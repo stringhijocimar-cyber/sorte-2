@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Pedido de Compra PC-2026-8716</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family: 'Arial', Helvetica, sans-serif; background:#fff; color:#1a1a1a; font-size:13px; line-height:1.5; }
+
+    /* ── CABEÇALHO ── */
+    .header { background:linear-gradient(135deg,#0d1b2a 0%,#1a3a5c 100%); color:#fff; padding:0; display:flex; min-height:90px; }
+    .header-accent { width:6px; background:linear-gradient(180deg,#e67e22,#f39c12); flex-shrink:0; }
+    .header-body   { flex:1; padding:18px 28px; display:flex; align-items:center; justify-content:space-between; gap:20px; }
+    .company-name  { font-size:24px; font-weight:900; letter-spacing:2px; color:#fff; }
+    .company-tagline { font-size:10px; color:rgba(255,255,255,0.55); letter-spacing:0.5px; margin-top:3px; }
+    .doc-badge { text-align:right; }
+    .doc-badge-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:#e67e22; }
+    .doc-badge-num { font-size:28px; font-weight:900; color:#fff; letter-spacing:1px; line-height:1.1; }
+    .doc-badge-date { font-size:10px; color:rgba(255,255,255,0.5); margin-top:4px; }
+
+    /* ── FAIXA DE STATUS ── */
+    .status-bar { background:#f4f5f7; padding:7px 28px; display:flex; gap:8px; align-items:center; border-bottom:1px solid #dde0e5; flex-wrap:wrap; font-size:11px; }
+    .badge { display:inline-flex; align-items:center; gap:4px; padding:3px 10px; border-radius:20px; font-size:10px; font-weight:700; border:1px solid; }
+    .badge-verde    { background:#d1fae5; color:#065f46; border-color:#6ee7b7; }
+    .badge-azul     { background:#dbeafe; color:#1e40af; border-color:#93c5fd; }
+    .badge-amarelo  { background:#fef3c7; color:#92400e; border-color:#fcd34d; }
+    .badge-vermelho { background:#fee2e2; color:#991b1b; border-color:#fca5a5; }
+    .badge-cinza    { background:#f3f4f6; color:#374151; border-color:#d1d5db; }
+
+    /* ── FAIXA RFQ/MAPA ── */
+    .rfq-bar { background:#fffbeb; border-bottom:2px solid #f59e0b; padding:8px 28px; display:flex; gap:16px; align-items:center; flex-wrap:wrap; }
+    .rfq-bar-label { font-size:10px; font-weight:800; text-transform:uppercase; color:#b45309; letter-spacing:0.5px; }
+    .rfq-bar-item  { font-size:11px; color:#555; }
+    .rfq-bar-item strong { color:#b45309; }
+    .rfq-desconto  { font-size:11px; font-weight:700; color:#059669; margin-left:auto; }
+
+    /* ── SEÇÕES ── */
+    .section { padding:16px 28px; border-bottom:1px solid #eee; }
+    .section-title { font-size:9px; font-weight:800; text-transform:uppercase; letter-spacing:1px; color:#94a3b8; margin-bottom:10px; display:flex; align-items:center; gap:6px; }
+    .section-title::after { content:''; flex:1; height:1px; background:#eee; }
+    .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+    .grid3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; }
+    .grid4 { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
+    .field-label { font-size:9px; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:3px; }
+    .field-value { font-size:13px; font-weight:600; color:#1a1a2e; }
+    .field-value.teal { color:#0891b2; }
+    .field-value.orange { color:#ea580c; }
+    .field-value.red  { color:#dc2626; }
+
+    /* ── CAIXA FORNECEDOR ── */
+    .forn-box { border:1px solid #e2e8f0; border-radius:8px; padding:14px; background:#f8fafc; }
+    .forn-name { font-size:16px; font-weight:800; color:#0d1b2a; margin-bottom:4px; }
+    .forn-detail { font-size:11px; color:#64748b; margin-top:2px; }
+
+    /* ── TABELA DE ITENS ── */
+    .items-table { width:100%; border-collapse:collapse; }
+    .items-table thead tr { background:#0d1b2a; color:#fff; }
+    .items-table thead th { padding:10px 10px; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; }
+    .items-table thead th:nth-child(1) { text-align:center; width:36px; }
+    .items-table thead th:nth-child(2) { text-align:left; }
+    .items-table thead th:nth-child(3) { text-align:center; width:55px; }
+    .items-table thead th:nth-child(4) { text-align:center; width:45px; }
+    .items-table thead th:nth-child(5) { text-align:right; width:110px; }
+    .items-table thead th:nth-child(6) { text-align:right; width:120px; }
+    .items-table .total-row { background:#0d1b2a; color:#fff; }
+    .items-table .total-row td { padding:11px 10px; font-size:14px; font-weight:800; }
+    .items-table .total-row td:nth-child(2) { text-align:right; color:rgba(255,255,255,0.6); font-size:11px; font-weight:400; }
+    .items-table .total-row td:last-child { text-align:right; color:#f59e0b; }
+
+    /* ── OBSERVAÇÕES ── */
+    .obs-box { background:#fffbeb; border:1px solid #fcd34d; border-radius:6px; padding:12px 16px; margin:0 28px 16px; }
+    .obs-label { font-size:9px; font-weight:800; text-transform:uppercase; color:#b45309; letter-spacing:0.5px; margin-bottom:5px; }
+
+    /* ── HISTÓRICO DE APROVAÇÕES ── */
+    .hist-table { width:100%; border-collapse:collapse; font-size:11px; }
+    .hist-table th { background:#f1f5f9; padding:7px 10px; text-align:left; font-size:9px; text-transform:uppercase; color:#64748b; border-bottom:1px solid #e2e8f0; }
+    .hist-table td { padding:7px 10px; color:#334155; border-bottom:1px solid #f1f5f9; }
+
+    /* ── ASSINATURAS ── */
+    .sign-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:24px; padding:20px 28px 10px; }
+    .sign-box { border-top:2px solid #0d1b2a; padding-top:8px; text-align:center; }
+    .sign-name  { font-size:12px; font-weight:700; color:#0d1b2a; margin-top:4px; }
+    .sign-title { font-size:10px; color:#64748b; }
+    .sign-line  { height:32px; border-bottom:1px dashed #cbd5e1; margin-bottom:4px; }
+
+    /* ── RODAPÉ ── */
+    .footer { padding:12px 28px; background:#f8fafc; border-top:3px solid #e67e22; display:flex; justify-content:space-between; align-items:center; }
+    .footer-l { font-size:10px; color:#64748b; line-height:1.7; }
+    .footer-r { text-align:right; font-size:10px; color:#64748b; }
+    .footer-r .num { color:#e67e22; font-weight:800; font-size:12px; }
+
+    /* ── WATERMARK ── */
+    .watermark { text-align:center; font-size:9px; color:#cbd5e1; padding:6px 28px; letter-spacing:0.5px; }
+
+    /* ── PRINT ── */
+    @media print {
+      body { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+      .no-print { display:none !important; }
+    }
+
+    /* ── BOTÃO IMPRIMIR (apenas na tela) ── */
+    .print-btn { position:fixed; top:16px; right:16px; background:#e67e22; color:#fff; border:none; padding:10px 20px; border-radius:8px; font-size:13px; font-weight:700; cursor:pointer; box-shadow:0 4px 12px rgba(0,0,0,0.2); z-index:999; display:flex; align-items:center; gap:8px; }
+    .print-btn:hover { background:#d35400; }
+    @media print { .print-btn { display:none; } }
+  </style>
+</head>
+<body>
+
+  <!-- BOTÃO IMPRIMIR (somente tela) -->
+  <button class="print-btn no-print" onclick="window.print()">
+    &#128438; Imprimir / Salvar PDF
+  </button>
+
+  <!-- ═══ CABEÇALHO ═══════════════════════════════════════════════════════ -->
+  <div class="header">
+    <div class="header-accent"></div>
+    <div class="header-body">
+      <div>
+        <div class="company-name">FRASER ALEXANDER</div>
+        <div class="company-tagline">Mineração Ltda. · CNPJ 00.000.000/0001-00</div>
+        <div class="company-tagline">Av. Contorno, 1234 – Belo Horizonte / MG · (31) 3000-0000</div>
+        <div class="company-tagline" style="margin-top:4px;color:rgba(255,255,255,0.4)">compras@fraseralexander.com.br</div>
+      </div>
+      <div class="doc-badge">
+        <div class="doc-badge-label">Pedido de Compra</div>
+        <div class="doc-badge-num">PC-2026-8716</div>
+        <div class="doc-badge-date">Emitido em 26/05/2026</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ FAIXA DE STATUS ══════════════════════════════════════════════════ -->
+  <div class="status-bar">
+    <span style="color:#64748b">Status:</span>
+    <span class="badge badge-verde">
+      Emitido
+    </span>
+    
+      <span style="color:#64748b;margin-left:6px">Tipo:</span>
+      <span class="badge badge-azul">Material</span>
+    
+    <span style="color:#64748b;margin-left:6px">Prioridade:</span>
+    <span class="badge badge-cinza">Normal</span>
+    
+      <span style="color:#64748b;margin-left:6px">Pagamento:</span>
+      <span class="badge badge-verde">21 dias</span>
+    
+    <span style="margin-left:auto;color:#94a3b8;font-size:10px">
+      Solicitante: <strong style="color:#334155">Administrador</strong>
+      &nbsp;·&nbsp;
+      Aprovador: <strong style="color:#334155">Ana Paula Rocha</strong>
+    </span>
+  </div>
+
+  <!-- ═══ BANNER RFQ / MAPA COMPARATIVO (quando aplicável) ════════════════ -->
+  
+  <div class="rfq-bar">
+    <span class="rfq-bar-label">&#128202; Origem: Mapa Comparativo Aprovado</span>
+    <span class="rfq-bar-item">RFQ: <strong>RFQ-006-002</strong></span>
+    <span class="rfq-bar-item">Mapa: <strong>MAPA-006-002</strong></span>
+    
+    
+  </div>
+  
+
+  <!-- ═══ DADOS DO FORNECEDOR ═════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">Fornecedor</div>
+    <div class="grid2">
+      <div class="forn-box">
+        <div class="forn-name">AirTec FOR-017</div>
+        
+        <div class="forn-detail">CNPJ: —</div>
+        <div class="forn-detail">Contato: —</div>
+        <div class="forn-detail">Localidade: —</div>
+        <div class="forn-detail" style="margin-top:6px;color:#94a3b8;font-size:10px">ID Cadastro: AirTec FOR-017</div>
+      </div>
+      <div>
+        <div class="grid2" style="gap:14px">
+          <div>
+            <div class="field-label">Contrato / Centro de Custo</div>
+            <div class="field-value teal">Geral</div>
+          </div>
+          <div>
+            <div class="field-label">Conta Contábil</div>
+            <div class="field-value" style="font-size:11px">1.1.3.02 – Material de Manutenção / Insumos</div>
+          </div>
+          <div>
+            <div class="field-label">Data de Emissão</div>
+            <div class="field-value">26/05/2026</div>
+          </div>
+          <div>
+            <div class="field-label">Entrega Prevista</div>
+            <div class="field-value orange">30/05/2026</div>
+          </div>
+          
+          <div style="grid-column:span 2">
+            <div class="field-label">Condição de Pagamento</div>
+            <div class="field-value ">21 dias</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ DESCRIÇÃO DO OBJETO ════════════════════════════════════════════ -->
+  <div style="padding:10px 28px 12px;background:#fffbf5;border-bottom:1px solid #eee">
+    <span style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.7px;color:#94a3b8">Objeto do Pedido: </span>
+    <span style="font-size:13px;font-weight:600;color:#1a1a2e">Cotação Kit Revisão Atlas Copco Boomer</span>
+  </div>
+
+  <!-- ═══ TABELA DE ITENS ════════════════════════════════════════════════ -->
+  <div style="padding:16px 0 0">
+    <div style="padding:0 28px 10px;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#94a3b8;display:flex;align-items:center;gap:6px">
+      Itens do Pedido
+      <span style="flex:1;height:1px;background:#eee;display:block"></span>
+    </div>
+    <table class="items-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th style="text-align:left">Descrição do Item / Produto / Serviço</th>
+          <th>Qtd.</th>
+          <th>Un.</th>
+          <th style="text-align:right">Preço Unit.</th>
+          <th style="text-align:right">Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td colspan="6" style="padding:20px;text-align:center;color:#888;font-size:12px;font-style:italic">Cotação Kit Revisão Atlas Copco Boomer</td></tr>
+        <tr class="total-row">
+          <td></td>
+          <td>VALOR TOTAL DO PEDIDO DE COMPRA</td>
+          <td colspan="3"></td>
+          <td style="text-align:right">R$&nbsp;3.050,00</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ═══ OBSERVAÇÕES ══════════════════════════════════════════════════ -->
+  <div style="height:12px"></div>
+
+  <!-- ═══ HISTÓRICO DE APROVAÇÕES (se existir) ═══════════════════════ -->
+  
+  <div class="section">
+    <div class="section-title">Histórico de Aprovações</div>
+    <table class="hist-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Etapa</th>
+          <th>Responsável</th>
+          <th>Data</th>
+        </tr>
+      </thead>
+      <tbody>
+        
+    <tr style="border-bottom:1px solid #eee">
+      <td style="padding:7px 10px;font-size:11px;color:#555">01</td>
+      <td style="padding:7px 10px;font-size:11px;font-weight:600;color:#1a1a2e">Requisição</td>
+      <td style="padding:7px 10px;font-size:11px;color:#555">—</td>
+      <td style="padding:7px 10px;font-size:11px;color:#888">25/05/2026</td>
+    </tr>
+  
+    <tr style="border-bottom:1px solid #eee">
+      <td style="padding:7px 10px;font-size:11px;color:#555">02</td>
+      <td style="padding:7px 10px;font-size:11px;font-weight:600;color:#1a1a2e">Mapa Comparativo</td>
+      <td style="padding:7px 10px;font-size:11px;color:#555">Ana Paula Rocha</td>
+      <td style="padding:7px 10px;font-size:11px;color:#888">18/05/2025</td>
+    </tr>
+  
+      </tbody>
+    </table>
+  </div>
+  
+
+  <!-- ═══ ASSINATURAS ══════════════════════════════════════════════════ -->
+  <div class="sign-grid">
+    <div class="sign-box">
+      <div class="sign-line"></div>
+      <div class="sign-title">Solicitante</div>
+      <div class="sign-name">Administrador</div>
+    </div>
+    <div class="sign-box">
+      <div class="sign-line"></div>
+      <div class="sign-title">Aprovado por</div>
+      <div class="sign-name">Ana Paula Rocha</div>
+    </div>
+    <div class="sign-box">
+      <div class="sign-line"></div>
+      <div class="sign-title">Recebido pelo Fornecedor</div>
+      <div class="sign-name" style="color:#94a3b8">________________________________</div>
+      <div style="font-size:10px;color:#94a3b8;margin-top:2px">Data: ____/____/________</div>
+    </div>
+  </div>
+
+  <!-- ═══ RODAPÉ ════════════════════════════════════════════════════════ -->
+  <div class="footer">
+    <div class="footer-l">
+      <div><strong style="color:#0d1b2a">Fraser Alexander Mineração Ltda.</strong></div>
+      <div>CNPJ: 00.000.000/0001-00 · IE: 000.000.000/0000</div>
+      <div>Av. Contorno, 1234 – Belo Horizonte / MG – CEP 30110-000</div>
+      <div>compras@fraseralexander.com.br · (31) 3000-0000</div>
+    </div>
+    <div class="footer-r">
+      <div>Documento gerado em 25/05/2026 às 21:38</div>
+      <div>Sistema Fraser Alexander ERP v3.1</div>
+      <div class="num" style="margin-top:4px">PC-2026-8716</div>
+    </div>
+  </div>
+  <div class="watermark">
+    Documento oficial de pedido de compra · Fraser Alexander Mineração Ltda.
+    · Gerado automaticamente pelo sistema de gestão integrado · Não requer assinatura eletrônica para validade interna
+  </div>
+
+</body>
+</html>
