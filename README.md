@@ -1,38 +1,66 @@
 # sorte-2
 
-Gerador de jogos das loterias brasileiras. Página única, sem dependências e sem
-etapa de build — abra o `index.html` ou sirva a pasta com qualquer servidor estático.
+Repositório do **LotoLab** — gerador e conferidor de jogos das loterias
+brasileiras, empacotado como app Android via Capacitor (`app.lotolab.jogos`).
+
+## Conteúdo
+
+| Caminho                        | O que é                                                        |
+| ------------------------------ | -------------------------------------------------------------- |
+| `www/`                         | Interface do app (HTML/CSS/JS em arquivo único)                 |
+| `LotoLab-1.0.0-release.apk`    | Build Android 1.0.0                                            |
+| `index.html`, `styles.css`, `app.js` | Gerador web separado — **superado**, ver nota abaixo      |
+
+### Sobre `www/`
+
+O `www/` foi **extraído de `LotoLab-1.0.0-release.apk`** (`assets/public/`),
+porque o repositório tinha só o APK compilado. É o `webDir` que o
+`capacitor.config.json` do build aponta.
+
+Se o projeto Capacitor completo existe em outro lugar, ele é a fonte de
+verdade: aplique lá o mesmo delta de CSS descrito abaixo, em vez de adotar
+esta pasta — senão o próximo build sobrescreve os ajustes.
+
+Os stubs `cordova.js` e `cordova_plugins.js` (0 byte) não foram trazidos:
+são injetados pelo empacotamento, não fazem parte da fonte.
+
+## Rodando a interface
 
 ```bash
-npx http-server -p 8080
-# ou
-python3 -m http.server 8080
+cd www && npx http-server -p 8080
 ```
 
-## Modalidades
+O 404 de `pesos.json` no console é esperado: é o arquivo opcional de pesos
+calibrados que o app menciona na aba "gerar". Sem ele, o app usa as hipóteses
+declaradas.
 
-| Loteria    | Dezenas por jogo | Universo |
-| ---------- | ---------------- | -------- |
-| Mega-Sena  | 6 a 15           | 1–60     |
-| Quina      | 5 a 15           | 1–80     |
-| Lotofácil  | 15 a 20          | 1–25     |
-| Lotomania  | 50               | 1–100    |
-| Dupla Sena | 6 a 15           | 1–50     |
-| Timemania  | 10               | 1–80     |
+## Ajustes de layout aplicados
 
-## Layout
+Três mudanças no CSS de `www/index.html`, sem tocar na direção visual nem no
+comportamento:
 
-- Duas colunas no desktop (controles fixos à esquerda, resultados à direita) que
-  colapsam para uma coluna abaixo de 60rem.
-- Tema claro/escuro seguindo o sistema, com alternância manual persistida em
-  `localStorage`.
-- Cada modalidade tem uma cor que percorre o cartão selecionado, o slider, o
-  contador e as bolas dos jogos.
-- Navegável por teclado, com `skip link`, `radiogroup` rotulado, região
-  `aria-live` para os resultados e respeito a `prefers-reduced-motion`.
+1. **Cabeçalho alinhado à coluna de conteúdo.** `.cabeca` ganhou
+   `max-width:var(--coluna)` e centralização. Antes, a 1024px, a marca ficava
+   colada na borda esquerda enquanto o conteúdo começava a 152px.
+2. **Barra de abas acompanha a coluna** acima de 760px — largura da coluna,
+   centrada, com bordas laterais, cantos superiores arredondados e sombra.
+   Antes atravessava a página inteira, desprendida do conteúdo. No celular
+   segue de borda a borda, como deve ser.
+3. **Respiro do fim do `main` derivado da barra**, via
+   `calc(var(--barra) + 40px + var(--base))` em vez do `96px` fixo — o valor
+   passa a acompanhar a altura da barra em vez de ser um número solto.
 
-## Arquivos
+Dois tokens novos em `:root`: `--coluna` (720px, a largura que já existia
+espalhada) e `--barra` (53px).
 
-- `index.html` — estrutura e marcação acessível
-- `styles.css` — tokens de design, temas e layout responsivo
-- `app.js` — sorteio (via `crypto.getRandomValues`, sem viés de módulo) e renderização
+Medido em Chromium a 320, 412 e 1024px: cabeçalho, conteúdo e abas coincidem
+em 152→872 a 1024px; sem overflow horizontal; o último bloco do `main` fica
+acima da barra em todos os tamanhos.
+
+## Nota sobre o gerador na raiz
+
+`index.html`, `styles.css` e `app.js` são um gerador web escrito antes de o
+LotoLab estar no repositório, quando havia apenas o README. O LotoLab cobre o
+mesmo terreno com muito mais profundidade — 8 modalidades, fechamento com
+garantia verificada, modelo de rateio, conferência. Esses três arquivos podem
+ser removidos.
