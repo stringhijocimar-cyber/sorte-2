@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Gerador de jogos das loterias brasileiras: Mega-Sena, Quina, Lotofácil e mais.">
+  <meta name="theme-color" content="#0f7b6c">
+  <title>Sorte — Gerador de Jogos</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#conteudo">Ir para o conteúdo</a>
+
+  <header class="topbar">
+    <div class="topbar__inner">
+      <div class="brand">
+        <span class="brand__mark" aria-hidden="true">🍀</span>
+        <span class="brand__text">
+          <strong>Sorte</strong>
+          <small>gerador de jogos</small>
+        </span>
+      </div>
+
+      <button id="theme-toggle" class="icon-button" type="button" aria-live="polite">
+        <span class="icon-button__icon" aria-hidden="true">🌗</span>
+        <span class="icon-button__label">Tema</span>
+      </button>
+    </div>
+  </header>
+
+  <main id="conteudo" class="layout">
+    <section class="panel panel--controls" aria-labelledby="titulo-controles">
+      <h1 id="titulo-controles" class="panel__title">Monte seu jogo</h1>
+      <p class="panel__hint">Escolha a loteria, ajuste a quantidade de números e gere quantos jogos quiser.</p>
+
+      <fieldset class="field">
+        <legend class="field__label">Loteria</legend>
+        <div id="game-picker" class="game-picker" role="radiogroup" aria-label="Loteria"></div>
+      </fieldset>
+
+      <div class="field">
+        <label class="field__label" for="qtd">
+          Números por jogo
+          <output id="qtd-output" class="field__value" for="qtd"></output>
+        </label>
+        <input id="qtd" class="slider" type="range" step="1">
+        <p id="qtd-range" class="field__help"></p>
+      </div>
+
+      <div class="field">
+        <label class="field__label" for="jogos">Quantidade de jogos</label>
+        <input id="jogos" class="number-input" type="number" min="1" max="20" value="1" inputmode="numeric">
+      </div>
+
+      <div class="actions">
+        <button id="gerar" class="button button--primary" type="button">Gerar jogos</button>
+        <button id="limpar" class="button button--ghost" type="button">Limpar</button>
+      </div>
+    </section>
+
+    <section class="panel panel--results" aria-labelledby="titulo-resultados">
+      <div class="panel__header">
+        <h2 id="titulo-resultados" class="panel__title">Seus jogos</h2>
+        <span id="contador" class="badge" hidden></span>
+      </div>
+
+      <div id="resultados" class="results" role="list" aria-live="polite"></div>
+
+      <div id="empty" class="empty">
+        <span class="empty__icon" aria-hidden="true">🎲</span>
+        <p class="empty__title">Nenhum jogo gerado ainda</p>
+        <p class="empty__text">Configure ao lado e toque em <strong>Gerar jogos</strong>.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>Feito para diversão. Jogue com responsabilidade — as chances não mudam com a estratégia.</p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
