@@ -1,40 +1,98 @@
 # LotoLab — aplicativo
 
-Esta pasta é o aplicativo inteiro. Não falta nada, não tem dependência
-externa, não precisa de build para funcionar.
+O app é uma página única sem dependência externa e sem etapa de build: o
+`index.html` contém interface, lógica e estilos. O Capacitor apenas o embrulha
+num app nativo Android.
 
 Monta jogos das loterias brasileiras, guarda no aparelho e confere contra os
 concursos — sempre mostrando o desempenho comparado ao acaso.
 
 ---
 
-## Arquivos
+## Estrutura do repositório
 
 ```
-index.html             o aplicativo inteiro: interface, lógica e estilos
+index.html             ← EDITE AQUI. O app inteiro: interface, lógica, estilos
 manifest.webmanifest   identidade para instalação no Android
 sw.js                  service worker — faz funcionar sem internet
-icone.svg              ícone vetorial
+icone.svg              ícone vetorial (trevo de quatro folhas)
 icone-192.png          ícone Android
 icone-512.png          ícone Android
-icone-maskable.png     ícone adaptativo (o Android recorta as bordas)
-servir.py              servidor local para testar no celular
-package.json           scripts do Capacitor, para gerar o APK
-capacitor.config.json  configuração do APK
+icone-maskable.png     ícone adaptativo (o Android recorta as bordas) — fonte
+                       dos ícones gerados em android/app/src/main/res/
+servir.py              servidor local para testar no computador e no celular
+package.json           dependências e scripts do Capacitor
+package-lock.json      versões travadas (reprodutibilidade)
+capacitor.config.json  configuração do app nativo (appId, webDir)
+
+www/                   ← RAIZ DE EMPACOTAMENTO do Capacitor (webDir)
+android/               projeto Android gerado pelo Capacitor, com ajustes
+ferramentas/           scripts de apoio (geração de ícones, testes)
+capturas/              capturas de tela das cinco abas
+APK.md                 como reconstruir o APK do zero
+LOJA.md                textos e ficha de dados para a Play Store
 ```
 
-Nada mais. Se algum arquivo sumir, o app degrada com elegância: sem `sw.js`
-ele deixa de funcionar offline, sem os PNGs o Android usa o SVG.
+### ⚠️ Atenção: `index.html` da raiz vs. `www/index.html`
 
-## Arquivo opcional
+Existem **dois** `index.html`, e eles não são idênticos:
 
-`pesos.json` — pesos calibrados do modo "otimizado para rateio", gerados a
-partir dos ganhadores publicados pela Caixa. Sem ele, o app usa hipóteses
-declaradas e **avisa isso na tela**. Se você tiver a plataforma LotoLab:
+| Caminho | Papel |
+|---|---|
+| `index.html` (raiz) | Onde o desenvolvimento acontece. **Edite este.** |
+| `www/index.html` | Cópia que o Capacitor empacota (`webDir: "www"`). |
+
+O APK publicado (`LotoLab-1.0.0-release.apk`) foi construído a partir de
+`www/index.html`. O arquivo da raiz contém alterações **posteriores** ao
+último build (logo de trevo e refino visual) que ainda **não** foram
+compiladas.
+
+Antes de gerar um APK novo, sincronize:
+
+```bash
+cp index.html manifest.webmanifest sw.js icone*.png icone.svg www/
+npx cap sync android
+```
+
+Não há build automatizado que faça isso — é uma cópia manual, de propósito,
+para que a pasta empacotada seja sempre explícita.
+
+## Arquivo opcional: `pesos.json`
+
+Pesos calibrados do modo "otimizado para rateio", gerados a partir dos
+ganhadores publicados pela Caixa. **Não está neste repositório** e o app
+funciona sem ele: usa as hipóteses declaradas na constante `PESOS` do
+`index.html` e **avisa isso na tela**. A ausência do arquivo gera um 404 no
+console, que é esperado e tratado.
+
+O comando abaixo pertence à plataforma LotoLab, um projeto **separado** que
+não faz parte deste repositório:
 
 ```bash
 python manage.py calibrar --modalidade mega-sena --preco 5.00 --exportar pesos.json
 ```
+
+## O que este repositório NÃO contém
+
+O `index.html` referencia dois artefatos Python que vivem na plataforma
+LotoLab, um projeto separado:
+
+| Referência no código | Onde aparece | Situação |
+|---|---|---|
+| `premio/impopularidade.py` | comentário na linha ~336 | **ausente** |
+| `manage.py calibrar` | comentário na linha ~380 e este README | **ausente** |
+| `pesos.json` | `fetch()` na linha ~1001 | **ausente** (opcional) |
+
+Esses arquivos nunca fizeram parte do app e **não foram recriados**: um
+arquivo reconstruído por engenharia reversa pareceria original e induziria a
+erro quem fosse evoluí-lo. O modelo de rateio está implementado de forma
+autônoma em JavaScript no próprio `index.html` — constante `PESOS` e função
+`caracteristicas()` — e funciona sem a plataforma.
+
+Também não são versionados, por decisão: `node_modules/`, artefatos de build
+(`android/build/`, `android/app/build/`, `android/.gradle/`), APK/AAB gerados
+e **todos os segredos de assinatura** (`*.jks`, `chave.properties`,
+`local.properties`).
 
 ---
 
@@ -110,27 +168,65 @@ Pelo GitHub Pages: `Settings → Pages → Source: main → /(root)`.
 
 ## Gerar o APK
 
-### Capacitor (embrulha esta pasta num app nativo)
+A pasta `android/` **já está no repositório**, com ajustes manuais que o
+Capacitor não gera sozinho (ícone adaptativo, splash, orientação retrato,
+remoção de permissões). **Não rode `npx cap add android`** — ele recria a
+pasta e descarta esses ajustes. O passo a passo completo está em `APK.md`.
 
 ```bash
 npm install
-npx cap init LotoLab app.lotolab.jogos --web-dir=.
-npx cap add android
-npx cap sync android
-npx cap open android          # abre no Android Studio
-```
 
-Ou direto pela linha de comando, sem abrir o Android Studio:
-
-```bash
+# 1. sincronize a pasta empacotada (veja o aviso sobre index.html acima)
+cp index.html manifest.webmanifest sw.js icone*.png icone.svg www/
 npx cap sync android
-cd android && ./gradlew assembleDebug
+
+# 2. compile
+cd android
+./gradlew assembleDebug        # APK de teste
 ```
 
 O APK sai em `android/app/build/outputs/apk/debug/app-debug.apk`.
 
-Para publicar na Play Store, gere um APK assinado (`assembleRelease` com sua
-keystore) ou um bundle (`bundleRelease`).
+### Release assinado
+
+A keystore **não está no repositório** e não deve estar. Gere a sua:
+
+```bash
+keytool -genkeypair -v -keystore android/minha-chave.jks \
+  -keyalg RSA -keysize 4096 -validity 10950 -alias lotolab
+```
+
+Crie `android/chave.properties` (ignorado pelo git):
+
+```properties
+storeFile=minha-chave.jks
+storePassword=SUA_SENHA
+keyAlias=lotolab
+keyPassword=SUA_SENHA
+```
+
+Então:
+
+```bash
+cd android
+./gradlew assembleRelease     # APK assinado
+./gradlew bundleRelease       # AAB para a Play Store
+```
+
+**Guarde a keystore e as senhas.** Se você perdê-las, não será mais possível
+publicar atualizações do app na Play Store — só um app novo, com outro
+identificador.
+
+### Testes
+
+```bash
+node ferramentas/testar-motor.mjs                          # lógica
+node --experimental-websocket ferramentas/testar-interface.mjs   # interface
+```
+
+O teste de interface precisa de um Chrome/Chromium e de um servidor local
+servindo `www/` (a porta 5060 **não** funciona: o Chrome bloqueia por ser
+porta de SIP).
 
 ### Bubblewrap (alternativa, exige o app publicado em HTTPS)
 
@@ -165,10 +261,17 @@ a ficha de privacidade da Play Store: nenhuma coleta de dados.
 
 A peça de identidade é a **faixa do acaso**: marcador âmbar para o seu
 resultado, traço tracejado teal para o que a aleatoriedade produziria, faixa
-clara para a variação normal. Aparece na conferência, no placar e no ícone.
+clara para a variação normal. Aparece na conferência e no placar.
 
-Sem verde-feltro, sem moeda, sem trevo, sem contagem regressiva, sem animação
-de celebração. É uma ficha de conferência, não uma mesa de cassino.
+Sem verde-feltro, sem moeda, sem contagem regressiva, sem animação de
+celebração. É uma ficha de conferência, não uma mesa de cassino.
+
+**Sobre o trevo do ícone.** O símbolo é um trevo de quatro folhas geométrico,
+adotado por ser mecânica real de loteria — a +Milionária sorteia trevos junto
+com as dezenas. É desenhado de forma sóbria, sem brilho, estrela ou faísca, e
+**nenhum texto do app associa o trevo a sorte, sortudo ou amuleto**. A
+distinção importa: um ícone que promete sorte contradiz o próprio conteúdo do
+app e o expõe ao risco de remoção da loja.
 
 ## Uso responsável
 
