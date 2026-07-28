@@ -1,0 +1,16 @@
+# segredos de assinatura — nunca versionar
+chave.properties
+*.jks
+*.keystore
+
+# artefatos de build
+/build
+/app/build
+/capacitor-cordova-android-plugins/build
+/.gradle
+local.properties
+/app/src/main/assets/public
+/app/src/main/assets/capacitor.config.json
+/app/src/main/assets/capacitor.plugins.json
+.idea
+*.iml
