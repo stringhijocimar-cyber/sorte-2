@@ -71,6 +71,9 @@ const EXPOSTOS = [
   "gerarUniforme", "gerarRateio", "gerarCobertura", "combinacoesDe",
   "verificarGarantia", "gerarFechamento", "faixaAcaso", "esperadoAcertos",
   "desvioAcertos",
+  "gerarAntirepeticao", "gerarContraste", "gerarPor", "ultimoResultado",
+  "sobreposicaoMedia", "erroPadraoAcertos", "bancada", "bancadaAgregada",
+  "vereditoAcertos", "ABAS", "T",
 ];
 const epilogo = `\n;globalThis.__motor = {${EXPOSTOS.map((n) => `${n}: typeof ${n} !== "undefined" ? ${n} : undefined`).join(", ")}};\n`;
 vm.runInContext(fonte + epilogo, contexto, { filename: "index.html:script" });
@@ -346,6 +349,182 @@ for (let i = 0; i < 300; i++) {
   if (j.length !== 15 || new Set(j).size !== 15) { mil = false; break; }
 }
 checar("300 gerações seguidas sem defeito", mil);
+
+
+/* ==================================================================
+   9. Métodos novos e bancada de testes
+   ================================================================== */
+secao("9. Métodos novos e bancada");
+
+/* --- gerarPor: porta única, usada pela interface E pela bancada --- */
+for (const id of ["uniforme", "rateio", "cobertura", "antirepeticao", "contraste"]) {
+  const lote = contexto.gerarPor(id, "mega-sena", 3, 6);
+  const valido = lote.length === 3 && lote.every(j =>
+    j.length === 6 && new Set(j).size === 6 &&
+    j.every(d => d >= 1 && d <= 60) &&
+    j.every((d, i) => i === 0 || j[i - 1] < d));
+  checar(`gerarPor("${id}") devolve lote válido e ordenado`, valido);
+}
+checar("gerarPor com id desconhecido cai no uniforme",
+  contexto.gerarPor("inexistente", "quina", 2, 5).length === 2);
+
+/* --- antirepeticao: sem concurso registrado, não trava --- */
+contexto.S.resultados = [];
+checar("antirepeticao sem concurso registrado ainda gera",
+  contexto.gerarAntirepeticao("mega-sena", 2, 6).length === 2);
+
+/* --- antirepeticao: com concurso, evita as dezenas anteriores --- */
+contexto.S.resultados = [{ modalidade: "mega-sena", concurso: "1", data: "2026-01-01",
+  dezenas: [1, 2, 3, 4, 5, 6] }];
+let repetidasAnti = 0, repetidasUnif = 0;
+for (let i = 0; i < 40; i++) {
+  const a = contexto.gerarAntirepeticao("mega-sena", 1, 6)[0];
+  const u = contexto.gerarUniforme("mega-sena", 1, 6)[0];
+  repetidasAnti += a.filter(d => d <= 6).length;
+  repetidasUnif += u.filter(d => d <= 6).length;
+}
+checar("antirepeticao repete menos o concurso anterior que o uniforme",
+  repetidasAnti < repetidasUnif, `anti=${repetidasAnti} unif=${repetidasUnif}`);
+contexto.S.resultados = [];
+
+/* --- contraste: sempre entrega a quantidade pedida, inclusive na Lotofácil,
+       onde 15 de 25 forçam dezenas consecutivas --- */
+checar("contraste entrega a quantidade pedida na Lotofacil",
+  contexto.gerarContraste("lotofacil", 4, 15).length === 4);
+checar("contraste entrega a quantidade pedida na Mega",
+  contexto.gerarContraste("mega-sena", 4, 6).length === 4);
+
+/* --- popularidade: os métodos de rateio ficam abaixo do uniforme --- */
+const popMedia = (id, n) => {
+  let s = 0;
+  for (let i = 0; i < n; i++) s += contexto.escorePopularidade(
+    contexto.gerarPor(id, "mega-sena", 1, 6)[0], "mega-sena");
+  return s / n;
+};
+const pUnif = popMedia("uniforme", 60), pRat = popMedia("rateio", 60), pCon = popMedia("contraste", 60);
+checar("rateio tem popularidade menor que uniforme", pRat < pUnif,
+  `rateio=${pRat.toFixed(3)} uniforme=${pUnif.toFixed(3)}`);
+checar("contraste tem popularidade menor que uniforme", pCon < pUnif,
+  `contraste=${pCon.toFixed(3)} uniforme=${pUnif.toFixed(3)}`);
+
+/* --- sobreposicao --- */
+checar("sobreposicaoMedia de jogo unico e zero",
+  contexto.sobreposicaoMedia([[1, 2, 3]]) === 0);
+checar("sobreposicaoMedia conta dezenas em comum",
+  contexto.sobreposicaoMedia([[1, 2, 3], [3, 4, 5]]) === 1);
+checar("cobertura sobrepoe menos que uniforme",
+  contexto.sobreposicaoMedia(contexto.gerarCobertura("mega-sena", 5, 6)) <=
+  contexto.sobreposicaoMedia(contexto.gerarUniforme("mega-sena", 5, 6)) + 0.8);
+
+/* --- bancada --- */
+const rb = contexto.bancada("mega-sena", [1, 2, 3, 4, 5, 6], { repeticoes: 8, quantos: 3 });
+checar("bancada cobre todos os metodos menos o fechamento",
+  rb.linhas.length === contexto.METODOS.length - 1 &&
+  !rb.linhas.some(l => l.id === "fechamento"));
+checar("bancada conta os jogos certos", rb.linhas.every(l => l.jogos === 24));
+checar("bancada devolve media de acertos plausivel",
+  rb.linhas.every(l => l.media >= 0 && l.media <= 6));
+checar("bancada expoe esperado do acaso positivo", rb.esperado > 0 && rb.erroPadrao > 0);
+checar("bancada calcula desvios (z) finitos",
+  rb.linhas.every(l => Number.isFinite(l.z)));
+
+/* --- agregacao: NAO pode somar as dezenas num alvo maior --- */
+const alvos = [
+  { modalidade: "mega-sena", concurso: "1", data: "2026-01-01", dezenas: [1, 2, 3, 4, 5, 6] },
+  { modalidade: "mega-sena", concurso: "2", data: "2026-01-08", dezenas: [10, 20, 30, 40, 50, 60] },
+];
+const ag = contexto.bancadaAgregada("mega-sena", alvos, { repeticoes: 6, quantos: 3 });
+checar("agregada soma os jogos dos concursos", ag.linhas.every(l => l.jogos === 36));
+checar("agregada mantem o esperado de UM concurso",
+  Math.abs(ag.esperado - rb.esperado) < 1e-9,
+  `agregada=${ag.esperado.toFixed(4)} single=${rb.esperado.toFixed(4)}`);
+checar("agregada reduz o erro padrao ao juntar concursos",
+  ag.erroPadrao < rb.erroPadrao, `${ag.erroPadrao.toFixed(4)} < ${rb.erroPadrao.toFixed(4)}`);
+checar("agregada mantem media dentro do intervalo possivel",
+  ag.linhas.every(l => l.media >= 0 && l.media <= 6));
+
+/* --- veredito --- */
+checar("veredito aprova quando nada sai da faixa",
+  contexto.vereditoAcertos({ linhas: [{ nome: "a", z: 0.4 }, { nome: "b", z: -1.2 }] }).ok);
+checar("veredito acusa quando algo passa de 3 desvios",
+  contexto.vereditoAcertos({ linhas: [{ nome: "a", z: 4.1 }] }).ok === false);
+checar("veredito de UM concurso explica o efeito estrutural",
+  /cara de aposta humana/.test(
+    contexto.vereditoAcertos({ linhas: [{ nome: "a", z: 4.1 }] }, true).texto));
+checar("veredito agregado nao usa a explicacao de concurso isolado",
+  !/cara de aposta humana/.test(
+    contexto.vereditoAcertos({ linhas: [{ nome: "a", z: 4.1 }] }, false).texto));
+checar("veredito nao promete vantagem a metodo nenhum",
+  !/melhor m|vantagem|vencedor/i.test(
+    contexto.vereditoAcertos({ linhas: [{ nome: "a", z: 4.1 }] }).texto));
+
+
+/* --- ARMADILHA 1: a bancada nao pode mandar o "evita o concurso anterior"
+       evitar justamente o concurso contra o qual sera conferido. --- */
+contexto.S.resultados = [];
+const alvoNeutro = [3, 17, 26, 38, 44, 59];   // sem cara de aposta humana
+const livre = contexto.bancada("mega-sena", alvoNeutro, { repeticoes: 25, quantos: 3 })
+  .linhas.find(l => l.id === "antirepeticao");
+const proprio = contexto.bancada("mega-sena", alvoNeutro,
+  { repeticoes: 25, quantos: 3, evitar: alvoNeutro })
+  .linhas.find(l => l.id === "antirepeticao");
+/* A penalidade e suave, nao exclusao dura: sobra um residuo, mas a queda e de
+   ordem de grandeza. E isso que torna a armadilha perigosa — ela nao zera a
+   coluna, so a afunda o bastante para parecer um metodo ruim. */
+checar("evitar o proprio alvo afunda os acertos (a armadilha e real)",
+  proprio.media < livre.media / 5,
+  `proprio=${proprio.media.toFixed(3)} livre=${livre.media.toFixed(3)}`);
+
+const outro = contexto.bancada("mega-sena", alvoNeutro,
+  { repeticoes: 25, quantos: 3, evitar: [10, 20, 30, 40, 50, 60] })
+  .linhas.find(l => l.id === "antirepeticao");
+checar("evitar OUTRO concurso nao zera os acertos", outro.media > 0,
+  `media=${outro.media.toFixed(3)}`);
+
+/* --- ARMADILHA 2: o desvio em UM concurso pode ser estrutural, nao ruido.
+       Se as dezenas sorteadas tem cara de aposta humana, os metodos que fogem
+       desse padrao acertam menos NAQUELE concurso — de proposito. O nulo
+       correto e a media sobre alvos sorteados, nao um alvo escolhido. --- */
+const alvoHumano = [1, 2, 3, 4, 5, 6];
+const rHumano = contexto.bancada("mega-sena", alvoHumano, { repeticoes: 25, quantos: 3 });
+const ratHumano = rHumano.linhas.find(l => l.id === "rateio");
+const uniHumano = rHumano.linhas.find(l => l.id === "uniforme");
+checar("com sorteio de cara humana, o rateio acerta menos — efeito estrutural",
+  ratHumano.media < uniHumano.media,
+  `rateio=${ratHumano.media.toFixed(3)} uniforme=${uniHumano.media.toFixed(3)}`);
+
+/* Sobre alvos uniformes — que e como os sorteios reais saem — todo metodo
+   converge para a media do acaso. Esta e a afirmacao que o app faz, e e a
+   unica que se sustenta. */
+const soma = {}, ALVOS = 30, REP = 4, QTD = 3;
+for (let t = 0; t < ALVOS; t++) {
+  const r = contexto.bancada("mega-sena", contexto.sortear("mega-sena", 6),
+    { repeticoes: REP, quantos: QTD });
+  r.linhas.forEach(l => { soma[l.id] = (soma[l.id] || 0) + l.media; });
+}
+const esperadoMega = contexto.esperadoAcertos("mega-sena", 6);
+const nTotal = ALVOS * REP * QTD;
+const tol = 3 * contexto.desvioAcertos("mega-sena", 6) / Math.sqrt(nTotal);
+for (const id of Object.keys(soma)) {
+  const media = soma[id] / ALVOS;
+  checar(`${id}: sobre alvos sorteados, converge para o acaso`,
+    Math.abs(media - esperadoMega) < tol,
+    `media=${media.toFixed(3)} acaso=${esperadoMega.toFixed(3)} tol=${tol.toFixed(3)}`);
+}
+
+/* A agregada usa o concurso anterior, nunca o proprio. */
+const alvos2 = [
+  { modalidade: "mega-sena", concurso: "1", data: "2026-01-01", dezenas: [3, 17, 26, 38, 44, 59] },
+  { modalidade: "mega-sena", concurso: "2", data: "2026-01-08", dezenas: [8, 14, 29, 33, 47, 55] },
+];
+const ag2 = contexto.bancadaAgregada("mega-sena", alvos2, { repeticoes: 20, quantos: 3 });
+checar("agregada nao zera o antirepeticao",
+  ag2.linhas.find(l => l.id === "antirepeticao").media > 0);
+
+/* --- a aba existe --- */
+checar("aba bancada registrada", contexto.ABAS.some(a => a.id === "bancada"));
+checar("tela da bancada renderiza", typeof contexto.T.bancada === "function" &&
+  contexto.T.bancada().includes("b-go"));
 
 /* ---------- saída ---------- */
 console.log(linhas.join("\n"));
