@@ -39,7 +39,8 @@ sobre a diferença — leia antes de assumir qualquer coisa.
 | Segurança: senhas, tokens, CSRF, limite de taxa, LGPD | ✅ pronto, testado |
 | Worker para backtests longos | ❌ pendente |
 | Machine learning | ❌ **não** implementado |
-| Monte Carlo dedicado, exportação PDF/Excel | ❌ **não** implementado |
+| Exportação CSV, Excel e PDF | ✅ pronta, XLSX validado com openpyxl |
+| Monte Carlo dedicado | ❌ **não** implementado |
 | Docker / CI-CD | ⚠️ compose de desenvolvimento apenas |
 
 Nada marcado ❌ foi simulado com implementação vazia. Preferi um núcleo em que
@@ -117,7 +118,7 @@ Faixas: 0–25 baixo · 26–50 moderado · 51–75 alto · 76–100 crítico.
 
 ```bash
 cd backend
-python3 -m pytest -q          # 236 testes, sem rede
+python3 -m pytest -q          # 259 testes, sem rede
 ```
 
 O núcleo não exige dependências. SciPy e statsmodels são usados **apenas** nos
@@ -148,7 +149,8 @@ backend/
     persistencia.py  modelos + repositórios; trava contra divergir do schema.sql
     seguranca.py     senhas, tokens, CSRF, limite de taxa, LGPD
     api.py           API REST: auth, geração, conferência, backtest
-  tests/             236 testes
+    exportacao.py    CSV, XLSX e PDF sem dependência de runtime
+  tests/             259 testes
 ```
 
 ## Acrescentar uma modalidade
