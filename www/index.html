@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-tema="claro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0F1E2E">
+<meta name="description" content="Gerador e conferidor de jogos das loterias brasileiras, com comparação honesta contra o acaso.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icone.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icone.svg">
+<title>LotoLab — jogos e conferência</title>
+<style>
+/* ------------------------------------------------------------------
+   Direção visual: ficha de conferência, não cassino.
+   Sem verde-feltro, sem moeda, sem trevo, sem brilho, sem animação de
+   celebração. A peça de identidade é a FICHA DE JOGO — cartão com a
+   grade de dezenas — e, depois da conferência, a FAIXA DO ACASO, que
+   mostra onde uma escolha aleatória teria caído.
+   Porcelana + tinta naval + dois sinais: teal para o acaso, âmbar para
+   o que é seu.
+------------------------------------------------------------------ */
+:root{
+  --fundo:#EDF0F2; --carta:#FFFFFF; --tinta:#0F1E2E; --secundaria:#5C6B7A;
+  --acaso:#0E6E62; --seu:#B26B00; --alerta:#A3324C; --linha:#D9DFE4; --trama:#E7ECEF;
+  --mono:ui-monospace,"SF Mono","Roboto Mono",Menlo,Consolas,monospace;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --r:14px; --sombra:0 1px 2px rgba(15,30,46,.06),0 10px 30px -22px rgba(15,30,46,.5);
+  --topo:env(safe-area-inset-top,0px); --base:env(safe-area-inset-bottom,0px);
+}
+html[data-tema="escuro"]{
+  --fundo:#0B1622; --carta:#132030; --tinta:#E7EDF2; --secundaria:#8FA0AF;
+  --acaso:#3FB3A3; --seu:#E9A73C; --alerta:#E2607C; --linha:#1E2E40; --trama:#16253A;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--fundo);color:var(--tinta);font-family:var(--sans);
+  font-size:16px;line-height:1.55;overscroll-behavior-y:none}
+h1,h2,h3{margin:0;font-weight:650;letter-spacing:-.02em}
+h1{font-size:1.35rem}
+h2{font-size:.72rem;text-transform:uppercase;letter-spacing:.14em;color:var(--secundaria);
+  font-weight:600}
+h3{font-size:1rem}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+button,select,input{font-family:inherit;font-size:1rem;color:inherit}
+:focus-visible{outline:2px solid var(--acaso);outline-offset:2px}
+
+/* ---------- estrutura ---------- */
+header{position:sticky;top:0;z-index:20;background:var(--fundo);
+  padding:calc(var(--topo) + 12px) 16px 10px;border-bottom:1px solid var(--linha)}
+.cabeca{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.marca{font-family:var(--mono);font-weight:600;font-size:.95rem;letter-spacing:-.02em}
+.marca span{color:var(--acaso)}
+main{padding:14px 16px calc(96px + var(--base));max-width:720px;margin:0 auto}
+nav{position:fixed;left:0;right:0;bottom:0;z-index:30;display:grid;
+  grid-template-columns:repeat(5,1fr);background:var(--carta);
+  border-top:1px solid var(--linha);padding-bottom:var(--base)}
+nav button{background:none;border:0;padding:9px 2px 8px;display:flex;flex-direction:column;
+  align-items:center;gap:3px;color:var(--secundaria);font-size:.62rem;cursor:pointer;
+  letter-spacing:.04em}
+nav button[aria-current="page"]{color:var(--tinta)}
+nav button svg{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width:1.7;
+  stroke-linecap:round;stroke-linejoin:round}
+nav button[aria-current="page"] svg{stroke-width:2.1}
+
+/* ---------- blocos ---------- */
+.carta{background:var(--carta);border:1px solid var(--linha);border-radius:var(--r);
+  padding:14px;box-shadow:var(--sombra);margin-bottom:12px}
+.campo{display:block;margin-bottom:12px}
+.campo label{display:block;font-size:.68rem;text-transform:uppercase;letter-spacing:.1em;
+  color:var(--secundaria);margin-bottom:5px;font-weight:600}
+select,input[type=number],input[type=text]{width:100%;padding:11px 12px;
+  background:var(--fundo);border:1px solid var(--linha);border-radius:10px}
+.linha2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.acao{width:100%;padding:14px;border:0;border-radius:12px;background:var(--tinta);
+  color:var(--carta);font-weight:650;cursor:pointer;letter-spacing:.01em}
+.acao:disabled{opacity:.5}
+.acao.contorno{background:transparent;color:var(--tinta);border:1px solid var(--linha)}
+.acao.perigo{background:transparent;color:var(--alerta);border:1px solid var(--alerta)}
+.mini{padding:9px 12px;font-size:.85rem;border-radius:10px;width:auto}
+.botoes{display:flex;gap:8px;flex-wrap:wrap}
+
+/* ---------- ficha de jogo: a peça de identidade ---------- */
+.ficha{background:var(--carta);border:1px solid var(--linha);border-radius:var(--r);
+  padding:12px;margin-bottom:10px;position:relative;overflow:hidden}
+.ficha::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;
+  background:var(--seu)}
+.ficha.conferida::before{background:var(--acaso)}
+.ficha .topo{display:flex;justify-content:space-between;align-items:baseline;gap:8px;
+  margin-bottom:9px}
+.ficha .id{font-family:var(--mono);font-size:.68rem;color:var(--secundaria);
+  letter-spacing:.08em}
+.dezenas{display:flex;flex-wrap:wrap;gap:5px}
+.dz{font-family:var(--mono);font-size:.85rem;font-weight:600;min-width:34px;height:34px;
+  display:grid;place-items:center;border:1px solid var(--linha);border-radius:9px;
+  background:var(--fundo)}
+.dz.acertou{background:var(--acaso);border-color:var(--acaso);color:#fff}
+.dz.marcada{border-color:var(--seu);color:var(--seu)}
+
+/* ---------- faixa do acaso ---------- */
+.faixa{margin-top:11px}
+.faixa svg{display:block;width:100%;height:38px;overflow:visible}
+.legenda{display:flex;gap:14px;flex-wrap:wrap;font-size:.66rem;color:var(--secundaria);
+  font-family:var(--mono);margin-top:5px}
+.legenda i{display:inline-block;width:14px;height:0;vertical-align:middle;margin-right:4px}
+
+/* ---------- indicadores ---------- */
+.kpis{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:12px}
+.kpi{background:var(--carta);border:1px solid var(--linha);border-radius:var(--r);padding:12px}
+.kpi .rot{font-size:.62rem;text-transform:uppercase;letter-spacing:.1em;
+  color:var(--secundaria);font-weight:600}
+.kpi .val{font-family:var(--mono);font-size:1.45rem;font-weight:650;letter-spacing:-.02em;
+  margin-top:2px}
+.kpi .sub{font-size:.7rem;color:var(--secundaria);font-family:var(--mono)}
+
+/* ---------- avisos ---------- */
+.nota{border-left:3px solid var(--acaso);background:var(--carta);border-radius:0 10px 10px 0;
+  padding:10px 12px;font-size:.85rem;color:var(--secundaria);margin:10px 0}
+.nota strong{color:var(--tinta)}
+.nota.atencao{border-left-color:var(--alerta)}
+.selo{display:inline-block;font-family:var(--mono);font-size:.6rem;letter-spacing:.1em;
+  text-transform:uppercase;padding:2px 7px;border:1px solid var(--linha);border-radius:20px;
+  color:var(--secundaria)}
+.selo.ok{color:var(--acaso);border-color:var(--acaso)}
+.selo.seu{color:var(--seu);border-color:var(--seu)}
+.vazio{text-align:center;color:var(--secundaria);padding:34px 16px;font-size:.9rem}
+.metodo{border:1px solid var(--linha);border-radius:12px;padding:11px;margin-bottom:8px;
+  cursor:pointer;background:var(--carta)}
+.metodo[aria-checked="true"]{border-color:var(--tinta);box-shadow:inset 0 0 0 1px var(--tinta)}
+.metodo b{display:block;font-size:.94rem}
+.metodo span{display:block;font-size:.78rem;color:var(--secundaria);margin-top:2px}
+.prosa{font-size:.92rem}
+.prosa p{margin:.7em 0}
+.prosa ul{padding-left:1.15em;margin:.5em 0}
+.rolagem{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:.78rem}
+th{text-align:left;font-size:.6rem;text-transform:uppercase;letter-spacing:.08em;
+  color:var(--secundaria);padding:6px 7px;border-bottom:1px solid var(--linha)}
+td{padding:6px 7px;border-bottom:1px solid var(--trama)}
+.aviso-fixo{font-size:.72rem;color:var(--secundaria);text-align:center;margin:18px 0 4px;
+  line-height:1.45}
+@media (prefers-reduced-motion:no-preference){
+  .ficha{animation:entra .22s ease-out both}
+  @keyframes entra{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="cabeca">
+    <div class="marca">loto<span>lab</span></div>
+    <div class="botoes">
+      <button class="acao contorno mini" id="btn-tema" aria-label="Alternar tema">tema</button>
+    </div>
+  </div>
+</header>
+
+<main id="tela"></main>
+
+<nav id="abas" aria-label="Seções"></nav>
+
+<script>
+"use strict";
+
+/* ============================ dados base ============================ */
+/* Regras vigentes das modalidades. Confirme na fonte oficial antes de
+   qualquer uso sério — regras e preços mudam, e é por isso que ficam aqui,
+   em um só lugar, e não espalhadas pelo código. */
+const MODALIDADES = {
+  "mega-sena":  {nome:"Mega-Sena",   N:60,  k:6,  min:6,  max:20, base:1, preco:5.00,
+                 faixas:[6,5,4]},
+  "lotofacil":  {nome:"Lotofácil",   N:25,  k:15, min:15, max:20, base:1, preco:3.50,
+                 faixas:[15,14,13,12,11]},
+  "quina":      {nome:"Quina",       N:80,  k:5,  min:5,  max:15, base:1, preco:3.00,
+                 faixas:[5,4,3,2]},
+  "lotomania":  {nome:"Lotomania",   N:100, k:20, min:50, max:50, base:0, preco:3.00,
+                 faixas:[20,19,18,17,16,15,0]},
+  "dupla-sena": {nome:"Dupla Sena",  N:50,  k:6,  min:6,  max:15, base:1, preco:2.50,
+                 faixas:[6,5,4,3]},
+  "dia-de-sorte":{nome:"Dia de Sorte",N:31, k:7,  min:7,  max:15, base:1, preco:2.50,
+                 faixas:[7,6,5,4]},
+  "timemania":  {nome:"Timemania",   N:80,  k:7,  min:10, max:10, base:1, preco:3.50,
+                 faixas:[7,6,5,4,3]},
+  "mais-milionaria":{nome:"+Milionária",N:50,k:6, min:6,  max:12, base:1, preco:6.00,
+                 faixas:[6,5,4,3,2], trevos:{N:6,k:2,min:2,max:6}}
+};
+
+const METODOS = [
+  {id:"uniforme", nome:"Sorteio uniforme",
+   desc:"Cada combinação com a mesma chance. É a referência — e é tão boa quanto qualquer outra."},
+  {id:"rateio", nome:"Otimizado para rateio",
+   desc:"Evita padrões que muita gente marca (datas, sequências, desenhos). Mesma chance de acertar, menos gente para dividir se acertar."},
+  {id:"cobertura", nome:"Cobertura espalhada",
+   desc:"Distribui os jogos pelo volante para que se repitam pouco entre si. Não muda a chance de cada jogo."},
+  {id:"fechamento", nome:"Fechamento com garantia verificada",
+   desc:"A partir das dezenas que você marcar, monta jogos com piso de acertos comprovado por enumeração. Disponível na Lotofácil."}
+];
+
+/* ============================ estado ============================ */
+const S = {
+  aba:"gerar", modalidade:"lotofacil", metodo:"rateio", quantidade:3,
+  tamanho:null, dezenasFechamento:[], jFechamento:14, garantia:13,
+  jogos:[], resultados:[], tema:"claro", ultimoLote:[]
+};
+
+/* Persistência tolerante: se o navegador bloquear, o app segue funcionando
+   na sessão em vez de quebrar. */
+const Guardar = {
+  ler(chave, padrao){
+    try{ const v = localStorage.getItem("lotolab:"+chave);
+      return v ? JSON.parse(v) : padrao; }catch(e){ return padrao; }
+  },
+  gravar(chave, valor){
+    try{ localStorage.setItem("lotolab:"+chave, JSON.stringify(valor)); return true; }
+    catch(e){ return false; }
+  }
+};
+
+/* ============================ utilidades ============================ */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c =>
+  ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const nf = (v,d=2) => Number(v).toLocaleString("pt-BR",
+  {minimumFractionDigits:d, maximumFractionDigits:d});
+const inf = v => Number(v).toLocaleString("pt-BR");
+const brl = v => Number(v).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+const pad = n => String(n).padStart(2,"0");
+const hoje = () => new Date().toISOString().slice(0,10);
+
+function combinacoes(n,k){
+  if(k<0||k>n) return 0;
+  let r = 1;
+  for(let i=1;i<=k;i++) r = r*(n-k+i)/i;
+  return Math.round(r);
+}
+function universo(m){
+  const c = MODALIDADES[m];
+  return Array.from({length:c.N}, (_,i)=> i + c.base);
+}
+function embaralhar(a, rnd=Math.random){
+  const x = a.slice();
+  for(let i=x.length-1;i>0;i--){ const j = Math.floor(rnd()*(i+1)); [x[i],x[j]]=[x[j],x[i]]; }
+  return x;
+}
+function sortear(m, quantos){
+  return embaralhar(universo(m)).slice(0, quantos).sort((a,b)=>a-b);
+}
+function tamanhoPadrao(m){ return S.tamanho || MODALIDADES[m].min; }
+
+/* ============================ modelo de rateio ============================
+   Porta do módulo `premio/impopularidade.py`. Pontua o quanto uma combinação
+   PARECE escolhida por gente. Combinação que parece escolhida por gente é
+   marcada por mais gente — e divide o prêmio com mais gente.
+   Isto NÃO altera a chance de a combinação ser sorteada.               */
+const PESOS = {
+  ate31:1.20, ate12:0.45, consecutivos:0.55, somaCentral:0.40,
+  espacamentoRegular:0.50, mesmaLinha:0.60, mesmaColuna:0.60,
+  terminacoesIguais:0.35, contem7:0.15
+};
+const GRADE = {"mega-sena":10, "lotofacil":5, "quina":10, "lotomania":10,
+               "dupla-sena":10, "dia-de-sorte":7, "timemania":10, "mais-milionaria":10};
+
+function caracteristicas(dez, m){
+  const c = MODALIDADES[m], n = dez.length, cols = GRADE[m] || 10;
+  const ord = dez.slice().sort((a,b)=>a-b);
+  const linhas = {}, colunas = {}, finais = {};
+  let consec = 0;
+  ord.forEach((d,i)=>{
+    const p = d - c.base;
+    linhas[Math.floor(p/cols)] = (linhas[Math.floor(p/cols)]||0)+1;
+    colunas[p%cols] = (colunas[p%cols]||0)+1;
+    finais[d%10] = (finais[d%10]||0)+1;
+    if(i>0 && ord[i]-ord[i-1]===1) consec++;
+  });
+  const difs = ord.slice(1).map((d,i)=> d-ord[i]);
+  const media = difs.reduce((a,b)=>a+b,0)/(difs.length||1);
+  const desvio = Math.sqrt(difs.reduce((a,b)=>a+(b-media)**2,0)/(difs.length||1));
+  const soma = ord.reduce((a,b)=>a+b,0);
+  const somaMedia = n*(c.N + 2*c.base - 1)/2;
+  const somaDP = Math.sqrt(n*(c.N+1)*(c.N-n)/12) || 1;
+  return {
+    ate31: ord.filter(d=>d<=31).length/n,
+    ate12: ord.filter(d=>d<=12).length/n,
+    consecutivos: consec/Math.max(n-1,1),
+    somaCentral: Math.exp(-0.5*((soma-somaMedia)/somaDP)**2),
+    espacamentoRegular: Math.max(0, Math.min(1, 1 - desvio/(media||1))),
+    mesmaLinha: Math.max(...Object.values(linhas))/n,
+    mesmaColuna: Math.max(...Object.values(colunas))/n,
+    terminacoesIguais: Math.max(...Object.values(finais))/n,
+    contem7: ord.includes(7) ? 1 : 0
+  };
+}
+
+/* Pesos calibrados, se houver. Gerados por
+   `python manage.py calibrar --modalidade X --preco Y --exportar app/pesos.json`
+   a partir dos ganhadores publicados pela Caixa. Sem o arquivo, valem as
+   hipóteses declaradas acima — e o app diz qual dos dois está em uso. */
+let CALIBRACAO = null;
+function pesosVigentes(){
+  return (CALIBRACAO && CALIBRACAO.pesos_app) ? CALIBRACAO.pesos_app : PESOS;
+}
+
+let REFERENCIA = {};
+function referencia(m){
+  if(REFERENCIA[m]) return REFERENCIA[m];
+  const n = tamanhoPadrao(m), soma = {}, amostras = 900;
+  for(let i=0;i<amostras;i++){
+    const c = caracteristicas(sortear(m,n), m);
+    for(const k in c) soma[k] = (soma[k]||0) + c[k];
+  }
+  for(const k in soma) soma[k] /= amostras;
+  REFERENCIA[m] = soma;
+  return soma;
+}
+
+function escorePopularidade(dez, m){
+  const c = caracteristicas(dez, m), ref = referencia(m), pesos = pesosVigentes();
+  let e = 0;
+  for(const k in pesos) e += pesos[k] * ((c[k]||0) - (ref[k]||0));
+  return e;
+}
+
+function observacoes(dez, m){
+  const c = caracteristicas(dez, m), ref = referencia(m), obs = [];
+  if(c.ate31 > ref.ate31 + 0.15) obs.push("concentrada em 1–31, faixa das datas de nascimento");
+  if(c.consecutivos > 0.30) obs.push("contém sequência consecutiva");
+  if(Math.max(c.mesmaLinha,c.mesmaColuna) > 0.55) obs.push("forma desenho no volante");
+  if(c.espacamentoRegular > 0.82) obs.push("espaçamento quase constante");
+  if(c.somaCentral > 0.92) obs.push("soma exatamente na média");
+  if(!obs.length) obs.push("sem padrão humano evidente");
+  return obs;
+}
+
+/* ============================ geradores ============================ */
+function gerarUniforme(m, quantos, tam){
+  return Array.from({length:quantos}, ()=> sortear(m, tam));
+}
+
+function gerarRateio(m, quantos, tam){
+  /* Sorteia candidatas UNIFORMEMENTE e fica com as de menor popularidade.
+     Nenhuma dezena é privilegiada em momento nenhum: o filtro age sobre o
+     rateio esperado, nunca sobre a chance de acerto. */
+  const candidatas = Math.min(1400, 220*quantos);
+  const lista = [];
+  for(let i=0;i<candidatas;i++){
+    const j = sortear(m, tam);
+    lista.push({j, e: escorePopularidade(j, m)});
+  }
+  lista.sort((a,b)=> a.e - b.e);
+  const saida = [], vistos = new Set();
+  for(const c of lista){
+    const chave = c.j.join("-");
+    if(vistos.has(chave)) continue;
+    vistos.add(chave); saida.push(c.j);
+    if(saida.length === quantos) break;
+  }
+  return saida;
+}
+
+function gerarCobertura(m, quantos, tam){
+  /* Maximiza a distância entre os jogos do lote: escolhe, entre candidatas
+     uniformes, a que menos repete dezenas já usadas. Reduz sobreposição entre
+     os seus jogos; não altera a chance de nenhum deles. */
+  const saida = [];
+  for(let q=0;q<quantos;q++){
+    let melhor = null, melhorCusto = Infinity;
+    for(let i=0;i<260;i++){
+      const cand = sortear(m, tam);
+      let custo = 0;
+      for(const j of saida) custo += cand.filter(d=> j.includes(d)).length ** 2;
+      custo += escorePopularidade(cand, m) * 0.5;
+      if(custo < melhorCusto){ melhorCusto = custo; melhor = cand; }
+    }
+    saida.push(melhor);
+  }
+  return saida;
+}
+
+/* Fechamento: cobertura combinatória com garantia VERIFICADA por enumeração.
+   Nunca exibimos um piso que não conseguimos provar. */
+function combinacoesDe(arr, k){
+  const saida = [], atual = [];
+  (function rec(inicio){
+    if(atual.length === k){ saida.push(atual.slice()); return; }
+    for(let i=inicio;i<arr.length;i++){ atual.push(arr[i]); rec(i+1); atual.pop(); }
+  })(0);
+  return saida;
+}
+
+function verificarGarantia(bilhetes, dezenas, j){
+  const idx = new Map(dezenas.map((d,i)=>[d,i]));
+  const masc = bilhetes.map(b=>{ let m=0; b.forEach(d=> m |= (1 << idx.get(d))); return m; });
+  const cenarios = combinacoesDe(dezenas.map((_,i)=>i), j);
+  let pior = Infinity;
+  for(const cen of cenarios){
+    let mc = 0; cen.forEach(i => mc |= (1 << i));
+    let melhor = 0;
+    for(const mb of masc){
+      let x = mb & mc, c = 0;
+      while(x){ x &= x-1; c++; }
+      if(c > melhor) melhor = c;
+    }
+    if(melhor < pior) pior = melhor;
+  }
+  return pior;
+}
+
+function gerarFechamento(m, dezenas, j, garantia){
+  const c = MODALIDADES[m], tam = c.k;
+  dezenas = dezenas.slice().sort((a,b)=>a-b);
+  if(dezenas.length < tam) throw new Error(`marque ao menos ${tam} dezenas`);
+  if(garantia > Math.min(tam, j)) throw new Error(
+    `com ${j} das suas dezenas sorteadas, o máximo alcançável é ${Math.min(tam,j)} acertos`);
+
+  const idx = dezenas.map((_,i)=>i);
+  const candidatos = combinacoesDe(idx, tam).map(c=>{ let m2=0; c.forEach(i=> m2 |= (1<<i)); return m2; });
+  const cenarios = combinacoesDe(idx, j).map(c=>{ let m2=0; c.forEach(i=> m2 |= (1<<i)); return m2; });
+  if(candidatos.length * cenarios.length > 12e6)
+    throw new Error("combinação pesada demais para o celular; reduza as dezenas marcadas");
+
+  const conta = x => { let c=0; while(x){ x &= x-1; c++; } return c; };
+  const cobre = candidatos.map(cd => cenarios.map(ce => conta(cd & ce) >= garantia));
+  if(!cenarios.every((_,s)=> cobre.some(linha => linha[s])))
+    throw new Error("garantia inalcançável com estas dezenas; reduza a garantia");
+
+  const descobertos = new Array(cenarios.length).fill(true);
+  const escolhidos = [];
+  let restantes = cenarios.length;
+  while(restantes > 0 && escolhidos.length < 400){
+    let melhor = -1, ganho = 0;
+    for(let i=0;i<candidatos.length;i++){
+      let g = 0;
+      for(let s=0;s<descobertos.length;s++) if(descobertos[s] && cobre[i][s]) g++;
+      if(g > ganho){ ganho = g; melhor = i; }
+    }
+    if(melhor < 0) break;
+    escolhidos.push(melhor);
+    for(let s=0;s<descobertos.length;s++)
+      if(descobertos[s] && cobre[melhor][s]){ descobertos[s] = false; restantes--; }
+  }
+  const bilhetes = escolhidos.map(i =>
+    dezenas.filter((_,p)=> candidatos[i] & (1<<p)));
+  return {bilhetes, garantiaVerificada: verificarGarantia(bilhetes, dezenas, j),
+          piso: Math.max(0, tam + c.k - c.N)};
+}
+
+/* ============================ faixa do acaso ============================
+   Peça central da interface: onde uma escolha aleatória teria caído.       */
+function faixaAcaso(observado, esperado, desvio, max){
+  const L=360, H=38, p=10;
+  const amp = Math.max(desvio*3, Math.abs(observado-esperado)*1.4, 1);
+  const min = Math.max(0, esperado-amp), sup = Math.min(max ?? esperado+amp, esperado+amp);
+  const x = v => p + (Math.min(Math.max(v,min),sup)-min)/((sup-min)||1)*(L-2*p);
+  const fora = desvio>0 && Math.abs(observado-esperado) > 2*desvio;
+  return `<div class="faixa"><svg viewBox="0 0 ${L} ${H}" role="img"
+    aria-label="você fez ${nf(observado,2)}, o acaso faria ${nf(esperado,2)}">
+    <rect x="${x(esperado-2*desvio)}" y="11" width="${Math.max(x(esperado+2*desvio)-x(esperado-2*desvio),2)}"
+      height="15" rx="3" fill="var(--acaso)" opacity=".15"/>
+    <line x1="${p}" y1="18.5" x2="${L-p}" y2="18.5" stroke="var(--linha)"/>
+    <line x1="${x(esperado)}" y1="7" x2="${x(esperado)}" y2="30" stroke="var(--acaso)"
+      stroke-width="1.6" stroke-dasharray="3 3"/>
+    <rect x="${x(observado)-1.6}" y="5" width="3.2" height="27" rx="1.6"
+      fill="${fora?"var(--alerta)":"var(--seu)"}"/>
+  </svg>
+  <div class="legenda">
+    <span><i style="border-top:3px solid ${fora?"var(--alerta)":"var(--seu)"}"></i>você ${nf(observado,2)}</span>
+    <span><i style="border-top:2px dashed var(--acaso)"></i>acaso ${nf(esperado,2)}</span>
+    <span><i style="border-top:7px solid var(--acaso);opacity:.3"></i>faixa normal</span>
+  </div></div>`;
+}
+
+/* ============================ telas ============================ */
+const T = {};
+
+T.gerar = () => {
+  const c = MODALIDADES[S.modalidade];
+  const tam = tamanhoPadrao(S.modalidade);
+  const total = combinacoes(c.N, c.k);
+  const cobertas = combinacoes(tam, c.k);
+  const custoUnit = cobertas * c.preco;
+  const ehFechamento = S.metodo === "fechamento";
+
+  return `
+  <div class="kpis">
+    <div class="kpi"><div class="rot">chance por jogo</div>
+      <div class="val" style="font-size:1.05rem">1 em ${inf(Math.round(total/Math.max(cobertas,1)))}</div>
+      <div class="sub">igual para toda combinação</div></div>
+    <div class="kpi"><div class="rot">custo de ${S.quantidade} jogo${S.quantidade>1?"s":""}</div>
+      <div class="val" style="font-size:1.05rem">${brl(custoUnit*S.quantidade)}</div>
+      <div class="sub">${nf(c.preco,2)} × ${inf(cobertas)} × ${S.quantidade}</div></div>
+  </div>
+
+  <div class="carta">
+    <label class="campo"><label>modalidade</label>
+      <select id="g-mod">${Object.entries(MODALIDADES).map(([k,v])=>
+        `<option value="${k}" ${k===S.modalidade?"selected":""}>${esc(v.nome)}</option>`).join("")}</select>
+    </label>
+    <div class="linha2">
+      <label class="campo"><label>dezenas por jogo</label>
+        <select id="g-tam">${Array.from({length:c.max-c.min+1},(_,i)=>c.min+i).map(v=>
+          `<option value="${v}" ${v===tam?"selected":""}>${v}</option>`).join("")}</select></label>
+      <label class="campo"><label>quantos jogos</label>
+        <input id="g-qtd" type="number" min="1" max="60" value="${S.quantidade}"></label>
+    </div>
+  </div>
+
+  <h2 style="margin:16px 0 8px">como montar</h2>
+  ${METODOS.map(mt=>{
+    const indisp = mt.id==="fechamento" && S.modalidade!=="lotofacil";
+    return `<div class="metodo" role="radio" tabindex="0" data-metodo="${mt.id}"
+      aria-checked="${S.metodo===mt.id}" ${indisp?'style="opacity:.45"':""}>
+      <b>${esc(mt.nome)}${indisp?" — só na Lotofácil":""}</b>
+      <span>${esc(mt.desc)}</span></div>`;
+  }).join("")}
+
+  ${ehFechamento && S.modalidade==="lotofacil" ? `
+  <div class="carta">
+    <label class="campo"><label>suas dezenas (separe por espaço)</label>
+      <input id="g-dez" type="text" inputmode="numeric"
+        value="${S.dezenasFechamento.length?S.dezenasFechamento.join(" "):"1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18"}"></label>
+    <div class="linha2">
+      <label class="campo"><label>se saírem</label>
+        <input id="g-j" type="number" min="1" max="20" value="${S.jFechamento}"></label>
+      <label class="campo"><label>garantir acertos</label>
+        <input id="g-gar" type="number" min="1" max="15" value="${S.garantia}"></label>
+    </div>
+    <div class="nota">O piso é verificado testando <strong>todos</strong> os cenários
+    possíveis. Se não der para provar, o app avisa em vez de prometer.</div>
+  </div>` : ""}
+
+  <button class="acao" id="g-go">Gerar ${S.quantidade} jogo${S.quantidade>1?"s":""}</button>
+
+  <div id="g-saida"></div>
+
+  ${S.metodo==="rateio" ? `<div class="nota">
+    <strong>Pesos em uso:</strong> ${CALIBRACAO
+      ? `calibrados com ${inf(CALIBRACAO.n_concursos)} concursos reais (R² ${nf(CALIBRACAO.r2,3)}), medindo o que o público de fato marca.`
+      : `hipóteses declaradas, ainda não medidas. Para calibrar com os ganhadores publicados pela Caixa, gere <code>pesos.json</code> na plataforma e coloque ao lado do app.`}
+  </div>` : ""}
+
+  <div class="nota atencao"><strong>O que nenhum método faz.</strong> Nenhuma opção acima
+  aumenta a chance de acertar — ela é fixa e igual para toda combinação válida. O que a
+  opção de rateio muda é <em>com quantas pessoas você dividiria</em> o prêmio se acertasse.
+  A de cobertura muda o quanto seus jogos se repetem entre si. O fechamento garante um
+  piso <em>caso</em> um número mínimo das suas dezenas saia.</div>`;
+};
+
+T.jogos = () => {
+  if(!S.jogos.length) return `<div class="vazio">Nenhum jogo salvo ainda.<br>
+    Gere jogos na primeira aba e toque em <strong>Salvar</strong>.</div>`;
+  const porLote = {};
+  S.jogos.forEach(j => (porLote[j.lote] = porLote[j.lote] || []).push(j));
+  return Object.entries(porLote).reverse().map(([lote, jogos])=>{
+    const p = jogos[0];
+    return `<h2 style="margin:14px 0 8px">${esc(MODALIDADES[p.modalidade].nome)} ·
+      ${esc(p.data)} · ${esc(p.metodo)}</h2>
+    ${jogos.map(j=>ficha(j)).join("")}
+    <div class="botoes" style="margin-bottom:16px">
+      <button class="acao contorno mini" data-copiar="${esc(lote)}">Copiar lote</button>
+      <button class="acao perigo mini" data-apagar="${esc(lote)}">Apagar lote</button>
+    </div>`;
+  }).join("") + `<div class="nota">Os jogos ficam guardados só neste aparelho. Nada é
+  enviado para lugar nenhum.</div>`;
+};
+
+function ficha(j){
+  const c = MODALIDADES[j.modalidade];
+  const conferencias = j.conferencias || [];
+  const ultima = conferencias[conferencias.length-1];
+  return `<div class="ficha ${conferencias.length?"conferida":""}">
+    <div class="topo">
+      <span class="id">#${esc(j.id)}</span>
+      ${conferencias.length
+        ? `<span class="selo ok">${conferencias.length} conferência${conferencias.length>1?"s":""}</span>`
+        : `<span class="selo seu">não conferido</span>`}
+    </div>
+    <div class="dezenas">${j.dezenas.map(d=>{
+      const acertou = ultima && ultima.dezenas.includes(d);
+      return `<span class="dz ${acertou?"acertou":""}">${pad(d)}</span>`;
+    }).join("")}</div>
+    ${ultima ? `<div style="margin-top:9px;font-size:.82rem;color:var(--secundaria)">
+      concurso ${esc(ultima.concurso)}: <strong style="color:var(--tinta)">${ultima.acertos} acerto${ultima.acertos===1?"":"s"}</strong>
+      — o acaso faria ${nf(esperadoAcertos(j.modalidade, j.dezenas.length),2)}</div>` : ""}
+  </div>`;
+}
+
+function esperadoAcertos(m, tamanho){
+  const c = MODALIDADES[m];
+  return c.k * tamanho / c.N;
+}
+function desvioAcertos(m, tamanho){
+  const c = MODALIDADES[m], N=c.N, K=c.k, n=tamanho;
+  const v = n*(K/N)*(1-K/N)*((N-n)/(N-1));
+  return Math.sqrt(Math.max(v,1e-9));
+}
+
+T.conferir = () => {
+  const c = MODALIDADES[S.modalidade];
+  const naoConferidos = S.jogos.filter(j=>j.modalidade===S.modalidade).length;
+  return `<div class="carta">
+    <label class="campo"><label>modalidade</label>
+      <select id="c-mod">${Object.entries(MODALIDADES).map(([k,v])=>
+        `<option value="${k}" ${k===S.modalidade?"selected":""}>${esc(v.nome)}</option>`).join("")}</select></label>
+    <div class="linha2">
+      <label class="campo"><label>concurso</label>
+        <input id="c-num" type="number" inputmode="numeric" placeholder="ex.: 3421"></label>
+      <label class="campo"><label>data</label>
+        <input id="c-data" type="date" value="${hoje()}"></label>
+    </div>
+    <label class="campo"><label>dezenas sorteadas (${c.k} números, separados por espaço)</label>
+      <input id="c-dez" type="text" inputmode="numeric" placeholder="ex.: 02 07 11 19 23 41"></label>
+    <button class="acao" id="c-go">Conferir ${naoConferidos} jogo${naoConferidos===1?"":"s"} salvos</button>
+  </div>
+  <div id="c-saida"></div>
+  <div class="nota">Digite o resultado oficial publicado pela Caixa. O app não inventa
+  resultado e não busca nada sozinho — o que você digita é o que ele usa.</div>
+  ${S.resultados.length ? `<h2 style="margin:18px 0 8px">concursos já registrados</h2>
+    <div class="rolagem"><table><thead><tr><th>concurso</th><th>data</th><th>dezenas</th></tr></thead>
+    <tbody>${S.resultados.slice().reverse().slice(0,20).map(r=>`<tr>
+      <td>${esc(r.concurso)}</td><td>${esc(r.data)}</td>
+      <td>${r.dezenas.map(pad).join(" ")}</td></tr>`).join("")}</tbody></table></div>` : ""}`;
+};
+
+T.placar = () => {
+  const conf = [];
+  S.jogos.forEach(j => (j.conferencias||[]).forEach(cf =>
+    conf.push({...cf, modalidade:j.modalidade, tamanho:j.dezenas.length, metodo:j.metodo})));
+  if(!conf.length) return `<div class="vazio">Nenhuma conferência ainda.<br>
+    Salve jogos, confira contra os concursos e o placar aparece aqui.</div>`;
+
+  const total = conf.length;
+  const somaAcertos = conf.reduce((a,b)=>a+b.acertos,0);
+  const media = somaAcertos/total;
+  const esperado = conf.reduce((a,b)=> a + esperadoAcertos(b.modalidade, b.tamanho), 0)/total;
+  const dp = Math.sqrt(conf.reduce((a,b)=> a + desvioAcertos(b.modalidade,b.tamanho)**2, 0))/total;
+  const melhor = conf.reduce((a,b)=> b.acertos>a.acertos ? b : a);
+
+  const porMetodo = {};
+  conf.forEach(cf=>{
+    const m = porMetodo[cf.metodo] = porMetodo[cf.metodo] || {n:0, acertos:0, esperado:0};
+    m.n++; m.acertos += cf.acertos; m.esperado += esperadoAcertos(cf.modalidade, cf.tamanho);
+  });
+
+  const dentro = Math.abs(media - esperado) <= 2*Math.max(dp,1e-9);
+
+  return `<div class="kpis">
+    <div class="kpi"><div class="rot">jogos conferidos</div><div class="val">${inf(total)}</div>
+      <div class="sub">em ${inf(new Set(conf.map(c=>c.concurso)).size)} concursos</div></div>
+    <div class="kpi"><div class="rot">melhor resultado</div><div class="val">${melhor.acertos}</div>
+      <div class="sub">concurso ${esc(melhor.concurso)}</div></div>
+  </div>
+  <div class="carta">
+    <div class="rot" style="font-size:.62rem;text-transform:uppercase;letter-spacing:.1em;
+      color:var(--secundaria);font-weight:600">acertos médios por jogo</div>
+    <div class="val num" style="font-size:1.9rem;font-weight:650;margin-top:2px">${nf(media,3)}</div>
+    ${faixaAcaso(media, esperado, Math.max(dp,0.02))}
+    <div class="nota ${dentro?"":"atencao"}" style="margin-bottom:0">
+      ${dentro
+        ? `Seus jogos estão <strong>dentro da faixa do acaso</strong>. É o resultado esperado: em um sorteio honesto nenhum método muda essa média.`
+        : `Sua média está fora da faixa normal. Com poucas conferências isso acontece por variação comum — com o tempo tende a voltar para a linha do acaso.`}
+    </div>
+  </div>
+  <h2 style="margin:18px 0 8px">por método</h2>
+  <div class="rolagem"><table>
+    <thead><tr><th>método</th><th>jogos</th><th>média</th><th>acaso</th><th>diferença</th></tr></thead>
+    <tbody>${Object.entries(porMetodo).map(([k,v])=>{
+      const m = v.acertos/v.n, e = v.esperado/v.n;
+      return `<tr><td>${esc(k)}</td><td>${v.n}</td><td>${nf(m,3)}</td><td>${nf(e,3)}</td>
+        <td style="color:${m-e>=0?"var(--acaso)":"var(--alerta)"}">${m-e>=0?"+":""}${nf(m-e,3)}</td></tr>`;
+    }).join("")}</tbody></table></div>
+  <div class="nota">Esta tabela é o teste mais honesto que o app faz com você: se algum
+  método tivesse vantagem real, a diferença cresceria de forma consistente conforme os
+  concursos passam. O que se observa, com amostra suficiente, é oscilação em torno de zero.</div>`;
+};
+
+T.entender = () => `<div class="prosa">
+  <h3>O que este app faz — e o que não faz</h3>
+  <p><strong>Não aumenta a chance de você ganhar.</strong> Nenhum app faz isso, e quem
+  disser que faz está vendendo algo que não existe. Em um sorteio honesto, cada concurso é
+  independente do anterior: as bolas não têm memória, então o histórico não carrega
+  informação sobre o próximo resultado.</p>
+  <p>Na Mega-Sena, a chance de uma aposta simples é de 1 em ${inf(combinacoes(60,6))}.
+  Na Lotofácil, 1 em ${inf(combinacoes(25,15))}. Esses números não se movem com
+  frequência, atraso, primos, Fibonacci ou inteligência artificial.</p>
+
+  <h3 style="margin-top:20px">Três coisas que a matemática faz de verdade</h3>
+  <ul>
+    <li><strong>Rateio.</strong> O prêmio é dividido entre os acertadores. Muita gente marca
+    datas de nascimento, sequências e desenhos no volante. Escolher combinações fora desses
+    padrões não muda sua chance de acertar, mas aumenta o quanto sobraria para você se
+    acertasse.</li>
+    <li><strong>Fechamento.</strong> Combinatória de cobertura: garante um piso de acertos
+    <em>caso</em> um número mínimo das suas dezenas seja sorteado. O app verifica cada
+    garantia testando todos os cenários — e recusa a mostrar piso que não conseguiu provar.</li>
+    <li><strong>Custo e cobertura.</strong> Marcar mais dezenas aumenta a cobertura e o custo
+    na mesma proporção. A chance por real gasto é idêntica em qualquer tamanho de aposta.
+    O que muda é a variância: você ganha mais vezes, valores menores.</li>
+  </ul>
+
+  <h3 style="margin-top:20px">Por que o placar existe</h3>
+  <p>A aba de placar compara seus acertos acumulados com o que uma escolha aleatória
+  produziria. É a parte mais útil do app: em vez de você acreditar em mim, você acompanha
+  os seus próprios números ao longo dos concursos e vê o resultado por conta própria.</p>
+
+  <h3 style="margin-top:20px">Uso responsável</h3>
+  <p>Loteria é gasto de entretenimento, não investimento. Jogue apenas o que puder perder
+  sem falta nenhuma, e não tente compensar perdas anteriores — essa é a via pela qual o
+  hábito costuma sair do controle.</p>
+  <p>Se o jogo deixou de ser diversão para você ou alguém próximo, procure apoio gratuito
+  e confidencial:</p>
+  <ul>
+    <li><strong>Jogadores Anônimos</strong> — jogadoresanonimos.org.br</li>
+    <li><strong>CVV</strong> — 188, ligação gratuita, 24 horas</li>
+  </ul>
+
+  <h3 style="margin-top:20px">Sobre os dados</h3>
+  <p>Tudo fica no seu aparelho. O app não envia jogos, não coleta dados e não pede cadastro.
+  Os resultados dos concursos são digitados por você a partir da publicação oficial da
+  Caixa — o app não inventa resultado.</p>
+  <p>Regras e preços das modalidades mudam com o tempo. Os valores usados aqui são de
+  referência: confirme na fonte oficial antes de usar para contas sérias.</p>
+</div>`;
+
+/* ============================ ações ============================ */
+function acoes(){
+  const mod = $("#g-mod");
+  if(mod) mod.onchange = e => { S.modalidade = e.target.value; S.tamanho = null;
+    REFERENCIA = {}; pintar(); };
+  const tam = $("#g-tam");
+  if(tam) tam.onchange = e => { S.tamanho = +e.target.value; REFERENCIA = {}; pintar(); };
+  const qtd = $("#g-qtd");
+  if(qtd) qtd.oninput = e => { S.quantidade = Math.max(1, Math.min(60, +e.target.value||1)); };
+
+  document.querySelectorAll("[data-metodo]").forEach(el=>{
+    const escolher = () => {
+      if(el.dataset.metodo==="fechamento" && S.modalidade!=="lotofacil") return;
+      S.metodo = el.dataset.metodo; pintar();
+    };
+    el.onclick = escolher;
+    el.onkeydown = ev => { if(ev.key==="Enter"||ev.key===" "){ ev.preventDefault(); escolher(); } };
+  });
+
+  const go = $("#g-go");
+  if(go) go.onclick = () => {
+    const saida = $("#g-saida");
+    const c = MODALIDADES[S.modalidade], t = tamanhoPadrao(S.modalidade);
+    go.disabled = true; go.textContent = "montando…";
+    setTimeout(()=>{
+      try{
+        let jogos, extra = "";
+        if(S.metodo === "fechamento"){
+          const dez = ($("#g-dez").value||"").split(/[\s,;]+/).filter(Boolean).map(Number);
+          S.dezenasFechamento = dez;
+          S.jFechamento = +$("#g-j").value; S.garantia = +$("#g-gar").value;
+          const r = gerarFechamento(S.modalidade, dez, S.jFechamento, S.garantia);
+          jogos = r.bilhetes;
+          extra = `<div class="kpis" style="margin-top:12px">
+            <div class="kpi"><div class="rot">garantia verificada</div>
+              <div class="val">${r.garantiaVerificada}</div>
+              <div class="sub">se ${S.jFechamento} das suas saírem</div></div>
+            <div class="kpi"><div class="rot">custo</div>
+              <div class="val" style="font-size:1.05rem">${brl(jogos.length*c.preco)}</div>
+              <div class="sub">${jogos.length} jogos, volante inteiro: ${inf(combinacoes(dez.length,c.k))}</div></div>
+          </div>`;
+        } else if(S.metodo === "rateio"){
+          jogos = gerarRateio(S.modalidade, S.quantidade, t);
+        } else if(S.metodo === "cobertura"){
+          jogos = gerarCobertura(S.modalidade, S.quantidade, t);
+        } else {
+          jogos = gerarUniforme(S.modalidade, S.quantidade, t);
+        }
+
+        S.ultimoLote = jogos.map((dez,i)=>({
+          id: `${Date.now().toString(36)}-${i}`, dezenas: dez,
+          modalidade: S.modalidade, metodo: S.metodo, data: hoje(),
+          lote: `L${Date.now().toString(36)}`, conferencias: []
+        }));
+        const loteId = S.ultimoLote[0].lote;
+        S.ultimoLote.forEach(j => j.lote = loteId);
+
+        saida.innerHTML = extra + S.ultimoLote.map(j=>`
+          <div class="ficha">
+            <div class="topo"><span class="id">${esc(METODOS.find(m=>m.id===j.metodo).nome)}</span>
+              <span class="selo">${j.dezenas.length} dezenas</span></div>
+            <div class="dezenas">${j.dezenas.map(d=>`<span class="dz marcada">${pad(d)}</span>`).join("")}</div>
+            ${S.metodo==="rateio" ? `<div style="margin-top:8px;font-size:.78rem;color:var(--secundaria)">
+              ${esc(observacoes(j.dezenas, S.modalidade).join(" · "))}</div>` : ""}
+          </div>`).join("") + `
+          <button class="acao" id="g-salvar" style="margin-top:6px">Salvar ${S.ultimoLote.length} jogo${S.ultimoLote.length>1?"s":""}</button>`;
+
+        $("#g-salvar").onclick = () => {
+          S.jogos = S.jogos.concat(S.ultimoLote);
+          Guardar.gravar("jogos", S.jogos);
+          S.aba = "jogos"; pintar();
+        };
+      }catch(e){
+        saida.innerHTML = `<div class="nota atencao">${esc(e.message)}</div>`;
+      }
+      go.disabled = false;
+      go.textContent = `Gerar ${S.quantidade} jogo${S.quantidade>1?"s":""}`;
+    }, 20);
+  };
+
+  document.querySelectorAll("[data-apagar]").forEach(b => b.onclick = () => {
+    if(!confirm("Apagar este lote de jogos?")) return;
+    S.jogos = S.jogos.filter(j => j.lote !== b.dataset.apagar);
+    Guardar.gravar("jogos", S.jogos); pintar();
+  });
+  document.querySelectorAll("[data-copiar]").forEach(b => b.onclick = async () => {
+    const texto = S.jogos.filter(j=>j.lote===b.dataset.copiar)
+      .map(j => j.dezenas.map(pad).join(" ")).join("\n");
+    try{ await navigator.clipboard.writeText(texto); b.textContent = "copiado"; }
+    catch(e){ b.textContent = "não deu para copiar"; }
+    setTimeout(()=> b.textContent = "Copiar lote", 1600);
+  });
+
+  const cmod = $("#c-mod");
+  if(cmod) cmod.onchange = e => { S.modalidade = e.target.value; pintar(); };
+
+  const cgo = $("#c-go");
+  if(cgo) cgo.onclick = () => {
+    const saida = $("#c-saida");
+    const c = MODALIDADES[S.modalidade];
+    const dezenas = ($("#c-dez").value||"").split(/[\s,;-]+/).filter(Boolean).map(Number);
+    const concurso = $("#c-num").value.trim();
+    const data = $("#c-data").value;
+    if(dezenas.length !== c.k){
+      saida.innerHTML = `<div class="nota atencao">A ${esc(c.nome)} sorteia ${c.k} dezenas;
+        você digitou ${dezenas.length}.</div>`; return;
+    }
+    if(new Set(dezenas).size !== dezenas.length){
+      saida.innerHTML = `<div class="nota atencao">Há dezenas repetidas no resultado.</div>`; return;
+    }
+    const fora = dezenas.filter(d => d < c.base || d > c.N + c.base - 1);
+    if(fora.length){
+      saida.innerHTML = `<div class="nota atencao">Fora do intervalo permitido: ${fora.join(", ")}.</div>`;
+      return;
+    }
+    if(!concurso){
+      saida.innerHTML = `<div class="nota atencao">Informe o número do concurso.</div>`; return;
+    }
+
+    const alvo = S.jogos.filter(j => j.modalidade === S.modalidade);
+    if(!alvo.length){
+      saida.innerHTML = `<div class="nota atencao">Nenhum jogo salvo desta modalidade.</div>`;
+      return;
+    }
+    let soma = 0, somaEsperado = 0;
+    alvo.forEach(j=>{
+      j.conferencias = (j.conferencias||[]).filter(cf => cf.concurso !== concurso);
+      const acertos = j.dezenas.filter(d => dezenas.includes(d)).length;
+      j.conferencias.push({concurso, data, dezenas, acertos});
+      soma += acertos; somaEsperado += esperadoAcertos(j.modalidade, j.dezenas.length);
+    });
+    S.resultados = S.resultados.filter(r => !(r.concurso===concurso && r.modalidade===S.modalidade));
+    S.resultados.push({concurso, data, dezenas, modalidade:S.modalidade});
+    Guardar.gravar("jogos", S.jogos); Guardar.gravar("resultados", S.resultados);
+
+    const media = soma/alvo.length, esperado = somaEsperado/alvo.length;
+    const dp = desvioAcertos(S.modalidade, alvo[0].dezenas.length)/Math.sqrt(alvo.length);
+    const premiou = alvo.filter(j => c.faixas.includes(
+      j.conferencias[j.conferencias.length-1].acertos)).length;
+
+    saida.innerHTML = `<div class="carta">
+      <h3>Concurso ${esc(concurso)} — ${alvo.length} jogo${alvo.length>1?"s":""} conferido${alvo.length>1?"s":""}</h3>
+      <div class="dezenas" style="margin:10px 0">${dezenas.slice().sort((a,b)=>a-b)
+        .map(d=>`<span class="dz acertou">${pad(d)}</span>`).join("")}</div>
+      <div class="kpis">
+        <div class="kpi"><div class="rot">acertos médios</div><div class="val">${nf(media,2)}</div>
+          <div class="sub">acaso: ${nf(esperado,2)}</div></div>
+        <div class="kpi"><div class="rot">jogos em faixa de prêmio</div>
+          <div class="val">${premiou}</div><div class="sub">de ${alvo.length}</div></div>
+      </div>
+      ${faixaAcaso(media, esperado, Math.max(dp,0.05))}
+    </div>
+    ${alvo.map(j=>ficha(j)).join("")}`;
+  };
+
+  const tema = $("#btn-tema");
+  if(tema) tema.onclick = () => {
+    S.tema = S.tema === "claro" ? "escuro" : "claro";
+    document.documentElement.dataset.tema = S.tema;
+    Guardar.gravar("tema", S.tema);
+  };
+}
+
+/* ============================ navegação ============================ */
+const ABAS = [
+  {id:"gerar",   nome:"gerar",    icone:'<path d="M4 7h16M4 12h16M4 17h10"/><circle cx="18" cy="17" r="3"/>'},
+  {id:"jogos",   nome:"meus jogos",icone:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9h10M7 13h6"/>'},
+  {id:"conferir",nome:"conferir", icone:'<path d="M4 12l5 5L20 6"/>'},
+  {id:"placar",  nome:"placar",   icone:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>'},
+  {id:"entender",nome:"entender", icone:'<circle cx="12" cy="12" r="9"/><path d="M12 16v-4M12 8h.01"/>'}
+];
+
+function navegacao(){
+  $("#abas").innerHTML = ABAS.map(a=>`
+    <button data-aba="${a.id}" ${a.id===S.aba?'aria-current="page"':""}>
+      <svg viewBox="0 0 24 24">${a.icone}</svg>${esc(a.nome)}</button>`).join("");
+  document.querySelectorAll("[data-aba]").forEach(b => b.onclick = () => {
+    S.aba = b.dataset.aba; window.scrollTo(0,0); pintar();
+  });
+}
+
+function pintar(){
+  $("#tela").innerHTML = `<h1 style="margin-bottom:10px">${
+    esc(ABAS.find(a=>a.id===S.aba).nome)}</h1>` + T[S.aba]() +
+    `<div class="aviso-fixo">Nenhum método aumenta a chance de acertar.<br>
+     Loteria é gasto de entretenimento, não investimento.</div>`;
+  navegacao();
+  acoes();
+}
+
+async function carregarCalibracao(){
+  try{
+    const r = await fetch("pesos.json", {cache:"no-cache"});
+    if(!r.ok) return;
+    const c = await r.json();
+    if(c && c.pesos_app) CALIBRACAO = c;
+  }catch(e){ /* sem arquivo: seguem as hipóteses declaradas */ }
+}
+
+(function iniciar(){
+  S.jogos = Guardar.ler("jogos", []);
+  S.resultados = Guardar.ler("resultados", []);
+  S.tema = Guardar.ler("tema", "claro");
+  document.documentElement.dataset.tema = S.tema;
+  pintar();
+  carregarCalibracao().then(()=>{ if(CALIBRACAO && S.aba==="gerar") pintar(); });
+  if("serviceWorker" in navigator){
+    navigator.serviceWorker.register("sw.js").catch(()=>{});
+  }
+})();
+</script>
+</body>
+</html>
