@@ -8,7 +8,7 @@ acreditar.
 **Conclusão geral: o sistema NÃO está pronto.** 10 dos 20 critérios estão
 atendidos, 4 parcialmente, 6 pendentes. O detalhamento está abaixo.
 
-Reproduzir: `cd backend && python3 -m pytest -q` (312 testes, sem rede).
+Reproduzir: `cd backend && python3 -m pytest -q` (319 testes, sem rede).
 
 ---
 
@@ -33,7 +33,7 @@ Reproduzir: `cd backend && python3 -m pytest -q` (312 testes, sem rede).
 | 15 | Não prometer capacidade de prever sorteios | ✅ | Nenhuma função de previsão existe; README e docstrings afirmam o contrário explicitamente. ⚠️ Falta o teste automatizado de vocabulário proibido (existe no LotoLab; deve ser portado). |
 | 16 | Funcionar em celular e computador | ❌ | Sem frontend. |
 | 17 | Possuir documentação técnica | ✅ | `README.md`, `ARQUITETURA.md`, `banco/schema.sql` comentado, docstrings em todos os módulos |
-| 18 | Possuir testes automatizados | ✅ | 312 testes, ~34 s, sem rede: unitários, banco, API e integração. ⚠️ Faltam testes de interface (não há frontend ainda). |
+| 18 | Possuir testes automatizados | ✅ | 319 testes, ~34 s, sem rede: unitários, banco, API e integração. ⚠️ Faltam testes de interface (não há frontend ainda). |
 | 19 | Permitir auditoria dos parâmetros utilizados | ✅ | `test_salva_backtest_com_semente_e_particao`, `test_backtest_sem_semente_e_recusado_pelo_banco`, `test_alteracao_cria_nova_versao_sem_apagar_a_anterior`, `test_auditoria_nao_expoe_alteracao_nem_remocao` |
 | 20 | Atender segurança e jogo responsável | ⚠️ parcial | Segurança implementada e testada: scrypt com parâmetros no hash e detecção de rehash, tokens guardados só como hash, CSRF amarrado à sessão, limite de taxa com janela deslizante, HMAC do IP, anonimização na exclusão. Injeção de SQL testada com ataque real (`test_injecao_de_sql_nao_derruba_a_tabela`). **Falta jogo responsável na interface** (limite de orçamento, alertas, pausa) e as telas. |
 
@@ -57,7 +57,7 @@ Reproduzir: `cd backend && python3 -m pytest -q` (312 testes, sem rede).
 
 | Tipo | Estado |
 |---|---|
-| Unitários | ✅ 312 |
+| Unitários | ✅ 319 |
 | Estatísticos | ✅ conferidos contra SciPy e statsmodels |
 | Regras de cada modalidade | ✅ 9 modalidades |
 | Geração de combinações | ✅ validade, faixa, ordem, não-duplicidade, obrigatórios/excluídos, orçamento, filtros |
@@ -81,9 +81,9 @@ Em ordem de impacto:
    a verificação não pôde ser feita aqui. Rode `python3
    ferramentas/verificar_caixa.py` de uma máquina com acesso: ele sai com
    código 1 e nomeia exatamente o que divergiu.
-2. **Sem migrações (Alembic).** O `schema.sql` executa limpo no PostgreSQL 16 e
-   os 312 testes passam contra ele, mas não há versionamento de migração — a
-   evolução do esquema em produção ainda seria manual.
+2. **Sem interface** — ver item 3. As migrações Alembic passaram a existir e
+   são conferidas contra os modelos; o `schema.sql` aplica limpo no
+   PostgreSQL 16 e os 319 testes passam nos dois bancos.
 3. **Sem interface.** O critério nº 14 (avisos de limitação) depende de tela, e
    é justamente o que protege o usuário de interpretar mal um resultado. A API
    já devolve os avisos em toda resposta relevante.

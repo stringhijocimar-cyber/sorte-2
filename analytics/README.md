@@ -34,7 +34,7 @@ sobre a diferença — leia antes de assumir qualquer coisa.
 | Estratégias compostas do §9.15/9.16 (cobertura otimizada, híbrida) | ❌ pendente |
 | API REST (auth, modalidades, gerador, conferência, backtest) | ✅ pronta, testada |
 | Persistência (modelos, repositórios, versionamento, auditoria) | ✅ pronto, testado em SQLite/PostgreSQL |
-| Migrações (Alembic) | ❌ pendente |
+| Migrações (Alembic), conferidas contra os modelos | ✅ prontas, testadas |
 | Frontend Next.js, 14 telas, 17 gráficos | ❌ **não** implementado |
 | Segurança: senhas, tokens, CSRF, limite de taxa, LGPD | ✅ pronto, testado |
 | Monte Carlo paralelo + fila de tarefas | ✅ pronta, testada |
@@ -119,7 +119,7 @@ Faixas: 0–25 baixo · 26–50 moderado · 51–75 alto · 76–100 crítico.
 
 ```bash
 cd backend
-python3 -m pytest -q          # 312 testes, sem rede
+python3 -m pytest -q          # 319 testes, sem rede
 
 # Confere a importação contra a API real da CAIXA (precisa de rede):
 python3 ferramentas/verificar_caixa.py
@@ -137,7 +137,7 @@ TEST_DATABASE_URL=postgresql+psycopg://lab@127.0.0.1:5432/loteria_teste \\
     python3 -m pytest -q
 ```
 
-Verificado em PostgreSQL 16.13: 312 testes passando, com `drawn_numbers` como
+Verificado em PostgreSQL 16.13: 319 testes passando, com `drawn_numbers` como
 `smallint[]` nativo e `parameters` como `jsonb`.
 
 ```bash
@@ -169,7 +169,8 @@ backend/
     tarefas.py       fila em segundo plano para backtests longos
   ferramentas/
     verificar_caixa.py  confere a ingestão contra a API real (manual, usa rede)
-  tests/             312 testes
+  migracoes/         Alembic; a migração é conferida contra os modelos
+  tests/             319 testes
 ```
 
 ## Acrescentar uma modalidade
