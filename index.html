@@ -29,6 +29,10 @@
   --sombra:0 1px 2px rgba(15,30,46,.05),0 12px 28px -20px rgba(15,30,46,.45);
   --sombra-alta:0 2px 4px rgba(15,30,46,.06),0 20px 44px -26px rgba(15,30,46,.55);
   --topo:env(safe-area-inset-top,0px); --base:env(safe-area-inset-bottom,0px);
+  /* Largura da coluna de leitura. Cabeçalho, conteúdo e abas se alinham a
+     ela, para que os três leiam como uma peça só em tela larga. */
+  --coluna:720px;
+  --barra:55px; /* altura da barra de abas; dita o respiro do fim do main */
 }
 html[data-tema="escuro"]{
   --fundo:#0B1622; --carta:#132030; --tinta:#E7EDF2; --secundaria:#8FA0AF;
@@ -55,17 +59,27 @@ header{position:sticky;top:0;z-index:20;
   -webkit-backdrop-filter:saturate(180%) blur(14px);backdrop-filter:saturate(180%) blur(14px);
   padding:calc(var(--topo) + 12px) 16px 10px;border-bottom:1px solid var(--linha)}
 @supports not (backdrop-filter:blur(2px)){header{background:var(--fundo)}}
-.cabeca{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.cabeca{display:flex;align-items:center;justify-content:space-between;gap:12px;
+  max-width:var(--coluna);margin:0 auto}
 .marca{display:flex;align-items:center;gap:9px;font-family:var(--mono);font-weight:600;
   font-size:1rem;letter-spacing:-.03em}
 .marca span{color:var(--acaso)}
 .marca svg{width:26px;height:26px;display:block;flex:none}
-main{padding:14px 16px calc(100px + var(--base));max-width:720px;margin:0 auto}
+main{padding:14px 16px calc(var(--barra) + 45px + var(--base));
+  max-width:var(--coluna);margin:0 auto}
 nav{position:fixed;left:0;right:0;bottom:0;z-index:30;display:grid;
-  grid-template-columns:repeat(6,1fr);
+  /* Uma coluna por aba, derivada da quantidade real: um número fixo aqui
+     deixa coluna vazia assim que ABAS muda de tamanho. */
+  grid-auto-flow:column;grid-auto-columns:1fr;
   background:color-mix(in srgb,var(--carta) 92%,transparent);
   -webkit-backdrop-filter:saturate(180%) blur(16px);backdrop-filter:saturate(180%) blur(16px);
   border-top:1px solid var(--linha);padding-bottom:var(--base)}
+/* Em tela larga a barra acompanha a coluna em vez de atravessar a página. */
+@media (min-width:760px){
+  nav{width:var(--coluna);margin-inline:auto;
+    border-inline:1px solid var(--linha);border-radius:var(--r) var(--r) 0 0;
+    box-shadow:var(--sombra-alta)}
+}
 @supports not (backdrop-filter:blur(2px)){nav{background:var(--carta)}}
 nav button{position:relative;background:none;border:0;padding:10px 1px 9px;display:flex;
   flex-direction:column;align-items:center;gap:3px;color:var(--secundaria);font-size:.58rem;
