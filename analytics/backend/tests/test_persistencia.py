@@ -24,9 +24,7 @@ RAIZ = Path(__file__).resolve().parents[2]
 
 
 @pytest.fixture()
-def sessao():
-    engine = p.criar_engine()
-    p.criar_tabelas(engine)
+def sessao(engine):
     with Session(engine) as s:
         yield s
 

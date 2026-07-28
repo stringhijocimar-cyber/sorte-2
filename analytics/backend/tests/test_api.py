@@ -23,8 +23,7 @@ SENHA = "senha-de-teste-123"
 
 
 @pytest.fixture()
-def app():
-    engine = p.criar_engine()
+def app(engine):
     return api.criar_app(engine)
 
 

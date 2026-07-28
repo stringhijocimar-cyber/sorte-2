@@ -65,7 +65,7 @@ Reproduzir: `cd backend && python3 -m pytest -q` (312 testes, sem rede).
 | Atualização de concursos | ✅ incremental, falha isolada, fallback, CSV |
 | Integração | ✅ histórico do banco alimentando o motor de backtest |
 | API | ✅ 36 testes ponta a ponta, motores reais |
-| Banco de dados | ✅ 35 testes em SQLite; restrições, cascatas e versionamento |
+| Banco de dados | ✅ 35 testes, executados em SQLite **e** em PostgreSQL 16 real; `schema.sql` aplicado sem erro |
 | Interface | ❌ sem frontend |
 | End-to-end | ❌ |
 
@@ -81,9 +81,9 @@ Em ordem de impacto:
    a verificação não pôde ser feita aqui. Rode `python3
    ferramentas/verificar_caixa.py` de uma máquina com acesso: ele sai com
    código 1 e nomeia exatamente o que divergiu.
-2. **Sem migrações nem execução em PostgreSQL real.** A persistência é testada
-   em SQLite; os tipos são portáteis por variante, mas nada rodou ainda contra
-   um PostgreSQL de verdade.
+2. **Sem migrações (Alembic).** O `schema.sql` executa limpo no PostgreSQL 16 e
+   os 312 testes passam contra ele, mas não há versionamento de migração — a
+   evolução do esquema em produção ainda seria manual.
 3. **Sem interface.** O critério nº 14 (avisos de limitação) depende de tela, e
    é justamente o que protege o usuário de interpretar mal um resultado. A API
    já devolve os avisos em toda resposta relevante.

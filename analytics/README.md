@@ -129,6 +129,17 @@ O núcleo não exige dependências. SciPy e statsmodels são usados **apenas** n
 testes de conferência; sem eles, esses testes são pulados e o resto continua
 valendo.
 
+A mesma suíte roda contra PostgreSQL, e é assim que a portabilidade dos tipos
+(`ARRAY`/`JSONB` lá, `JSON` no SQLite) deixa de ser suposição:
+
+```bash
+TEST_DATABASE_URL=postgresql+psycopg://lab@127.0.0.1:5432/loteria_teste \\
+    python3 -m pytest -q
+```
+
+Verificado em PostgreSQL 16.13: 312 testes passando, com `drawn_numbers` como
+`smallint[]` nativo e `parameters` como `jsonb`.
+
 ```bash
 pip install -r requirements-dev.txt   # scipy, statsmodels, sqlalchemy, pytest
 docker compose up                     # postgres + redis para desenvolvimento
