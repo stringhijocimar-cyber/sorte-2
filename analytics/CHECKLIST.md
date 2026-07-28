@@ -5,10 +5,10 @@ aparece quando existe teste automatizado que prova o critério — a coluna
 *Evidência* nomeia o teste, para que qualquer um possa conferir em vez de
 acreditar.
 
-**Conclusão geral: o sistema NÃO está pronto.** 9 dos 20 critérios estão
-atendidos, 3 parcialmente, 8 pendentes. O detalhamento está abaixo.
+**Conclusão geral: o sistema NÃO está pronto.** 10 dos 20 critérios estão
+atendidos, 4 parcialmente, 6 pendentes. O detalhamento está abaixo.
 
-Reproduzir: `cd backend && python3 -m pytest -q` (137 testes, sem rede).
+Reproduzir: `cd backend && python3 -m pytest -q` (172 testes, sem rede).
 
 ---
 
@@ -34,8 +34,8 @@ Reproduzir: `cd backend && python3 -m pytest -q` (137 testes, sem rede).
 | 16 | Funcionar em celular e computador | ❌ | Sem frontend. |
 | 17 | Possuir documentação técnica | ✅ | `README.md`, `ARQUITETURA.md`, `banco/schema.sql` comentado, docstrings em todos os módulos |
 | 18 | Possuir testes automatizados | ✅ | 97 testes, 1,4 s, sem rede. ⚠️ Faltam testes de API, de banco, de interface e end-to-end (não há o que testar ainda). |
-| 19 | Permitir auditoria dos parâmetros utilizados | ⚠️ parcial | Semente, nº de simulações e partição fazem parte do resultado; `strategy_versions` e `audit_log` modelados. **Persistência não implementada.** |
-| 20 | Atender segurança e jogo responsável | ❌ | Modelado no schema (Argon2id, consentimento datado, `ip_hash`, `audit_log` append-only, limite de orçamento). **Nada implementado em código.** |
+| 19 | Permitir auditoria dos parâmetros utilizados | ✅ | `test_salva_backtest_com_semente_e_particao`, `test_backtest_sem_semente_e_recusado_pelo_banco`, `test_alteracao_cria_nova_versao_sem_apagar_a_anterior`, `test_auditoria_nao_expoe_alteracao_nem_remocao` |
+| 20 | Atender segurança e jogo responsável | ⚠️ parcial | Modelo de dados atende LGPD e é testado (`test_usuario_guarda_o_minimo_necessario`, `test_consentimentos_sao_datados`, `test_auditoria_guarda_hash_do_ip_e_nao_o_ip`, `test_apagar_usuario_leva_estrategias_e_jogos`). **Falta o código de autenticação, rate limiting e as telas.** |
 
 ---
 
@@ -57,15 +57,15 @@ Reproduzir: `cd backend && python3 -m pytest -q` (137 testes, sem rede).
 
 | Tipo | Estado |
 |---|---|
-| Unitários | ✅ 137 |
+| Unitários | ✅ 172 |
 | Estatísticos | ✅ conferidos contra SciPy e statsmodels |
 | Regras de cada modalidade | ✅ 9 modalidades |
 | Geração de combinações | ✅ validade, faixa, ordem, não-duplicidade, obrigatórios/excluídos, orçamento, filtros |
 | Não duplicidade | ✅ importação e geração |
 | Atualização de concursos | ✅ incremental, falha isolada, fallback, CSV |
-| Integração | ❌ sem banco |
+| Integração | ✅ histórico do banco alimentando o motor de backtest |
 | API | ❌ sem API |
-| Banco de dados | ❌ sem persistência |
+| Banco de dados | ✅ 35 testes em SQLite; restrições, cascatas e versionamento |
 | Interface | ❌ sem frontend |
 | End-to-end | ❌ |
 
@@ -78,8 +78,9 @@ Em ordem de impacto:
 1. **Nenhuma execução contra a API real da CAIXA.** Toda a importação foi
    exercitada com respostas controladas. O formato real pode divergir do que
    assumi, e isso só se descobre executando.
-2. **Sem persistência.** Sem banco, não há auditoria de verdade, histórico de
-   estratégias nem versionamento efetivo — só o modelo.
+2. **Sem migrações nem execução em PostgreSQL real.** A persistência é testada
+   em SQLite; os tipos são portáteis por variante, mas nada rodou ainda contra
+   um PostgreSQL de verdade.
 3. **Sem interface.** O critério nº 14 (avisos de limitação) depende de tela, e
    é justamente o que protege o usuário de interpretar mal um resultado.
 4. **Sem segurança implementada.** Autenticação, LGPD e jogo responsável estão

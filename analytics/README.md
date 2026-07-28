@@ -33,7 +33,8 @@ sobre a diferença — leia antes de assumir qualquer coisa.
 | Gerador configurável com filtros (§8, §9.6–9.13) | ✅ pronto, testado |
 | Estratégias compostas do §9.15/9.16 (cobertura otimizada, híbrida) | ❌ pendente |
 | API FastAPI | ⚠️ esqueleto mínimo |
-| Banco PostgreSQL / migrações | ❌ modelado no escopo, **não** implementado |
+| Persistência (modelos, repositórios, versionamento, auditoria) | ✅ pronto, testado em SQLite/PostgreSQL |
+| Migrações (Alembic) | ❌ pendente |
 | Frontend Next.js, 14 telas, 17 gráficos | ❌ **não** implementado |
 | Autenticação, perfis, consentimento de maioridade | ❌ **não** implementado |
 | Machine learning | ❌ **não** implementado |
@@ -115,7 +116,7 @@ Faixas: 0–25 baixo · 26–50 moderado · 51–75 alto · 76–100 crítico.
 
 ```bash
 cd backend
-python3 -m pytest -q          # 137 testes, sem rede
+python3 -m pytest -q          # 172 testes, sem rede
 ```
 
 O núcleo não exige dependências. SciPy e statsmodels são usados **apenas** nos
@@ -123,7 +124,7 @@ testes de conferência; sem eles, esses testes são pulados e o resto continua
 valendo.
 
 ```bash
-pip install -r requirements-dev.txt   # scipy, statsmodels, pytest
+pip install -r requirements-dev.txt   # scipy, statsmodels, sqlalchemy, pytest
 docker compose up                     # postgres + redis para desenvolvimento
 ```
 
@@ -143,7 +144,8 @@ backend/
     ingestao.py      importação CAIXA incremental, CSV, validação, fallback
     filtros.py       filtros estruturais, cada um com aviso obrigatório
     gerador.py       geração com filtros, obrigatórios/excluídos, orçamento
-  tests/             137 testes
+    persistencia.py  modelos + repositórios; trava contra divergir do schema.sql
+  tests/             172 testes
 ```
 
 ## Acrescentar uma modalidade

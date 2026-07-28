@@ -4,3 +4,5 @@
 pytest>=8.0
 scipy>=1.11        # confere distribuições e testes
 statsmodels>=0.14  # confere Holm e Benjamini-Hochberg
+sqlalchemy>=2.0    # persistência (o núcleo estatístico segue sem dependência)
+psycopg[binary]>=3.1  # driver PostgreSQL para produção

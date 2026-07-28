@@ -19,7 +19,7 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;   -- gen_random_uuid, crypt
 -- ===========================================================================
 
 CREATE TABLE lotteries (
-    id               SMALLSERIAL PRIMARY KEY,
+    id               SERIAL      PRIMARY KEY,
     code             TEXT        NOT NULL UNIQUE,
     name             TEXT        NOT NULL,
     -- 'dezenas' | 'composta' (dezenas + complemento) | 'colunas' (Super Sete)
@@ -41,7 +41,7 @@ CREATE TABLE lotteries (
 -- concurso de 2019 infla o custo e produz um ROI falso no histórico inteiro.
 CREATE TABLE price_history (
     id            BIGSERIAL PRIMARY KEY,
-    lottery_id    SMALLINT NOT NULL REFERENCES lotteries(id) ON DELETE CASCADE,
+    lottery_id    INTEGER  NOT NULL REFERENCES lotteries(id) ON DELETE CASCADE,
     valid_from    DATE     NOT NULL,
     bet_price     NUMERIC(10, 2) NOT NULL CHECK (bet_price > 0),
     source        TEXT     NOT NULL DEFAULT 'caixa',
@@ -54,7 +54,7 @@ CREATE TABLE price_history (
 
 CREATE TABLE draws (
     id              BIGSERIAL PRIMARY KEY,
-    lottery_id      SMALLINT   NOT NULL REFERENCES lotteries(id) ON DELETE CASCADE,
+    lottery_id      INTEGER    NOT NULL REFERENCES lotteries(id) ON DELETE CASCADE,
     contest_number  INTEGER    NOT NULL CHECK (contest_number > 0),
     draw_date       DATE       NOT NULL,
     -- Array preserva a ORDEM: o Super Sete depende dela, e ordenar destruiria
@@ -142,7 +142,7 @@ CREATE TABLE generated_games (
     id                  BIGSERIAL PRIMARY KEY,
     user_id             UUID     NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     strategy_version_id BIGINT   REFERENCES strategy_versions(id) ON DELETE SET NULL,
-    lottery_id          SMALLINT NOT NULL REFERENCES lotteries(id),
+    lottery_id          INTEGER  NOT NULL REFERENCES lotteries(id),
     numbers             SMALLINT[] NOT NULL,
     generated_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
     cost                NUMERIC(10, 2) NOT NULL CHECK (cost >= 0),
@@ -159,7 +159,7 @@ CREATE INDEX generated_games_por_usuario ON generated_games (user_id, generated_
 CREATE TABLE backtests (
     id                  BIGSERIAL PRIMARY KEY,
     strategy_version_id BIGINT   NOT NULL REFERENCES strategy_versions(id) ON DELETE CASCADE,
-    lottery_id          SMALLINT NOT NULL REFERENCES lotteries(id),
+    lottery_id          INTEGER  NOT NULL REFERENCES lotteries(id),
 
     -- A partição é gravada como faixas de concurso, para ser reconstituível
     -- meses depois sem depender de percentuais nem do tamanho do histórico
@@ -233,7 +233,7 @@ CREATE TABLE backtest_windows (
 
 CREATE TABLE import_runs (
     id            BIGSERIAL PRIMARY KEY,
-    lottery_id    SMALLINT NOT NULL REFERENCES lotteries(id),
+    lottery_id    INTEGER  NOT NULL REFERENCES lotteries(id),
     started_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
     finished_at   TIMESTAMPTZ,
     source        TEXT NOT NULL,
