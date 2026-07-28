@@ -30,7 +30,8 @@ sobre a diferença — leia antes de assumir qualquer coisa.
 | Comparação contra carteiras aleatórias + percentil | ✅ pronto, testado |
 | Índice de Risco de Sobreajuste | ✅ pronto, testado (heurística, ver abaixo) |
 | Importação incremental CAIXA + CSV, com validação e fallback | ✅ pronto, testado sem rede |
-| Estratégias além da aleatória uniforme | ⚠️ só a referência; as 16 do escopo **não** foram implementadas |
+| Gerador configurável com filtros (§8, §9.6–9.13) | ✅ pronto, testado |
+| Estratégias compostas do §9.15/9.16 (cobertura otimizada, híbrida) | ❌ pendente |
 | API FastAPI | ⚠️ esqueleto mínimo |
 | Banco PostgreSQL / migrações | ❌ modelado no escopo, **não** implementado |
 | Frontend Next.js, 14 telas, 17 gráficos | ❌ **não** implementado |
@@ -114,7 +115,7 @@ Faixas: 0–25 baixo · 26–50 moderado · 51–75 alto · 76–100 crítico.
 
 ```bash
 cd backend
-python3 -m pytest -q          # 97 testes, sem rede
+python3 -m pytest -q          # 137 testes, sem rede
 ```
 
 O núcleo não exige dependências. SciPy e statsmodels são usados **apenas** nos
@@ -140,7 +141,9 @@ backend/
     backtest.py      partição, walk-forward, comparação com aleatório
     overfitting.py   índice de risco (heurística documentada)
     ingestao.py      importação CAIXA incremental, CSV, validação, fallback
-  tests/             97 testes
+    filtros.py       filtros estruturais, cada um com aviso obrigatório
+    gerador.py       geração com filtros, obrigatórios/excluídos, orçamento
+  tests/             137 testes
 ```
 
 ## Acrescentar uma modalidade

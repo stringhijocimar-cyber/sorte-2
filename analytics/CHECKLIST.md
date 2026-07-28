@@ -8,7 +8,7 @@ acreditar.
 **Conclusão geral: o sistema NÃO está pronto.** 9 dos 20 critérios estão
 atendidos, 3 parcialmente, 8 pendentes. O detalhamento está abaixo.
 
-Reproduzir: `cd backend && python3 -m pytest -q` (97 testes, sem rede).
+Reproduzir: `cd backend && python3 -m pytest -q` (137 testes, sem rede).
 
 ---
 
@@ -18,7 +18,7 @@ Reproduzir: `cd backend && python3 -m pytest -q` (97 testes, sem rede).
 |---|---|---|---|
 | 1 | Importar corretamente o histórico de todas as modalidades | ⚠️ parcial | Conversão, validação e recusa testadas com respostas controladas (`test_ingestao.py`, 22 testes). **Nunca executado contra a API real da CAIXA** — sem isso o critério não pode ser dado por cumprido. |
 | 2 | Atualizar novos concursos sem duplicidade | ✅ | `test_importa_apenas_o_que_falta`, `test_deduplica_contra_o_banco_e_dentro_do_lote`, `test_nada_a_fazer_quando_esta_em_dia`; e `UNIQUE(lottery_id, contest_number)` no schema |
-| 3 | Gerar apenas jogos válidos | ✅ | `Modalidade.validar_aposta()` roda em toda aposta dentro de `_apostar()`; `test_validacao_de_sorteio_recusa_lixo`, `test_lotomania_comeca_no_zero`, `test_supersete_usa_colunas` |
+| 3 | Gerar apenas jogos válidos | ✅ | `Modalidade.validar_aposta()` em toda aposta; `test_gera_jogos_validos`, `test_obrigatorios_aparecem_em_todos_os_jogos`, `test_excluidos_nao_aparecem`, `test_filtro_apertado_entrega_menos_e_nao_mente` (o gerador nunca completa o lote violando filtros) |
 | 4 | Calcular corretamente combinações e probabilidades | ✅ | `test_probabilidade_da_sena_e_a_oficial` (1 em 50.063.860), `test_probabilidade_da_lotofacil_e_a_oficial` (1 em 3.268.760), `test_probabilidades_de_uma_modalidade_somam_um` |
 | 5 | Executar backtests reproduzíveis | ✅ | `test_avaliacao_e_reproduzivel_com_a_mesma_semente`; semente gravada em `Avaliacao.semente` e `backtests.seed NOT NULL` |
 | 6 | Separar desenvolvimento, validação e teste | ✅ | `test_particao_e_cronologica_e_nao_se_sobrepoe`, `test_particao_embaralhada_e_recusada`, `test_particao_sem_teste_e_recusada` |
@@ -57,10 +57,10 @@ Reproduzir: `cd backend && python3 -m pytest -q` (97 testes, sem rede).
 
 | Tipo | Estado |
 |---|---|
-| Unitários | ✅ 97 |
+| Unitários | ✅ 137 |
 | Estatísticos | ✅ conferidos contra SciPy e statsmodels |
 | Regras de cada modalidade | ✅ 9 modalidades |
-| Geração de combinações | ✅ validade, faixa, ordem, não-duplicidade |
+| Geração de combinações | ✅ validade, faixa, ordem, não-duplicidade, obrigatórios/excluídos, orçamento, filtros |
 | Não duplicidade | ✅ importação e geração |
 | Atualização de concursos | ✅ incremental, falha isolada, fallback, CSV |
 | Integração | ❌ sem banco |
