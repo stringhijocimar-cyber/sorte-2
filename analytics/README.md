@@ -118,7 +118,7 @@ Faixas: 0–25 baixo · 26–50 moderado · 51–75 alto · 76–100 crítico.
 
 ```bash
 cd backend
-python3 -m pytest -q          # 259 testes, sem rede
+python3 -m pytest -q          # 268 testes, sem rede
 ```
 
 O núcleo não exige dependências. SciPy e statsmodels são usados **apenas** nos
@@ -150,7 +150,7 @@ backend/
     seguranca.py     senhas, tokens, CSRF, limite de taxa, LGPD
     api.py           API REST: auth, geração, conferência, backtest
     exportacao.py    CSV, XLSX e PDF sem dependência de runtime
-  tests/             259 testes
+  tests/             268 testes
 ```
 
 ## Acrescentar uma modalidade

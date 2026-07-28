@@ -393,3 +393,99 @@ def test_openapi_declara_que_nao_preve(cliente):
     descricao = cliente.get("/openapi.json").json()["info"]["description"]
     assert "NÃO prevê resultados" in descricao
     assert "18 anos" in descricao
+
+
+# --------------------------------------------------------------------------- #
+# Exportação pela API
+# --------------------------------------------------------------------------- #
+
+def test_exporta_jogos_em_csv(cliente):
+    token = registrar(cliente)
+    r = cliente.post("/jogos/exportar", headers=auth(token), json={
+        "modalidade": "megasena", "formato": "csv",
+        "jogos": [[6, 5, 4, 3, 2, 1], [10, 20, 30, 40, 50, 60]]})
+    assert r.status_code == 200
+    assert r.headers["content-type"].startswith("text/csv")
+    assert "attachment" in r.headers["content-disposition"]
+    assert ".csv" in r.headers["content-disposition"]
+    # BOM para o Excel abrir acentuação corretamente
+    assert r.content.startswith(b"\xef\xbb\xbf")
+    texto = r.content.decode("utf-8-sig")
+    assert texto.splitlines()[1].startswith("megasena,1,1,2,3,4,5,6")
+
+
+def test_exporta_jogos_em_xlsx_que_abre_em_leitor_independente(cliente):
+    openpyxl = pytest.importorskip("openpyxl")
+    import io as _io
+
+    token = registrar(cliente)
+    r = cliente.post("/jogos/exportar", headers=auth(token), json={
+        "modalidade": "megasena", "formato": "xlsx", "jogos": [[1, 2, 3, 4, 5, 6]]})
+    assert r.status_code == 200
+    assert "spreadsheetml" in r.headers["content-type"]
+    aba = openpyxl.load_workbook(_io.BytesIO(r.content))["jogos"]
+    assert [c.value for c in aba[2]][:8] == ["megasena", 1, 1, 2, 3, 4, 5, 6]
+
+
+def test_exportacao_recusa_formato_desconhecido(cliente):
+    token = registrar(cliente)
+    r = cliente.post("/jogos/exportar", headers=auth(token), json={
+        "modalidade": "megasena", "formato": "docx", "jogos": [[1, 2, 3, 4, 5, 6]]})
+    assert r.status_code == 422
+
+
+def test_exportacao_recusa_jogo_invalido(cliente):
+    token = registrar(cliente)
+    r = cliente.post("/jogos/exportar", headers=auth(token), json={
+        "modalidade": "megasena", "formato": "csv", "jogos": [[1, 2, 3, 4, 5, 99]]})
+    assert r.status_code == 422
+
+
+def test_exportacao_exige_autenticacao(cliente):
+    r = cliente.post("/jogos/exportar", json={
+        "modalidade": "megasena", "jogos": [[1, 2, 3, 4, 5, 6]]})
+    assert r.status_code == 401
+
+
+def test_relatorio_de_backtest_em_markdown(app, cliente):
+    _semear_historico(app)
+    token = registrar(cliente)
+    r = cliente.post("/backtests/relatorio?formato=md", headers=auth(token),
+                     json={"modalidade": "megasena", "simulacoes": 20, "semente": 3})
+    assert r.status_code == 200, r.text
+    texto = r.content.decode("utf-8")
+    for secao in ("1. Objetivo", "5. Custos", "7. Testes estatisticos",
+                  "8. Limitacoes", "10. Parametros"):
+        assert f"## {secao}" in texto
+    assert "não garante resultado futuro" in texto
+    assert "semente: 3" in texto
+
+
+def test_relatorio_de_backtest_em_pdf(app, cliente):
+    _semear_historico(app)
+    token = registrar(cliente)
+    r = cliente.post("/backtests/relatorio?formato=pdf", headers=auth(token),
+                     json={"modalidade": "megasena", "simulacoes": 20, "semente": 3})
+    assert r.status_code == 200
+    assert r.headers["content-type"] == "application/pdf"
+    assert r.content.startswith(b"%PDF")
+    assert r.content.rstrip().endswith(b"%%EOF")
+
+
+def test_relatorio_recusa_formato_desconhecido(app, cliente):
+    _semear_historico(app)
+    token = registrar(cliente)
+    r = cliente.post("/backtests/relatorio?formato=docx", headers=auth(token),
+                     json={"modalidade": "megasena", "simulacoes": 10})
+    assert r.status_code == 422
+
+
+def test_relatorio_sempre_declara_a_independencia_dos_sorteios(app, cliente):
+    """A seção de limitações não é opcional nem configurável."""
+    _semear_historico(app)
+    token = registrar(cliente)
+    texto = cliente.post("/backtests/relatorio?formato=md", headers=auth(token),
+                         json={"modalidade": "megasena", "simulacoes": 20}
+                         ).content.decode("utf-8")
+    assert "eventos independentes" in texto
+    assert "nao carrega" in texto or "não carrega" in texto

@@ -8,7 +8,7 @@ acreditar.
 **Conclusão geral: o sistema NÃO está pronto.** 10 dos 20 critérios estão
 atendidos, 4 parcialmente, 6 pendentes. O detalhamento está abaixo.
 
-Reproduzir: `cd backend && python3 -m pytest -q` (259 testes, sem rede).
+Reproduzir: `cd backend && python3 -m pytest -q` (268 testes, sem rede).
 
 ---
 
@@ -28,12 +28,12 @@ Reproduzir: `cd backend && python3 -m pytest -q` (259 testes, sem rede).
 | 10 | Corrigir múltiplos testes | ✅ | Bonferroni, Holm e BH conferidos contra `statsmodels` (`test_holm_e_bh_batem_com_statsmodels`); `test_relata_quem_perdeu_a_significancia` |
 | 11 | Identificar risco de overfitting | ✅ | `overfitting.calcular()`; `test_degradacao_grande_eleva_o_risco`, `test_instabilidade_entre_janelas_eleva_o_risco`, `test_sem_janelas_cobra_metade_do_peso_e_avisa`. **É heurística declarada, não medida oficial.** |
 | 12 | Repetir testes em diferentes períodos | ✅ | Walk-forward expansiva e móvel: `test_walk_forward_expansiva_avanca_sem_sobrepor`, `test_walk_forward_movel_esquece_o_comeco`. ⚠️ Falta a *matriz de estabilidade* do §17 (acumulado vs. regular, janelas curtas vs. longas). |
-| 13 | Exportar resultados | ✅ | CSV, XLSX e PDF sem dependência; o XLSX é validado lendo de volta com `openpyxl` (`test_xlsx_abre_em_leitor_independente`). O relatório recusa ser criado sem a seção de limitações (`test_relatorio_sem_limitacoes_e_recusado`). ⚠️ Falta o endpoint de download na API. |
+| 13 | Exportar resultados | ✅ | CSV, XLSX e PDF sem dependência; o XLSX é validado lendo de volta com `openpyxl` (`test_xlsx_abre_em_leitor_independente`). O relatório recusa ser criado sem a seção de limitações (`test_relatorio_sem_limitacoes_e_recusado`). Endpoints `/jogos/exportar` e `/backtests/relatorio` entregam os arquivos. |
 | 14 | Exibir avisos de limitações estatísticas | ⚠️ parcial | Todo `Resultado` traz `leitura` em português e o índice de overfitting se declara não-oficial. Falta a **interface** que exibe isso junto ao dado. |
 | 15 | Não prometer capacidade de prever sorteios | ✅ | Nenhuma função de previsão existe; README e docstrings afirmam o contrário explicitamente. ⚠️ Falta o teste automatizado de vocabulário proibido (existe no LotoLab; deve ser portado). |
 | 16 | Funcionar em celular e computador | ❌ | Sem frontend. |
 | 17 | Possuir documentação técnica | ✅ | `README.md`, `ARQUITETURA.md`, `banco/schema.sql` comentado, docstrings em todos os módulos |
-| 18 | Possuir testes automatizados | ✅ | 259 testes, ~34 s, sem rede: unitários, banco, API e integração. ⚠️ Faltam testes de interface (não há frontend ainda). |
+| 18 | Possuir testes automatizados | ✅ | 268 testes, ~34 s, sem rede: unitários, banco, API e integração. ⚠️ Faltam testes de interface (não há frontend ainda). |
 | 19 | Permitir auditoria dos parâmetros utilizados | ✅ | `test_salva_backtest_com_semente_e_particao`, `test_backtest_sem_semente_e_recusado_pelo_banco`, `test_alteracao_cria_nova_versao_sem_apagar_a_anterior`, `test_auditoria_nao_expoe_alteracao_nem_remocao` |
 | 20 | Atender segurança e jogo responsável | ⚠️ parcial | Segurança implementada e testada: scrypt com parâmetros no hash e detecção de rehash, tokens guardados só como hash, CSRF amarrado à sessão, limite de taxa com janela deslizante, HMAC do IP, anonimização na exclusão. Injeção de SQL testada com ataque real (`test_injecao_de_sql_nao_derruba_a_tabela`). **Falta jogo responsável na interface** (limite de orçamento, alertas, pausa) e as telas. |
 
@@ -57,7 +57,7 @@ Reproduzir: `cd backend && python3 -m pytest -q` (259 testes, sem rede).
 
 | Tipo | Estado |
 |---|---|
-| Unitários | ✅ 259 |
+| Unitários | ✅ 268 |
 | Estatísticos | ✅ conferidos contra SciPy e statsmodels |
 | Regras de cada modalidade | ✅ 9 modalidades |
 | Geração de combinações | ✅ validade, faixa, ordem, não-duplicidade, obrigatórios/excluídos, orçamento, filtros |

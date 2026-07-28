@@ -28,12 +28,12 @@ import uuid
 from datetime import date
 from typing import Annotated, Any, Iterator
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Request, status
+from fastapi import Depends, FastAPI, Header, HTTPException, Request, Response, status
 from pydantic import BaseModel, EmailStr, Field, field_validator
 from sqlalchemy.orm import Session
 
 from . import backtest as bt
-from . import estatistica, filtros as mod_filtros, gerador, loterias
+from . import estatistica, exportacao, filtros as mod_filtros, gerador, loterias
 from . import persistencia as p
 from . import seguranca as sec
 
@@ -108,6 +108,19 @@ class PedidoConferir(BaseModel):
     modalidade: str
     dezenas_sorteadas: list[int]
     jogos: list[list[int]]
+
+
+class PedidoExportarJogos(BaseModel):
+    modalidade: str
+    jogos: list[list[int]] = Field(min_length=1)
+    formato: str = "csv"
+
+    @field_validator("formato")
+    @classmethod
+    def formato_conhecido(cls, v: str) -> str:
+        if v not in {"csv", "xlsx"}:
+            raise ValueError("formato deve ser 'csv' ou 'xlsx'")
+        return v
 
 
 class PedidoBacktest(BaseModel):
@@ -449,6 +462,116 @@ def criar_app(engine=None) -> FastAPI:
             "aviso": ("Desempenho passado não garante resultado futuro. Sorteios são "
                       "independentes e nenhum método altera a probabilidade de acerto."),
         }
+
+    # ----------------------------------------------------------------- #
+    # Exportação
+    # ----------------------------------------------------------------- #
+    @app.post("/jogos/exportar")
+    def exportar_jogos(pedido: PedidoExportarJogos, u: Adulto) -> Response:
+        try:
+            m = loterias.modalidade(pedido.modalidade)
+            for jogo in pedido.jogos:
+                m.validar_aposta(jogo)
+        except KeyError as erro:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, str(erro)) from erro
+        except loterias.FormatoInvalido as erro:
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(erro)) from erro
+
+        custo = m.preco(date.today(), len(pedido.jogos[0])) if pedido.jogos else 0.0
+        carimbo = date.today().isoformat()
+        try:
+            if pedido.formato == "csv":
+                corpo = exportacao.jogos_para_csv(
+                    pedido.jogos, pedido.modalidade, custo).encode("utf-8-sig")
+                tipo = "text/csv; charset=utf-8"
+            else:
+                corpo = exportacao.jogos_para_xlsx(pedido.jogos, pedido.modalidade, custo)
+                tipo = ("application/vnd.openxmlformats-officedocument"
+                        ".spreadsheetml.sheet")
+        except ValueError as erro:
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(erro)) from erro
+
+        nome = f"jogos-{pedido.modalidade}-{carimbo}.{pedido.formato}"
+        return Response(content=corpo, media_type=tipo,
+                        headers={"Content-Disposition": f'attachment; filename="{nome}"'})
+
+    @app.post("/backtests/relatorio")
+    def relatorio_de_backtest(pedido: PedidoBacktest, formato: str,
+                              u: Adulto, sessao: Sessao) -> Response:
+        """Roda o backtest e devolve o relatório completo do §23.
+
+        O relatório sai do mesmo caminho de código do endpoint /backtests: se
+        fossem caminhos diferentes, o documento exportado poderia divergir do
+        que a tela mostrou, e o exportado é o que fica.
+        """
+        if formato not in {"md", "pdf"}:
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY,
+                                "formato deve ser 'md' ou 'pdf'")
+        dados = rodar_backtest(pedido, u, sessao)
+        teste = dados["teste"]
+
+        limitacoes = [
+            "Sorteios sao eventos independentes: o historico nao carrega "
+            "informacao sobre o proximo concurso.",
+            f"Amostra de {teste['n']} observacoes no periodo de teste.",
+            "Rateio historico ausente em alguma faixa e contado como zero, "
+            "nunca estimado.",
+        ]
+        if dados["maior_sequencia_sem_premio"] >= 10:
+            limitacoes.append(
+                f"Houve {dados['maior_sequencia_sem_premio']} concursos seguidos "
+                "sem premio algum.")
+        if dados["roi"] > 0:
+            limitacoes.append(
+                "ROI positivo em periodo curto costuma vir de poucos premios "
+                "isolados; ver a perda maxima acumulada.")
+
+        relatorio = exportacao.Relatorio(
+            objetivo="Comparar a estrategia com carteiras aleatorias equivalentes",
+            modalidade=loterias.modalidade(pedido.modalidade).nome,
+            periodo=dados["particao"],
+            metodologia=(
+                "Particao cronologica; a estrategia recebe apenas concursos "
+                f"anteriores ao avaliado; {dados['simulacoes']} carteiras "
+                "aleatorias de mesma modalidade, concursos, quantidade e custo."),
+            custos={
+                "custo total": f"R$ {dados['custo_total']:.2f}",
+                "premio bruto": f"R$ {dados['premio_bruto']:.2f}",
+                "resultado liquido": f"R$ {dados['resultado_liquido']:.2f}",
+            },
+            resultados={
+                "ROI": f"{dados['roi'] * 100:.2f}%",
+                "percentil vs aleatorio": f"{dados['percentil_vs_aleatorio']:.1f}",
+                "perda maxima acumulada": f"R$ {dados['perda_maxima']:.2f}",
+                "maior sequencia sem premio": dados["maior_sequencia_sem_premio"],
+            },
+            testes={
+                "teste": teste["nome"],
+                "estimativa": f"{teste['estimativa']:.6g}",
+                "IC 95%": f"[{teste['ic'][0]:.6g}; {teste['ic'][1]:.6g}]",
+                "p-valor": f"{teste['p_valor']:.4g}",
+                teste["nome_efeito"]: f"{teste['tamanho_efeito']:.4g}",
+                "amostra": teste["n"],
+                "leitura": teste["leitura"],
+            },
+            limitacoes=limitacoes,
+            conclusao=teste["leitura"],
+            parametros={
+                "semente": dados["semente"],
+                "simulacoes": dados["simulacoes"],
+                "jogos por concurso": pedido.jogos_por_concurso,
+                "modalidade": pedido.modalidade,
+            },
+        )
+        if formato == "md":
+            corpo = exportacao.relatorio_markdown(relatorio).encode("utf-8")
+            tipo = "text/markdown; charset=utf-8"
+        else:
+            corpo = exportacao.relatorio_pdf(relatorio)
+            tipo = "application/pdf"
+        nome = f"backtest-{pedido.modalidade}-{date.today().isoformat()}.{formato}"
+        return Response(content=corpo, media_type=tipo,
+                        headers={"Content-Disposition": f'attachment; filename="{nome}"'})
 
     @app.get("/jogo-responsavel")
     def jogo_responsavel() -> dict[str, Any]:
