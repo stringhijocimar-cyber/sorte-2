@@ -119,7 +119,10 @@ Faixas: 0–25 baixo · 26–50 moderado · 51–75 alto · 76–100 crítico.
 
 ```bash
 cd backend
-python3 -m pytest -q          # 299 testes, sem rede
+python3 -m pytest -q          # 312 testes, sem rede
+
+# Confere a importação contra a API real da CAIXA (precisa de rede):
+python3 ferramentas/verificar_caixa.py
 ```
 
 O núcleo não exige dependências. SciPy e statsmodels são usados **apenas** nos
@@ -153,7 +156,9 @@ backend/
     exportacao.py    CSV, XLSX e PDF sem dependência de runtime
     simulacao.py     Monte Carlo paralelo, reprodutível sob qualquer nº de processos
     tarefas.py       fila em segundo plano para backtests longos
-  tests/             299 testes
+  ferramentas/
+    verificar_caixa.py  confere a ingestão contra a API real (manual, usa rede)
+  tests/             312 testes
 ```
 
 ## Acrescentar uma modalidade

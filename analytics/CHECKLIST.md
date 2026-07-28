@@ -8,7 +8,7 @@ acreditar.
 **Conclusão geral: o sistema NÃO está pronto.** 10 dos 20 critérios estão
 atendidos, 4 parcialmente, 6 pendentes. O detalhamento está abaixo.
 
-Reproduzir: `cd backend && python3 -m pytest -q` (299 testes, sem rede).
+Reproduzir: `cd backend && python3 -m pytest -q` (312 testes, sem rede).
 
 ---
 
@@ -16,7 +16,7 @@ Reproduzir: `cd backend && python3 -m pytest -q` (299 testes, sem rede).
 
 | # | Critério (§30) | Estado | Evidência |
 |---|---|---|---|
-| 1 | Importar corretamente o histórico de todas as modalidades | ⚠️ parcial | Conversão, validação e recusa testadas com respostas controladas (`test_ingestao.py`, 22 testes). **Nunca executado contra a API real da CAIXA** — sem isso o critério não pode ser dado por cumprido. |
+| 1 | Importar corretamente o histórico de todas as modalidades | ⚠️ parcial | Conversão, validação e recusa testadas com respostas controladas (`test_ingestao.py`). **Ainda não executado contra a API real da CAIXA**: a política de rede deste ambiente bloqueia `servicebus2.caixa.gov.br` (403 no CONNECT). Existe `ferramentas/verificar_caixa.py` para você rodar de uma máquina com acesso — ele confere as 9 modalidades e nomeia campos ausentes, renomeados ou novos. |
 | 2 | Atualizar novos concursos sem duplicidade | ✅ | `test_importa_apenas_o_que_falta`, `test_deduplica_contra_o_banco_e_dentro_do_lote`, `test_nada_a_fazer_quando_esta_em_dia`; e `UNIQUE(lottery_id, contest_number)` no schema |
 | 3 | Gerar apenas jogos válidos | ✅ | `Modalidade.validar_aposta()` em toda aposta; `test_gera_jogos_validos`, `test_obrigatorios_aparecem_em_todos_os_jogos`, `test_excluidos_nao_aparecem`, `test_filtro_apertado_entrega_menos_e_nao_mente` (o gerador nunca completa o lote violando filtros) |
 | 4 | Calcular corretamente combinações e probabilidades | ✅ | `test_probabilidade_da_sena_e_a_oficial` (1 em 50.063.860), `test_probabilidade_da_lotofacil_e_a_oficial` (1 em 3.268.760), `test_probabilidades_de_uma_modalidade_somam_um` |
@@ -33,7 +33,7 @@ Reproduzir: `cd backend && python3 -m pytest -q` (299 testes, sem rede).
 | 15 | Não prometer capacidade de prever sorteios | ✅ | Nenhuma função de previsão existe; README e docstrings afirmam o contrário explicitamente. ⚠️ Falta o teste automatizado de vocabulário proibido (existe no LotoLab; deve ser portado). |
 | 16 | Funcionar em celular e computador | ❌ | Sem frontend. |
 | 17 | Possuir documentação técnica | ✅ | `README.md`, `ARQUITETURA.md`, `banco/schema.sql` comentado, docstrings em todos os módulos |
-| 18 | Possuir testes automatizados | ✅ | 299 testes, ~34 s, sem rede: unitários, banco, API e integração. ⚠️ Faltam testes de interface (não há frontend ainda). |
+| 18 | Possuir testes automatizados | ✅ | 312 testes, ~34 s, sem rede: unitários, banco, API e integração. ⚠️ Faltam testes de interface (não há frontend ainda). |
 | 19 | Permitir auditoria dos parâmetros utilizados | ✅ | `test_salva_backtest_com_semente_e_particao`, `test_backtest_sem_semente_e_recusado_pelo_banco`, `test_alteracao_cria_nova_versao_sem_apagar_a_anterior`, `test_auditoria_nao_expoe_alteracao_nem_remocao` |
 | 20 | Atender segurança e jogo responsável | ⚠️ parcial | Segurança implementada e testada: scrypt com parâmetros no hash e detecção de rehash, tokens guardados só como hash, CSRF amarrado à sessão, limite de taxa com janela deslizante, HMAC do IP, anonimização na exclusão. Injeção de SQL testada com ataque real (`test_injecao_de_sql_nao_derruba_a_tabela`). **Falta jogo responsável na interface** (limite de orçamento, alertas, pausa) e as telas. |
 
@@ -57,7 +57,7 @@ Reproduzir: `cd backend && python3 -m pytest -q` (299 testes, sem rede).
 
 | Tipo | Estado |
 |---|---|
-| Unitários | ✅ 299 |
+| Unitários | ✅ 312 |
 | Estatísticos | ✅ conferidos contra SciPy e statsmodels |
 | Regras de cada modalidade | ✅ 9 modalidades |
 | Geração de combinações | ✅ validade, faixa, ordem, não-duplicidade, obrigatórios/excluídos, orçamento, filtros |
@@ -76,8 +76,11 @@ Reproduzir: `cd backend && python3 -m pytest -q` (299 testes, sem rede).
 Em ordem de impacto:
 
 1. **Nenhuma execução contra a API real da CAIXA.** Toda a importação foi
-   exercitada com respostas controladas. O formato real pode divergir do que
-   assumi, e isso só se descobre executando.
+   exercitada com respostas controladas, e o formato real pode divergir do que
+   assumi. A política de rede deste ambiente bloqueia o domínio da CAIXA, então
+   a verificação não pôde ser feita aqui. Rode `python3
+   ferramentas/verificar_caixa.py` de uma máquina com acesso: ele sai com
+   código 1 e nomeia exatamente o que divergiu.
 2. **Sem migrações nem execução em PostgreSQL real.** A persistência é testada
    em SQLite; os tipos são portáteis por variante, mas nada rodou ainda contra
    um PostgreSQL de verdade.
