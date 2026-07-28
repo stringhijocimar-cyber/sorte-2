@@ -352,6 +352,64 @@ def teste_permutacao(
     )
 
 
+def teste_monte_carlo(
+    observado: float, distribuicao_nula: Sequence[float], confianca: float = 0.95
+) -> Resultado:
+    """Compara UM valor observado contra a distribuição simulada sob a hipótese nula.
+
+    É o teste correto para "a minha carteira difere do acaso?": há uma única
+    observação (o ROI da estratégia) e milhares de carteiras aleatórias que
+    formam o nulo.
+
+    Substituiu um teste de permutação que comparava o resultado líquido em
+    reais contra ROIs em razão — grandezas de unidades diferentes, cuja
+    diferença de médias não significava nada. O defeito não aparecia em
+    nenhuma tela: produzia um p-valor plausível a partir de uma conta sem
+    sentido.
+
+    Atenção ao intervalo devolvido: ``ic_inferior``/``ic_superior`` delimitam a
+    **faixa central do acaso**, não a incerteza da estimativa. Com uma única
+    observação não há intervalo de confiança a estimar, e inventar um seria
+    pior do que informar onde as carteiras aleatórias caem.
+    """
+    nulo = sorted(float(x) for x in distribuicao_nula)
+    n = len(nulo)
+    if n == 0:
+        raise ValueError("distribuição nula vazia")
+
+    acima = sum(1 for x in nulo if x >= observado)
+    abaixo = sum(1 for x in nulo if x <= observado)
+    # Correção (r+1)/(m+1): p = 0 é impossível com amostra finita.
+    p = min(1.0, 2.0 * min((acima + 1) / (n + 1), (abaixo + 1) / (n + 1)))
+
+    media = sum(nulo) / n
+    if n > 1:
+        variancia = sum((x - media) ** 2 for x in nulo) / (n - 1)
+        dp = sqrt(variancia)
+    else:
+        dp = 0.0
+    z = (observado - media) / dp if dp > 0 else 0.0
+
+    alfa = (1.0 - confianca) / 2.0
+    lo = nulo[max(0, int(alfa * n) - 1)]
+    hi = nulo[min(n - 1, int((1 - alfa) * n))]
+    percentil = percentil_na_distribuicao(observado, nulo)
+
+    return Resultado(
+        nome="Monte Carlo contra carteiras aleatórias",
+        estimativa=observado, ic_inferior=lo, ic_superior=hi,
+        p_valor=p, tamanho_efeito=z, nome_efeito="z frente ao acaso",
+        n=n, confianca=confianca,
+        leitura=(
+            f"Observado {observado:.4g}; o acaso produz entre {lo:.4g} e {hi:.4g} "
+            f"em {int(confianca * 100)}% das carteiras (percentil {percentil:.1f}). "
+            + ("Diferença compatível com acaso." if p >= 0.05 else
+               "Fora da faixa do acaso neste recorte; verifique quantas hipóteses "
+               "foram testadas antes de concluir.")
+        ),
+    )
+
+
 def percentil_na_distribuicao(valor: float, distribuicao: Sequence[float]) -> float:
     """Em que percentil ``valor`` cai dentro de ``distribuicao``.
 

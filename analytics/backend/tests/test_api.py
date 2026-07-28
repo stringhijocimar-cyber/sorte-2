@@ -489,3 +489,92 @@ def test_relatorio_sempre_declara_a_independencia_dos_sorteios(app, cliente):
                          ).content.decode("utf-8")
     assert "eventos independentes" in texto
     assert "nao carrega" in texto or "não carrega" in texto
+
+
+# --------------------------------------------------------------------------- #
+# Backtest em segundo plano
+# --------------------------------------------------------------------------- #
+
+def _aguardar(cliente, token, tarefa_id, tentativas=200):
+    import time as _t
+
+    for _ in range(tentativas):
+        dados = cliente.get(f"/tarefas/{tarefa_id}", headers=auth(token)).json()
+        if dados["situacao"] in ("concluida", "falhou", "cancelada"):
+            return dados
+        _t.sleep(0.05)
+    raise AssertionError("a tarefa não terminou a tempo")
+
+
+def test_backtest_assincrono_aceita_dez_mil_simulacoes(app, cliente):
+    """O §12 pede no mínimo 10.000; a rota síncrona recusa, esta aceita."""
+    _semear_historico(app)
+    token = registrar(cliente)
+    r = cliente.post("/backtests/assincrono", headers=auth(token), json={
+        "modalidade": "megasena", "simulacoes": 10_000, "semente": 4})
+    assert r.status_code == 202, r.text
+    tarefa = r.json()
+    assert tarefa["situacao"] in ("na_fila", "executando")
+
+    concluida = _aguardar(cliente, token, tarefa["id"])
+    assert concluida["situacao"] == "concluida", concluida.get("erro")
+    resultado = concluida["resultado"]
+    assert resultado["simulacoes"] == 10_000
+    assert resultado["semente"] == 4
+    assert 0 <= resultado["percentil_vs_aleatorio"] <= 100
+    assert set(resultado["teste"]) >= {"estimativa", "ic", "p_valor", "n", "leitura"}
+
+
+def test_assincrono_e_sincrono_dao_o_mesmo_resultado(app, cliente):
+    """Caminhos diferentes não podem divergir para a mesma semente."""
+    _semear_historico(app)
+    token = registrar(cliente)
+    corpo = {"modalidade": "megasena", "simulacoes": 200, "semente": 31}
+    sincrono = cliente.post("/backtests", headers=auth(token), json=corpo).json()
+    tarefa = cliente.post("/backtests/assincrono", headers=auth(token), json=corpo).json()
+    assincrono = _aguardar(cliente, token, tarefa["id"])["resultado"]
+    assert assincrono["roi"] == sincrono["roi"]
+    assert assincrono["percentil_vs_aleatorio"] == sincrono["percentil_vs_aleatorio"]
+    assert assincrono["teste"]["p_valor"] == sincrono["teste"]["p_valor"]
+
+
+def test_tarefa_alheia_da_404(app, cliente):
+    _semear_historico(app)
+    a = registrar(cliente, "a@x.com")
+    b = registrar(cliente, "b@x.com")
+    tarefa = cliente.post("/backtests/assincrono", headers=auth(a), json={
+        "modalidade": "megasena", "simulacoes": 20}).json()
+    assert cliente.get(f"/tarefas/{tarefa['id']}", headers=auth(b)).status_code == 404
+    assert cliente.get("/tarefas/inexistente", headers=auth(b)).status_code == 404
+
+
+def test_listar_tarefas_so_traz_as_do_usuario(app, cliente):
+    _semear_historico(app)
+    a = registrar(cliente, "a@x.com")
+    b = registrar(cliente, "b@x.com")
+    cliente.post("/backtests/assincrono", headers=auth(a),
+                 json={"modalidade": "megasena", "simulacoes": 20})
+    assert len(cliente.get("/tarefas", headers=auth(a)).json()) == 1
+    assert cliente.get("/tarefas", headers=auth(b)).json() == []
+
+
+def test_assincrono_sem_historico_da_409(cliente):
+    token = registrar(cliente)
+    r = cliente.post("/backtests/assincrono", headers=auth(token),
+                     json={"modalidade": "megasena", "simulacoes": 20})
+    assert r.status_code == 409
+
+
+def test_assincrono_recusa_volume_absurdo(app, cliente):
+    _semear_historico(app)
+    token = registrar(cliente)
+    r = cliente.post("/backtests/assincrono", headers=auth(token), json={
+        "modalidade": "megasena",
+        "simulacoes": api.SIMULACOES_MAXIMAS_ASSINCRONO + 1})
+    assert r.status_code == 422
+
+
+def test_tarefas_exigem_autenticacao(cliente):
+    assert cliente.get("/tarefas").status_code == 401
+    assert cliente.post("/backtests/assincrono",
+                        json={"modalidade": "megasena"}).status_code == 401

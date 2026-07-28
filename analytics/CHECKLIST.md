@@ -8,7 +8,7 @@ acreditar.
 **Conclusão geral: o sistema NÃO está pronto.** 10 dos 20 critérios estão
 atendidos, 4 parcialmente, 6 pendentes. O detalhamento está abaixo.
 
-Reproduzir: `cd backend && python3 -m pytest -q` (268 testes, sem rede).
+Reproduzir: `cd backend && python3 -m pytest -q` (299 testes, sem rede).
 
 ---
 
@@ -22,7 +22,7 @@ Reproduzir: `cd backend && python3 -m pytest -q` (268 testes, sem rede).
 | 4 | Calcular corretamente combinações e probabilidades | ✅ | `test_probabilidade_da_sena_e_a_oficial` (1 em 50.063.860), `test_probabilidade_da_lotofacil_e_a_oficial` (1 em 3.268.760), `test_probabilidades_de_uma_modalidade_somam_um` |
 | 5 | Executar backtests reproduzíveis | ✅ | `test_avaliacao_e_reproduzivel_com_a_mesma_semente`; semente gravada em `Avaliacao.semente` e `backtests.seed NOT NULL` |
 | 6 | Separar desenvolvimento, validação e teste | ✅ | `test_particao_e_cronologica_e_nao_se_sobrepoe`, `test_particao_embaralhada_e_recusada`, `test_particao_sem_teste_e_recusada` |
-| 7 | Comparar estratégias com milhares de jogos aleatórios | ✅ | `avaliar_periodo(n_simulacoes=10_000)` por padrão; `test_avaliacao_compara_com_aleatorio_e_registra_semente`, `test_aleatorio_fica_perto_do_meio_da_propria_distribuicao` |
+| 7 | Comparar estratégias com milhares de jogos aleatórios | ✅ | 10.000 simulações em paralelo (`test_dez_mil_simulacoes_sao_viaveis`), com resultado **idêntico** a 1, 2 ou 4 processos (`test_resultado_identico_com_1_2_e_4_processos`). Endpoint `/backtests/assincrono` aceita até 100.000. |
 | 8 | Calcular custos, prêmios, resultado líquido e ROI | ✅ | `test_metricas_de_carteira_conhecida`, `test_custo_usa_o_preco_do_concurso_nao_o_de_hoje`, `test_preco_respeita_a_data_do_concurso` |
 | 9 | Aplicar intervalos de confiança | ✅ | Todo `Resultado` carrega IC; `test_nenhum_resultado_sai_sem_ic_e_efeito`, `test_wilson_bate_com_scipy`, `test_wilson_nunca_sai_do_intervalo_valido` |
 | 10 | Corrigir múltiplos testes | ✅ | Bonferroni, Holm e BH conferidos contra `statsmodels` (`test_holm_e_bh_batem_com_statsmodels`); `test_relata_quem_perdeu_a_significancia` |
@@ -33,7 +33,7 @@ Reproduzir: `cd backend && python3 -m pytest -q` (268 testes, sem rede).
 | 15 | Não prometer capacidade de prever sorteios | ✅ | Nenhuma função de previsão existe; README e docstrings afirmam o contrário explicitamente. ⚠️ Falta o teste automatizado de vocabulário proibido (existe no LotoLab; deve ser portado). |
 | 16 | Funcionar em celular e computador | ❌ | Sem frontend. |
 | 17 | Possuir documentação técnica | ✅ | `README.md`, `ARQUITETURA.md`, `banco/schema.sql` comentado, docstrings em todos os módulos |
-| 18 | Possuir testes automatizados | ✅ | 268 testes, ~34 s, sem rede: unitários, banco, API e integração. ⚠️ Faltam testes de interface (não há frontend ainda). |
+| 18 | Possuir testes automatizados | ✅ | 299 testes, ~34 s, sem rede: unitários, banco, API e integração. ⚠️ Faltam testes de interface (não há frontend ainda). |
 | 19 | Permitir auditoria dos parâmetros utilizados | ✅ | `test_salva_backtest_com_semente_e_particao`, `test_backtest_sem_semente_e_recusado_pelo_banco`, `test_alteracao_cria_nova_versao_sem_apagar_a_anterior`, `test_auditoria_nao_expoe_alteracao_nem_remocao` |
 | 20 | Atender segurança e jogo responsável | ⚠️ parcial | Segurança implementada e testada: scrypt com parâmetros no hash e detecção de rehash, tokens guardados só como hash, CSRF amarrado à sessão, limite de taxa com janela deslizante, HMAC do IP, anonimização na exclusão. Injeção de SQL testada com ataque real (`test_injecao_de_sql_nao_derruba_a_tabela`). **Falta jogo responsável na interface** (limite de orçamento, alertas, pausa) e as telas. |
 
@@ -57,7 +57,7 @@ Reproduzir: `cd backend && python3 -m pytest -q` (268 testes, sem rede).
 
 | Tipo | Estado |
 |---|---|
-| Unitários | ✅ 268 |
+| Unitários | ✅ 299 |
 | Estatísticos | ✅ conferidos contra SciPy e statsmodels |
 | Regras de cada modalidade | ✅ 9 modalidades |
 | Geração de combinações | ✅ validade, faixa, ordem, não-duplicidade, obrigatórios/excluídos, orçamento, filtros |

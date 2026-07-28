@@ -37,10 +37,11 @@ sobre a diferença — leia antes de assumir qualquer coisa.
 | Migrações (Alembic) | ❌ pendente |
 | Frontend Next.js, 14 telas, 17 gráficos | ❌ **não** implementado |
 | Segurança: senhas, tokens, CSRF, limite de taxa, LGPD | ✅ pronto, testado |
-| Worker para backtests longos | ❌ pendente |
+| Monte Carlo paralelo + fila de tarefas | ✅ pronta, testada |
+| Fila distribuída (Redis) para vários processos | ❌ pendente |
 | Machine learning | ❌ **não** implementado |
 | Exportação CSV, Excel e PDF | ✅ pronta, XLSX validado com openpyxl |
-| Monte Carlo dedicado | ❌ **não** implementado |
+| Simulador Monte Carlo dedicado (§20) | ❌ **não** implementado |
 | Docker / CI-CD | ⚠️ compose de desenvolvimento apenas |
 
 Nada marcado ❌ foi simulado com implementação vazia. Preferi um núcleo em que
@@ -118,7 +119,7 @@ Faixas: 0–25 baixo · 26–50 moderado · 51–75 alto · 76–100 crítico.
 
 ```bash
 cd backend
-python3 -m pytest -q          # 268 testes, sem rede
+python3 -m pytest -q          # 299 testes, sem rede
 ```
 
 O núcleo não exige dependências. SciPy e statsmodels são usados **apenas** nos
@@ -150,7 +151,9 @@ backend/
     seguranca.py     senhas, tokens, CSRF, limite de taxa, LGPD
     api.py           API REST: auth, geração, conferência, backtest
     exportacao.py    CSV, XLSX e PDF sem dependência de runtime
-  tests/             268 testes
+    simulacao.py     Monte Carlo paralelo, reprodutível sob qualquer nº de processos
+    tarefas.py       fila em segundo plano para backtests longos
+  tests/             299 testes
 ```
 
 ## Acrescentar uma modalidade

@@ -22,7 +22,7 @@ from dataclasses import dataclass, field
 from datetime import date
 from typing import Callable, Iterable, Sequence
 
-from .estatistica import Resultado, percentil_na_distribuicao, teste_permutacao
+from .estatistica import Resultado, percentil_na_distribuicao, teste_monte_carlo
 from .financeiro import Metricas, ResultadoConcurso, avaliar
 from .loterias import Modalidade
 
@@ -195,12 +195,11 @@ def avaliar_periodo(
         rois.append(avaliar(base).roi)
 
     percentil = percentil_na_distribuicao(metricas.roi, rois)
-    teste = teste_permutacao(
-        [r.liquido for r in reais],
-        [x for x in rois],
-        permutacoes=min(10_000, max(1_000, n_simulacoes)),
-        semente=semente,
-    )
+    # Monte Carlo, e não permutação: há UMA observação (o ROI da estratégia)
+    # contra a distribuição das carteiras aleatórias. A versão anterior
+    # comparava resultado líquido em reais contra ROIs em razão — unidades
+    # diferentes, estatística sem sentido, p-valor plausível mesmo assim.
+    teste = teste_monte_carlo(metricas.roi, rois)
     return Avaliacao(periodo, metricas, percentil, teste, n_simulacoes, semente)
 
 

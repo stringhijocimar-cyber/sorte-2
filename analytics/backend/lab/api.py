@@ -36,6 +36,7 @@ from . import backtest as bt
 from . import estatistica, exportacao, filtros as mod_filtros, gerador, loterias
 from . import persistencia as p
 from . import seguranca as sec
+from . import simulacao, tarefas
 
 # --------------------------------------------------------------------------- #
 # Configuração
@@ -48,6 +49,10 @@ LOGIN_JANELA = float(os.getenv("LOGIN_JANELA_SEGUNDOS", "300"))
 #: Teto de simulações por requisição: 10.000 num ciclo HTTP estoura o tempo.
 #: Backtests maiores pertencem ao worker, ainda não implementado.
 SIMULACOES_MAXIMAS = int(os.getenv("SIMULACOES_MAXIMAS", "500"))
+#: Em segundo plano não há ciclo HTTP a respeitar. O §12 pede no mínimo 10.000
+#: e permite 100.000 — é aqui que esse requisito é atendido.
+SIMULACOES_MAXIMAS_ASSINCRONO = int(os.getenv("SIMULACOES_MAXIMAS_ASSINCRONO", "100000"))
+TRABALHADORES = int(os.getenv("TRABALHADORES", "2"))
 
 
 def segredo() -> str:
@@ -213,6 +218,7 @@ def criar_app(engine=None) -> FastAPI:
     #: Tokens ativos, por usuário. Em produção pertencem ao Redis ou a uma
     #: tabela; aqui a estrutura é explícita para o comportamento ser testável.
     app.state.tokens = {}
+    app.state.fila = tarefas.Fila(trabalhadores=TRABALHADORES)
 
     # ----------------------------------------------------------------- #
     @app.get("/saude")
@@ -572,6 +578,89 @@ def criar_app(engine=None) -> FastAPI:
         nome = f"backtest-{pedido.modalidade}-{date.today().isoformat()}.{formato}"
         return Response(content=corpo, media_type=tipo,
                         headers={"Content-Disposition": f'attachment; filename="{nome}"'})
+
+    # ----------------------------------------------------------------- #
+    # Backtest em segundo plano
+    # ----------------------------------------------------------------- #
+    @app.post("/backtests/assincrono", status_code=status.HTTP_202_ACCEPTED)
+    def enfileirar_backtest(pedido: PedidoBacktest, u: Adulto,
+                            sessao: Sessao) -> dict[str, Any]:
+        """Enfileira e devolve o identificador. É aqui que as 10.000 do §12 cabem."""
+        if pedido.simulacoes > SIMULACOES_MAXIMAS_ASSINCRONO:
+            raise HTTPException(
+                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                f"máximo de {SIMULACOES_MAXIMAS_ASSINCRONO} simulações")
+        try:
+            m = loterias.modalidade(pedido.modalidade)
+        except KeyError as erro:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, str(erro)) from erro
+
+        # O histórico é lido AGORA, na sessão da requisição: a tarefa roda em
+        # outra thread e não pode usar a sessão do request, que já terá sido
+        # fechada quando ela começar.
+        historico = p.RepositorioConcursos(sessao).para_backtest(pedido.modalidade)
+        if len(historico) < 10:
+            raise HTTPException(
+                status.HTTP_409_CONFLICT,
+                f"histórico insuficiente: {len(historico)} concursos importados")
+        particao = bt.particionar(historico)
+
+        def executar() -> dict[str, Any]:
+            a = simulacao.avaliar_periodo_paralelo(
+                m, bt.aleatoria_uniforme, particao.teste,
+                particao.desenvolvimento + particao.validacao,
+                jogos_por_concurso=pedido.jogos_por_concurso,
+                n_simulacoes=pedido.simulacoes, semente=pedido.semente,
+                periodo="teste final")
+            return {
+                "particao": particao.resumo(),
+                "roi": a.metricas.roi, "custo_total": a.metricas.custo_total,
+                "premio_bruto": a.metricas.premio_bruto,
+                "perda_maxima": a.metricas.perda_maxima,
+                "percentil_vs_aleatorio": a.percentil_vs_aleatorio,
+                "simulacoes": a.n_simulacoes, "semente": a.semente,
+                "teste": {
+                    "estimativa": a.teste.estimativa,
+                    "ic": [a.teste.ic_inferior, a.teste.ic_superior],
+                    "p_valor": a.teste.p_valor,
+                    "tamanho_efeito": a.teste.tamanho_efeito,
+                    "n": a.teste.n, "leitura": a.teste.leitura,
+                },
+            }
+
+        try:
+            tarefa = app.state.fila.enfileirar(
+                f"backtest {pedido.modalidade} ({pedido.simulacoes} simulações)",
+                executar, user_id=u.id)
+        except tarefas.LimiteDeTarefas as erro:
+            raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, str(erro)) from erro
+
+        p.Auditoria(sessao).registrar("backtest_enfileirado", "tarefas", tarefa.id,
+                                      user_id=u.id,
+                                      details={"simulacoes": pedido.simulacoes,
+                                               "semente": pedido.semente})
+        return tarefa.para_json()
+
+    @app.get("/tarefas")
+    def listar_tarefas(u: Autenticado) -> list[dict[str, Any]]:
+        return [t.para_json() for t in app.state.fila.listar(user_id=u.id)]
+
+    @app.get("/tarefas/{tarefa_id}")
+    def obter_tarefa(tarefa_id: str, u: Autenticado) -> dict[str, Any]:
+        tarefa = app.state.fila.obter(tarefa_id, user_id=u.id)
+        if tarefa is None:
+            # Mesma resposta para inexistente e alheia: distinguir permitiria
+            # descobrir quais identificadores existem.
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "tarefa não encontrada")
+        return tarefa.para_json()
+
+    @app.delete("/tarefas/{tarefa_id}")
+    def cancelar_tarefa(tarefa_id: str, u: Autenticado) -> dict[str, Any]:
+        if not app.state.fila.cancelar(tarefa_id, user_id=u.id):
+            raise HTTPException(
+                status.HTTP_409_CONFLICT,
+                "tarefa não encontrada ou já iniciada; execução em curso não é interrompida")
+        return {"cancelada": tarefa_id}
 
     @app.get("/jogo-responsavel")
     def jogo_responsavel() -> dict[str, Any]:

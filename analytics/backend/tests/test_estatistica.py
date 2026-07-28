@@ -193,3 +193,62 @@ def test_uma_hipotese_nao_e_corrigida():
 def test_metodo_desconhecido_falha():
     with pytest.raises(KeyError):
         multiplos.corrigir("inventado", PS)
+
+
+# --------------------------------------------------------------------------- #
+# Monte Carlo — substituiu a permutação de unidades incompatíveis
+# --------------------------------------------------------------------------- #
+
+def test_monte_carlo_no_centro_do_nulo_nao_e_significativo():
+    nulo = [scipy_stats.norm.ppf((i + 0.5) / 1000) for i in range(1000)]
+    r = est.teste_monte_carlo(0.0, nulo)
+    assert r.p_valor > 0.9
+    assert r.ic_inferior < 0.0 < r.ic_superior
+    assert abs(r.tamanho_efeito) < 0.1
+    assert "compatível com acaso" in r.leitura
+
+
+def test_monte_carlo_no_extremo_e_significativo():
+    nulo = [scipy_stats.norm.ppf((i + 0.5) / 1000) for i in range(1000)]
+    r = est.teste_monte_carlo(10.0, nulo)
+    assert r.p_valor < 0.01
+    assert r.tamanho_efeito > 5
+    assert r.estimativa == 10.0
+
+
+def test_monte_carlo_nunca_devolve_p_zero():
+    """Com amostra finita, p = 0 é impossível — e enganaria o usuário."""
+    r = est.teste_monte_carlo(1e9, [0.0] * 500)
+    assert r.p_valor > 0
+    assert r.p_valor == pytest.approx(2 / 501, rel=1e-9)
+
+
+def test_monte_carlo_e_bilateral():
+    nulo = list(range(1000))
+    baixo = est.teste_monte_carlo(-500, nulo)
+    alto = est.teste_monte_carlo(1500, nulo)
+    assert baixo.p_valor == pytest.approx(alto.p_valor, rel=1e-9)
+
+
+def test_monte_carlo_declara_que_o_intervalo_e_do_acaso():
+    """O intervalo é a faixa do acaso, não a incerteza da estimativa."""
+    r = est.teste_monte_carlo(0.5, list(range(100)))
+    assert "o acaso produz entre" in r.leitura
+    assert r.n == 100
+
+
+def test_monte_carlo_com_nulo_vazio_falha():
+    with pytest.raises(ValueError):
+        est.teste_monte_carlo(1.0, [])
+
+
+def test_monte_carlo_bate_com_a_referencia_normal():
+    """Contra um nulo normal grande, o p do Monte Carlo aproxima o analítico."""
+    import random as _r
+
+    rng = _r.Random(7)
+    nulo = [rng.gauss(0, 1) for _ in range(20_000)]
+    for observado in (1.0, 1.96, 2.5):
+        nosso = est.teste_monte_carlo(observado, nulo).p_valor
+        analitico = 2 * scipy_stats.norm.sf(observado)
+        assert nosso == pytest.approx(analitico, abs=0.02), observado
