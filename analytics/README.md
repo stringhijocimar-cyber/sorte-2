@@ -32,12 +32,12 @@ sobre a diferença — leia antes de assumir qualquer coisa.
 | Importação incremental CAIXA + CSV, com validação e fallback | ✅ pronto, testado sem rede |
 | Gerador configurável com filtros (§8, §9.6–9.13) | ✅ pronto, testado |
 | Estratégias compostas do §9.15/9.16 (cobertura otimizada, híbrida) | ❌ pendente |
-| API FastAPI | ⚠️ esqueleto mínimo |
+| API REST (auth, modalidades, gerador, conferência, backtest) | ✅ pronta, testada |
 | Persistência (modelos, repositórios, versionamento, auditoria) | ✅ pronto, testado em SQLite/PostgreSQL |
 | Migrações (Alembic) | ❌ pendente |
 | Frontend Next.js, 14 telas, 17 gráficos | ❌ **não** implementado |
 | Segurança: senhas, tokens, CSRF, limite de taxa, LGPD | ✅ pronto, testado |
-| Fluxo de login/registro e perfis na API | ❌ pendente |
+| Worker para backtests longos | ❌ pendente |
 | Machine learning | ❌ **não** implementado |
 | Monte Carlo dedicado, exportação PDF/Excel | ❌ **não** implementado |
 | Docker / CI-CD | ⚠️ compose de desenvolvimento apenas |
@@ -117,7 +117,7 @@ Faixas: 0–25 baixo · 26–50 moderado · 51–75 alto · 76–100 crítico.
 
 ```bash
 cd backend
-python3 -m pytest -q          # 200 testes, sem rede
+python3 -m pytest -q          # 236 testes, sem rede
 ```
 
 O núcleo não exige dependências. SciPy e statsmodels são usados **apenas** nos
@@ -147,7 +147,8 @@ backend/
     gerador.py       geração com filtros, obrigatórios/excluídos, orçamento
     persistencia.py  modelos + repositórios; trava contra divergir do schema.sql
     seguranca.py     senhas, tokens, CSRF, limite de taxa, LGPD
-  tests/             200 testes
+    api.py           API REST: auth, geração, conferência, backtest
+  tests/             236 testes
 ```
 
 ## Acrescentar uma modalidade

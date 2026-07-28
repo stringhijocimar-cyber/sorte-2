@@ -577,7 +577,18 @@ def criar_engine(url: str = "sqlite+pysqlite:///:memory:", echo: bool = False):
     estrangeiras são aceitas e ignoradas, e o teste de CASCADE passaria sem
     nada estar acontecendo.
     """
-    engine = create_engine(url, echo=echo)
+    argumentos: dict = {}
+    if url.endswith(":memory:"):
+        # Uma base SQLite em memória vive DENTRO da conexão. Com o pool padrão,
+        # cada conexão nova abre um banco vazio — e o servidor de teste, que
+        # roda em outra thread, não enxergaria as tabelas criadas aqui.
+        # StaticPool mantém uma única conexão compartilhada.
+        from sqlalchemy.pool import StaticPool
+
+        argumentos = {"poolclass": StaticPool,
+                      "connect_args": {"check_same_thread": False}}
+
+    engine = create_engine(url, echo=echo, **argumentos)
     if engine.dialect.name == "sqlite":
         from sqlalchemy import event
 
