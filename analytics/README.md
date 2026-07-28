@@ -35,7 +35,8 @@ sobre a diferença — leia antes de assumir qualquer coisa.
 | API REST (auth, modalidades, gerador, conferência, backtest) | ✅ pronta, testada |
 | Persistência (modelos, repositórios, versionamento, auditoria) | ✅ pronto, testado em SQLite/PostgreSQL |
 | Migrações (Alembic), conferidas contra os modelos | ✅ prontas, testadas |
-| Frontend Next.js, 14 telas, 17 gráficos | ❌ **não** implementado |
+| Frontend: 2 telas reais (Gerador, Backtest), responsivas | ✅ pronto, verificado no navegador |
+| Frontend: as outras 12 telas do §24 e os 17 gráficos | ❌ pendente |
 | Segurança: senhas, tokens, CSRF, limite de taxa, LGPD | ✅ pronto, testado |
 | Monte Carlo paralelo + fila de tarefas | ✅ pronta, testada |
 | Fila distribuída (Redis) para vários processos | ❌ pendente |

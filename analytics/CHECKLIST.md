@@ -5,8 +5,8 @@ aparece quando existe teste automatizado que prova o critério — a coluna
 *Evidência* nomeia o teste, para que qualquer um possa conferir em vez de
 acreditar.
 
-**Conclusão geral: o sistema NÃO está pronto.** 10 dos 20 critérios estão
-atendidos, 4 parcialmente, 6 pendentes. O detalhamento está abaixo.
+**Conclusão geral: o sistema NÃO está pronto.** 13 dos 20 critérios estão
+atendidos, 4 parcialmente, 3 pendentes. O detalhamento está abaixo.
 
 Reproduzir: `cd backend && python3 -m pytest -q` (319 testes, sem rede).
 
@@ -29,9 +29,9 @@ Reproduzir: `cd backend && python3 -m pytest -q` (319 testes, sem rede).
 | 11 | Identificar risco de overfitting | ✅ | `overfitting.calcular()`; `test_degradacao_grande_eleva_o_risco`, `test_instabilidade_entre_janelas_eleva_o_risco`, `test_sem_janelas_cobra_metade_do_peso_e_avisa`. **É heurística declarada, não medida oficial.** |
 | 12 | Repetir testes em diferentes períodos | ✅ | Walk-forward expansiva e móvel: `test_walk_forward_expansiva_avanca_sem_sobrepor`, `test_walk_forward_movel_esquece_o_comeco`. ⚠️ Falta a *matriz de estabilidade* do §17 (acumulado vs. regular, janelas curtas vs. longas). |
 | 13 | Exportar resultados | ✅ | CSV, XLSX e PDF sem dependência; o XLSX é validado lendo de volta com `openpyxl` (`test_xlsx_abre_em_leitor_independente`). O relatório recusa ser criado sem a seção de limitações (`test_relatorio_sem_limitacoes_e_recusado`). Endpoints `/jogos/exportar` e `/backtests/relatorio` entregam os arquivos. |
-| 14 | Exibir avisos de limitações estatísticas | ⚠️ parcial | Todo `Resultado` traz `leitura` em português e o índice de overfitting se declara não-oficial. Falta a **interface** que exibe isso junto ao dado. |
+| 14 | Exibir avisos de limitações estatísticas | ✅ | O aviso fica **junto do dado**: o texto sobre filtros está colado aos controles de filtro, e o veredito estatístico (estimativa, faixa do acaso, p-valor, tamanho de efeito, leitura) fica no mesmo bloco do ROI. Verificado no navegador. Vale para as 2 telas existentes. |
 | 15 | Não prometer capacidade de prever sorteios | ✅ | Nenhuma função de previsão existe; README e docstrings afirmam o contrário explicitamente. ⚠️ Falta o teste automatizado de vocabulário proibido (existe no LotoLab; deve ser portado). |
-| 16 | Funcionar em celular e computador | ❌ | Sem frontend. |
+| 16 | Funcionar em celular e computador | ⚠️ parcial | As 2 telas existentes são responsivas e verificadas a 1280px e 390px, **sem overflow horizontal**. As outras 12 telas não existem. |
 | 17 | Possuir documentação técnica | ✅ | `README.md`, `ARQUITETURA.md`, `banco/schema.sql` comentado, docstrings em todos os módulos |
 | 18 | Possuir testes automatizados | ✅ | 319 testes, ~34 s, sem rede: unitários, banco, API e integração. ⚠️ Faltam testes de interface (não há frontend ainda). |
 | 19 | Permitir auditoria dos parâmetros utilizados | ✅ | `test_salva_backtest_com_semente_e_particao`, `test_backtest_sem_semente_e_recusado_pelo_banco`, `test_alteracao_cria_nova_versao_sem_apagar_a_anterior`, `test_auditoria_nao_expoe_alteracao_nem_remocao` |
@@ -66,8 +66,8 @@ Reproduzir: `cd backend && python3 -m pytest -q` (319 testes, sem rede).
 | Integração | ✅ histórico do banco alimentando o motor de backtest |
 | API | ✅ 36 testes ponta a ponta, motores reais |
 | Banco de dados | ✅ 35 testes, executados em SQLite **e** em PostgreSQL 16 real; `schema.sql` aplicado sem erro |
-| Interface | ❌ sem frontend |
-| End-to-end | ❌ |
+| Interface | ⚠️ 2 telas verificadas ponta a ponta com Playwright contra a API real |
+| End-to-end | ✅ login, geração com filtros, orçamento, backtest e erro da API |
 
 ---
 
@@ -84,9 +84,9 @@ Em ordem de impacto:
 2. **Sem interface** — ver item 3. As migrações Alembic passaram a existir e
    são conferidas contra os modelos; o `schema.sql` aplica limpo no
    PostgreSQL 16 e os 319 testes passam nos dois bancos.
-3. **Sem interface.** O critério nº 14 (avisos de limitação) depende de tela, e
-   é justamente o que protege o usuário de interpretar mal um resultado. A API
-   já devolve os avisos em toda resposta relevante.
+3. **Só 2 das 14 telas.** Gerador e Backtest funcionam de verdade; as outras
+   doze do §24 não existem. Foi escolha deliberada: duas telas que executam o
+   código real valem mais que catorze que parecem executar.
 4. **Jogo responsável ainda não tem interface.** O limite de orçamento existe
    no modelo e o gerador respeita orçamento, mas alertas, pausa e histórico de
    gastos dependem de tela.
