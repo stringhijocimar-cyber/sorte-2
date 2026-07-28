@@ -1,0 +1,6 @@
+# O núcleo (lab/) roda sem nada disto. Estas dependências existem para os
+# testes de conferência, que comparam nossa implementação com referências
+# independentes — e para a API.
+pytest>=8.0
+scipy>=1.11        # confere distribuições e testes
+statsmodels>=0.14  # confere Holm e Benjamini-Hochberg
