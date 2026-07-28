@@ -8,7 +8,7 @@ acreditar.
 **Conclusão geral: o sistema NÃO está pronto.** 10 dos 20 critérios estão
 atendidos, 4 parcialmente, 6 pendentes. O detalhamento está abaixo.
 
-Reproduzir: `cd backend && python3 -m pytest -q` (172 testes, sem rede).
+Reproduzir: `cd backend && python3 -m pytest -q` (200 testes, sem rede).
 
 ---
 
@@ -35,7 +35,7 @@ Reproduzir: `cd backend && python3 -m pytest -q` (172 testes, sem rede).
 | 17 | Possuir documentação técnica | ✅ | `README.md`, `ARQUITETURA.md`, `banco/schema.sql` comentado, docstrings em todos os módulos |
 | 18 | Possuir testes automatizados | ✅ | 97 testes, 1,4 s, sem rede. ⚠️ Faltam testes de API, de banco, de interface e end-to-end (não há o que testar ainda). |
 | 19 | Permitir auditoria dos parâmetros utilizados | ✅ | `test_salva_backtest_com_semente_e_particao`, `test_backtest_sem_semente_e_recusado_pelo_banco`, `test_alteracao_cria_nova_versao_sem_apagar_a_anterior`, `test_auditoria_nao_expoe_alteracao_nem_remocao` |
-| 20 | Atender segurança e jogo responsável | ⚠️ parcial | Modelo de dados atende LGPD e é testado (`test_usuario_guarda_o_minimo_necessario`, `test_consentimentos_sao_datados`, `test_auditoria_guarda_hash_do_ip_e_nao_o_ip`, `test_apagar_usuario_leva_estrategias_e_jogos`). **Falta o código de autenticação, rate limiting e as telas.** |
+| 20 | Atender segurança e jogo responsável | ⚠️ parcial | Segurança implementada e testada: scrypt com parâmetros no hash e detecção de rehash, tokens guardados só como hash, CSRF amarrado à sessão, limite de taxa com janela deslizante, HMAC do IP, anonimização na exclusão. Injeção de SQL testada com ataque real (`test_injecao_de_sql_nao_derruba_a_tabela`). **Falta jogo responsável na interface** (limite de orçamento, alertas, pausa) e as telas. |
 
 ---
 
@@ -57,7 +57,7 @@ Reproduzir: `cd backend && python3 -m pytest -q` (172 testes, sem rede).
 
 | Tipo | Estado |
 |---|---|
-| Unitários | ✅ 172 |
+| Unitários | ✅ 200 |
 | Estatísticos | ✅ conferidos contra SciPy e statsmodels |
 | Regras de cada modalidade | ✅ 9 modalidades |
 | Geração de combinações | ✅ validade, faixa, ordem, não-duplicidade, obrigatórios/excluídos, orçamento, filtros |
@@ -83,8 +83,9 @@ Em ordem de impacto:
    um PostgreSQL de verdade.
 3. **Sem interface.** O critério nº 14 (avisos de limitação) depende de tela, e
    é justamente o que protege o usuário de interpretar mal um resultado.
-4. **Sem segurança implementada.** Autenticação, LGPD e jogo responsável estão
-   modelados e não construídos.
+4. **Jogo responsável ainda não tem interface.** O limite de orçamento existe
+   no modelo e o gerador respeita orçamento, mas alertas, pausa e histórico de
+   gastos dependem de tela.
 5. **Preços e faixas conferidos apenas contra fontes públicas.** Um preço
    histórico errado contamina o ROI de todo o período. Precisa de conferência
    contra o portal oficial antes de qualquer uso sério.
