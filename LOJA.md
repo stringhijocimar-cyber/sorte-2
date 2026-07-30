@@ -119,6 +119,38 @@ Federal.
 Isto é verificável: o APK declara **zero permissões**, inclusive sem
 `INTERNET`. Não há como enviar dado nenhum.
 
+## Novidades desta versão (1.1.0 — versionCode 2)
+
+Campo "O que há de novo" da Play Store, limite de 500 caracteres. Este texto
+tem 463:
+
+```
+Volante de papel: marque as dezenas como na lotérica e confira o resultado
+sobre a própria cartela.
+
+Escolha manual, teimosinha e histórico de resultados.
+
+Conferência automática: novos concursos conferem seus jogos sozinhos e avisam.
+
+Aprendizado por modalidade: treina um modelo em cada loteria e mostra, fora da
+amostra, se ele aprendeu algo. Com sorteios honestos, não aprende — e o app diz
+isso, porque é a verdade.
+
+Nenhum método aumenta a chance de acerto.
+```
+
+**Não altere a última linha.** Ela é o ponto em que a ficha da loja deixa de
+poder ser lida como promessa, e é o que diferencia este app dos que prometem
+número quente.
+
+## Antes de enviar
+
+* `versionCode` **precisa** subir a cada envio. Está em 2; o 1 foi gasto pelo
+  `LotoLab-1.0.0-release.apk`. Enviar um código repetido é recusado pela loja.
+* Sincronize o `www/` e reconstrua: veja `APK.md`.
+* As capturas em `capturas/` são geradas pela bateria de interface e já mostram
+  a versão nova — mas confira o tamanho exigido pela loja antes de subir.
+
 ## Classificação indicativa
 
 Ao responder o questionário da Play Store, declare o conteúdo relacionado a
