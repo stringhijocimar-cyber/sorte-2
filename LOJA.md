@@ -75,12 +75,16 @@ suficiente, é oscilação em torno de zero.
 
 SEUS DADOS FICAM COM VOCÊ
 
-Sem cadastro, sem login, sem anúncio, sem rastreador. O app não envia nada
-para lugar nenhum e não pede nenhuma permissão do Android — nem internet.
-Tudo é guardado no seu aparelho, e funciona inteiro em modo avião.
+Sem cadastro, sem login, sem anúncio, sem rastreador. Seus jogos ficam no seu
+aparelho e não são enviados para lugar nenhum.
 
-Os resultados dos concursos são digitados por você a partir da publicação
-oficial da Caixa. O app não busca resultado sozinho e não inventa resultado.
+O app pede uma única permissão: internet. Ela serve para um botão opcional na
+aba Conferir, que busca as dezenas de um concurso já sorteado no serviço
+público de loterias da Caixa. Nessa consulta vai só a modalidade e o número do
+concurso — nenhum jogo seu, nenhum identificador.
+
+Você pode nunca tocar nesse botão: digitando o resultado à mão, o app funciona
+inteiro em modo avião. O app não inventa resultado e não prevê sorteio futuro.
 
 USO RESPONSÁVEL
 
@@ -113,11 +117,18 @@ Federal.
 | Coleta algum dado? | **Não** |
 | Compartilha algum dado? | **Não** |
 | Dados sensíveis? | **Nenhum** |
-| Criptografia em trânsito | Não se aplica — não há trânsito |
+| Criptografia em trânsito | **Sim** — a consulta à Caixa é HTTPS |
 | Exclusão de dados | O usuário desinstala o app; nada fica em servidor |
 
-Isto é verificável: o APK declara **zero permissões**, inclusive sem
-`INTERNET`. Não há como enviar dado nenhum.
+O APK declara **uma única permissão**, `INTERNET`, usada apenas para a busca
+opcional de resultado em `servicebus2.caixa.gov.br`. É permissão normal: não
+gera diálogo em tempo de execução.
+
+O que **sai** do aparelho nessa consulta: modalidade e número do concurso.
+O que **não** sai: jogos, dezenas escolhidas, histórico de conferências,
+identificador de aparelho ou de usuário. Não há servidor do LotoLab — a
+requisição vai direto ao serviço público da Caixa. O app não registra login,
+não possui conta e não tem como associar uma consulta a uma pessoa.
 
 ## Classificação indicativa
 

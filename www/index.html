@@ -22,20 +22,26 @@
 :root{
   --fundo:#EDF0F2; --carta:#FFFFFF; --tinta:#0F1E2E; --secundaria:#5C6B7A;
   --acaso:#0E6E62; --seu:#B26B00; --alerta:#A3324C; --linha:#D9DFE4; --trama:#E7ECEF;
+  --veu:rgba(15,30,46,.045);
   --mono:ui-monospace,"SF Mono","Roboto Mono",Menlo,Consolas,monospace;
   --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
-  --r:14px; --sombra:0 1px 2px rgba(15,30,46,.06),0 10px 30px -22px rgba(15,30,46,.5);
+  --r:15px;
+  --sombra:0 1px 2px rgba(15,30,46,.05),0 12px 28px -20px rgba(15,30,46,.45);
+  --sombra-alta:0 2px 4px rgba(15,30,46,.06),0 20px 44px -26px rgba(15,30,46,.55);
   --topo:env(safe-area-inset-top,0px); --base:env(safe-area-inset-bottom,0px);
 }
 html[data-tema="escuro"]{
   --fundo:#0B1622; --carta:#132030; --tinta:#E7EDF2; --secundaria:#8FA0AF;
   --acaso:#3FB3A3; --seu:#E9A73C; --alerta:#E2607C; --linha:#1E2E40; --trama:#16253A;
+  --veu:rgba(255,255,255,.04);
+  --sombra:0 1px 2px rgba(0,0,0,.3),0 12px 28px -20px rgba(0,0,0,.8);
+  --sombra-alta:0 2px 4px rgba(0,0,0,.35),0 20px 44px -26px rgba(0,0,0,.9);
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{margin:0;background:var(--fundo);color:var(--tinta);font-family:var(--sans);
   font-size:16px;line-height:1.55;overscroll-behavior-y:none}
 h1,h2,h3{margin:0;font-weight:650;letter-spacing:-.02em}
-h1{font-size:1.35rem}
+h1{font-size:1.42rem;letter-spacing:-.03em}
 h2{font-size:.72rem;text-transform:uppercase;letter-spacing:.14em;color:var(--secundaria);
   font-weight:600}
 h3{font-size:1rem}
@@ -44,44 +50,74 @@ button,select,input{font-family:inherit;font-size:1rem;color:inherit}
 :focus-visible{outline:2px solid var(--acaso);outline-offset:2px}
 
 /* ---------- estrutura ---------- */
-header{position:sticky;top:0;z-index:20;background:var(--fundo);
+header{position:sticky;top:0;z-index:20;
+  background:color-mix(in srgb,var(--fundo) 88%,transparent);
+  -webkit-backdrop-filter:saturate(180%) blur(14px);backdrop-filter:saturate(180%) blur(14px);
   padding:calc(var(--topo) + 12px) 16px 10px;border-bottom:1px solid var(--linha)}
+@supports not (backdrop-filter:blur(2px)){header{background:var(--fundo)}}
 .cabeca{display:flex;align-items:center;justify-content:space-between;gap:12px}
-.marca{font-family:var(--mono);font-weight:600;font-size:.95rem;letter-spacing:-.02em}
+.marca{display:flex;align-items:center;gap:9px;font-family:var(--mono);font-weight:600;
+  font-size:1rem;letter-spacing:-.03em}
 .marca span{color:var(--acaso)}
-main{padding:14px 16px calc(96px + var(--base));max-width:720px;margin:0 auto}
+.marca svg{width:26px;height:26px;display:block;flex:none}
+main{padding:14px 16px calc(100px + var(--base));max-width:720px;margin:0 auto}
 nav{position:fixed;left:0;right:0;bottom:0;z-index:30;display:grid;
-  grid-template-columns:repeat(5,1fr);background:var(--carta);
+  grid-template-columns:repeat(6,1fr);
+  background:color-mix(in srgb,var(--carta) 92%,transparent);
+  -webkit-backdrop-filter:saturate(180%) blur(16px);backdrop-filter:saturate(180%) blur(16px);
   border-top:1px solid var(--linha);padding-bottom:var(--base)}
-nav button{background:none;border:0;padding:9px 2px 8px;display:flex;flex-direction:column;
-  align-items:center;gap:3px;color:var(--secundaria);font-size:.62rem;cursor:pointer;
-  letter-spacing:.04em}
+@supports not (backdrop-filter:blur(2px)){nav{background:var(--carta)}}
+nav button{position:relative;background:none;border:0;padding:10px 1px 9px;display:flex;
+  flex-direction:column;align-items:center;gap:3px;color:var(--secundaria);font-size:.58rem;
+  cursor:pointer;letter-spacing:.03em;transition:color .18s ease}
 nav button[aria-current="page"]{color:var(--tinta)}
+nav button[aria-current="page"]::before{content:"";position:absolute;top:0;left:50%;
+  transform:translateX(-50%);width:26px;height:2.5px;border-radius:0 0 3px 3px;
+  background:var(--acaso)}
 nav button svg{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width:1.7;
-  stroke-linecap:round;stroke-linejoin:round}
-nav button[aria-current="page"] svg{stroke-width:2.1}
+  stroke-linecap:round;stroke-linejoin:round;transition:stroke-width .18s ease}
+nav button[aria-current="page"] svg{stroke-width:2.2}
 
 /* ---------- blocos ---------- */
 .carta{background:var(--carta);border:1px solid var(--linha);border-radius:var(--r);
-  padding:14px;box-shadow:var(--sombra);margin-bottom:12px}
+  padding:15px;box-shadow:var(--sombra);margin-bottom:12px}
 .campo{display:block;margin-bottom:12px}
 .campo label{display:block;font-size:.68rem;text-transform:uppercase;letter-spacing:.1em;
   color:var(--secundaria);margin-bottom:5px;font-weight:600}
-select,input[type=number],input[type=text]{width:100%;padding:11px 12px;
-  background:var(--fundo);border:1px solid var(--linha);border-radius:10px}
+select,input[type=number],input[type=text],input[type=date]{width:100%;padding:11px 12px;
+  background:var(--fundo);border:1px solid var(--linha);border-radius:11px;
+  transition:border-color .16s ease,box-shadow .16s ease}
+select:focus,input:focus{border-color:var(--acaso);
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--acaso) 16%,transparent);outline:none}
 .linha2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.acao{width:100%;padding:14px;border:0;border-radius:12px;background:var(--tinta);
-  color:var(--carta);font-weight:650;cursor:pointer;letter-spacing:.01em}
-.acao:disabled{opacity:.5}
-.acao.contorno{background:transparent;color:var(--tinta);border:1px solid var(--linha)}
-.acao.perigo{background:transparent;color:var(--alerta);border:1px solid var(--alerta)}
+.acao{width:100%;padding:14px;border:0;border-radius:13px;background:var(--tinta);
+  color:var(--carta);font-weight:650;cursor:pointer;letter-spacing:.01em;
+  transition:transform .12s ease,opacity .16s ease,box-shadow .16s ease;
+  box-shadow:0 1px 2px rgba(15,30,46,.12),0 8px 18px -12px rgba(15,30,46,.5)}
+.acao:active{transform:translateY(1px)}
+.acao:disabled{opacity:.5;box-shadow:none}
+.acao.contorno{background:transparent;color:var(--tinta);border:1px solid var(--linha);
+  box-shadow:none}
+.acao.contorno:hover{background:var(--veu)}
+.acao.perigo{background:transparent;color:var(--alerta);border:1px solid var(--alerta);
+  box-shadow:none}
+.acao.aviao{background:var(--acaso);color:#fff}
+.acao.secundaria{background:transparent;color:var(--tinta);border:1px solid var(--linha)}
+.acao.secundaria:hover:not(:disabled){background:var(--trama)}
+.acao:disabled{opacity:.55;cursor:not-allowed}
 .mini{padding:9px 12px;font-size:.85rem;border-radius:10px;width:auto}
 .botoes{display:flex;gap:8px;flex-wrap:wrap}
+.girando{display:inline-block;width:13px;height:13px;border:2px solid currentColor;
+  border-right-color:transparent;border-radius:50%;vertical-align:-2px;margin-right:7px;
+  animation:gira .7s linear infinite}
+@keyframes gira{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.girando{animation:none}}
 
 /* ---------- ficha de jogo: a peça de identidade ---------- */
 .ficha{background:var(--carta);border:1px solid var(--linha);border-radius:var(--r);
-  padding:12px;margin-bottom:10px;position:relative;overflow:hidden}
-.ficha::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;
+  padding:13px;margin-bottom:10px;position:relative;overflow:hidden;
+  box-shadow:var(--sombra)}
+.ficha::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3.5px;
   background:var(--seu)}
 .ficha.conferida::before{background:var(--acaso)}
 .ficha .topo{display:flex;justify-content:space-between;align-items:baseline;gap:8px;
@@ -89,11 +125,13 @@ select,input[type=number],input[type=text]{width:100%;padding:11px 12px;
 .ficha .id{font-family:var(--mono);font-size:.68rem;color:var(--secundaria);
   letter-spacing:.08em}
 .dezenas{display:flex;flex-wrap:wrap;gap:5px}
-.dz{font-family:var(--mono);font-size:.85rem;font-weight:600;min-width:34px;height:34px;
-  display:grid;place-items:center;border:1px solid var(--linha);border-radius:9px;
-  background:var(--fundo)}
-.dz.acertou{background:var(--acaso);border-color:var(--acaso);color:#fff}
+.dz{font-family:var(--mono);font-size:.85rem;font-weight:600;min-width:35px;height:35px;
+  display:grid;place-items:center;border:1px solid var(--linha);border-radius:10px;
+  background:var(--fundo);font-variant-numeric:tabular-nums}
+.dz.acertou{background:var(--acaso);border-color:var(--acaso);color:#fff;
+  box-shadow:0 2px 8px -3px color-mix(in srgb,var(--acaso) 70%,transparent)}
 .dz.marcada{border-color:var(--seu);color:var(--seu)}
+.dz.trevo{border-color:var(--acaso);color:var(--acaso);border-radius:50%}
 
 /* ---------- faixa do acaso ---------- */
 .faixa{margin-top:11px}
@@ -104,7 +142,8 @@ select,input[type=number],input[type=text]{width:100%;padding:11px 12px;
 
 /* ---------- indicadores ---------- */
 .kpis{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:12px}
-.kpi{background:var(--carta);border:1px solid var(--linha);border-radius:var(--r);padding:12px}
+.kpi{background:var(--carta);border:1px solid var(--linha);border-radius:var(--r);
+  padding:13px;box-shadow:var(--sombra)}
 .kpi .rot{font-size:.62rem;text-transform:uppercase;letter-spacing:.1em;
   color:var(--secundaria);font-weight:600}
 .kpi .val{font-family:var(--mono);font-size:1.45rem;font-weight:650;letter-spacing:-.02em;
@@ -122,9 +161,11 @@ select,input[type=number],input[type=text]{width:100%;padding:11px 12px;
 .selo.ok{color:var(--acaso);border-color:var(--acaso)}
 .selo.seu{color:var(--seu);border-color:var(--seu)}
 .vazio{text-align:center;color:var(--secundaria);padding:34px 16px;font-size:.9rem}
-.metodo{border:1px solid var(--linha);border-radius:12px;padding:11px;margin-bottom:8px;
-  cursor:pointer;background:var(--carta)}
-.metodo[aria-checked="true"]{border-color:var(--tinta);box-shadow:inset 0 0 0 1px var(--tinta)}
+.metodo{border:1px solid var(--linha);border-radius:13px;padding:12px;margin-bottom:8px;
+  cursor:pointer;background:var(--carta);transition:border-color .16s ease,box-shadow .16s ease}
+.metodo:hover{border-color:var(--secundaria)}
+.metodo[aria-checked="true"]{border-color:var(--tinta);
+  box-shadow:inset 0 0 0 1px var(--tinta),var(--sombra)}
 .metodo b{display:block;font-size:.94rem}
 .metodo span{display:block;font-size:.78rem;color:var(--secundaria);margin-top:2px}
 .prosa{font-size:.92rem}
@@ -137,16 +178,65 @@ th{text-align:left;font-size:.6rem;text-transform:uppercase;letter-spacing:.08em
 td{padding:6px 7px;border-bottom:1px solid var(--trama)}
 .aviso-fixo{font-size:.72rem;color:var(--secundaria);text-align:center;margin:18px 0 4px;
   line-height:1.45}
+
+/* ---------- busca do resultado oficial ---------- */
+.busca{display:flex;gap:8px;align-items:stretch;margin-bottom:12px}
+.busca .acao{flex:1}
+.origem{display:flex;align-items:center;gap:7px;font-size:.72rem;color:var(--secundaria);
+  font-family:var(--mono);margin-top:9px}
+.origem b{color:var(--acaso);font-weight:600}
+.pilula{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:.62rem;
+  letter-spacing:.06em;text-transform:uppercase;padding:3px 9px;border-radius:20px;
+  border:1px solid var(--linha);color:var(--secundaria)}
+.pilula.oficial{color:var(--acaso);border-color:var(--acaso)}
+.pilula.manual{color:var(--seu);border-color:var(--seu)}
+
+/* ---------- aderência: barras de frequência contra a faixa do acaso ---------- */
+.grade-freq{display:grid;grid-template-columns:repeat(auto-fill,minmax(46px,1fr));gap:6px}
+.cel{border:1px solid var(--linha);border-radius:9px;padding:5px 3px 4px;text-align:center;
+  background:var(--carta)}
+.cel .n{font-family:var(--mono);font-size:.72rem;font-weight:600}
+.cel .b{height:26px;display:flex;align-items:flex-end;justify-content:center;margin-top:3px}
+.cel .b i{display:block;width:9px;border-radius:2px 2px 0 0;background:var(--acaso);
+  opacity:.75;min-height:1px}
+.cel.fora .b i{background:var(--alerta);opacity:1}
+.cel .c{font-family:var(--mono);font-size:.58rem;color:var(--secundaria);margin-top:2px}
+.cel.fora{border-color:var(--alerta)}
+.escala{display:flex;justify-content:space-between;font-family:var(--mono);font-size:.6rem;
+  color:var(--secundaria);margin-top:7px}
+.barra-teste{height:9px;border-radius:5px;background:var(--trama);overflow:hidden;
+  position:relative;margin:9px 0 5px}
+.barra-teste i{position:absolute;top:0;bottom:0;left:0;background:var(--acaso);border-radius:5px}
+.barra-teste.fora i{background:var(--alerta)}
+
 @media (prefers-reduced-motion:no-preference){
   .ficha{animation:entra .22s ease-out both}
   @keyframes entra{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+  .carta,.kpi{animation:sobe .26s ease-out both}
+  @keyframes sobe{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
 }
 </style>
 </head>
 <body>
 <header>
   <div class="cabeca">
-    <div class="marca">loto<span>lab</span></div>
+    <div class="marca">
+      <svg viewBox="0 0 64 64" aria-hidden="true">
+        <path d="M32 33q4 10.5-2.4 18.6" stroke="var(--acaso)" stroke-width="3.6"
+          stroke-linecap="round" fill="none"/>
+        <g transform="translate(32 27)" stroke="var(--carta)" stroke-width="1.6">
+          <path transform="rotate(-45)" fill="#3FB3A3"
+            d="M0 0V-13.5a9 9 0 0 1 13.5 0h0a9 9 0 0 1 0 13.5Z"/>
+          <path transform="rotate(45)" fill="var(--seu)"
+            d="M0 0V-13.5a9 9 0 0 1 13.5 0h0a9 9 0 0 1 0 13.5Z"/>
+          <path transform="rotate(135)" fill="var(--acaso)"
+            d="M0 0V-13.5a9 9 0 0 1 13.5 0h0a9 9 0 0 1 0 13.5Z"/>
+          <path transform="rotate(225)" fill="#0B5D53"
+            d="M0 0V-13.5a9 9 0 0 1 13.5 0h0a9 9 0 0 1 0 13.5Z"/>
+        </g>
+      </svg>
+      <span style="color:var(--tinta)">loto</span><span>lab</span>
+    </div>
     <div class="botoes">
       <button class="acao contorno mini" id="btn-tema" aria-label="Alternar tema">tema</button>
     </div>
@@ -592,6 +682,70 @@ function desvioAcertos(m, tamanho){
   return Math.sqrt(Math.max(v,1e-9));
 }
 
+/* ==================== busca de resultado oficial ====================
+   Consulta o serviço público de loterias da Caixa. Serve apenas para
+   PREENCHER o resultado já sorteado, poupando digitação. Não prevê nada,
+   não sugere jogo e não altera o gerador — o sorteio é passado, não futuro.
+   Se a rede falhar, o campo manual continua sendo o caminho principal. */
+const ROTA_CAIXA = {
+  "mega-sena":"megasena", "lotofacil":"lotofacil", "quina":"quina",
+  "lotomania":"lotomania", "dupla-sena":"duplasena", "dia-de-sorte":"diadesorte",
+  "timemania":"timemania", "mais-milionaria":"maismilionaria"
+};
+const BASE_CAIXA = "https://servicebus2.caixa.gov.br/portaldeloterias/api";
+
+/* A API devolve alguns campos preenchidos com bytes nulos quando não se
+   aplicam à modalidade. Limpa antes de mostrar. */
+function limpar(t){
+  return typeof t === "string" ? t.replace(/\u0000/g,"").trim() : "";
+}
+
+async function buscarConcurso(modalidade, numero){
+  const rota = ROTA_CAIXA[modalidade];
+  if(!rota) throw new Error("Modalidade sem rota conhecida.");
+  const url = `${BASE_CAIXA}/${rota}${numero ? "/"+encodeURIComponent(numero) : ""}`;
+
+  const corta = new AbortController();
+  const relogio = setTimeout(()=>corta.abort(), 12000);
+  let resp;
+  try{
+    resp = await fetch(url, {signal:corta.signal, headers:{"Accept":"application/json"}});
+  }catch(e){
+    throw new Error(e.name === "AbortError"
+      ? "A consulta demorou demais. Verifique a conexão ou digite o resultado."
+      : "Não foi possível falar com o serviço da Caixa. Digite o resultado.");
+  }finally{ clearTimeout(relogio); }
+
+  if(!resp.ok) throw new Error(resp.status === 404
+    ? "Concurso não encontrado. Confira o número."
+    : `O serviço respondeu ${resp.status}. Tente de novo mais tarde.`);
+
+  let d;
+  try{ d = await resp.json(); }
+  catch(e){ throw new Error("A resposta não veio em formato legível."); }
+
+  const cfg = MODALIDADES[modalidade];
+  const dezenas = (d.listaDezenas||[]).map(Number).filter(n=>Number.isFinite(n));
+  if(dezenas.length !== cfg.k)
+    throw new Error(`A resposta trouxe ${dezenas.length} dezenas; a ${cfg.nome} sorteia ${cfg.k}.`);
+  const fora = dezenas.filter(n => n < cfg.base || n > cfg.N + cfg.base - 1);
+  if(fora.length) throw new Error("A resposta trouxe dezenas fora do intervalo da modalidade.");
+
+  /* dataApuracao vem como dd/mm/aaaa; o <input type=date> exige aaaa-mm-dd */
+  let data = "";
+  const p = String(d.dataApuracao||"").match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if(p) data = `${p[3]}-${p[2]}-${p[1]}`;
+
+  return {
+    concurso: String(d.numero ?? numero ?? ""),
+    data, dezenas, modalidade,
+    acumulou: !!d.acumulado,
+    segundoSorteio: (d.listaDezenasSegundoSorteio||[]).map(Number).filter(Number.isFinite),
+    trevos: (d.trevosSorteados||[]).map(Number).filter(Number.isFinite),
+    extra: limpar(d.nomeTimeCoracaoMesSorte)
+  };
+}
+
 T.conferir = () => {
   const c = MODALIDADES[S.modalidade];
   const naoConferidos = S.jogos.filter(j=>j.modalidade===S.modalidade).length;
@@ -605,13 +759,19 @@ T.conferir = () => {
       <label class="campo"><label>data</label>
         <input id="c-data" type="date" value="${hoje()}"></label>
     </div>
+    <div class="busca">
+      <button class="acao aviao" id="c-buscar" type="button">Buscar resultado na Caixa</button>
+      <button class="acao secundaria" id="c-ultimo" type="button">Último concurso</button>
+    </div>
+    <div id="c-origem"></div>
     <label class="campo"><label>dezenas sorteadas (${c.k} números, separados por espaço)</label>
       <input id="c-dez" type="text" inputmode="numeric" placeholder="ex.: 02 07 11 19 23 41"></label>
     <button class="acao" id="c-go">Conferir ${naoConferidos} jogo${naoConferidos===1?"":"s"} salvos</button>
   </div>
   <div id="c-saida"></div>
-  <div class="nota">Digite o resultado oficial publicado pela Caixa. O app não inventa
-  resultado e não busca nada sozinho — o que você digita é o que ele usa.</div>
+  <div class="nota">Você pode digitar o resultado ou buscá-lo no serviço público da Caixa.
+  A busca só preenche um sorteio que já aconteceu — o app não inventa resultado e não
+  prevê sorteio futuro. Se a rede falhar, a digitação continua funcionando.</div>
   ${S.resultados.length ? `<h2 style="margin:18px 0 8px">concursos já registrados</h2>
     <div class="rolagem"><table><thead><tr><th>concurso</th><th>data</th><th>dezenas</th></tr></thead>
     <tbody>${S.resultados.slice().reverse().slice(0,20).map(r=>`<tr>
@@ -712,9 +872,15 @@ T.entender = () => `<div class="prosa">
   </ul>
 
   <h3 style="margin-top:20px">Sobre os dados</h3>
-  <p>Tudo fica no seu aparelho. O app não envia jogos, não coleta dados e não pede cadastro.
-  Os resultados dos concursos são digitados por você a partir da publicação oficial da
-  Caixa — o app não inventa resultado.</p>
+  <p>Seus jogos ficam no seu aparelho. O app não envia jogos, não coleta dados e não pede
+  cadastro.</p>
+  <p>Há uma única conexão com a internet, e ela é opcional: ao tocar em “Buscar resultado
+  na Caixa”, o app consulta o serviço público de loterias
+  (<span class="num">servicebus2.caixa.gov.br</span>) para preencher as dezenas de um
+  concurso <strong>já sorteado</strong>. Nessa consulta vai apenas a modalidade e o número
+  do concurso — nenhum jogo seu, nenhum identificador. Você pode ignorar o botão e digitar
+  tudo à mão: o app funciona inteiro sem rede. O app não inventa resultado e não prevê
+  sorteio futuro.</p>
   <p>Regras e preços das modalidades mudam com o tempo. Os valores usados aqui são de
   referência: confirme na fonte oficial antes de usar para contas sérias.</p>
 </div>`;
@@ -814,6 +980,52 @@ function acoes(){
 
   const cmod = $("#c-mod");
   if(cmod) cmod.onchange = e => { S.modalidade = e.target.value; pintar(); };
+
+  /* Busca do resultado oficial. Preenche os campos e deixa a conferência
+     para o botão seguinte — quem decide continuar é a pessoa. */
+  async function puxar(numero, botao){
+    const alvo = $("#c-origem"), saida = $("#c-saida");
+    const rotulo = botao.textContent;
+    const botoes = [$("#c-buscar"), $("#c-ultimo")].filter(Boolean);
+    botoes.forEach(b => b.disabled = true);
+    botao.innerHTML = `<span class="girando"></span> consultando…`;
+    if(saida) saida.innerHTML = "";
+    try{
+      const r = await buscarConcurso(S.modalidade, numero);
+      if($("#c-num"))  $("#c-num").value  = r.concurso;
+      if($("#c-data")) $("#c-data").value = r.data;
+      if($("#c-dez"))  $("#c-dez").value  = r.dezenas.slice().sort((a,b)=>a-b).map(pad).join(" ");
+      const extras = [];
+      if(r.segundoSorteio.length)
+        extras.push(`2º sorteio: ${r.segundoSorteio.slice().sort((a,b)=>a-b).map(pad).join(" ")}`);
+      if(r.trevos.length) extras.push(`trevos: ${r.trevos.join(" e ")}`);
+      if(r.extra) extras.push(esc(r.extra));
+      alvo.innerHTML = `<div class="origem"><span class="pilula oficial">oficial</span>
+        concurso ${esc(r.concurso)} da Caixa${r.data?" — "+esc(r.data.split("-").reverse().join("/")):""}</div>
+        ${extras.length?`<div class="nota" style="margin-top:8px">${extras.join(" · ")}${
+          r.segundoSorteio.length?`<br>A conferência abaixo usa o 1º sorteio.`:""}</div>`:""}`;
+      S.origemResultado = "oficial";
+    }catch(e){
+      alvo.innerHTML = `<div class="origem"><span class="pilula manual">manual</span>
+        ${esc(e.message)}</div>`;
+      S.origemResultado = "manual";
+    }finally{
+      botoes.forEach(b => b.disabled = false);
+      botao.textContent = rotulo;
+    }
+  }
+  const cbuscar = $("#c-buscar");
+  if(cbuscar) cbuscar.onclick = () => {
+    const n = ($("#c-num").value||"").trim();
+    if(!n){
+      $("#c-origem").innerHTML = `<div class="origem"><span class="pilula manual">manual</span>
+        Informe o concurso, ou use “Último concurso”.</div>`;
+      return;
+    }
+    puxar(n, cbuscar);
+  };
+  const cultimo = $("#c-ultimo");
+  if(cultimo) cultimo.onclick = () => puxar(null, cultimo);
 
   const cgo = $("#c-go");
   if(cgo) cgo.onclick = () => {

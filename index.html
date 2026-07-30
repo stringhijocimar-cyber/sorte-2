@@ -102,6 +102,9 @@ select:focus,input:focus{border-color:var(--acaso);
 .acao.perigo{background:transparent;color:var(--alerta);border:1px solid var(--alerta);
   box-shadow:none}
 .acao.aviao{background:var(--acaso);color:#fff}
+.acao.secundaria{background:transparent;color:var(--tinta);border:1px solid var(--linha)}
+.acao.secundaria:hover:not(:disabled){background:var(--trama)}
+.acao:disabled{opacity:.55;cursor:not-allowed}
 .mini{padding:9px 12px;font-size:.85rem;border-radius:10px;width:auto}
 .botoes{display:flex;gap:8px;flex-wrap:wrap}
 .girando{display:inline-block;width:13px;height:13px;border:2px solid currentColor;
@@ -679,6 +682,70 @@ function desvioAcertos(m, tamanho){
   return Math.sqrt(Math.max(v,1e-9));
 }
 
+/* ==================== busca de resultado oficial ====================
+   Consulta o serviço público de loterias da Caixa. Serve apenas para
+   PREENCHER o resultado já sorteado, poupando digitação. Não prevê nada,
+   não sugere jogo e não altera o gerador — o sorteio é passado, não futuro.
+   Se a rede falhar, o campo manual continua sendo o caminho principal. */
+const ROTA_CAIXA = {
+  "mega-sena":"megasena", "lotofacil":"lotofacil", "quina":"quina",
+  "lotomania":"lotomania", "dupla-sena":"duplasena", "dia-de-sorte":"diadesorte",
+  "timemania":"timemania", "mais-milionaria":"maismilionaria"
+};
+const BASE_CAIXA = "https://servicebus2.caixa.gov.br/portaldeloterias/api";
+
+/* A API devolve alguns campos preenchidos com bytes nulos quando não se
+   aplicam à modalidade. Limpa antes de mostrar. */
+function limpar(t){
+  return typeof t === "string" ? t.replace(/\u0000/g,"").trim() : "";
+}
+
+async function buscarConcurso(modalidade, numero){
+  const rota = ROTA_CAIXA[modalidade];
+  if(!rota) throw new Error("Modalidade sem rota conhecida.");
+  const url = `${BASE_CAIXA}/${rota}${numero ? "/"+encodeURIComponent(numero) : ""}`;
+
+  const corta = new AbortController();
+  const relogio = setTimeout(()=>corta.abort(), 12000);
+  let resp;
+  try{
+    resp = await fetch(url, {signal:corta.signal, headers:{"Accept":"application/json"}});
+  }catch(e){
+    throw new Error(e.name === "AbortError"
+      ? "A consulta demorou demais. Verifique a conexão ou digite o resultado."
+      : "Não foi possível falar com o serviço da Caixa. Digite o resultado.");
+  }finally{ clearTimeout(relogio); }
+
+  if(!resp.ok) throw new Error(resp.status === 404
+    ? "Concurso não encontrado. Confira o número."
+    : `O serviço respondeu ${resp.status}. Tente de novo mais tarde.`);
+
+  let d;
+  try{ d = await resp.json(); }
+  catch(e){ throw new Error("A resposta não veio em formato legível."); }
+
+  const cfg = MODALIDADES[modalidade];
+  const dezenas = (d.listaDezenas||[]).map(Number).filter(n=>Number.isFinite(n));
+  if(dezenas.length !== cfg.k)
+    throw new Error(`A resposta trouxe ${dezenas.length} dezenas; a ${cfg.nome} sorteia ${cfg.k}.`);
+  const fora = dezenas.filter(n => n < cfg.base || n > cfg.N + cfg.base - 1);
+  if(fora.length) throw new Error("A resposta trouxe dezenas fora do intervalo da modalidade.");
+
+  /* dataApuracao vem como dd/mm/aaaa; o <input type=date> exige aaaa-mm-dd */
+  let data = "";
+  const p = String(d.dataApuracao||"").match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if(p) data = `${p[3]}-${p[2]}-${p[1]}`;
+
+  return {
+    concurso: String(d.numero ?? numero ?? ""),
+    data, dezenas, modalidade,
+    acumulou: !!d.acumulado,
+    segundoSorteio: (d.listaDezenasSegundoSorteio||[]).map(Number).filter(Number.isFinite),
+    trevos: (d.trevosSorteados||[]).map(Number).filter(Number.isFinite),
+    extra: limpar(d.nomeTimeCoracaoMesSorte)
+  };
+}
+
 T.conferir = () => {
   const c = MODALIDADES[S.modalidade];
   const naoConferidos = S.jogos.filter(j=>j.modalidade===S.modalidade).length;
@@ -692,13 +759,19 @@ T.conferir = () => {
       <label class="campo"><label>data</label>
         <input id="c-data" type="date" value="${hoje()}"></label>
     </div>
+    <div class="busca">
+      <button class="acao aviao" id="c-buscar" type="button">Buscar resultado na Caixa</button>
+      <button class="acao secundaria" id="c-ultimo" type="button">Último concurso</button>
+    </div>
+    <div id="c-origem"></div>
     <label class="campo"><label>dezenas sorteadas (${c.k} números, separados por espaço)</label>
       <input id="c-dez" type="text" inputmode="numeric" placeholder="ex.: 02 07 11 19 23 41"></label>
     <button class="acao" id="c-go">Conferir ${naoConferidos} jogo${naoConferidos===1?"":"s"} salvos</button>
   </div>
   <div id="c-saida"></div>
-  <div class="nota">Digite o resultado oficial publicado pela Caixa. O app não inventa
-  resultado e não busca nada sozinho — o que você digita é o que ele usa.</div>
+  <div class="nota">Você pode digitar o resultado ou buscá-lo no serviço público da Caixa.
+  A busca só preenche um sorteio que já aconteceu — o app não inventa resultado e não
+  prevê sorteio futuro. Se a rede falhar, a digitação continua funcionando.</div>
   ${S.resultados.length ? `<h2 style="margin:18px 0 8px">concursos já registrados</h2>
     <div class="rolagem"><table><thead><tr><th>concurso</th><th>data</th><th>dezenas</th></tr></thead>
     <tbody>${S.resultados.slice().reverse().slice(0,20).map(r=>`<tr>
@@ -799,9 +872,15 @@ T.entender = () => `<div class="prosa">
   </ul>
 
   <h3 style="margin-top:20px">Sobre os dados</h3>
-  <p>Tudo fica no seu aparelho. O app não envia jogos, não coleta dados e não pede cadastro.
-  Os resultados dos concursos são digitados por você a partir da publicação oficial da
-  Caixa — o app não inventa resultado.</p>
+  <p>Seus jogos ficam no seu aparelho. O app não envia jogos, não coleta dados e não pede
+  cadastro.</p>
+  <p>Há uma única conexão com a internet, e ela é opcional: ao tocar em “Buscar resultado
+  na Caixa”, o app consulta o serviço público de loterias
+  (<span class="num">servicebus2.caixa.gov.br</span>) para preencher as dezenas de um
+  concurso <strong>já sorteado</strong>. Nessa consulta vai apenas a modalidade e o número
+  do concurso — nenhum jogo seu, nenhum identificador. Você pode ignorar o botão e digitar
+  tudo à mão: o app funciona inteiro sem rede. O app não inventa resultado e não prevê
+  sorteio futuro.</p>
   <p>Regras e preços das modalidades mudam com o tempo. Os valores usados aqui são de
   referência: confirme na fonte oficial antes de usar para contas sérias.</p>
 </div>`;
@@ -901,6 +980,52 @@ function acoes(){
 
   const cmod = $("#c-mod");
   if(cmod) cmod.onchange = e => { S.modalidade = e.target.value; pintar(); };
+
+  /* Busca do resultado oficial. Preenche os campos e deixa a conferência
+     para o botão seguinte — quem decide continuar é a pessoa. */
+  async function puxar(numero, botao){
+    const alvo = $("#c-origem"), saida = $("#c-saida");
+    const rotulo = botao.textContent;
+    const botoes = [$("#c-buscar"), $("#c-ultimo")].filter(Boolean);
+    botoes.forEach(b => b.disabled = true);
+    botao.innerHTML = `<span class="girando"></span> consultando…`;
+    if(saida) saida.innerHTML = "";
+    try{
+      const r = await buscarConcurso(S.modalidade, numero);
+      if($("#c-num"))  $("#c-num").value  = r.concurso;
+      if($("#c-data")) $("#c-data").value = r.data;
+      if($("#c-dez"))  $("#c-dez").value  = r.dezenas.slice().sort((a,b)=>a-b).map(pad).join(" ");
+      const extras = [];
+      if(r.segundoSorteio.length)
+        extras.push(`2º sorteio: ${r.segundoSorteio.slice().sort((a,b)=>a-b).map(pad).join(" ")}`);
+      if(r.trevos.length) extras.push(`trevos: ${r.trevos.join(" e ")}`);
+      if(r.extra) extras.push(esc(r.extra));
+      alvo.innerHTML = `<div class="origem"><span class="pilula oficial">oficial</span>
+        concurso ${esc(r.concurso)} da Caixa${r.data?" — "+esc(r.data.split("-").reverse().join("/")):""}</div>
+        ${extras.length?`<div class="nota" style="margin-top:8px">${extras.join(" · ")}${
+          r.segundoSorteio.length?`<br>A conferência abaixo usa o 1º sorteio.`:""}</div>`:""}`;
+      S.origemResultado = "oficial";
+    }catch(e){
+      alvo.innerHTML = `<div class="origem"><span class="pilula manual">manual</span>
+        ${esc(e.message)}</div>`;
+      S.origemResultado = "manual";
+    }finally{
+      botoes.forEach(b => b.disabled = false);
+      botao.textContent = rotulo;
+    }
+  }
+  const cbuscar = $("#c-buscar");
+  if(cbuscar) cbuscar.onclick = () => {
+    const n = ($("#c-num").value||"").trim();
+    if(!n){
+      $("#c-origem").innerHTML = `<div class="origem"><span class="pilula manual">manual</span>
+        Informe o concurso, ou use “Último concurso”.</div>`;
+      return;
+    }
+    puxar(n, cbuscar);
+  };
+  const cultimo = $("#c-ultimo");
+  if(cultimo) cultimo.onclick = () => puxar(null, cultimo);
 
   const cgo = $("#c-go");
   if(cgo) cgo.onclick = () => {

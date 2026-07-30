@@ -102,7 +102,7 @@ e **todos os segredos de assinatura** (`*.jks`, `chave.properties`,
 |---|---|
 | **Gerar** | Monta a quantidade de jogos que você escolher, por quatro métodos |
 | **Meus jogos** | Guarda os lotes, permite copiar e apagar |
-| **Conferir** | Você digita o resultado oficial; ele marca os acertos de cada jogo |
+| **Conferir** | Busca o resultado no serviço da Caixa ou você digita; marca os acertos de cada jogo |
 | **Placar** | Desempenho acumulado dos seus jogos contra o que o acaso produziria |
 | **Entender** | O que cada método faz de verdade, e uso responsável |
 
@@ -127,6 +127,31 @@ nenhum jogo isolado.
 marcadas: 21 jogos garantem 13 acertos se 14 das suas saírem, contra 816 do
 volante completo — 97,4% de economia. A garantia é verificada testando todos
 os cenários; se não puder ser provada, o app avisa em vez de prometer.
+
+### Busca de resultado oficial
+
+A aba **Conferir** tem dois botões que consultam o serviço público de loterias
+da Caixa (`servicebus2.caixa.gov.br`) e preenchem concurso, data e dezenas:
+**Buscar resultado na Caixa** (pelo número digitado) e **Último concurso**.
+
+| Aspecto | Como é |
+|---|---|
+| O que sai do aparelho | Modalidade e número do concurso, nada mais |
+| O que **não** sai | Jogos, dezenas, histórico, identificador de aparelho |
+| Servidor do LotoLab | Não existe — a chamada vai direto à Caixa, por HTTPS |
+| Permissão Android | `INTERNET`, a única do app (permissão normal, sem diálogo) |
+| Selo na tela | `oficial` quando veio da Caixa, `manual` quando falhou ou foi digitado |
+| Tempo limite | 12 s, via `AbortController` — a tela nunca fica travada |
+| Sem rede | O botão avisa e a digitação continua funcionando; o app é inteiro offline |
+| Cache | O service worker **não** guarda resposta da API, só a casca do app |
+
+A busca só preenche um sorteio **que já aconteceu**. Não há previsão de sorteio
+futuro, nem sugestão de jogo a partir do histórico: o gerador não lê os
+resultados buscados.
+
+O `sw.js` ignora qualquer host que não seja o próprio app. Isso é deliberado —
+se a resposta da Caixa fosse cacheada, o app poderia exibir um concurso antigo
+com o selo `oficial`, inclusive offline.
 
 ### O que o app não faz
 

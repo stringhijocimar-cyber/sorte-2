@@ -2,14 +2,19 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- Nenhuma permissão é declarada de propósito.
-         O app não usa rede, armazenamento externo, localização, câmera nem
-         identificadores. Tudo fica em localStorage, no aparelho.
-         A linha abaixo remove a permissão INTERNET que bibliotecas incluídas
-         (Capacitor / AndroidX) trazem no próprio manifesto: sem ela o APK
-         final declara zero permissões. O conteúdo é servido de assets/
-         pelo WebViewAssetLoader, que não passa pela rede. -->
-    <uses-permission android:name="android.permission.INTERNET" tools:node="remove" />
+    <!-- INTERNET é a ÚNICA permissão do app, e existe por um motivo só:
+         a busca opcional do resultado de um concurso já sorteado no serviço
+         público da Caixa (servicebus2.caixa.gov.br), na aba Conferir.
+
+         Nada mais usa rede. O app continua funcionando inteiro sem conexão —
+         gerar, salvar e conferir jogos digitando o resultado à mão. Nenhum
+         jogo é enviado: a consulta leva apenas a modalidade e o número do
+         concurso. Sem armazenamento externo, sem localização, sem câmera,
+         sem identificadores, sem rastreador. Tudo fica em localStorage.
+
+         INTERNET é permissão normal: não gera diálogo em tempo de execução,
+         mas aparece na ficha da loja — e é isso que a LOJA.md declara. -->
+    <uses-permission android:name="android.permission.INTERNET" />
 
     <!-- O androidx.core injeta esta permissão de assinatura no manifesto de
          quem o usa, para dar suporte a ContextCompat.registerReceiver. Nada

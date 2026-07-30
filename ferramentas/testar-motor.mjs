@@ -70,7 +70,7 @@ const EXPOSTOS = [
   "embaralhar", "sortear", "caracteristicas", "escorePopularidade",
   "gerarUniforme", "gerarRateio", "gerarCobertura", "combinacoesDe",
   "verificarGarantia", "gerarFechamento", "faixaAcaso", "esperadoAcertos",
-  "desvioAcertos",
+  "desvioAcertos", "ROTA_CAIXA", "buscarConcurso", "limpar",
 ];
 const epilogo = `\n;globalThis.__motor = {${EXPOSTOS.map((n) => `${n}: typeof ${n} !== "undefined" ? ${n} : undefined`).join(", ")}};\n`;
 vm.runInContext(fonte + epilogo, contexto, { filename: "index.html:script" });
@@ -314,8 +314,26 @@ checar("contato Jogadores Anônimos presente",
   textoBaixo.includes("jogadores anônimos") || textoBaixo.includes("jogadores anonimos"));
 checar("aba Placar existe", textoBaixo.includes("placar"));
 checar("sem alert() em fluxo normal", !/[^.\w]alert\s*\(/.test(fonte));
-checar("sem fetch para servidor externo",
-  !/fetch\s*\(\s*["'`]https?:\/\//.test(fonte));
+/* A rede deixou de ser proibida: a busca de resultado oficial usa fetch.
+   Mas continua CONFINADA — o único destino permitido é o serviço público
+   de loterias da Caixa. Qualquer outro host é falha. */
+const HOSTS_PERMITIDOS = ["servicebus2.caixa.gov.br"];
+const urlsNoFonte = [...html.matchAll(/https?:\/\/([a-z0-9.-]+)/gi)].map((m) => m[1]);
+checar("nenhum host de rede fora da Caixa",
+  urlsNoFonte.every((h) => HOSTS_PERMITIDOS.includes(h) || h === "www.w3.org"),
+  [...new Set(urlsNoFonte)].join(", "));
+checar("fetch existe e aponta para a base da Caixa",
+  /BASE_CAIXA\s*=\s*["'`]https:\/\/servicebus2\.caixa\.gov\.br/.test(fonte));
+checar("busca tem tempo limite (não trava a tela)",
+  /AbortController/.test(fonte) && /setTimeout\(.*abort\(\)/.test(fonte) &&
+  /clearTimeout/.test(fonte));
+checar("busca trata falha de rede sem quebrar",
+  /catch/.test(fonte) && /Digite o resultado/.test(fonte));
+checar("nenhum jogo do usuário vai na consulta",
+  !/fetch\s*\([^)]*(S\.jogos|body\s*:)/.test(fonte));
+checar("as 8 modalidades têm rota da Caixa",
+  Object.keys(contexto.MODALIDADES || {}).every(
+    (m) => contexto.ROTA_CAIXA && contexto.ROTA_CAIXA[m]));
 checar("sem XMLHttpRequest", !fonte.includes("XMLHttpRequest"));
 checar("sem analytics/rastreador",
   !/gtag|googletagmanager|analytics|firebase|facebook|mixpanel|sentry/i.test(html));
