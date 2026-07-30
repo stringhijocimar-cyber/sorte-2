@@ -33,6 +33,13 @@
      ela, para que os três leiam como uma peça só em tela larga. */
   --coluna:720px;
   --barra:55px; /* altura da barra de abas; dita o respiro do fim do main */
+  /* Escala de espaço. Existir num só lugar é o que faz o ritmo da página ser
+     uma decisão, e não o acúmulo de números escolhidos um a um. */
+  --e1:4px; --e2:8px; --e3:12px; --e4:16px; --e5:24px; --e6:34px;
+  /* Papel da cartela. Fica fora de --carta porque a cartela não segue o tema
+     da interface: papel de lotérica é creme no claro e continua papel no
+     escuro, apenas rebaixado, senão a marca de caneta perde o contraste. */
+  --papel:#FBF8F1; --tintaPapel:#1A1A17; --grade:#CFC9BC;
 }
 html[data-tema="escuro"]{
   --fundo:#0B1622; --carta:#132030; --tinta:#E7EDF2; --secundaria:#8FA0AF;
@@ -40,6 +47,7 @@ html[data-tema="escuro"]{
   --veu:rgba(255,255,255,.04);
   --sombra:0 1px 2px rgba(0,0,0,.3),0 12px 28px -20px rgba(0,0,0,.8);
   --sombra-alta:0 2px 4px rgba(0,0,0,.35),0 20px 44px -26px rgba(0,0,0,.9);
+  --papel:#E8E3D8; --tintaPapel:#14140F; --grade:#A9A296;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{margin:0;background:var(--fundo);color:var(--tinta);font-family:var(--sans);
@@ -67,6 +75,127 @@ header{position:sticky;top:0;z-index:20;
 .marca svg{width:26px;height:26px;display:block;flex:none}
 main{padding:14px 16px calc(var(--barra) + 45px + var(--base));
   max-width:var(--coluna);margin:0 auto}
+
+/* ---------- trilha de modalidade: uma escolha, válida em todas as telas ----
+   Antes cada tela tinha o seu próprio <select> de modalidade, e trocar numa
+   não trocava nas outras — o usuário podia gerar na Quina e conferir na
+   Lotofácil sem perceber. A escolha subiu para o cabeçalho: é global, fica
+   sempre visível, e não há como as telas discordarem entre si.            */
+.trilha{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;
+  margin:10px -16px 0;padding:0 16px 2px;scroll-snap-type:x proximity}
+.trilha::-webkit-scrollbar{display:none}
+.trilha button{flex:none;scroll-snap-align:start;background:var(--carta);
+  border:1px solid var(--linha);border-radius:20px;padding:6px 13px;font-size:.8rem;
+  color:var(--secundaria);cursor:pointer;white-space:nowrap;font-weight:550;
+  transition:color .16s ease,border-color .16s ease,background .16s ease}
+.trilha button:hover{border-color:var(--secundaria)}
+.trilha button[aria-pressed="true"]{background:var(--tinta);border-color:var(--tinta);
+  color:var(--carta)}
+
+/* ---------- controle segmentado: as telas dentro de uma seção ---------- */
+.segmento{display:flex;gap:2px;background:var(--trama);border-radius:12px;padding:3px;
+  margin-bottom:var(--e3)}
+.segmento button{flex:1;background:none;border:0;border-radius:9px;padding:8px 6px;
+  font-size:.82rem;font-weight:600;color:var(--secundaria);cursor:pointer;
+  transition:background .16s ease,color .16s ease}
+.segmento button[aria-selected="true"]{background:var(--carta);color:var(--tinta);
+  box-shadow:0 1px 2px rgba(15,30,46,.09)}
+
+/* ---------- título de tela com subtítulo ---------- */
+.titulo{margin-bottom:var(--e3)}
+.titulo p{margin:3px 0 0;font-size:.85rem;color:var(--secundaria);line-height:1.45}
+
+/* ---------- sino de avisos ---------- */
+.sino{position:relative;background:none;border:1px solid var(--linha);border-radius:11px;
+  width:38px;height:38px;display:grid;place-items:center;cursor:pointer;color:var(--tinta)}
+.sino svg{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:1.7;
+  stroke-linecap:round;stroke-linejoin:round}
+.sino b{position:absolute;top:-5px;right:-5px;min-width:17px;height:17px;padding:0 4px;
+  border-radius:9px;background:var(--alerta);color:#fff;font-family:var(--mono);
+  font-size:.6rem;display:grid;place-items:center;border:2px solid var(--fundo)}
+/* `display:grid` acima vence o [hidden] do navegador, e o contador aparecia
+   com "0". Precisa ser explícito. */
+.sino b[hidden]{display:none}
+
+/* ---------- folha inferior (avisos) ---------- */
+.folha{position:fixed;inset:0;z-index:50;display:none}
+.folha[data-aberta="1"]{display:block}
+.folha .fundo{position:absolute;inset:0;background:rgba(15,30,46,.42);
+  -webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)}
+.folha .corpo{position:absolute;left:0;right:0;bottom:0;max-height:78vh;overflow-y:auto;
+  background:var(--fundo);border-radius:var(--r) var(--r) 0 0;
+  padding:var(--e4) var(--e4) calc(var(--e5) + var(--base));
+  max-width:var(--coluna);margin:0 auto;box-shadow:var(--sombra-alta)}
+.folha .alca{width:38px;height:4px;border-radius:2px;background:var(--linha);
+  margin:0 auto var(--e3)}
+
+/* ---------- cartela: a forma do volante de lotérica ------------------------
+   A referência é o cartão de papel: fundo creme, grade impressa contínua (uma
+   linha entre células, não uma borda por célula), número pequeno no canto e a
+   marca ocupando a casa inteira, como caneta preta.
+
+   Deliberadamente NÃO reproduz a identidade da Caixa — nada de logo, nome de
+   marca ou paleta oficial. Imitar a forma ajuda a reconhecer o gesto; imitar a
+   marca seria se passar por eles.                                          */
+.cartela{background:var(--papel);border:1px solid var(--linha);border-radius:12px;
+  overflow:hidden;box-shadow:var(--sombra);margin-bottom:var(--e3)}
+.cartela .tarja{display:flex;justify-content:space-between;align-items:center;gap:8px;
+  padding:9px 12px;background:var(--tinta);color:var(--carta)}
+.cartela .tarja b{font-size:.82rem;letter-spacing:.04em;text-transform:uppercase;
+  font-weight:650}
+.cartela .tarja span{font-family:var(--mono);font-size:.62rem;letter-spacing:.08em;
+  opacity:.72}
+.cartela .miolo{padding:10px}
+/* A grade impressa: colapsada, com a linha desenhada pela própria célula. */
+.grade-volante{display:grid;gap:0;border:1px solid var(--grade);border-radius:4px;
+  overflow:hidden;background:var(--grade)}
+.casa{position:relative;aspect-ratio:1;background:var(--papel);border:0;
+  margin:0 1px 1px 0;padding:0;display:grid;place-items:center;cursor:pointer;
+  font-family:var(--mono);font-size:.8rem;font-weight:600;color:var(--tintaPapel);
+  font-variant-numeric:tabular-nums;transition:background .1s ease,color .1s ease}
+.casa:hover:not(:disabled){background:color-mix(in srgb,var(--seu) 12%,var(--papel))}
+/* A marca de caneta: um retângulo dentro da casa, e não a casa inteira
+   invertida. A casa inteira lê como seleção de interface; o retângulo com a
+   margem de papel em volta lê como alguém que passou a caneta.
+
+   O número fica num <span> com z-index próprio. Sem isso ele desaparece: o
+   ::before é posicionado, e conteúdo posicionado pinta ACIMA do texto em fluxo
+   do mesmo contexto de empilhamento — a marca cobria o dígito inteiro. */
+.casa span{position:relative;z-index:1}
+.casa[aria-pressed="true"]{color:var(--papel)}
+.casa[aria-pressed="true"]::before{content:"";position:absolute;inset:9%;
+  border-radius:4px;background:var(--tintaPapel)}
+/* Sorteada é o resultado impresso na casa; acerto é a caneta sobre ela — as
+   duas camadas juntas, como conferir o papel contra o resultado. */
+.casa.sorteada{background:var(--acaso);color:#fff}
+.casa.acertou{background:var(--acaso)}
+.casa.acertou::before{background:var(--tintaPapel);
+  box-shadow:0 0 0 1.5px color-mix(in srgb,#fff 70%,transparent)}
+.casa:disabled{cursor:default;color:color-mix(in srgb,var(--tintaPapel) 40%,var(--papel))}
+.cartela .pe{display:flex;justify-content:space-between;gap:8px;padding:8px 12px;
+  border-top:1px dashed var(--grade);font-family:var(--mono);font-size:.66rem;
+  color:var(--secundaria);flex-wrap:wrap}
+.legenda-cartela{display:flex;gap:12px;flex-wrap:wrap;font-size:.66rem;
+  color:var(--secundaria);font-family:var(--mono);margin-top:var(--e2)}
+.legenda-cartela i{display:inline-block;width:11px;height:11px;border-radius:2px;
+  vertical-align:-1px;margin-right:4px}
+.contador{display:flex;justify-content:space-between;align-items:baseline;
+  font-family:var(--mono);font-size:.76rem;color:var(--secundaria);margin:var(--e3) 0 var(--e2)}
+.contador b{font-size:1.05rem;color:var(--tinta)}
+
+/* ---------- lista de linhas (avisos, resultados, teimosinha) ---------- */
+.lista{display:flex;flex-direction:column;gap:var(--e2)}
+.item{display:flex;gap:var(--e3);align-items:flex-start;background:var(--carta);
+  border:1px solid var(--linha);border-radius:13px;padding:var(--e3)}
+.item .marca-cor{flex:none;width:3px;align-self:stretch;border-radius:2px;
+  background:var(--secundaria)}
+.item.ok .marca-cor{background:var(--acaso)}
+.item.aviso .marca-cor{background:var(--seu)}
+.item .txt{flex:1;min-width:0}
+.item .txt b{display:block;font-size:.9rem}
+.item .txt span{display:block;font-size:.78rem;color:var(--secundaria)}
+.item .quando{font-family:var(--mono);font-size:.62rem;color:var(--secundaria);flex:none}
+.nao-lido{background:color-mix(in srgb,var(--acaso) 6%,var(--carta))}
 nav{position:fixed;left:0;right:0;bottom:0;z-index:30;display:grid;
   /* Uma coluna por aba, derivada da quantidade real: um número fixo aqui
      deixa coluna vazia assim que ABAS muda de tamanho. */
@@ -248,15 +377,28 @@ td{padding:6px 7px;border-bottom:1px solid var(--trama)}
       </svg>
       <span style="color:var(--tinta)">loto</span><span>lab</span>
     </div>
-    <div class="botoes">
+    <div class="botoes" style="gap:8px">
+      <button class="sino" id="btn-avisos" aria-label="Avisos">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M18 8a6 6 0 1 0-12 0c0 7-3 8-3 8h18s-3-1-3-8"/>
+          <path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+        <b id="conta-avisos" hidden></b>
+      </button>
       <button class="acao contorno mini" id="btn-tema" aria-label="Alternar tema">tema</button>
     </div>
   </div>
+  <div class="trilha" id="trilha-mod" role="group" aria-label="Modalidade"></div>
 </header>
 
 <main id="tela"></main>
 
 <nav id="abas" aria-label="Seções"></nav>
+
+<div class="folha" id="folha-avisos" data-aberta="0" role="dialog" aria-modal="true"
+     aria-label="Avisos">
+  <div class="fundo" data-fechar="1"></div>
+  <div class="corpo"><div class="alca"></div><div id="corpo-avisos"></div></div>
+</div>
 
 <script>
 "use strict";
@@ -301,10 +443,13 @@ const METODOS = [
 
 /* ============================ estado ============================ */
 const S = {
-  aba:"gerar", modalidade:"lotofacil", metodo:"rateio", quantidade:3,
+  tela:"gerar", modalidade:"lotofacil", metodo:"rateio", quantidade:3,
   tamanho:null, dezenasFechamento:[], jFechamento:14, garantia:13,
   jogos:[], resultados:[], tema:"claro", ultimoLote:[],
-  bancadaRep:40, bancadaQtd:3
+  bancadaRep:40, bancadaQtd:3,
+  /* marcadas: dezenas do volante manual, por modalidade, para trocar de
+     modalidade e voltar não apagar o que a pessoa já tinha marcado. */
+  marcadas:{}, avisos:[], teimosinhas:[]
 };
 
 /* Persistência tolerante: se o navegador bloquear, o app segue funcionando
@@ -782,10 +927,6 @@ T.gerar = () => {
   </div>
 
   <div class="carta">
-    <label class="campo"><label>modalidade</label>
-      <select id="g-mod">${Object.entries(MODALIDADES).map(([k,v])=>
-        `<option value="${k}" ${k===S.modalidade?"selected":""}>${esc(v.nome)}</option>`).join("")}</select>
-    </label>
     <div class="linha2">
       <label class="campo"><label>dezenas por jogo</label>
         <select id="g-tam">${Array.from({length:c.max-c.min+1},(_,i)=>c.min+i).map(v=>
@@ -856,8 +997,12 @@ T.jogos = () => {
 
 function ficha(j){
   const c = MODALIDADES[j.modalidade];
-  const conferencias = j.conferencias || [];
+  const conferencias = (j.conferencias || []).slice().sort((a,b)=>a.concurso-b.concurso);
   const ultima = conferencias[conferencias.length-1];
+  const aberto = S.jogoAberto === j.id;
+  /* Clicar no jogo abre a cartela dele. A ficha compacta serve para varrer a
+     lista; a cartela serve para olhar um jogo — misturar as duas em toda linha
+     transformaria a lista num rolo. */
   return `<div class="ficha ${conferencias.length?"conferida":""}">
     <div class="topo">
       <span class="id">#${esc(j.id)}</span>
@@ -872,6 +1017,22 @@ function ficha(j){
     ${ultima ? `<div style="margin-top:9px;font-size:.82rem;color:var(--secundaria)">
       concurso ${esc(ultima.concurso)}: <strong style="color:var(--tinta)">${ultima.acertos} acerto${ultima.acertos===1?"":"s"}</strong>
       — o acaso faria ${nf(esperadoAcertos(j.modalidade, j.dezenas.length),2)}</div>` : ""}
+    <div class="botoes" style="margin-top:10px">
+      <button class="acao contorno mini" data-abrir-jogo="${esc(j.id)}"
+        aria-expanded="${aberto}">${aberto?"fechar cartela":"ver na cartela"}</button>
+    </div>
+    ${!aberto ? "" : `<div style="margin-top:12px">
+      ${cartela(j.modalidade, j.dezenas, {
+        sorteadas: ultima ? ultima.dezenas : null,
+        selo: ultima ? `concurso ${ultima.concurso}` : "não conferido"})}
+      ${ultima ? legendaCartela : ""}
+      ${conferencias.length > 1 ? `<div class="rolagem" style="margin-top:10px"><table>
+        <tr><th>concurso</th><th>acertos</th><th>faixa</th></tr>
+        ${conferencias.map(cf=>`<tr><td>${esc(cf.concurso)}</td><td>${cf.acertos}</td>
+          <td>${faixaAtingida(j.modalidade, cf.acertos) !== null
+            ? `<span class="selo ok">prêmio</span>` : "—"}</td></tr>`).join("")}
+      </table></div>` : ""}
+    </div>`}
   </div>`;
 }
 
@@ -889,9 +1050,6 @@ T.conferir = () => {
   const c = MODALIDADES[S.modalidade];
   const naoConferidos = S.jogos.filter(j=>j.modalidade===S.modalidade).length;
   return `<div class="carta">
-    <label class="campo"><label>modalidade</label>
-      <select id="c-mod">${Object.entries(MODALIDADES).map(([k,v])=>
-        `<option value="${k}" ${k===S.modalidade?"selected":""}>${esc(v.nome)}</option>`).join("")}</select></label>
     <div class="linha2">
       <label class="campo"><label>concurso</label>
         <input id="c-num" type="number" inputmode="numeric" placeholder="ex.: 3421"></label>
@@ -968,9 +1126,6 @@ T.bancada = () => {
   const c = MODALIDADES[S.modalidade];
   const disponiveis = S.resultados.filter(r => r.modalidade === S.modalidade);
   return `<div class="carta">
-    <label class="campo"><label>modalidade</label>
-      <select id="b-mod">${Object.entries(MODALIDADES).map(([k,v])=>
-        `<option value="${k}" ${k===S.modalidade?"selected":""}>${esc(v.nome)}</option>`).join("")}</select></label>
     <div class="linha2">
       <label class="campo"><label>lotes por método</label>
         <select id="b-rep">${[20,40,80].map(v=>
@@ -1068,11 +1223,577 @@ T.entender = () => `<div class="prosa">
   referência: confirme na fonte oficial antes de usar para contas sérias.</p>
 </div>`;
 
+/* ==================== a cartela ====================
+   Uma função só desenha a cartela em todos os usos: marcação manual, jogo
+   salvo, e conferência. Três desenhos separados divergiriam no primeiro ajuste
+   — e o volante é a peça de identidade do app, então ele tem de ser o mesmo
+   objeto em qualquer tela.
+
+   `sorteadas` pinta o resultado; quando há marcadas E sorteadas, a casa que é
+   as duas coisas ganha o contorno âmbar: é o acerto.                       */
+function cartela(modalidade, marcadas, opcoes){
+  const o = Object.assign({sorteadas:null, interativa:false, rodape:"", selo:""}, opcoes||{});
+  const c = MODALIDADES[modalidade];
+  const cols = GRADE[modalidade] || 10;
+  const marc = new Set(marcadas || []);
+  const sort = o.sorteadas ? new Set(o.sorteadas) : null;
+  const casas = [];
+  for(let d = c.base; d <= c.N + c.base - 1; d++){
+    const m = marc.has(d), s = sort && sort.has(d);
+    const classe = s && m ? "casa acertou" : s ? "casa sorteada" : "casa";
+    casas.push(`<button type="button" class="${classe}" ${o.interativa?"":"disabled"}
+      data-casa="${d}" aria-pressed="${m}"
+      aria-label="${d}${s?" sorteada":""}${m?" marcada":""}"><span>${pad(d)}</span></button>`);
+  }
+  const acertos = sort ? [...marc].filter(d => sort.has(d)).length : null;
+  return `<div class="cartela">
+    <div class="tarja"><b>${esc(c.nome)}</b>
+      <span>${o.selo || `${marc.size}/${c.N}`}</span></div>
+    <div class="miolo">
+      <div class="grade-volante" style="grid-template-columns:repeat(${cols},1fr)"
+        ${o.interativa?'id="volante"':""}>${casas.join("")}</div>
+    </div>
+    ${o.rodape || (acertos !== null
+      ? `<div class="pe"><span>${acertos} acerto${acertos===1?"":"s"}</span>
+          <span>${marc.size} dezenas marcadas</span></div>`
+      : "")}
+  </div>`;
+}
+
+const legendaCartela = `<div class="legenda-cartela">
+  <span><i style="background:var(--tintaPapel)"></i>marcada</span>
+  <span><i style="background:var(--acaso)"></i>sorteada</span>
+  <span><i style="background:var(--acaso);box-shadow:inset 0 0 0 2px var(--seu)"></i>acerto</span>
+</div>`;
+
+/* ==================== avisos e conferência automática ====================
+   Conferir à mão só funciona para quem lembra de conferir. O motor abaixo roda
+   sozinho a cada vez que o histórico muda: percorre os jogos salvos e as
+   teimosinhas, confere contra todo concurso que ainda não foi conferido, e
+   registra um aviso para cada faixa de prêmio atingida.
+
+   Duas decisões que evitam mentira:
+
+   * Um jogo salvo sem concurso-alvo declarado vale para os concursos **a
+     partir da data em que foi salvo** — nunca para trás. Conferir um jogo
+     contra um sorteio anterior ao dia em que ele foi criado produziria
+     "acertos" que ninguém poderia ter apostado.
+   * A conferência é idempotente: reprocessar o mesmo concurso não duplica
+     conferência nem aviso, porque a chave é (jogo, concurso).            */
+
+const AVISO_MAX = 200;
+
+function avisar(tipo, titulo, texto, chave){
+  /* `chave` torna o aviso idempotente: o mesmo fato não avisa duas vezes. */
+  if(chave && S.avisos.some(a => a.chave === chave)) return false;
+  S.avisos.unshift({
+    id:`${Date.now().toString(36)}-${Math.random().toString(36).slice(2,6)}`,
+    tipo, titulo, texto, chave, quando:new Date().toISOString(), lido:false
+  });
+  if(S.avisos.length > AVISO_MAX) S.avisos.length = AVISO_MAX;
+  Guardar.gravar("avisos", S.avisos);
+  return true;
+}
+
+/* Notificação do sistema, quando a pessoa autorizou. O app funciona igual sem
+   ela — o sino no cabeçalho é a via garantida, porque não depende de permissão
+   nem de o app estar aberto no momento certo. */
+function notificarSistema(titulo, texto){
+  try{
+    if(typeof Notification === "undefined" || Notification.permission !== "granted") return;
+    new Notification(titulo, {body:texto, icon:"icone.svg", tag:"lotolab"});
+  }catch(e){ /* alguns navegadores exigem service worker; o sino cobre */ }
+}
+
+async function pedirPermissaoDeAviso(){
+  try{
+    if(typeof Notification === "undefined") return "indisponível";
+    if(Notification.permission !== "default") return Notification.permission;
+    return await Notification.requestPermission();
+  }catch(e){ return "indisponível"; }
+}
+
+/* Faixa de prêmio atingida, ou null. Lotomania premia 0 acerto, e é por isso
+   que a comparação é contra a lista de faixas e não contra um mínimo. */
+function faixaAtingida(modalidade, acertos){
+  const c = MODALIDADES[modalidade];
+  return c.faixas.includes(acertos) ? acertos : null;
+}
+
+/* Os concursos que um jogo cobre. Para teimosinha é a faixa declarada; para um
+   jogo comum, todo concurso conhecido da modalidade a partir da data de
+   criação. */
+function concursosDoJogo(j){
+  return S.resultados.filter(r =>
+    r.modalidade === j.modalidade &&
+    (j.deConcurso
+      ? r.concurso >= j.deConcurso && r.concurso <= j.deConcurso + (j.concursos||1) - 1
+      : String(r.data || "") >= String(j.data || "")));
+}
+
+function conferenciaAutomatica(){
+  let novas = 0, premios = 0;
+  const todos = S.jogos.concat(S.teimosinhas || []);
+  todos.forEach(j => {
+    j.conferencias = j.conferencias || [];
+    const jaFeitas = new Set(j.conferencias.map(cf => cf.concurso));
+    concursosDoJogo(j).forEach(r => {
+      if(jaFeitas.has(r.concurso)) return;
+      const acertos = j.dezenas.filter(d => r.dezenas.includes(d)).length;
+      j.conferencias.push({concurso:r.concurso, data:r.data, dezenas:r.dezenas, acertos});
+      novas++;
+      const faixa = faixaAtingida(j.modalidade, acertos);
+      if(faixa !== null){
+        premios++;
+        const nome = MODALIDADES[j.modalidade].nome;
+        avisar("premio", `${nome}: ${faixa} acerto${faixa===1?"":"s"}`,
+          `Concurso ${r.concurso} — o jogo ${j.dezenas.map(pad).join(" ")} está numa faixa de prêmio. Confira no volante oficial antes de comemorar.`,
+          `premio:${j.id}:${r.concurso}`);
+      }
+    });
+  });
+  if(novas){
+    Guardar.gravar("jogos", S.jogos);
+    Guardar.gravar("teimosinhas", S.teimosinhas);
+  }
+  return {novas, premios};
+}
+
+/* Chamado sempre que o histórico muda: confere, avisa quantos concursos
+   entraram, e só então notifica o sistema. */
+function aoMudarHistorico(quantosConcursos, origem){
+  const r = conferenciaAutomatica();
+  if(quantosConcursos > 0){
+    const titulo = `${quantosConcursos} concurso${quantosConcursos===1?"":"s"} novo${quantosConcursos===1?"":"s"}`;
+    const texto = r.novas
+      ? `${r.novas} conferência${r.novas===1?"":"s"} feita${r.novas===1?"":"s"} automaticamente` +
+        (r.premios ? `, ${r.premios} em faixa de prêmio.` : ", nenhuma em faixa de prêmio.")
+      : "Nenhum jogo salvo cobria esses concursos.";
+    if(avisar("historico", titulo, `${texto} Origem: ${origem}.`,
+              `hist:${origem}:${S.resultados.length}:${Date.now()}`))
+      notificarSistema(titulo, texto);
+  }
+  if(r.premios) notificarSistema("Faixa de prêmio atingida",
+    "Abra o LotoLab para ver qual jogo e qual concurso.");
+  return r;
+}
+
+function avisosNaoLidos(){ return S.avisos.filter(a => !a.lido).length; }
+
+function pintarContaAvisos(){
+  const n = avisosNaoLidos(), b = $("#conta-avisos");
+  if(!b) return;
+  b.hidden = n === 0;
+  b.textContent = n > 9 ? "9+" : String(n);
+}
+
+function pintarAvisos(){
+  const corpo = $("#corpo-avisos");
+  if(!corpo) return;
+  const perm = (typeof Notification !== "undefined") ? Notification.permission : "indisponível";
+  const cabeca = `<div style="display:flex;justify-content:space-between;align-items:center;
+      gap:10px;margin-bottom:12px">
+      <h2 style="margin:0">avisos</h2>
+      <div class="botoes">
+        ${perm === "granted" ? "" :
+          `<button class="acao contorno mini" id="a-permitir">permitir notificação</button>`}
+        ${S.avisos.length ? `<button class="acao contorno mini" id="a-limpar">limpar</button>` : ""}
+      </div></div>`;
+  const lista = !S.avisos.length
+    ? `<div class="vazio">Nenhum aviso ainda.<br>Eles aparecem quando novos concursos
+        entram no histórico e a conferência automática roda.</div>`
+    : `<div class="lista">${S.avisos.map(a=>`
+        <div class="item ${a.tipo==="premio"?"ok":a.tipo==="erro"?"aviso":""} ${a.lido?"":"nao-lido"}">
+          <span class="marca-cor"></span>
+          <span class="txt"><b>${esc(a.titulo)}</b><span>${esc(a.texto)}</span></span>
+          <span class="quando">${esc(new Date(a.quando).toLocaleDateString("pt-BR"))}</span>
+        </div>`).join("")}</div>`;
+  corpo.innerHTML = cabeca + lista;
+  const lim = $("#a-limpar");
+  if(lim) lim.onclick = () => {
+    S.avisos = []; Guardar.gravar("avisos", S.avisos); pintarAvisos(); pintarContaAvisos();
+  };
+  const perm2 = $("#a-permitir");
+  if(perm2) perm2.onclick = async () => {
+    const r = await pedirPermissaoDeAviso();
+    if(r === "granted") notificarSistema("Notificações ligadas",
+      "Você será avisado quando novos concursos forem conferidos.");
+    pintarAvisos();
+  };
+}
+
+/* ==================== importação de resultados ====================
+   Duas vias, e a diferença entre elas é declarada na tela:
+
+   * **Colar/arquivo** — funciona sem rede e é o caminho verificado.
+   * **Buscar na Caixa** — consulta o serviço público do Portal de Loterias.
+     NÃO PUDE TESTAR esta via: o ambiente onde este código foi escrito bloqueia
+     o domínio da Caixa. O formato abaixo segue o que o portal publica, mas se
+     ele mudar, a tela informa o erro em vez de inventar um resultado.       */
+
+const SLUG_CAIXA = {
+  "mega-sena":"megasena", "lotofacil":"lotofacil", "quina":"quina",
+  "lotomania":"lotomania", "dupla-sena":"duplasena", "dia-de-sorte":"diadesorte",
+  "timemania":"timemania", "mais-milionaria":"maismilionaria"
+};
+
+function dataBrParaIso(s){
+  const m = String(s||"").match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  return m ? `${m[3]}-${m[2]}-${m[1]}` : String(s||"").slice(0,10);
+}
+
+/* Converte a resposta do portal no registro do app, e recusa o que não
+   reconhece — devolver um resultado pela metade é pior que devolver erro. */
+function normalizarCaixa(bruto, modalidade){
+  const c = MODALIDADES[modalidade];
+  const dezenas = (bruto.listaDezenas || bruto.dezenas || [])
+    .map(x => parseInt(String(x), 10)).filter(x => Number.isFinite(x));
+  if(dezenas.length !== c.k)
+    throw new Error(`o serviço devolveu ${dezenas.length} dezenas, esperava ${c.k}`);
+  const concurso = parseInt(bruto.numero ?? bruto.concurso, 10);
+  if(!Number.isFinite(concurso)) throw new Error("o serviço não informou o número do concurso");
+  const r = {concurso, data:dataBrParaIso(bruto.dataApuracao || bruto.data),
+             dezenas:dezenas.sort((a,b)=>a-b), modalidade, origem:"caixa"};
+  const trevos = (bruto.trevosSorteados || []).map(x=>parseInt(String(x),10))
+    .filter(Number.isFinite);
+  if(trevos.length) r.trevos = trevos;
+  return r;
+}
+
+async function buscarNaCaixa(modalidade, concurso){
+  const slug = SLUG_CAIXA[modalidade];
+  if(!slug) throw new Error("modalidade sem serviço público conhecido");
+  const url = `https://servicebus2.caixa.gov.br/portaldeloterias/api/${slug}` +
+              (concurso ? `/${concurso}` : "");
+  const resp = await fetch(url, {cache:"no-cache", headers:{Accept:"application/json"}});
+  if(!resp.ok) throw new Error(`o serviço respondeu ${resp.status}`);
+  return normalizarCaixa(await resp.json(), modalidade);
+}
+
+/* Colagem: aceita JSON (array de objetos) ou linhas soltas
+   "concurso; data; dezenas". O formato de linha existe porque é o que sai de
+   uma planilha, e planilha é o que as pessoas realmente têm. */
+function lerColagem(texto, modalidade){
+  const t = (texto||"").trim();
+  if(!t) throw new Error("nada para importar");
+  const c = MODALIDADES[modalidade];
+  const saida = [];
+  if(t.startsWith("[") || t.startsWith("{")){
+    const bruto = JSON.parse(t);
+    (Array.isArray(bruto) ? bruto : [bruto]).forEach(o =>
+      saida.push(normalizarCaixa(o, modalidade)));
+    return saida;
+  }
+  t.split(/\r?\n/).forEach((linha, i) => {
+    const limpa = linha.trim();
+    if(!limpa || /concurso/i.test(limpa)) return;      // cabeçalho de planilha
+    const campos = limpa.split(/[;\t]|,(?=\s*\d{2}\/)/).map(x=>x.trim());
+    const numeros = limpa.match(/\d+/g) || [];
+    if(numeros.length < c.k + 1)
+      throw new Error(`linha ${i+1}: esperava concurso, data e ${c.k} dezenas`);
+    const concurso = parseInt(campos[0] ?? numeros[0], 10);
+    const dataBruta = (campos[1] || "").match(/\d{2}\/\d{2}\/\d{4}|\d{4}-\d{2}-\d{2}/);
+    const dezenas = limpa.slice(String(campos[0]).length + (campos[1]||"").length + 2)
+      .match(/\d+/g);
+    const dez = (dezenas || []).map(Number).filter(d => d >= c.base && d <= c.N + c.base - 1);
+    if(dez.length < c.k) throw new Error(`linha ${i+1}: só reconheci ${dez.length} dezenas válidas`);
+    saida.push({concurso, data: dataBruta ? dataBrParaIso(dataBruta[0]) : hoje(),
+                dezenas: dez.slice(0, c.k).sort((a,b)=>a-b), modalidade, origem:"colado"});
+  });
+  if(!saida.length) throw new Error("nenhuma linha reconhecida");
+  return saida;
+}
+
+/* Insere sem duplicar: a chave é (modalidade, concurso), e um concurso já
+   conhecido é substituído, não repetido. */
+function guardarResultados(novos){
+  let inseridos = 0;
+  novos.forEach(r => {
+    const i = S.resultados.findIndex(x =>
+      x.modalidade === r.modalidade && x.concurso === r.concurso);
+    if(i >= 0) S.resultados[i] = r; else { S.resultados.push(r); inseridos++; }
+  });
+  S.resultados.sort((a,b)=> a.modalidade === b.modalidade
+    ? a.concurso - b.concurso : a.modalidade.localeCompare(b.modalidade));
+  Guardar.gravar("resultados", S.resultados);
+  return inseridos;
+}
+
+/* ==================== telas novas ==================== */
+
+const marcadasDe = m => S.marcadas[m] || [];
+
+T.montar = () => {
+  const c = MODALIDADES[S.modalidade];
+  const dez = marcadasDe(S.modalidade).slice().sort((a,b)=>a-b);
+  const valido = dez.length >= c.min && dez.length <= c.max;
+  const cobertas = valido ? combinacoes(dez.length, c.k) : 0;
+  const custo = cobertas * c.preco;
+  const obs = dez.length >= c.k ? observacoes(dez, S.modalidade) : [];
+  const ultimo = ultimoResultado(S.modalidade);
+
+  return cartela(S.modalidade, dez, {interativa:true,
+      selo:`${dez.length} de ${c.min}${c.max>c.min?`–${c.max}`:""}`,
+      rodape:`<div class="pe">
+        <span>${dez.length < c.min
+          ? `faltam ${c.min - dez.length}`
+          : dez.length > c.max ? `${dez.length - c.max} a mais` : "aposta válida"}</span>
+        <span>${valido ? brl(custo) : "—"}</span></div>`}) +
+    `<div class="contador">
+      <span>marcadas <b>${dez.length}</b> de ${c.min}${c.max>c.min?` a ${c.max}`:""}</span>
+      <span>${valido ? `${inf(cobertas)} aposta${cobertas>1?"s":""} simples` : "aposta incompleta"}</span>
+    </div>
+    <div class="botoes" style="margin-bottom:12px">
+      <button class="acao mini" id="m-salvar" ${valido?"":"disabled"}>salvar jogo</button>
+      <button class="acao contorno mini" id="m-completar">completar ao acaso</button>
+      <button class="acao contorno mini" id="m-limpar" ${dez.length?"":"disabled"}>limpar</button>
+    </div>
+    ${dez.length >= c.k ? `<div class="carta">
+      <h2>como este jogo se parece</h2>
+      <ul style="margin:8px 0 0;padding-left:1.15em;font-size:.88rem">
+        ${obs.map(o=>`<li>${esc(o)}</li>`).join("")}</ul>
+      <div class="nota">Isto descreve a <strong>forma</strong> do jogo, não a chance dele.
+        Todas as combinações válidas têm exatamente a mesma probabilidade. O que a forma
+        muda é quanta gente costuma marcar algo parecido — e portanto com quantas pessoas
+        você dividiria, se acertasse.</div>
+    </div>` : ""}
+    ${ultimo && dez.length ? `<div class="carta">
+      <h2>contra o último concurso conhecido</h2>
+      <p style="font-size:.85rem;color:var(--secundaria);margin:6px 0 10px">
+        Concurso ${esc(ultimo.concurso)}. Isto é um teste retrospectivo: não diz nada
+        sobre o próximo sorteio.</p>
+      ${cartela(S.modalidade, dez, {sorteadas:ultimo.dezenas,
+        selo:`concurso ${ultimo.concurso}`})}
+      ${legendaCartela}
+    </div>` : ""}
+    <div id="m-saida"></div>`;
+};
+
+T.resultados = () => {
+  const meus = S.resultados.filter(r => r.modalidade === S.modalidade)
+    .slice().sort((a,b)=> b.concurso - a.concurso);
+  const c = MODALIDADES[S.modalidade];
+  const temServico = !!SLUG_CAIXA[S.modalidade];
+  return `<div class="carta">
+    <h2>trazer resultados</h2>
+    <div class="botoes" style="margin:10px 0">
+      <button class="acao mini" id="r-caixa" ${temServico?"":"disabled"}>buscar último na Caixa</button>
+      <button class="acao contorno mini" id="r-varios" ${temServico?"":"disabled"}>buscar os 20 últimos</button>
+    </div>
+    <div class="nota atencao"><strong>A busca online não pôde ser testada por mim.</strong>
+      O ambiente onde este código foi escrito bloqueia o domínio da Caixa, então a via
+      online segue o formato publicado pelo portal mas não foi verificada contra ele.
+      Se o serviço mudar, a tela mostra o erro em vez de inventar um resultado. A via de
+      colagem abaixo funciona sem rede e é a verificada.</div>
+    <label class="campo"><label>colar resultados</label>
+      <textarea id="r-texto" rows="4" placeholder="${esc(
+        `Um concurso por linha: 3421; 21/06/2025; ${Array.from({length:c.k},(_,i)=>pad(i+c.base)).join(" ")}`)}"
+        style="width:100%;padding:11px 12px;background:var(--fundo);
+        border:1px solid var(--linha);border-radius:11px;font-family:var(--mono);
+        font-size:.82rem"></textarea></label>
+    <button class="acao mini" id="r-colar">importar o que está colado</button>
+    <div id="r-saida"></div>
+  </div>
+  <div class="carta">
+    <h2>${esc(c.nome)} — ${meus.length} concurso${meus.length===1?"":"s"} no app</h2>
+    ${!meus.length
+      ? `<div class="vazio">Nenhum resultado desta modalidade ainda.<br>
+          Sem histórico, a bancada e o placar não têm o que medir.</div>`
+      : `<div class="lista" style="margin-top:10px">${meus.slice(0,40).map(r=>`
+          <div class="item">
+            <span class="marca-cor"></span>
+            <span class="txt"><b>Concurso ${esc(r.concurso)}</b>
+              <span>${r.dezenas.map(pad).join(" ")}</span></span>
+            <span class="quando">${esc(r.data)}<br>
+              <span class="pilula ${r.origem==="caixa"?"oficial":"manual"}"
+                >${esc(r.origem || "manual")}</span></span>
+          </div>`).join("")}</div>
+        ${meus.length > 40 ? `<div class="pe">mostrando os 40 mais recentes</div>` : ""}`}
+  </div>`;
+};
+
+T.teimosinha = () => {
+  const c = MODALIDADES[S.modalidade];
+  const dez = marcadasDe(S.modalidade).slice().sort((a,b)=>a-b);
+  const minhas = (S.teimosinhas||[]).filter(t => t.modalidade === S.modalidade);
+  const podeCriar = dez.length >= c.min && dez.length <= c.max;
+  const ultimo = ultimoResultado(S.modalidade);
+  return `<div class="carta">
+    <h2>criar teimosinha</h2>
+    <p style="font-size:.85rem;color:var(--secundaria);margin:6px 0 10px">
+      Usa as dezenas marcadas na tela <strong>Manual</strong>${
+        dez.length ? `: ${dez.map(pad).join(" ")}` : " — nenhuma marcada ainda"}.</p>
+    <div class="linha2">
+      <label class="campo"><label>a partir do concurso</label>
+        <input id="t-de" type="number" inputmode="numeric"
+          value="${ultimo ? ultimo.concurso + 1 : ""}" placeholder="ex.: 3422"></label>
+      <label class="campo"><label>concursos seguidos</label>
+        <select id="t-n">${[2,3,4,5,6,7,8,9].map(v=>
+          `<option value="${v}">${v}</option>`).join("")}</select></label>
+    </div>
+    <button class="acao mini" id="t-criar" ${podeCriar?"":"disabled"}>criar teimosinha</button>
+    <div class="nota">O custo é multiplicado pelo número de concursos e sai inteiro no ato,
+      como na lotérica. Repetir o mesmo jogo não muda a chance de nenhum sorteio: cada
+      concurso é independente do anterior.</div>
+    <div id="t-saida"></div>
+  </div>
+  ${!minhas.length ? `<div class="vazio">Nenhuma teimosinha nesta modalidade.</div>`
+    : minhas.map(t=>{
+        const conf = t.conferencias || [];
+        const fim = t.deConcurso + t.concursos - 1;
+        const restam = Math.max(0, t.concursos - conf.length);
+        const melhor = conf.length ? Math.max(...conf.map(x=>x.acertos)) : null;
+        return `<div class="carta">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
+            <h3>Concursos ${t.deConcurso}–${fim}</h3>
+            <span class="selo ${restam?"seu":"ok"}">${restam?`${restam} por sair`:"encerrada"}</span>
+          </div>
+          ${cartela(t.modalidade, t.dezenas, {
+            sorteadas: conf.length ? conf[conf.length-1].dezenas : null,
+            selo:`${t.dezenas.length} dezenas`})}
+          <div class="kpis">
+            <div class="kpi"><div class="rot">custo total</div>
+              <div class="val" style="font-size:1.15rem">${brl(t.custo)}</div>
+              <div class="sub">${t.concursos} concursos</div></div>
+            <div class="kpi"><div class="rot">melhor acerto</div>
+              <div class="val">${melhor === null ? "—" : melhor}</div>
+              <div class="sub">${conf.length} conferido${conf.length===1?"":"s"}</div></div>
+          </div>
+          ${conf.length ? `<div class="rolagem"><table>
+            <tr><th>concurso</th><th>acertos</th><th>faixa</th></tr>
+            ${conf.slice().sort((a,b)=>a.concurso-b.concurso).map(x=>`<tr>
+              <td>${esc(x.concurso)}</td><td>${x.acertos}</td>
+              <td>${faixaAtingida(t.modalidade, x.acertos) !== null
+                ? `<span class="selo ok">prêmio</span>` : "—"}</td></tr>`).join("")}
+          </table></div>` : `<div class="pe">Nenhum dos concursos entrou no histórico ainda.</div>`}
+          <div class="botoes" style="margin-top:10px">
+            <button class="acao perigo mini" data-apagar-teimosinha="${esc(t.id)}">apagar</button>
+          </div>
+        </div>`;
+      }).join("")}`;
+};
+
 /* ============================ ações ============================ */
+function acoesNovas(){
+  /* --- volante manual --- */
+  document.querySelectorAll("#volante [data-casa]").forEach(b => b.onclick = () => {
+    const d = +b.dataset.casa, c = MODALIDADES[S.modalidade];
+    const atual = marcadasDe(S.modalidade).slice();
+    const i = atual.indexOf(d);
+    if(i >= 0) atual.splice(i, 1);
+    else if(atual.length >= c.max) return;      // teto da modalidade, sem aviso ruidoso
+    else atual.push(d);
+    S.marcadas[S.modalidade] = atual;
+    Guardar.gravar("marcadas", S.marcadas);
+    pintar();
+  });
+
+  const compl = $("#m-completar");
+  if(compl) compl.onclick = () => {
+    const c = MODALIDADES[S.modalidade];
+    const atual = new Set(marcadasDe(S.modalidade));
+    const faltam = Math.max(0, c.min - atual.size);
+    const livres = universo(S.modalidade).filter(d => !atual.has(d));
+    embaralhar(livres).slice(0, faltam).forEach(d => atual.add(d));
+    S.marcadas[S.modalidade] = [...atual].sort((a,b)=>a-b);
+    Guardar.gravar("marcadas", S.marcadas); pintar();
+  };
+
+  const limpar = $("#m-limpar");
+  if(limpar) limpar.onclick = () => {
+    S.marcadas[S.modalidade] = [];
+    Guardar.gravar("marcadas", S.marcadas); pintar();
+  };
+
+  const salvar = $("#m-salvar");
+  if(salvar) salvar.onclick = () => {
+    const dez = marcadasDe(S.modalidade).slice().sort((a,b)=>a-b);
+    S.jogos.push({
+      id:`${Date.now().toString(36)}-m`, dezenas:dez, modalidade:S.modalidade,
+      metodo:"manual", data:hoje(), lote:`M${Date.now().toString(36)}`, conferencias:[]
+    });
+    Guardar.gravar("jogos", S.jogos);
+    conferenciaAutomatica();
+    S.tela = "jogos"; pintar();
+  };
+
+  /* --- resultados --- */
+  const colar = $("#r-colar");
+  if(colar) colar.onclick = () => {
+    const saida = $("#r-saida");
+    try{
+      const novos = lerColagem($("#r-texto").value, S.modalidade);
+      const n = guardarResultados(novos);
+      const r = aoMudarHistorico(n, "colado");
+      saida.innerHTML = `<div class="nota"><strong>${n} concurso${n===1?"":"s"} novo${n===1?"":"s"}</strong>
+        de ${novos.length} lido${novos.length===1?"":"s"}. ${r.novas} conferência${r.novas===1?"":"s"}
+        automática${r.novas===1?"":"s"}.</div>`;
+      setTimeout(pintar, 900);
+    }catch(e){
+      saida.innerHTML = `<div class="nota atencao">Não importei: ${esc(e.message)}.</div>`;
+    }
+  };
+
+  const buscar = async (quantos) => {
+    const saida = $("#r-saida");
+    saida.innerHTML = `<div class="nota"><span class="girando"></span>consultando o serviço da Caixa…</div>`;
+    try{
+      const ultimo = await buscarNaCaixa(S.modalidade, null);
+      const lote = [ultimo];
+      for(let i = 1; i < quantos; i++){
+        const n = ultimo.concurso - i;
+        if(n < 1) break;
+        try{ lote.push(await buscarNaCaixa(S.modalidade, n)); }
+        catch(e){ break; }   // para no primeiro que falhar; o que veio já vale
+      }
+      const n = guardarResultados(lote);
+      const r = aoMudarHistorico(n, "caixa");
+      saida.innerHTML = `<div class="nota"><strong>${lote.length} concurso${lote.length===1?"":"s"}
+        recebido${lote.length===1?"":"s"}</strong>, ${n} novo${n===1?"":"s"}.
+        ${r.novas} conferência${r.novas===1?"":"s"} automática${r.novas===1?"":"s"}.</div>`;
+      setTimeout(pintar, 900);
+    }catch(e){
+      saida.innerHTML = `<div class="nota atencao">A busca falhou: ${esc(e.message)}.
+        Isto acontece sem internet, se o serviço estiver fora, ou se o formato dele
+        mudou. Use a colagem abaixo — ela não depende de rede.</div>`;
+    }
+  };
+  if($("#r-caixa")) $("#r-caixa").onclick = () => buscar(1);
+  if($("#r-varios")) $("#r-varios").onclick = () => buscar(20);
+
+  /* --- teimosinha --- */
+  const criar = $("#t-criar");
+  if(criar) criar.onclick = () => {
+    const c = MODALIDADES[S.modalidade];
+    const dez = marcadasDe(S.modalidade).slice().sort((a,b)=>a-b);
+    const de = parseInt($("#t-de").value, 10), n = +$("#t-n").value;
+    const saida = $("#t-saida");
+    if(!Number.isFinite(de) || de < 1){
+      saida.innerHTML = `<div class="nota atencao">Informe o concurso inicial.</div>`; return;
+    }
+    S.teimosinhas = S.teimosinhas || [];
+    S.teimosinhas.push({
+      id:`${Date.now().toString(36)}-t`, dezenas:dez, modalidade:S.modalidade,
+      metodo:"teimosinha", data:hoje(), deConcurso:de, concursos:n,
+      custo: combinacoes(dez.length, c.k) * c.preco * n, conferencias:[]
+    });
+    Guardar.gravar("teimosinhas", S.teimosinhas);
+    conferenciaAutomatica(); pintar();
+  };
+  document.querySelectorAll("[data-apagar-teimosinha]").forEach(b => b.onclick = () => {
+    S.teimosinhas = (S.teimosinhas||[]).filter(t => t.id !== b.dataset.apagarTeimosinha);
+    Guardar.gravar("teimosinhas", S.teimosinhas); pintar();
+  });
+
+  /* --- abrir um jogo salvo na cartela --- */
+  document.querySelectorAll("[data-abrir-jogo]").forEach(b => b.onclick = () => {
+    S.jogoAberto = S.jogoAberto === b.dataset.abrirJogo ? null : b.dataset.abrirJogo;
+    pintar();
+  });
+}
+
 function acoes(){
-  const mod = $("#g-mod");
-  if(mod) mod.onchange = e => { S.modalidade = e.target.value; S.tamanho = null;
-    REFERENCIA = {}; pintar(); };
+  acoesNovas();
   const tam = $("#g-tam");
   if(tam) tam.onchange = e => { S.tamanho = +e.target.value; REFERENCIA = {}; pintar(); };
   const qtd = $("#g-qtd");
@@ -1134,7 +1855,7 @@ function acoes(){
         $("#g-salvar").onclick = () => {
           S.jogos = S.jogos.concat(S.ultimoLote);
           Guardar.gravar("jogos", S.jogos);
-          S.aba = "jogos"; pintar();
+          S.tela = "jogos"; pintar();
         };
       }catch(e){
         saida.innerHTML = `<div class="nota atencao">${esc(e.message)}</div>`;
@@ -1144,7 +1865,6 @@ function acoes(){
     }, 20);
   };
 
-  if($("#b-mod")) $("#b-mod").onchange = e => { S.modalidade = e.target.value; pintar(); };
   if($("#b-rep")) $("#b-rep").onchange = e => { S.bancadaRep = Number(e.target.value); };
   if($("#b-qtd")) $("#b-qtd").onchange = e => { S.bancadaQtd = Number(e.target.value); };
   if($("#b-go")) $("#b-go").onclick = () => {
@@ -1193,8 +1913,6 @@ function acoes(){
     setTimeout(()=> b.textContent = "Copiar lote", 1600);
   });
 
-  const cmod = $("#c-mod");
-  if(cmod) cmod.onchange = e => { S.modalidade = e.target.value; pintar(); };
 
   const cgo = $("#c-go");
   if(cgo) cgo.onclick = () => {
@@ -1264,30 +1982,99 @@ function acoes(){
 }
 
 /* ============================ navegação ============================ */
-const ABAS = [
-  {id:"gerar",   nome:"gerar",    icone:'<path d="M4 7h16M4 12h16M4 17h10"/><circle cx="18" cy="17" r="3"/>'},
-  {id:"jogos",   nome:"meus jogos",icone:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9h10M7 13h6"/>'},
-  {id:"conferir",nome:"conferir", icone:'<path d="M4 12l5 5L20 6"/>'},
-  {id:"placar",  nome:"placar",   icone:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>'},
-  {id:"bancada", nome:"bancada",  icone:'<path d="M3 20h18M7 20V10M12 20V4M17 20v-8"/><path d="M5 16h4M10 10h4M15 14h4"/>'},
-  {id:"entender",nome:"entender", icone:'<circle cx="12" cy="12" r="9"/><path d="M12 16v-4M12 8h.01"/>'}
+/* ============================ navegação ============================
+   Duas camadas, e não uma barra com nove ícones. A barra inferior tem cinco
+   seções — o limite prático antes de os alvos ficarem pequenos demais para o
+   dedo — e cada seção abre suas telas num controle segmentado. Sem isso, cada
+   tela nova encolheria todas as outras.
+
+   Cada tela declara também um subtítulo: o título sozinho ("Bancada") não diz
+   o que a tela faz, e a explicação ficava perdida no meio do conteúdo.      */
+const SECOES = [
+  {id:"gerar", nome:"gerar",
+   icone:'<path d="M4 7h16M4 12h16M4 17h10"/><circle cx="18" cy="17" r="3"/>',
+   telas:[
+     {id:"gerar", nome:"Automático", titulo:"Gerar jogos",
+      sub:"Monta combinações válidas por método. Todos têm a mesma chance de acerto — o que muda é com quantas pessoas você dividiria."},
+     {id:"montar", nome:"Manual", titulo:"Montar à mão",
+      sub:"Marque as dezenas que quiser. O app mostra as características do jogo e como elas se comparam ao esperado do acaso."}
+   ]},
+  {id:"jogos", nome:"jogos",
+   icone:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9h10M7 13h6"/>',
+   telas:[
+     {id:"jogos", nome:"Meus jogos", titulo:"Meus jogos",
+      sub:"Tudo o que você salvou, conferido automaticamente contra os resultados que o app conhece."},
+     {id:"teimosinha", nome:"Teimosinha", titulo:"Teimosinha",
+      sub:"Repete o mesmo jogo por vários concursos seguidos. O app acompanha o custo total e confere cada concurso sozinho."}
+   ]},
+  {id:"conferir", nome:"conferir", icone:'<path d="M4 12l5 5L20 6"/>',
+   telas:[
+     {id:"conferir", nome:"Conferir", titulo:"Conferir",
+      sub:"Informe o resultado de um concurso e o app confere todos os seus jogos daquela modalidade."},
+     {id:"resultados", nome:"Resultados", titulo:"Histórico de resultados",
+      sub:"Os concursos que o app conhece. É esta base que alimenta a análise, a bancada e o aprendizado."}
+   ]},
+  {id:"analise", nome:"análise",
+   icone:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
+   telas:[
+     {id:"placar", nome:"Placar", titulo:"Placar",
+      sub:"Seu resultado acumulado, comparado com o que o acaso teria feito com o mesmo dinheiro."},
+     {id:"bancada", nome:"Bancada", titulo:"Bancada de testes",
+      sub:"Roda todos os métodos contra o mesmo sorteio e mede se algum se distingue do acaso."}
+   ]},
+  {id:"entender", nome:"entender",
+   icone:'<circle cx="12" cy="12" r="9"/><path d="M12 16v-4M12 8h.01"/>',
+   telas:[
+     {id:"entender", nome:"Entender", titulo:"Entender",
+      sub:"O que este app faz, o que ele não faz, e por quê."}
+   ]}
 ];
 
+const secaoAtual = () => SECOES.find(s => s.telas.some(t => t.id === S.tela)) || SECOES[0];
+const telaAtual = () => secaoAtual().telas.find(t => t.id === S.tela) || secaoAtual().telas[0];
+
 function navegacao(){
-  $("#abas").innerHTML = ABAS.map(a=>`
-    <button data-aba="${a.id}" ${a.id===S.aba?'aria-current="page"':""}>
-      <svg viewBox="0 0 24 24">${a.icone}</svg>${esc(a.nome)}</button>`).join("");
-  document.querySelectorAll("[data-aba]").forEach(b => b.onclick = () => {
-    S.aba = b.dataset.aba; window.scrollTo(0,0); pintar();
+  const sec = secaoAtual();
+  $("#abas").innerHTML = SECOES.map(s=>`
+    <button data-secao="${s.id}" ${s.id===sec.id?'aria-current="page"':""}>
+      <svg viewBox="0 0 24 24">${s.icone}</svg>${esc(s.nome)}</button>`).join("");
+  document.querySelectorAll("[data-secao]").forEach(b => b.onclick = () => {
+    const s = SECOES.find(x => x.id === b.dataset.secao);
+    /* Entrar numa seção leva à primeira tela dela, salvo quando já se está
+       nela — aí o clique é um "voltar ao topo", não uma troca de tela. */
+    if(s.id !== sec.id) S.tela = s.telas[0].id;
+    window.scrollTo(0,0); pintar();
+  });
+}
+
+function trilhaModalidade(){
+  $("#trilha-mod").innerHTML = Object.entries(MODALIDADES).map(([k,v])=>
+    `<button data-mod="${k}" aria-pressed="${k===S.modalidade}">${esc(v.nome)}</button>`).join("");
+  document.querySelectorAll("[data-mod]").forEach(b => b.onclick = () => {
+    if(b.dataset.mod === S.modalidade) return;
+    S.modalidade = b.dataset.mod; S.tamanho = null; REFERENCIA = {};
+    Guardar.gravar("modalidade", S.modalidade);
+    pintar();
   });
 }
 
 function pintar(){
-  $("#tela").innerHTML = `<h1 style="margin-bottom:10px">${
-    esc(ABAS.find(a=>a.id===S.aba).nome)}</h1>` + T[S.aba]() +
+  const sec = secaoAtual(), tela = telaAtual();
+  const segmento = sec.telas.length < 2 ? "" :
+    `<div class="segmento" role="tablist">${sec.telas.map(t=>
+      `<button role="tab" data-tela="${t.id}" aria-selected="${t.id===tela.id}">
+        ${esc(t.nome)}</button>`).join("")}</div>`;
+  $("#tela").innerHTML = segmento +
+    `<div class="titulo"><h1>${esc(tela.titulo)}</h1><p>${esc(tela.sub)}</p></div>` +
+    T[tela.id]() +
     `<div class="aviso-fixo">Nenhum método aumenta a chance de acertar.<br>
      Loteria é gasto de entretenimento, não investimento.</div>`;
+  document.querySelectorAll("[data-tela]").forEach(b => b.onclick = () => {
+    S.tela = b.dataset.tela; window.scrollTo(0,0); pintar();
+  });
   navegacao();
+  trilhaModalidade();
+  pintarContaAvisos();
   acoes();
 }
 
@@ -1304,9 +2091,37 @@ async function carregarCalibracao(){
   S.jogos = Guardar.ler("jogos", []);
   S.resultados = Guardar.ler("resultados", []);
   S.tema = Guardar.ler("tema", "claro");
+  S.avisos = Guardar.ler("avisos", []);
+  S.teimosinhas = Guardar.ler("teimosinhas", []);
+  S.marcadas = Guardar.ler("marcadas", {});
+  S.modalidade = Guardar.ler("modalidade", S.modalidade);
   document.documentElement.dataset.tema = S.tema;
+  /* Conferir na abertura: quem digitou um resultado e fechou o app antes de
+     conferir os jogos encontra tudo conferido ao voltar. */
+  conferenciaAutomatica();
   pintar();
-  carregarCalibracao().then(()=>{ if(CALIBRACAO && S.aba==="gerar") pintar(); });
+
+  /* Sino e folha de avisos. Ficam fora de pintar() porque vivem no cabeçalho,
+     que não é redesenhado a cada troca de tela. */
+  const folha = $("#folha-avisos");
+  $("#btn-avisos").onclick = () => {
+    pintarAvisos();
+    folha.dataset.aberta = "1";
+  };
+  folha.addEventListener("click", e => {
+    if(!e.target.closest("[data-fechar]")) return;
+    folha.dataset.aberta = "0";
+    /* Fechar marca como lido: o aviso já foi mostrado, e manter o contador
+       aceso depois disso treinaria a pessoa a ignorá-lo. */
+    S.avisos.forEach(a => a.lido = true);
+    Guardar.gravar("avisos", S.avisos);
+    pintarContaAvisos();
+  });
+  document.addEventListener("keydown", e => {
+    if(e.key === "Escape" && folha.dataset.aberta === "1")
+      folha.querySelector("[data-fechar]").click();
+  });
+  carregarCalibracao().then(()=>{ if(CALIBRACAO && S.tela==="gerar") pintar(); });
   if("serviceWorker" in navigator){
     navigator.serviceWorker.register("sw.js").catch(()=>{});
   }

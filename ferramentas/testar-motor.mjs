@@ -73,7 +73,9 @@ const EXPOSTOS = [
   "desvioAcertos",
   "gerarAntirepeticao", "gerarContraste", "gerarPor", "ultimoResultado",
   "sobreposicaoMedia", "erroPadraoAcertos", "bancada", "bancadaAgregada",
-  "vereditoAcertos", "ABAS", "T",
+  "vereditoAcertos", "SECOES", "T", "cartela", "faixaAtingida",
+  "concursosDoJogo", "lerColagem", "normalizarCaixa", "guardarResultados",
+  "dataBrParaIso", "SLUG_CAIXA",
 ];
 const epilogo = `\n;globalThis.__motor = {${EXPOSTOS.map((n) => `${n}: typeof ${n} !== "undefined" ? ${n} : undefined`).join(", ")}};\n`;
 vm.runInContext(fonte + epilogo, contexto, { filename: "index.html:script" });
@@ -522,7 +524,8 @@ checar("agregada nao zera o antirepeticao",
   ag2.linhas.find(l => l.id === "antirepeticao").media > 0);
 
 /* --- a aba existe --- */
-checar("aba bancada registrada", contexto.ABAS.some(a => a.id === "bancada"));
+checar("aba bancada registrada",
+  contexto.SECOES.some(s => s.telas.some(t => t.id === "bancada")));
 checar("tela da bancada renderiza", typeof contexto.T.bancada === "function" &&
   contexto.T.bancada().includes("b-go"));
 
