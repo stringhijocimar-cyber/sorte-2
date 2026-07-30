@@ -12,6 +12,24 @@ honestos são eventos independentes: nenhuma análise muda a probabilidade de um
 dezena sair. O que ele faz é medir, comparar contra o acaso, e dizer quando um
 "achado" é ruído.
 
+---
+
+> ### ⚠️ O `.apk` deste repositório está desatualizado
+>
+> `LotoLab-1.0.0-release.apk` é um build antigo. **Instalar esse arquivo não traz
+> nada do que está descrito abaixo** — nem a cartela, nem a conferência
+> automática, nem o aprendizado por modalidade.
+>
+> O código-fonte está atualizado (`index.html` e `www/index.html` são idênticos e
+> sincronizados). Para ter o app novo no celular, escolha um:
+>
+> * **Sem compilar:** `python3 servir.py` e abra o endereço no navegador do
+>   celular. É a mesma página que roda dentro do APK.
+> * **Compilando:** siga o `APK.md` — precisa de Android SDK, `npm install` e da
+>   sua keystore.
+
+---
+
 ## As telas
 
 Cinco seções na barra inferior, cada uma com suas telas num controle segmentado.
