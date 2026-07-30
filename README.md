@@ -97,7 +97,7 @@ capacitor.config.json  configuração do app nativo (appId, webDir)
 www/                   ← RAIZ DE EMPACOTAMENTO do Capacitor (webDir)
 android/               projeto Android gerado pelo Capacitor, com ajustes
 ferramentas/           scripts de apoio (geração de ícones, testes)
-capturas/              capturas de tela das cinco abas
+capturas/              capturas de tela, geradas por ferramentas/testar-interface.mjs
 APK.md                 como reconstruir o APK do zero
 LOJA.md                textos e ficha de dados para a Play Store
 ```
