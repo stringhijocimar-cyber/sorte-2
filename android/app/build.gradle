@@ -7,8 +7,11 @@ android {
         applicationId "app.lotolab.jogos"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0.0"
+        // 1.1.0 / código 2: a busca opcional de resultado na Caixa entrou, e com
+        // ela a permissão INTERNET. Mudança de permissão exige versionCode novo —
+        // a 1.0.0 já foi publicada sem rede e não pode ser sobrescrita.
+        versionCode 2
+        versionName "1.1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         resourceConfigurations += ['pt-rBR', 'en']
         aaptOptions {
