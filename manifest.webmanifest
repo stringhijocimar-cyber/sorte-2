@@ -1,0 +1,19 @@
+{
+  "name": "LotoLab — jogos e conferência",
+  "short_name": "LotoLab",
+  "description": "Monta jogos das loterias brasileiras, guarda no aparelho e confere contra os concursos, sempre mostrando o desempenho comparado ao acaso.",
+  "lang": "pt-BR",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#EDF0F2",
+  "theme_color": "#0F1E2E",
+  "categories": ["utilities", "education"],
+  "icons": [
+    { "src": "icone.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "icone-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icone-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icone-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

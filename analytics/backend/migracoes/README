@@ -1,0 +1,25 @@
+Migrações do esquema (Alembic).
+
+A URL vem de DATABASE_URL, não do alembic.ini — credencial em arquivo
+versionado é o caminho mais comum para vazá-la.
+
+    export DATABASE_URL=postgresql+psycopg://usuario@host:5432/banco
+
+    python3 -m alembic upgrade head        # aplica
+    python3 -m alembic downgrade -1        # volta uma
+    python3 -m alembic upgrade head --sql  # só gera o SQL, para revisão
+
+Ao criar uma migração nova:
+
+    python3 -m alembic revision --autogenerate -m "descricao"
+
+ATENÇÃO: o autogenerate do Alembic renderiza `Text()` e `SmallInteger()` sem o
+prefixo `sa.` dentro de ARRAY e JSONB. A migração é gerada sem erro e só quebra
+com NameError na hora de aplicar — em produção, se ninguém tiver testado.
+Corrija à mão antes de commitar; `test_nenhum_tipo_ficou_sem_prefixo_sa` pega
+o caso na suíte.
+
+`test_migracao_produz_o_mesmo_esquema_dos_modelos` compara o resultado das
+migrações com lab/persistencia.py. Migração que não acompanha o modelo é pior
+que migração nenhuma: dá a impressão de que o esquema está versionado enquanto
+produção e código divergem em silêncio.

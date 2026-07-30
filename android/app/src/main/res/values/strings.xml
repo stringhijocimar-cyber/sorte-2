@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">LotoLab</string>
+    <string name="title_activity_main">LotoLab</string>
+    <string name="package_name">app.lotolab.jogos</string>
+    <string name="custom_url_scheme">app.lotolab.jogos</string>
+</resources>

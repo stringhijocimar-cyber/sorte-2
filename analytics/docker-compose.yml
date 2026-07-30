@@ -1,0 +1,26 @@
+# Compose de DESENVOLVIMENTO. Não é configuração de produção: as senhas são
+# fixas de propósito, para que ninguém as confunda com credenciais reais.
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: loteria
+      POSTGRES_PASSWORD: desenvolvimento
+      POSTGRES_DB: loteria_analytics
+    ports: ["5432:5432"]
+    volumes: ["dados_postgres:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U loteria"]
+      interval: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 10
+
+volumes:
+  dados_postgres:

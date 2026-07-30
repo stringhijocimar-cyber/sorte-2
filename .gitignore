@@ -1,0 +1,149 @@
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.yarn-integrity
+*.tgz
+yarn.lock
+.pnpm-debug.log*
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+pip-log.txt
+pip-delete-this-directory.txt
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+
+# Virtual Environments
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.venv/
+
+# IDEs and Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*.swn
+.DS_Store
+Thumbs.db
+*~
+.project
+.classpath
+.settings/
+*.sublime-*
+
+# Logs
+logs/
+*.log
+log/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+.env.development
+.env.test
+.env.production
+
+# Build outputs
+/out
+/target
+/.next
+/.nuxt
+/dist
+/build
+/.cache
+
+# Testing
+/coverage
+/.nyc_output
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+*.bak
+*.backup
+*.old
+
+# Database
+*.sqlite
+*.sqlite3
+*.db
+
+# OS Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Docker
+Dockerfile.local
+docker-compose.override.yml
+
+# Misc
+*.pid
+*.seed
+*.pid.lock
+.grunt
+.lock-wscript
+
+# ---------------- LotoLab: Capacitor / Android ----------------
+# Artefatos de build (nunca versionar)
+android/build/
+android/.gradle/
+android/app/build/
+android/capacitor-cordova-android-plugins/build/
+android/local.properties
+*.apk
+*.aab
+
+# Segredos de assinatura — vazamento permite assinar APK se passando pelo app
+*.keystore
+*.jks
+android/chave.properties
+key.properties
+
+# Assets sincronizados pelo Capacitor (gerados por `npx cap sync`)
+android/app/src/main/assets/public/
+android/app/src/main/assets/capacitor.config.json
+android/app/src/main/assets/capacitor.plugins.json
+
+# Entregaveis e capturas locais
+entrega/
