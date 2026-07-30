@@ -22,8 +22,12 @@ const LARGURA = 412, ALTURA = 915; // proporção de celular comum
 
 mkdirSync(CAPTURAS, { recursive: true });
 
-/* ---------- sobe o Chrome ---------- */
-const chrome = spawn("google-chrome", [
+/* ---------- sobe o Chrome ----------
+   O executável é configurável porque nem todo ambiente tem `google-chrome` no
+   PATH: em contêiner é comum só existir `chromium` num caminho próprio, e sem
+   esta variável a bateria de interface simplesmente não roda. */
+const NAVEGADOR = process.env.LOTOLAB_CHROME || "google-chrome";
+const chrome = spawn(NAVEGADOR, [
   "--headless=new", "--remote-debugging-port=9222", "--no-sandbox",
   "--disable-gpu", "--disable-dev-shm-usage", "--hide-scrollbars",
   "--no-proxy-server", "--proxy-bypass-list=*",
@@ -119,24 +123,49 @@ checar("ausência de pesos.json não quebra o app",
 checar("as cinco abas estão presentes",
   await js(`
     const t = document.body.innerText.toLowerCase();
-    return ['gerar','meus jogos','conferir','placar','entender'].every(a => t.includes(a));
+    return ['gerar','jogos','conferir','análise','entender'].every(a => t.includes(a));
   `));
 
-/* ---------- percorrer as abas ---------- */
-async function irPara(aba) {
+/* ---------- percorrer a navegação ----------
+   Duas camadas desde o redesenho: `data-secao` na barra inferior e `data-tela`
+   no controle segmentado. `irPara` aceita o id de qualquer uma das duas e
+   clica primeiro na seção que contém a tela, senão o segmentado não existe
+   ainda no DOM quando se tenta clicar nele. */
+async function irPara(destino) {
   const achou = await js(`
-    const alvos = [...document.querySelectorAll('button,[role="tab"],a,[data-aba]')];
-    const b = alvos.find(e => (e.dataset.aba === ${JSON.stringify(aba)}) ||
-      e.textContent.trim().toLowerCase() === ${JSON.stringify(aba)});
-    if (!b) return false;
-    b.click(); return true;
+    const alvo = ${JSON.stringify(destino)};
+    const sec = document.querySelector('[data-secao="' + alvo + '"]');
+    if (sec) { sec.click(); return true; }
+    const secoes = (typeof SECOES !== 'undefined') ? SECOES : [];
+    const dona = secoes.find(s => s.telas.some(t => t.id === alvo));
+    if (dona) {
+      const bs = document.querySelector('[data-secao="' + dona.id + '"]');
+      if (bs) bs.click();
+    }
+    return true;
+  `);
+  await dormir(400);
+  await js(`
+    const t = document.querySelector('[data-tela="' + ${JSON.stringify(destino)} + '"]');
+    if (t) t.click();
+    return true;
   `);
   await dormir(700);
   return achou;
 }
 
+/* A modalidade virou global, na trilha do cabeçalho. */
+async function escolherModalidade(id) {
+  await js(`
+    const b = document.querySelector('[data-mod="' + ${JSON.stringify(id)} + '"]');
+    if (b) b.click();
+    return true;
+  `);
+  await dormir(500);
+}
+
 secao("B. Navegação pelas cinco abas");
-for (const aba of ["gerar", "meus jogos", "conferir", "placar", "entender"]) {
+for (const aba of ["gerar", "jogos", "conferir", "analise", "entender"]) {
   const foi = await irPara(aba);
   const conteudo = await js("return document.body.innerText.trim().length");
   checar(`aba "${aba}" abre e desenha conteúdo`, foi && conteudo > 120,
@@ -195,7 +224,7 @@ await js(`
 `);
 await cmd("Page.reload");
 await dormir(2200);
-await irPara("meus jogos");
+await irPara("jogos");
 const sobreviveu = await js(`
   const j = JSON.parse(localStorage.getItem('lotolab:jogos')||'[]');
   const texto = document.body.innerText;
@@ -226,8 +255,8 @@ await irPara("conferir");
 
 async function preencherConferencia(dezenas, concurso) {
   return js(`
-    const mod = document.querySelector('#c-mod');
-    if (mod) { mod.value = 'mega-sena'; mod.dispatchEvent(new Event('change')); }
+    const b = document.querySelector('[data-mod="mega-sena"]');
+    if (b) b.click();
     return true;
   `).then(() => dormir(500)).then(() => js(`
     document.querySelector('#c-dez').value = ${JSON.stringify(dezenas)};
@@ -397,7 +426,7 @@ checar("app abre sem rede", offline.titulo.includes("LotoLab") && offline.texto 
   `offline=${!offline.online}, ${offline.texto} caracteres`);
 const abasOffline = await js(`
   const t = document.body.innerText.toLowerCase();
-  return ['gerar','conferir','placar','entender'].every(a => t.includes(a));
+  return ['gerar','jogos','conferir','análise','entender'].every(a => t.includes(a));
 `);
 checar("todas as abas presentes sem rede", abasOffline);
 await irPara("gerar");

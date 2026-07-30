@@ -7,6 +7,75 @@ num app nativo Android.
 Monta jogos das loterias brasileiras, guarda no aparelho e confere contra os
 concursos — sempre mostrando o desempenho comparado ao acaso.
 
+**O app não prevê resultados e não aumenta a chance de acerto.** Sorteios
+honestos são eventos independentes: nenhuma análise muda a probabilidade de uma
+dezena sair. O que ele faz é medir, comparar contra o acaso, e dizer quando um
+"achado" é ruído.
+
+## As telas
+
+Cinco seções na barra inferior, cada uma com suas telas num controle segmentado.
+A modalidade é escolhida uma vez no cabeçalho e vale em todas as telas.
+
+| Seção | Telas |
+|---|---|
+| **Gerar** | *Automático* — seis métodos de montagem · *Manual* — marcação na cartela, com custo, validade e características do jogo |
+| **Jogos** | *Meus jogos* — tudo o que foi salvo, com a cartela conferida · *Teimosinha* — repete o jogo por N concursos, com custo total e conferência de cada um |
+| **Conferir** | *Conferir* — informa um resultado e confere os jogos · *Resultados* — histórico por modalidade, importado por colagem ou pelo serviço da Caixa |
+| **Análise** | *Placar* — resultado acumulado contra o acaso · *Bancada* — todos os métodos contra o mesmo sorteio · *Aprendizado* — um modelo por modalidade, medido fora da amostra |
+| **Entender** | o que o app faz, o que não faz, e por quê |
+
+### A cartela
+
+A peça de escolha e de conferência é o volante de papel: grade impressa, marca
+de caneta dentro da casa, e a conferência empilhando as duas camadas — casa
+sorteada pintada, caneta por cima, acerto sendo os dois juntos.
+
+Ela **não** reproduz a identidade da Caixa: nada de logo, nome de marca ou
+paleta oficial. Imitar a forma ajuda a reconhecer o gesto; imitar a marca seria
+se passar por eles.
+
+### Conferência automática e avisos
+
+O motor roda a cada mudança do histórico e na abertura do app: percorre jogos e
+teimosinhas, confere o que falta, e registra um aviso por faixa de prêmio
+atingida. É idempotente — a chave é (jogo, concurso).
+
+Um jogo sem concurso-alvo declarado vale para os concursos **a partir da data em
+que foi salvo**, nunca para trás. Conferir contra um sorteio anterior à criação
+do jogo produziria "acertos" que ninguém poderia ter apostado.
+
+O sino no cabeçalho é a via garantida, porque não depende de permissão. A
+notificação do sistema é adicional e só depois de autorizada.
+
+### Aprendizado por modalidade
+
+Um modelo **por modalidade**, treinado e avaliado separadamente. Juntar
+modalidades num modelo só seria mais fácil e estaria errado: universo,
+quantidade sorteada e calendário são diferentes, e o modelo aprenderia a
+distinguir modalidade em vez de aprender algo sobre dezenas.
+
+Regressão logística implementada no próprio arquivo, sem biblioteca. Treino e
+teste separados no tempo, corte por concurso (nunca no meio de um concurso, cujas
+linhas são dependentes), características calculadas só com os concursos
+anteriores, e os 50 primeiros concursos usados como aquecimento.
+
+A medida é AUC, não acerto — com 15 de 25 dezenas sorteadas, responder "sai"
+para tudo acerta 60% e não aprendeu nada. O p-valor sai de um teste de
+permutação com semente fixa, então **rodar de novo dá o mesmo resultado**.
+
+Com sorteios independentes o veredito é "não há sinal, e este é o resultado
+esperado". A bateria de testes prova que o medidor não é cego: com um sorteio
+deliberadamente viciado, ele detecta (AUC 0,755, p = 0,010).
+
+### Busca de resultados na Caixa
+
+A importação por **colagem** (planilha ou JSON) funciona sem rede e é a via
+verificada. A **busca online** no serviço público do Portal de Loterias segue o
+formato que ele publica, mas **não pôde ser testada**: a rede do ambiente onde
+foi escrita bloqueia o domínio da Caixa. A tela declara isso, e em caso de erro
+mostra a falha em vez de inventar um resultado.
+
 ---
 
 ## Estrutura do repositório
@@ -42,10 +111,11 @@ Existem **dois** `index.html`, e eles não são idênticos:
 | `index.html` (raiz) | Onde o desenvolvimento acontece. **Edite este.** |
 | `www/index.html` | Cópia que o Capacitor empacota (`webDir: "www"`). |
 
-O APK publicado (`LotoLab-1.0.0-release.apk`) foi construído a partir de
-`www/index.html`. O arquivo da raiz contém alterações **posteriores** ao
-último build (logo de trevo e refino visual) que ainda **não** foram
-compiladas.
+O APK publicado (`LotoLab-1.0.0-release.apk`) foi construído a partir de um
+`www/index.html` **anterior**. A pasta `www/` já foi sincronizada com a raiz,
+então o próximo build sai com tudo o que está descrito abaixo — mas o APK que
+está no repositório ainda é o antigo. Reconstrua antes de publicar (ver
+`APK.md`).
 
 Antes de gerar um APK novo, sincronize:
 
@@ -220,9 +290,20 @@ identificador.
 ### Testes
 
 ```bash
-node ferramentas/testar-motor.mjs                          # lógica
-node --experimental-websocket ferramentas/testar-interface.mjs   # interface
+node ferramentas/testar-motor.mjs                          # lógica — 172 testes
+node --experimental-websocket ferramentas/testar-interface.mjs   # interface — 42 testes
 ```
+
+O executável do navegador é configurável, porque nem todo ambiente tem
+`google-chrome` no PATH:
+
+```bash
+LOTOLAB_CHROME=/caminho/para/chromium node ferramentas/testar-interface.mjs
+```
+
+`testar-motor.mjs` não reimplementa nada: extrai o `<script>` do `index.html` e
+o executa numa VM com um DOM mínimo. O que é testado é exatamente o código que
+roda no aparelho.
 
 O teste de interface precisa de um Chrome/Chromium e de um servidor local
 servindo `www/` (a porta 5060 **não** funciona: o Chrome bloqueia por ser
