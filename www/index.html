@@ -1263,7 +1263,12 @@ function cartela(modalidade, marcadas, opcoes){
 const legendaCartela = `<div class="legenda-cartela">
   <span><i style="background:var(--tintaPapel)"></i>marcada</span>
   <span><i style="background:var(--acaso)"></i>sorteada</span>
-  <span><i style="background:var(--acaso);box-shadow:inset 0 0 0 2px var(--seu)"></i>acerto</span>
+  <!-- O selo do acerto reproduz o que a casa faz: caneta escura sobre a casa
+       sorteada, com o fio claro em volta. Antes era um quadrado âmbar, que não
+       aparece em lugar nenhum da cartela — legenda que não bate com o desenho
+       é pior que legenda nenhuma. -->
+  <span><i style="background:var(--acaso);box-shadow:inset 0 0 0 1px #fff,
+    inset 0 0 0 3px var(--tintaPapel)"></i>acerto</span>
 </div>`;
 
 /* ==================== avisos e conferência automática ====================
@@ -2310,8 +2315,19 @@ function acoes(){
 
     saida.innerHTML = `<div class="carta">
       <h3>Concurso ${esc(concurso)} — ${alvo.length} jogo${alvo.length>1?"s":""} conferido${alvo.length>1?"s":""}</h3>
-      <div class="dezenas" style="margin:10px 0">${dezenas.slice().sort((a,b)=>a-b)
-        .map(d=>`<span class="dz acertou">${pad(d)}</span>`).join("")}</div>
+      ${/* O resultado sai na cartela, e não em chips: é o mesmo objeto que a
+             pessoa marcou, agora com o sorteio impresso. Quando há um jogo só,
+             a cartela mostra as duas camadas — marcação e sorteio — e o acerto
+             é a sobreposição. Com vários jogos seria ambíguo de quem é a
+             marcação, então aí a cartela mostra apenas o sorteio, e cada jogo
+             tem a sua própria cartela em Meus jogos. */
+        alvo.length === 1
+          ? cartela(S.modalidade, alvo[0].dezenas,
+              {sorteadas:dezenas, selo:`concurso ${concurso}`}) + legendaCartela
+          : cartela(S.modalidade, [], {sorteadas:dezenas,
+              selo:`concurso ${concurso}`,
+              rodape:`<div class="pe"><span>resultado sorteado</span>
+                <span>${alvo.length} jogos conferidos — veja cada cartela em Meus jogos</span></div>`})}
       <div class="kpis">
         <div class="kpi"><div class="rot">acertos médios</div><div class="val">${nf(media,2)}</div>
           <div class="sub">acaso: ${nf(esperado,2)}</div></div>
