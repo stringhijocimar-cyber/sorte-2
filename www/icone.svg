@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="LotoLab">
+  <!-- Trevo de quatro folhas geométrico. Símbolo de loteria (a +Milionária
+       sorteia trevos como mecânica de jogo), não amuleto: sem brilho, sem
+       estrela, sem faísca. Quatro pétalas idênticas em rotação de 90°,
+       três em teal e a quarta em âmbar — os dois sinais da identidade. -->
+  <rect width="64" height="64" rx="14" fill="#0F1E2E"/>
+  <path d="M32 33q4 10.5-2.4 18.6" stroke="#0E6E62" stroke-width="3.6"
+    stroke-linecap="round" fill="none"/>
+  <g transform="translate(32 27)">
+    <g stroke="#0F1E2E" stroke-width="1.6">
+      <!-- pétala: quadrado de canto arredondado apoiado no centro -->
+      <path transform="rotate(-45)" fill="#3FB3A3"
+        d="M0 0V-13.5a9 9 0 0 1 13.5 0h0a9 9 0 0 1 0 13.5Z"/>
+      <path transform="rotate(45)" fill="#E9A73C"
+        d="M0 0V-13.5a9 9 0 0 1 13.5 0h0a9 9 0 0 1 0 13.5Z"/>
+      <path transform="rotate(135)" fill="#0E6E62"
+        d="M0 0V-13.5a9 9 0 0 1 13.5 0h0a9 9 0 0 1 0 13.5Z"/>
+      <path transform="rotate(225)" fill="#0B5D53"
+        d="M0 0V-13.5a9 9 0 0 1 13.5 0h0a9 9 0 0 1 0 13.5Z"/>
+    </g>
+  </g>
+</svg>

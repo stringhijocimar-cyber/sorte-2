@@ -1,0 +1,21 @@
+{
+  "name": "lotolab",
+  "version": "1.0.0",
+  "description": "Monta jogos das loterias brasileiras, guarda no aparelho e confere contra os concursos, mostrando o desempenho comparado ao acaso.",
+  "private": true,
+  "scripts": {
+    "start": "python3 servir.py",
+    "android:init": "cap init LotoLab app.lotolab.jogos --web-dir=.",
+    "android:add": "cap add android",
+    "android:sync": "cap sync android",
+    "android:open": "cap open android",
+    "android:build": "cap sync android && cd android && ./gradlew assembleDebug"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.1.2"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.1.2",
+    "@capacitor/core": "^6.1.2"
+  }
+}

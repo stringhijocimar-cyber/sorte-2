@@ -1,0 +1,12 @@
+{
+  "appId": "app.lotolab.jogos",
+  "appName": "LotoLab",
+  "webDir": "www",
+  "android": {
+    "allowMixedContent": false,
+    "webContentsDebuggingEnabled": false
+  },
+  "server": {
+    "androidScheme": "https"
+  }
+}
