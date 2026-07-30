@@ -5,10 +5,13 @@ aparece quando existe teste automatizado que prova o critério — a coluna
 *Evidência* nomeia o teste, para que qualquer um possa conferir em vez de
 acreditar.
 
-**Conclusão geral: o sistema NÃO está pronto.** 13 dos 20 critérios estão
-atendidos, 4 parcialmente, 3 pendentes. O detalhamento está abaixo.
+**Conclusão geral: o sistema NÃO está pronto.** 16 dos 20 critérios estão
+atendidos sem ressalva, 1 atendido com ressalva (18: falta teste de componente
+de interface) e 3 parcialmente (1: sem execução contra a API real da CAIXA;
+16 e 20: dependem das telas que não existem). Nenhum critério ficou sem
+nenhuma cobertura. O detalhamento está abaixo.
 
-Reproduzir: `cd backend && python3 -m pytest -q` (319 testes, sem rede).
+Reproduzir: `cd backend && python3 -m pytest -q` (360 testes, sem rede).
 
 ---
 
@@ -26,14 +29,14 @@ Reproduzir: `cd backend && python3 -m pytest -q` (319 testes, sem rede).
 | 8 | Calcular custos, prêmios, resultado líquido e ROI | ✅ | `test_metricas_de_carteira_conhecida`, `test_custo_usa_o_preco_do_concurso_nao_o_de_hoje`, `test_preco_respeita_a_data_do_concurso` |
 | 9 | Aplicar intervalos de confiança | ✅ | Todo `Resultado` carrega IC; `test_nenhum_resultado_sai_sem_ic_e_efeito`, `test_wilson_bate_com_scipy`, `test_wilson_nunca_sai_do_intervalo_valido` |
 | 10 | Corrigir múltiplos testes | ✅ | Bonferroni, Holm e BH conferidos contra `statsmodels` (`test_holm_e_bh_batem_com_statsmodels`); `test_relata_quem_perdeu_a_significancia` |
-| 11 | Identificar risco de overfitting | ✅ | `overfitting.calcular()`; `test_degradacao_grande_eleva_o_risco`, `test_instabilidade_entre_janelas_eleva_o_risco`, `test_sem_janelas_cobra_metade_do_peso_e_avisa`. **É heurística declarada, não medida oficial.** |
-| 12 | Repetir testes em diferentes períodos | ✅ | Walk-forward expansiva e móvel: `test_walk_forward_expansiva_avanca_sem_sobrepor`, `test_walk_forward_movel_esquece_o_comeco`. ⚠️ Falta a *matriz de estabilidade* do §17 (acumulado vs. regular, janelas curtas vs. longas). |
+| 11 | Identificar risco de overfitting | ✅ | `overfitting.calcular()`; `test_degradacao_grande_eleva_o_risco`, `test_instabilidade_entre_janelas_eleva_o_risco`, `test_sem_janelas_cobra_metade_do_peso_e_avisa`. Os três instrumentos do §18 alimentam o índice por `robustez.risco_medido()`, e `test_medir_reduz_a_incerteza_do_indice` prova que medir muda o resultado — sem medição o índice fica preso no piso de 17,5 pontos cobrado por "não medido". **É heurística declarada, não medida oficial.** |
+| 12 | Repetir testes em diferentes períodos | ✅ | Walk-forward expansiva e móvel (`test_walk_forward_expansiva_avanca_sem_sobrepor`, `test_walk_forward_movel_esquece_o_comeco`) **e** a matriz de estabilidade do §17 em `lab/robustez.py`: recortes antigo/intermediário/recente e janelas curtas/longas, cada recorte comparado com o acaso **dentro dele**. `Matriz.robusta` exige todos os recortes acima da mediana do acaso — travado por `test_robusta_exige_todos_os_recortes`; com um recorte só devolve `False` em vez do benefício da dúvida. Semente distinta por recorte, conferida no gerador (`test_cada_recorte_usa_semente_propria`), e nenhum recorte recebe o futuro como passado (`test_recortes_por_terco_nao_deixam_o_futuro_entrar`). |
 | 13 | Exportar resultados | ✅ | CSV, XLSX e PDF sem dependência; o XLSX é validado lendo de volta com `openpyxl` (`test_xlsx_abre_em_leitor_independente`). O relatório recusa ser criado sem a seção de limitações (`test_relatorio_sem_limitacoes_e_recusado`). Endpoints `/jogos/exportar` e `/backtests/relatorio` entregam os arquivos. |
 | 14 | Exibir avisos de limitações estatísticas | ✅ | O aviso fica **junto do dado**: o texto sobre filtros está colado aos controles de filtro, e o veredito estatístico (estimativa, faixa do acaso, p-valor, tamanho de efeito, leitura) fica no mesmo bloco do ROI. Verificado no navegador. Vale para as 2 telas existentes. |
-| 15 | Não prometer capacidade de prever sorteios | ✅ | Nenhuma função de previsão existe; README e docstrings afirmam o contrário explicitamente. ⚠️ Falta o teste automatizado de vocabulário proibido (existe no LotoLab; deve ser portado). |
+| 15 | Não prometer capacidade de prever sorteios | ✅ | Nenhuma função de previsão existe; README e docstrings afirmam o contrário explicitamente. O `test_vocabulario.py` varre **o repositório inteiro** (Python, TypeScript, Markdown, SQL, HTML, JSON) procurando promessa de previsão ou de vantagem — a checagem é *por frase, exigindo negação*, porque os termos aparecem legitimamente dentro de negações. Um teste de sanidade confirma que a varredura ainda pega uma promessa real, e as isenções (arquivos que **citam** os termos, como a própria lista) são declaradas dentro do arquivo e limitadas a 4 por teste. |
 | 16 | Funcionar em celular e computador | ⚠️ parcial | As 2 telas existentes são responsivas e verificadas a 1280px e 390px, **sem overflow horizontal**. As outras 12 telas não existem. |
 | 17 | Possuir documentação técnica | ✅ | `README.md`, `ARQUITETURA.md`, `banco/schema.sql` comentado, docstrings em todos os módulos |
-| 18 | Possuir testes automatizados | ✅ | 319 testes, ~34 s, sem rede: unitários, banco, API e integração. ⚠️ Faltam testes de interface (não há frontend ainda). |
+| 18 | Possuir testes automatizados | ✅ | 360 testes, ~36 s, sem rede: unitários, banco, API e integração, executados em SQLite **e** em PostgreSQL 16.13. ⚠️ A interface tem verificação ponta a ponta com Playwright, mas ainda não testes unitários de componente. |
 | 19 | Permitir auditoria dos parâmetros utilizados | ✅ | `test_salva_backtest_com_semente_e_particao`, `test_backtest_sem_semente_e_recusado_pelo_banco`, `test_alteracao_cria_nova_versao_sem_apagar_a_anterior`, `test_auditoria_nao_expoe_alteracao_nem_remocao` |
 | 20 | Atender segurança e jogo responsável | ⚠️ parcial | Segurança implementada e testada: scrypt com parâmetros no hash e detecção de rehash, tokens guardados só como hash, CSRF amarrado à sessão, limite de taxa com janela deslizante, HMAC do IP, anonimização na exclusão. Injeção de SQL testada com ataque real (`test_injecao_de_sql_nao_derruba_a_tabela`). **Falta jogo responsável na interface** (limite de orçamento, alertas, pausa) e as telas. |
 
@@ -49,7 +52,8 @@ Reproduzir: `cd backend && python3 -m pytest -q` (319 testes, sem rede).
 | Apuração dos prêmios | ⚠️ | apuração por interseção testada; **depende de rateio histórico completo**, que a fonte nem sempre traz. Ausência devolve 0 e é reportada, nunca estimada. |
 | Separação temporal | ✅ | `test_particao_*` |
 | Ausência de vazamento de dados | ✅ | `test_estrategia_nao_ve_o_futuro` — estratégia trapaceira instalada de propósito |
-| Reprodutibilidade dos backtests | ✅ | `test_avaliacao_e_reproduzivel_com_a_mesma_semente` |
+| Reprodutibilidade dos backtests | ✅ | `test_avaliacao_e_reproduzivel_com_a_mesma_semente`, `test_matriz_e_reproduzivel_com_a_mesma_semente` |
+| Robustez (§17/§18) | ✅ | matriz de estabilidade por terços e por janelas; perturbação de ±5/10/20% um parâmetro por vez (`test_perturba_um_parametro_por_vez`); exclusão do melhor e do pior concurso (`test_concentracao_de_carteira_conhecida`). Sanidade: a estratégia aleatória **não** sai robusta contra o próprio acaso (`test_aleatorio_nao_sai_robusto_por_acidente`). |
 
 ---
 
@@ -57,7 +61,7 @@ Reproduzir: `cd backend && python3 -m pytest -q` (319 testes, sem rede).
 
 | Tipo | Estado |
 |---|---|
-| Unitários | ✅ 319 |
+| Unitários | ✅ 360 |
 | Estatísticos | ✅ conferidos contra SciPy e statsmodels |
 | Regras de cada modalidade | ✅ 9 modalidades |
 | Geração de combinações | ✅ validade, faixa, ordem, não-duplicidade, obrigatórios/excluídos, orçamento, filtros |
@@ -65,7 +69,9 @@ Reproduzir: `cd backend && python3 -m pytest -q` (319 testes, sem rede).
 | Atualização de concursos | ✅ incremental, falha isolada, fallback, CSV |
 | Integração | ✅ histórico do banco alimentando o motor de backtest |
 | API | ✅ 36 testes ponta a ponta, motores reais |
-| Banco de dados | ✅ 35 testes, executados em SQLite **e** em PostgreSQL 16 real; `schema.sql` aplicado sem erro |
+| Banco de dados | ✅ 35 testes, executados em SQLite **e** em PostgreSQL 16.13 real; `schema.sql` aplicado sem erro |
+| Robustez e sobreajuste | ✅ 33 testes de `robustez.py` + os de `overfitting.py` |
+| Vocabulário proibido | ✅ 8 testes; varredura do repositório inteiro, por frase, exigindo negação |
 | Interface | ⚠️ 2 telas verificadas ponta a ponta com Playwright contra a API real |
 | End-to-end | ✅ login, geração com filtros, orçamento, backtest e erro da API |
 
@@ -81,16 +87,15 @@ Em ordem de impacto:
    a verificação não pôde ser feita aqui. Rode `python3
    ferramentas/verificar_caixa.py` de uma máquina com acesso: ele sai com
    código 1 e nomeia exatamente o que divergiu.
-2. **Sem interface** — ver item 3. As migrações Alembic passaram a existir e
-   são conferidas contra os modelos; o `schema.sql` aplica limpo no
-   PostgreSQL 16 e os 319 testes passam nos dois bancos.
-3. **Só 2 das 14 telas.** Gerador e Backtest funcionam de verdade; as outras
+2. **Só 2 das 14 telas.** Gerador e Backtest funcionam de verdade; as outras
    doze do §24 não existem. Foi escolha deliberada: duas telas que executam o
-   código real valem mais que catorze que parecem executar.
-4. **Jogo responsável ainda não tem interface.** O limite de orçamento existe
+   código real valem mais que catorze que parecem executar. A matriz de
+   estabilidade e a análise de robustez já existem no motor e ainda **não**
+   têm tela nem endpoint — hoje só chegam a quem chama a biblioteca.
+3. **Jogo responsável ainda não tem interface.** O limite de orçamento existe
    no modelo e o gerador respeita orçamento, mas alertas, pausa e histórico de
    gastos dependem de tela.
-5. **Preços e faixas conferidos apenas contra fontes públicas.** Um preço
+4. **Preços e faixas conferidos apenas contra fontes públicas.** Um preço
    histórico errado contamina o ROI de todo o período. Precisa de conferência
    contra o portal oficial antes de qualquer uso sério.
 

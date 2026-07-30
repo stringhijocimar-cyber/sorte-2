@@ -29,6 +29,7 @@ flowchart TB
     MUL["multiplos<br/>Bonferroni · Holm · BH"]
     FIN["financeiro<br/>ROI · drawdown · seca"]
     BKT["backtest<br/>partição · walk-forward"]
+    ROB["robustez<br/>matriz · perturbação · extremos"]
     OVF["overfitting<br/>índice heurístico"]
     ING["ingestao<br/>validação na porta"]
   end
@@ -189,9 +190,9 @@ difícil de interpretar errado do que "ROI +28%".
 
 | Fase | Escopo | Situação |
 |---|---|---|
-| **0 — Núcleo** *(não estava na sua lista; antecipei)* | motor estatístico, backtest, ingestão, modalidades | ✅ **entregue, 97 testes** |
-| **1 — MVP** | auth, Mega-Sena + Lotofácil, importação real, dashboard, gerador, probabilidades, jogos salvos, conferência, backtest simples, exportação CSV/Excel | próxima |
-| **2 — Estatística avançada** | walk-forward na UI, Monte Carlo dedicado, bootstrap, significância, correção múltipla, overfitting, relatórios | motor pronto; falta UI e Monte Carlo dedicado |
+| **0 — Núcleo** *(não estava na sua lista; antecipei)* | motor estatístico, backtest, ingestão, modalidades | ✅ **entregue** |
+| **1 — MVP** | auth, Mega-Sena + Lotofácil, importação real, dashboard, gerador, probabilidades, jogos salvos, conferência, backtest simples, exportação CSV/Excel | ⚠️ backend, persistência, migrações, exportação e 2 telas entregues; faltam as demais telas |
+| **2 — Estatística avançada** | walk-forward na UI, Monte Carlo dedicado, bootstrap, significância, correção múltipla, overfitting, robustez, relatórios | motor pronto (inclusive matriz de estabilidade e perturbação); falta UI e Monte Carlo dedicado |
 | **3 — Otimização** | fechamentos, cobertura, genéticos, programação inteira, laboratório, ranking | pendente |
 | **4 — Expansão** | demais loterias, ML, comprovantes, mobile, notificações | modalidades já registradas; resto pendente |
 

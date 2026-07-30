@@ -28,6 +28,7 @@ sobre a diferença — leia antes de assumir qualquer coisa.
 | Backtest com separação temporal e trava anti-vazamento | ✅ pronto, testado |
 | Walk-forward (janela expansiva e móvel) | ✅ pronto, testado |
 | Comparação contra carteiras aleatórias + percentil | ✅ pronto, testado |
+| Matriz de estabilidade e robustez (§17, §18) | ✅ pronto, testado — sem tela ainda |
 | Índice de Risco de Sobreajuste | ✅ pronto, testado (heurística, ver abaixo) |
 | Importação incremental CAIXA + CSV, com validação e fallback | ✅ pronto, testado sem rede |
 | Gerador configurável com filtros (§8, §9.6–9.13) | ✅ pronto, testado |
@@ -110,9 +111,46 @@ decisão visível):
 | Concentração | 10 | o retorno depende de pouquíssimos concursos |
 
 Quando não há janelas suficientes, a instabilidade é cobrada pela metade e o
-sistema avisa: "não medido" não é o mesmo que "estável".
+sistema avisa: "não medido" não é o mesmo que "estável". Os três últimos
+componentes deixam de ser suposição quando `lab/robustez.py` os mede — veja
+abaixo.
 
 Faixas: 0–25 baixo · 26–50 moderado · 51–75 alto · 76–100 crítico.
+
+---
+
+## Robustez: o resultado depende de uma configuração muito específica?
+
+Uma estratégia que só funciona numa janela, ou que desaparece quando um
+parâmetro muda 5%, ou cujo retorno inteiro vem de um único concurso
+excepcional, não é robusta. `lab/robustez.py` tem três instrumentos, e cada um
+pega um tipo diferente de ilusão:
+
+| Instrumento | O que pega |
+|---|---|
+| **Matriz de estabilidade** — recortes antigo/intermediário/recente e janelas curtas/longas | a estratégia que funciona só num pedaço do histórico |
+| **Perturbação de parâmetros** — ±5%, ±10%, ±20%, **um por vez** | o resultado que existe por causa de um número mágico |
+| **Exclusão de extremos** — remove o melhor e o pior concurso | o retorno que depende de um prêmio isolado |
+
+Três decisões de desenho que valem ser explicadas, porque um sistema
+complacente faria o contrário:
+
+**Robusta é funcionar em TODOS os recortes.** `Matriz.robusta` usa `all`, não
+`any`. Com um recorte só, devolve `False` — não há como afirmar estabilidade a
+partir de um período, e dar o benefício da dúvida seria mentir por omissão.
+
+**Cada recorte compara com o acaso dentro dele.** Comparar o ROI de um período
+com carteiras aleatórias de outro misturaria mudança de estratégia com mudança
+de época. E cada recorte usa semente própria: reaproveitar a semente faria as
+carteiras aleatórias serem as mesmas dezenas em todos os recortes, e a
+"concordância entre recortes" seria artefato da semente.
+
+**Perturba um parâmetro por vez.** Variando tudo junto não se sabe qual
+parâmetro carregava o resultado, e a informação útil se perde.
+
+A exclusão de extremos é a que mais desmancha resultado, e por isso é a mais
+importante: se mais da metade do prêmio total vem de um concurso, o texto do
+sistema diz literalmente *"o resultado é um evento, não um padrão"*.
 
 ---
 
@@ -120,7 +158,7 @@ Faixas: 0–25 baixo · 26–50 moderado · 51–75 alto · 76–100 crítico.
 
 ```bash
 cd backend
-python3 -m pytest -q          # 319 testes, sem rede
+python3 -m pytest -q          # 360 testes, sem rede
 
 # Confere a importação contra a API real da CAIXA (precisa de rede):
 python3 ferramentas/verificar_caixa.py
@@ -138,7 +176,7 @@ TEST_DATABASE_URL=postgresql+psycopg://lab@127.0.0.1:5432/loteria_teste \\
     python3 -m pytest -q
 ```
 
-Verificado em PostgreSQL 16.13: 319 testes passando, com `drawn_numbers` como
+Verificado em PostgreSQL 16.13: 360 testes passando, com `drawn_numbers` como
 `smallint[]` nativo e `parameters` como `jsonb`.
 
 ```bash
@@ -158,6 +196,7 @@ backend/
     multiplos.py     Bonferroni, Holm, Benjamini-Hochberg
     financeiro.py    ROI, drawdown, seca, volatilidade
     backtest.py      partição, walk-forward, comparação com aleatório
+    robustez.py      matriz de estabilidade, perturbação, exclusão de extremos
     overfitting.py   índice de risco (heurística documentada)
     ingestao.py      importação CAIXA incremental, CSV, validação, fallback
     filtros.py       filtros estruturais, cada um com aviso obrigatório
@@ -171,7 +210,7 @@ backend/
   ferramentas/
     verificar_caixa.py  confere a ingestão contra a API real (manual, usa rede)
   migracoes/         Alembic; a migração é conferida contra os modelos
-  tests/             319 testes
+  tests/             360 testes
 ```
 
 ## Acrescentar uma modalidade
@@ -191,6 +230,8 @@ prêmios e repasses.
 Exclusivo para maiores de 18 anos. Se o jogo deixou de ser diversão:
 **CVV — 188** (24h, gratuito) · **Jogadores Anônimos** —
 jogadoresanonimos.com.br
+
+<!-- vocabulario-proibido: este arquivo cita os termos na seção de jogo responsável -->
 
 Este repositório não contém, e não deve conter, mensagens do tipo "aposte
 agora", "chance imperdível", "número vencedor", "número atrasado" ou "número

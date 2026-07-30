@@ -1,5 +1,8 @@
 """Testes do gerador e dos filtros estruturais (§8 e §9).
 
+vocabulario-proibido: este arquivo cita os termos ao testar que os avisos não
+os afirmam.
+
 Dois contratos que estes testes travam:
 
 * **Todo filtro declara um aviso.** Sem ele, o construtor levanta. O aviso é o
