@@ -76,6 +76,9 @@ const EXPOSTOS = [
   "vereditoAcertos", "SECOES", "T", "cartela", "faixaAtingida",
   "concursosDoJogo", "lerColagem", "normalizarCaixa", "guardarResultados",
   "dataBrParaIso", "SLUG_CAIXA",
+  "auc", "logLoss", "sigmoide", "treinarLogistica", "permutarAuc",
+  "atributosDezena", "dadosAprendizado", "aprender", "vereditoAprendizado",
+  "MINIMO_CONCURSOS", "NOMES_ATRIBUTOS",
 ];
 const epilogo = `\n;globalThis.__motor = {${EXPOSTOS.map((n) => `${n}: typeof ${n} !== "undefined" ? ${n} : undefined`).join(", ")}};\n`;
 vm.runInContext(fonte + epilogo, contexto, { filename: "index.html:script" });
@@ -528,6 +531,172 @@ checar("aba bancada registrada",
   contexto.SECOES.some(s => s.telas.some(t => t.id === "bancada")));
 checar("tela da bancada renderiza", typeof contexto.T.bancada === "function" &&
   contexto.T.bancada().includes("b-go"));
+
+/* ==================================================================
+   9. Aprendizado por modalidade
+   ================================================================== */
+secao("9. Aprendizado — AUC, permutação e ausência de vazamento");
+
+const auc = contexto.auc;
+checar("AUC de separacao perfeita é 1",
+  auc([0.1, 0.2, 0.8, 0.9], [0, 0, 1, 1]) === 1, `${auc([0.1,0.2,0.8,0.9],[0,0,1,1])}`);
+checar("AUC de separacao invertida é 0",
+  auc([0.9, 0.8, 0.2, 0.1], [0, 0, 1, 1]) === 0);
+checar("AUC de escores todos iguais é 0,5 (empate vale meio)",
+  auc([0.5, 0.5, 0.5, 0.5], [0, 1, 0, 1]) === 0.5);
+checar("AUC ignora a escala do escore",
+  Math.abs(auc([1, 2, 3, 4], [0, 0, 1, 1]) - auc([10, 20, 30, 40], [0, 0, 1, 1])) < 1e-12);
+{
+  // Mann-Whitney conferido à mão: escores 1,2,3 com rótulos 0,1,0
+  // pares (pos,neg): (2>1) acerta, (2<3) erra -> AUC = 0.5
+  checar("AUC conferido à mão num caso pequeno", auc([1, 2, 3], [0, 1, 0]) === 0.5,
+    `${auc([1,2,3],[0,1,0])}`);
+}
+
+checar("logLoss pune confiança errada",
+  contexto.logLoss([0.99], [0]) > contexto.logLoss([0.51], [0]));
+checar("logLoss de previsão perfeita é ~0", contexto.logLoss([1, 0], [1, 0]) < 1e-9);
+
+/* Regressão logística: precisa aprender um padrão que EXISTE. Sem este teste,
+   um modelo quebrado passaria pelos testes de ausência de sinal — que é
+   justamente o que ele produziria sempre. */
+{
+  const X = [], y = [];
+  let semente = 7;
+  const rnd = () => (semente = (semente * 1103515245 + 12345) % 2147483648) / 2147483648;
+  for (let i = 0; i < 400; i++) {
+    const x1 = rnd(), x2 = rnd();
+    X.push([x1, x2, 0, 0, 0]);
+    y.push(x1 > 0.5 ? 1 : 0);          // rótulo depende só de x1
+  }
+  const idx = X.map((_, i) => i);
+  const modelo = contexto.treinarLogistica(X, y, idx, { epocas: 400, taxa: 1.2 });
+  const escores = idx.map(i => modelo.prever(X[i]));
+  const a = auc(escores, y);
+  checar("logística aprende um padrão que existe", a > 0.9, `AUC treino = ${a.toFixed(4)}`);
+  checar("o peso vai para a característica certa",
+    Math.abs(modelo.w[0]) > Math.abs(modelo.w[1]) * 3,
+    `w1=${modelo.w[0].toFixed(3)} w2=${modelo.w[1].toFixed(3)}`);
+}
+
+/* Nuvem de permutação: tem de cercar 0,5 e não conter quase nada. */
+{
+  let semente = 99;
+  const rnd = () => (semente = (semente * 1103515245 + 12345) % 2147483648) / 2147483648;
+  const escores = Array.from({ length: 300 }, () => rnd());
+  const rotulos = Array.from({ length: 300 }, (_, i) => (i % 5 === 0 ? 1 : 0));
+  const nulos = contexto.permutarAuc(escores, rotulos, 300, rnd);
+  const media = nulos.reduce((a, b) => a + b, 0) / nulos.length;
+  checar("a nuvem de permutação fica centrada em 0,5", Math.abs(media - 0.5) < 0.02,
+    `média = ${media.toFixed(4)}`);
+  checar("a nuvem tem largura, não é um ponto", nulos[299] - nulos[0] > 0.05,
+    `de ${nulos[0].toFixed(3)} a ${nulos[299].toFixed(3)}`);
+}
+
+/* Vazamento: as características de um concurso não podem usar o próprio
+   concurso. Se usassem, "saiu no anterior" viraria "saiu agora" e o AUC
+   estouraria — é o defeito mais fácil de cometer e o mais invisível. */
+{
+  const c = M["lotofacil"];
+  const anteriores = [{ dezenas: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15] }];
+  const dentro = contexto.atributosDezena(1, anteriores, c);
+  const fora = contexto.atributosDezena(25, anteriores, c);
+  checar("atributos vêm só do passado: saiu-no-anterior distingue",
+    dentro[3] === 1 && fora[3] === 0);
+  checar("atributos ficam todos em [0,1]",
+    dentro.concat(fora).every(v => v >= 0 && v <= 1),
+    `${dentro.map(v => v.toFixed(2)).join(",")}`);
+}
+
+/* Ponta a ponta com sorteios independentes: o veredito TEM de ser "sem sinal".
+   Este é o teste que impede o app de virar uma máquina de prometer previsão. */
+{
+  const original = motor.S.resultados;
+  let semente = 2026;
+  const rnd = () => (semente = (semente * 1103515245 + 12345) % 2147483648) / 2147483648;
+  const hist = [];
+  for (let i = 1; i <= 140; i++) {
+    const pool = Array.from({ length: 25 }, (_, k) => k + 1);
+    for (let k = pool.length - 1; k > 0; k--) {
+      const j = Math.floor(rnd() * (k + 1));
+      const t = pool[k]; pool[k] = pool[j]; pool[j] = t;
+    }
+    hist.push({ concurso: i, data: "2025-01-01", modalidade: "lotofacil",
+                dezenas: pool.slice(0, 15).sort((a, b) => a - b) });
+  }
+  motor.S.resultados = hist;
+  const d = contexto.dadosAprendizado("lotofacil");
+  checar("o corte temporal não sobrepõe treino e teste",
+    Math.max(...d.treino) < Math.min(...d.teste));
+  checar("o corte separa por concurso, não por linha",
+    d.concursosTreino > 0 && d.concursosTeste > 0,
+    `${d.concursosTreino} treino / ${d.concursosTeste} teste`);
+
+  const r = contexto.aprender("lotofacil", { permutacoes: 200 });
+  checar("sorteios independentes: o modelo NÃO aprende", r.aprendeu === false,
+    `AUC=${r.auc.toFixed(4)} p=${r.p.toFixed(3)} faixa=[${r.faixaAcaso.map(v => v.toFixed(4)).join(", ")}]`);
+  checar("AUC fica perto de 0,5", Math.abs(r.auc - 0.5) < 0.06, `${r.auc.toFixed(4)}`);
+  checar("o veredito diz que é o resultado esperado",
+    /resultado esperado/i.test(contexto.vereditoAprendizado(r)));
+  checar("o veredito não promete previsão",
+    !/prev[êe] o pr[óo]ximo|aumenta a chance/i.test(contexto.vereditoAprendizado(r)));
+  checar("todos os pesos são nomeados",
+    r.pesos.length === contexto.NOMES_ATRIBUTOS.length &&
+    r.pesos.every(x => typeof x.nome === "string" && x.nome.length > 0));
+
+  /* Reprodutibilidade: a primeira versão usava Math.random no teste de
+     permutação, e o veredito podia mudar sem dado novo. Este teste é a trava. */
+  {
+    const a1 = contexto.aprender("lotofacil", { permutacoes: 200 });
+    const a2 = contexto.aprender("lotofacil", { permutacoes: 200 });
+    checar("o mesmo histórico dá exatamente o mesmo p-valor",
+      a1.p === a2.p && a1.faixaAcaso[0] === a2.faixaAcaso[0] &&
+      a1.faixaAcaso[1] === a2.faixaAcaso[1] && a1.aprendeu === a2.aprendeu,
+      `p=${a1.p} vs ${a2.p}`);
+    const a3 = contexto.aprender("lotofacil", { permutacoes: 200, semente: 12345 });
+    checar("semente diferente muda a nuvem do acaso (a semente é usada)",
+      a3.faixaAcaso[0] !== a1.faixaAcaso[0] || a3.faixaAcaso[1] !== a1.faixaAcaso[1]);
+    checar("o AUC não depende da semente — só a nuvem depende", a3.auc === a1.auc);
+    checar("a semente é reportada junto do resultado", a1.semente === 20260730);
+  }
+
+  checar("histórico curto é recusado com o número que falta",
+    (() => { motor.S.resultados = hist.slice(0, 20);
+             const x = contexto.dadosAprendizado("lotofacil");
+             return !!x.erro && x.precisa === contexto.MINIMO_CONCURSOS && x.tem === 20; })());
+  motor.S.resultados = original;
+}
+
+/* Um sorteio VICIADO tem de ser detectado. Sem este teste, "não aprendeu" seria
+   indistinguível de um medidor cego. */
+{
+  const original = motor.S.resultados;
+  let semente = 31337;
+  const rnd = () => (semente = (semente * 1103515245 + 12345) % 2147483648) / 2147483648;
+  const hist = [];
+  for (let i = 1; i <= 140; i++) {
+    // Dezenas 1..8 saem sempre; as outras 7 vagas são sorteadas entre 9..25.
+    const resto = Array.from({ length: 17 }, (_, k) => k + 9);
+    for (let k = resto.length - 1; k > 0; k--) {
+      const j = Math.floor(rnd() * (k + 1));
+      const t = resto[k]; resto[k] = resto[j]; resto[j] = t;
+    }
+    hist.push({ concurso: i, data: "2025-01-01", modalidade: "lotofacil",
+                dezenas: [1,2,3,4,5,6,7,8].concat(resto.slice(0, 7)).sort((a,b)=>a-b) });
+  }
+  motor.S.resultados = hist;
+  const r = contexto.aprender("lotofacil", { permutacoes: 200 });
+  checar("sorteio viciado É detectado (o medidor não é cego)", r.aprendeu === true,
+    `AUC=${r.auc.toFixed(4)} p=${r.p.toFixed(3)}`);
+  checar("mesmo detectando, o veredito não manda apostar",
+    /não[\s\S]*é prova de sinal/i.test(contexto.vereditoAprendizado(r)));
+  motor.S.resultados = original;
+}
+
+checar("tela de aprendizado renderiza", typeof contexto.T.aprendizado() === "string" &&
+  contexto.T.aprendizado().length > 200);
+checar("aba aprendizado registrada",
+  contexto.SECOES.some(s => s.telas.some(t => t.id === "aprendizado")));
 
 /* ---------- saída ---------- */
 console.log(linhas.join("\n"));

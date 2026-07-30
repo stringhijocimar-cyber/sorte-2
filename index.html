@@ -449,7 +449,7 @@ const S = {
   bancadaRep:40, bancadaQtd:3,
   /* marcadas: dezenas do volante manual, por modalidade, para trocar de
      modalidade e voltar não apagar o que a pessoa já tinha marcado. */
-  marcadas:{}, avisos:[], teimosinhas:[]
+  marcadas:{}, avisos:[], teimosinhas:[], aprendizado:{}, jogoAberto:null
 };
 
 /* Persistência tolerante: se o navegador bloquear, o app segue funcionando
@@ -1519,6 +1519,238 @@ function guardarResultados(novos){
   return inseridos;
 }
 
+/* ==================== aprendizado por modalidade ====================
+   Um modelo POR MODALIDADE, treinado e avaliado separadamente. Juntar
+   modalidades num modelo só seria mais fácil e estaria errado: o universo, a
+   quantidade sorteada e a frequência de sorteios são diferentes, e o modelo
+   aprenderia a distinguir modalidade em vez de qualquer coisa sobre dezenas.
+
+   A pergunta que isto responde é honesta: **existe sinal aprendível no
+   histórico desta modalidade?** A resposta esperada é não, porque sorteios
+   honestos são independentes. O valor do módulo é medir isso em vez de afirmar,
+   e mostrar o número.
+
+   O que impede a auto-ilusão:
+
+   * Treino e teste são separados no TEMPO. O modelo é treinado nos concursos
+     antigos e medido nos recentes, que ele nunca viu.
+   * As características de um concurso são calculadas só com os concursos
+     ANTERIORES a ele. Usar o próprio concurso vazaria o alvo e produziria um
+     AUC alto e falso.
+   * A medida é AUC, não acerto. Com 15 de 25 dezenas sorteadas, um modelo que
+     responde "sai" para tudo acerta 60% e não aprendeu nada.
+   * Teste de permutação: embaralha os rótulos do teste e recalcula o AUC
+     centenas de vezes. Se o AUC real cai dentro dessa nuvem, não há sinal.   */
+
+const JANELA_CURTA = 10, JANELA_LONGA = 50;
+const MINIMO_CONCURSOS = 60;
+
+/* Características de uma dezena no instante do concurso `i`, usando apenas os
+   concursos [0, i). Nomes e ordem ficam aqui para o relatório poder nomear os
+   pesos — um modelo cujos pesos não se pode ler é um modelo em que não se
+   pode confiar. */
+const NOMES_ATRIBUTOS = ["freq curta", "freq longa", "atraso", "saiu no anterior",
+                         "posição no volante"];
+
+function atributosDezena(d, anteriores, c){
+  const n = anteriores.length;
+  const curta = anteriores.slice(-JANELA_CURTA);
+  const longa = anteriores.slice(-JANELA_LONGA);
+  const conta = lista => lista.reduce((a,r)=> a + (r.dezenas.includes(d)?1:0), 0);
+  /* Atraso: quantos concursos desde a última aparição, normalizado pelo
+     intervalo médio esperado (N/k). Sem aparição nenhuma no recorte, o valor
+     satura em 1 — e não em infinito, que estouraria o gradiente. */
+  let atraso = longa.length;
+  for(let j = anteriores.length - 1; j >= 0; j--){
+    if(anteriores[j].dezenas.includes(d)){ atraso = anteriores.length - 1 - j; break; }
+  }
+  const intervaloEsperado = c.N / c.k;
+  return [
+    curta.length ? conta(curta) / curta.length : 0,
+    longa.length ? conta(longa) / longa.length : 0,
+    Math.min(1, atraso / (intervaloEsperado * 3)),
+    n && anteriores[n-1].dezenas.includes(d) ? 1 : 0,
+    (d - c.base) / Math.max(1, c.N - 1)
+  ];
+}
+
+/* Monta a matriz de treino/teste a partir do histórico de UMA modalidade. */
+function dadosAprendizado(modalidade){
+  const c = MODALIDADES[modalidade];
+  const hist = S.resultados.filter(r => r.modalidade === modalidade)
+    .slice().sort((a,b)=> a.concurso - b.concurso);
+  if(hist.length < MINIMO_CONCURSOS)
+    return {erro:`faltam ${MINIMO_CONCURSOS - hist.length} concursos`,
+            tem:hist.length, precisa:MINIMO_CONCURSOS};
+
+  const X = [], y = [], concursoDe = [];
+  for(let i = JANELA_LONGA; i < hist.length; i++){
+    const anteriores = hist.slice(0, i);
+    const sorteadas = new Set(hist[i].dezenas);
+    for(let d = c.base; d <= c.N + c.base - 1; d++){
+      X.push(atributosDezena(d, anteriores, c));
+      y.push(sorteadas.has(d) ? 1 : 0);
+      concursoDe.push(i);
+    }
+  }
+  /* Corte temporal: 70% dos CONCURSOS para treino. O corte é por concurso, e
+     não por linha, porque as linhas de um mesmo concurso são dependentes entre
+     si — dividir no meio de um concurso deixaria o modelo ver parte do alvo. */
+  const primeiro = concursoDe[0], ultimo = concursoDe[concursoDe.length-1];
+  const corte = primeiro + Math.floor((ultimo - primeiro + 1) * 0.7);
+  const treino = [], teste = [];
+  concursoDe.forEach((ci, k) => (ci < corte ? treino : teste).push(k));
+  return {X, y, treino, teste, hist, nConcursos:hist.length,
+          concursosTreino:corte - primeiro, concursosTeste:ultimo - corte + 1};
+}
+
+const sigmoide = z => 1 / (1 + Math.exp(-Math.max(-30, Math.min(30, z))));
+
+/* Regressão logística por gradiente descendente, com regularização L2. Sem
+   biblioteca: são vinte linhas, e uma dependência externa aqui significaria o
+   app não abrir offline. */
+function treinarLogistica(X, y, indices, opcoes){
+  const o = Object.assign({epocas:220, taxa:0.6, l2:1e-3}, opcoes||{});
+  const p = X[0].length;
+  const w = new Array(p).fill(0);
+  let b = 0;
+  const n = indices.length;
+  for(let e = 0; e < o.epocas; e++){
+    const gw = new Array(p).fill(0);
+    let gb = 0;
+    for(const i of indices){
+      const xi = X[i];
+      let z = b;
+      for(let j = 0; j < p; j++) z += w[j] * xi[j];
+      const erro = sigmoide(z) - y[i];
+      for(let j = 0; j < p; j++) gw[j] += erro * xi[j];
+      gb += erro;
+    }
+    for(let j = 0; j < p; j++) w[j] -= o.taxa * (gw[j]/n + o.l2 * w[j]);
+    b -= o.taxa * (gb/n);
+  }
+  return {w, b, prever(xi){
+    let z = this.b;
+    for(let j = 0; j < this.w.length; j++) z += this.w[j] * xi[j];
+    return sigmoide(z);
+  }};
+}
+
+/* AUC pela estatística de Mann-Whitney, com empates valendo meio. É a medida
+   certa aqui: não depende do ponto de corte nem da proporção de positivos. */
+function auc(escores, rotulos){
+  const pares = escores.map((s,i)=>[s, rotulos[i]]).sort((a,b)=> a[0]-b[0]);
+  let i = 0, somaPostos = 0, positivos = 0;
+  while(i < pares.length){
+    let j = i;
+    while(j+1 < pares.length && pares[j+1][0] === pares[i][0]) j++;
+    const posto = (i + j + 2) / 2;                      // postos de 1 a n
+    for(let k = i; k <= j; k++) if(pares[k][1] === 1){ somaPostos += posto; positivos++; }
+    i = j + 1;
+  }
+  const negativos = pares.length - positivos;
+  if(!positivos || !negativos) return 0.5;
+  return (somaPostos - positivos*(positivos+1)/2) / (positivos * negativos);
+}
+
+function logLoss(escores, rotulos){
+  let s = 0;
+  for(let i = 0; i < escores.length; i++){
+    const p = Math.min(1-1e-12, Math.max(1e-12, escores[i]));
+    s += rotulos[i] ? -Math.log(p) : -Math.log(1-p);
+  }
+  return s / escores.length;
+}
+
+/* Nuvem do acaso: embaralha os rótulos do teste e recalcula o AUC. Não
+   retreina o modelo — o que testaria é a associação entre os escores que o
+   modelo produziu e os rótulos, que é exatamente a hipótese em questão.
+   Retreinar a cada permutação seria mais forte e levaria minutos no aparelho;
+   a limitação está declarada na tela. */
+function permutarAuc(escores, rotulos, repeticoes, rnd=Math.random){
+  const nulos = [];
+  const copia = rotulos.slice();
+  for(let r = 0; r < repeticoes; r++){
+    for(let i = copia.length - 1; i > 0; i--){
+      const j = Math.floor(rnd() * (i+1));
+      const t = copia[i]; copia[i] = copia[j]; copia[j] = t;
+    }
+    nulos.push(auc(escores, copia));
+  }
+  nulos.sort((a,b)=>a-b);
+  return nulos;
+}
+
+/* Gerador determinístico para o teste de permutação. Existe porque a primeira
+   versão usava Math.random: o mesmo histórico produzia p-valores diferentes a
+   cada execução, e o veredito podia mudar de "sem sinal" para "revisar" sem
+   nenhum dado novo. Um teste desta bateria pegou isso falhando de forma
+   intermitente. Resultado que não se repete não pode ser auditado. */
+function geradorSemeado(semente){
+  let x = semente >>> 0;
+  return () => {
+    x ^= x << 13; x >>>= 0;
+    x ^= x >>> 17;
+    x ^= x << 5;  x >>>= 0;
+    return x / 4294967296;
+  };
+}
+
+function aprender(modalidade, opcoes){
+  const o = Object.assign({permutacoes:200, semente:20260730}, opcoes||{});
+  const d = dadosAprendizado(modalidade);
+  if(d.erro) return d;
+
+  const modelo = treinarLogistica(d.X, d.y, d.treino);
+  const escoresTeste = d.teste.map(i => modelo.prever(d.X[i]));
+  const rotulosTeste = d.teste.map(i => d.y[i]);
+  const a = auc(escoresTeste, rotulosTeste);
+  const perda = logLoss(escoresTeste, rotulosTeste);
+
+  /* Referência: prever sempre a taxa-base do treino. Um modelo que não bate
+     isto não aprendeu nada de útil, ainda que a perda pareça pequena. */
+  const taxaBase = d.treino.reduce((s,i)=> s + d.y[i], 0) / d.treino.length;
+  const perdaBase = logLoss(rotulosTeste.map(()=>taxaBase), rotulosTeste);
+
+  const nulos = permutarAuc(escoresTeste, rotulosTeste, o.permutacoes,
+                            geradorSemeado(o.semente));
+  /* p-valor bilateral por Monte Carlo, com a correção (r+1)/(m+1): sem ela um
+     p-valor de exatamente zero seria reportado, e zero é impossível de medir
+     com um número finito de permutações. */
+  const acima = nulos.filter(x => x >= a).length;
+  const abaixo = nulos.filter(x => x <= a).length;
+  const m = nulos.length;
+  const p = Math.min(1, 2 * Math.min((acima+1)/(m+1), (abaixo+1)/(m+1)));
+  const faixa = [nulos[Math.floor(m*0.025)], nulos[Math.floor(m*0.975)]];
+
+  return {
+    modalidade, auc:a, perda, perdaBase, taxaBase, p, faixaAcaso:faixa,
+    semente:o.semente, permutacoes:o.permutacoes,
+    nConcursos:d.nConcursos, concursosTreino:d.concursosTreino,
+    concursosTeste:d.concursosTeste, nLinhasTeste:d.teste.length,
+    pesos: modelo.w.map((v,i)=>({nome:NOMES_ATRIBUTOS[i], peso:v})),
+    /* O veredito não é opcional e não é otimista: dentro da faixa do acaso
+       significa que não há sinal, e é o resultado esperado. */
+    aprendeu: p < 0.05 && (a < faixa[0] || a > faixa[1])
+  };
+}
+
+function vereditoAprendizado(r){
+  if(!r.aprendeu)
+    return `O modelo <strong>não distingue</strong> dezena sorteada de não sorteada
+      melhor que o acaso: AUC ${nf(r.auc,4)}, dentro da faixa que o embaralhamento
+      produz (${nf(r.faixaAcaso[0],4)} a ${nf(r.faixaAcaso[1],4)}), p = ${nf(r.p,3)}.
+      <strong>Este é o resultado esperado.</strong> Sorteios honestos são eventos
+      independentes: não há o que aprender no histórico, e um modelo que
+      afirmasse o contrário estaria descrevendo ruído.`;
+  return `O AUC de ${nf(r.auc,4)} caiu <strong>fora</strong> da faixa do acaso
+    (${nf(r.faixaAcaso[0],4)} a ${nf(r.faixaAcaso[1],4)}), p = ${nf(r.p,3)}.
+    Isto <strong>não</strong> é prova de sinal. Com poucos concursos, um desvio
+    assim aparece por variância amostral; e este é um teste entre vários que o
+    app roda, então parte dos achados é falsa por construção. O caminho é
+    repetir com mais concursos e ver se sobrevive — não é apostar nisso.`;
+}
+
 /* ==================== telas novas ==================== */
 
 const marcadasDe = m => S.marcadas[m] || [];
@@ -1567,6 +1799,104 @@ T.montar = () => {
       ${legendaCartela}
     </div>` : ""}
     <div id="m-saida"></div>`;
+};
+
+T.aprendizado = () => {
+  const c = MODALIDADES[S.modalidade];
+  const estoque = Object.keys(MODALIDADES).map(k => ({
+    id:k, nome:MODALIDADES[k].nome,
+    n:S.resultados.filter(r => r.modalidade === k).length
+  }));
+  const d = dadosAprendizado(S.modalidade);
+  const r = S.aprendizado && S.aprendizado[S.modalidade];
+
+  return `<div class="carta">
+    <h2>${esc(c.nome)}</h2>
+    <div class="nota"><strong>Um modelo por modalidade, treinado e medido
+      separadamente.</strong> Juntar modalidades num modelo só seria mais fácil e
+      estaria errado: universo, quantidade sorteada e calendário são diferentes, e o
+      modelo aprenderia a distinguir modalidade em vez de aprender algo sobre
+      dezenas.</div>
+    ${d.erro
+      ? `<div class="nota atencao">Não dá para treinar ainda: ${esc(d.erro)}.
+          Há ${d.tem} concurso${d.tem===1?"":"s"} desta modalidade no app e são
+          necessários ${d.precisa}. Traga histórico na aba
+          <strong>Conferir › Resultados</strong>.</div>`
+      : `<div class="kpis">
+          <div class="kpi"><div class="rot">concursos</div>
+            <div class="val">${d.nConcursos}</div><div class="sub">no app</div></div>
+          <div class="kpi"><div class="rot">divisão temporal</div>
+            <div class="val" style="font-size:1.05rem">${d.concursosTreino} / ${d.concursosTeste}</div>
+            <div class="sub">treino / teste</div></div>
+        </div>
+        <div class="pe" style="border:0;padding-left:0">
+          <span>os ${JANELA_LONGA} primeiros concursos não entram na conta</span>
+          <span>viram as características dos seguintes</span></div>
+        <p style="font-size:.82rem;color:var(--secundaria);margin:0 0 12px">
+          ${d.nConcursos} concursos no app − ${JANELA_LONGA} de aquecimento =
+          ${d.concursosTreino + d.concursosTeste} usados. Um concurso só pode ser
+          previsto depois de existir passado suficiente para descrever cada dezena.</p>
+        <button class="acao" id="ap-treinar">treinar e medir fora da amostra</button>
+        <div class="nota">O modelo é treinado nos concursos antigos e medido nos
+          recentes, que ele nunca viu. As características de cada concurso usam
+          apenas os concursos anteriores a ele — usar o próprio vazaria a resposta e
+          produziria um resultado excelente e falso.</div>`}
+    <div id="ap-saida">${!r ? "" : `
+      <div class="kpis">
+        <div class="kpi"><div class="rot">AUC fora da amostra</div>
+          <div class="val">${nf(r.auc,4)}</div>
+          <div class="sub">acaso: 0,5000</div></div>
+        <div class="kpi"><div class="rot">p-valor</div>
+          <div class="val">${nf(r.p,3)}</div>
+          <div class="sub">${r.aprendeu?"fora":"dentro"} da faixa do acaso</div></div>
+        <div class="kpi"><div class="rot">perda do modelo</div>
+          <div class="val" style="font-size:1.15rem">${nf(r.perda,4)}</div>
+          <div class="sub">taxa-base: ${nf(r.perdaBase,4)}</div></div>
+        <div class="kpi"><div class="rot">linhas no teste</div>
+          <div class="val" style="font-size:1.15rem">${inf(r.nLinhasTeste)}</div>
+          <div class="sub">dezena × concurso</div></div>
+      </div>
+      ${faixaAcaso(r.auc, 0.5, Math.max((r.faixaAcaso[1]-r.faixaAcaso[0])/4, 0.001))}
+      <div class="nota ${r.aprendeu?"atencao":""}">${vereditoAprendizado(r)}</div>
+      <div class="rolagem"><table>
+        <tr><th>característica</th><th>peso</th><th>direção</th></tr>
+        ${r.pesos.map(x=>`<tr><td>${esc(x.nome)}</td><td>${nf(x.peso,4)}</td>
+          <td>${x.peso > 0 ? "aumenta o escore" : x.peso < 0 ? "reduz o escore" : "—"}</td>
+          </tr>`).join("")}
+      </table></div>
+      <div class="nota">Os pesos ficam à vista de propósito: um modelo cujos
+        coeficientes não se pode ler é um modelo em que não se pode confiar. Peso
+        diferente de zero <strong>não</strong> significa que a característica prevê
+        algo — significa que o gradiente parou ali com os dados de treino.</div>
+      <div class="nota atencao">Limitação declarada: o teste de permutação embaralha
+        os rótulos do teste e recalcula o AUC, sem retreinar o modelo a cada
+        permutação. Retreinar seria mais forte e levaria minutos no aparelho.</div>
+      <div class="pe" style="border:0;padding-left:0">
+        <span>${r.permutacoes} permutações · semente ${r.semente}</span>
+        <span>rodar de novo dá o mesmo resultado</span></div>`}
+    </div>
+  </div>
+  <div class="carta">
+    <h2>histórico disponível por modalidade</h2>
+    <p style="font-size:.85rem;color:var(--secundaria);margin:6px 0 10px">
+      Cada modalidade é analisada por conta própria, e só entra na análise com pelo
+      menos ${MINIMO_CONCURSOS} concursos — abaixo disso qualquer resultado seria
+      variância amostral com cara de descoberta.</p>
+    <div class="rolagem"><table>
+      <tr><th>modalidade</th><th>concursos</th><th>situação</th><th>AUC</th></tr>
+      ${estoque.map(e=>{
+        const res = S.aprendizado && S.aprendizado[e.id];
+        return `<tr>
+          <td>${esc(e.nome)}</td><td>${e.n}</td>
+          <td>${e.n >= MINIMO_CONCURSOS
+            ? (res ? `<span class="selo ${res.aprendeu?"seu":"ok"}"
+                >${res.aprendeu?"revisar":"sem sinal"}</span>`
+                   : `<span class="selo">pronta</span>`)
+            : `faltam ${MINIMO_CONCURSOS - e.n}`}</td>
+          <td>${res ? nf(res.auc,4) : "—"}</td></tr>`;
+      }).join("")}
+    </table></div>
+  </div>`;
 };
 
 T.resultados = () => {
@@ -1784,6 +2114,26 @@ function acoesNovas(){
     S.teimosinhas = (S.teimosinhas||[]).filter(t => t.id !== b.dataset.apagarTeimosinha);
     Guardar.gravar("teimosinhas", S.teimosinhas); pintar();
   });
+
+  /* --- aprendizado --- */
+  const treinar = $("#ap-treinar");
+  if(treinar) treinar.onclick = () => {
+    const saida = $("#ap-saida");
+    treinar.disabled = true;
+    treinar.innerHTML = `<span class="girando"></span>treinando…`;
+    /* setTimeout para o navegador pintar o estado "treinando" antes de o laço
+       bloquear a linha principal. Sem isso o botão só muda depois de acabar. */
+    setTimeout(()=>{
+      try{
+        S.aprendizado[S.modalidade] = aprender(S.modalidade);
+        Guardar.gravar("aprendizado", S.aprendizado);
+        pintar();
+      }catch(e){
+        saida.innerHTML = `<div class="nota atencao">O treino falhou: ${esc(e.message)}.</div>`;
+        treinar.disabled = false; treinar.textContent = "treinar e medir fora da amostra";
+      }
+    }, 30);
+  };
 
   /* --- abrir um jogo salvo na cartela --- */
   document.querySelectorAll("[data-abrir-jogo]").forEach(b => b.onclick = () => {
@@ -2020,7 +2370,9 @@ const SECOES = [
      {id:"placar", nome:"Placar", titulo:"Placar",
       sub:"Seu resultado acumulado, comparado com o que o acaso teria feito com o mesmo dinheiro."},
      {id:"bancada", nome:"Bancada", titulo:"Bancada de testes",
-      sub:"Roda todos os métodos contra o mesmo sorteio e mede se algum se distingue do acaso."}
+      sub:"Roda todos os métodos contra o mesmo sorteio e mede se algum se distingue do acaso."},
+     {id:"aprendizado", nome:"Aprendizado", titulo:"Aprendizado por modalidade",
+      sub:"Treina um modelo em cada modalidade separadamente e mede, fora da amostra, se ele aprendeu algo."}
    ]},
   {id:"entender", nome:"entender",
    icone:'<circle cx="12" cy="12" r="9"/><path d="M12 16v-4M12 8h.01"/>',
@@ -2094,6 +2446,7 @@ async function carregarCalibracao(){
   S.avisos = Guardar.ler("avisos", []);
   S.teimosinhas = Guardar.ler("teimosinhas", []);
   S.marcadas = Guardar.ler("marcadas", {});
+  S.aprendizado = Guardar.ler("aprendizado", {});
   S.modalidade = Guardar.ler("modalidade", S.modalidade);
   document.documentElement.dataset.tema = S.tema;
   /* Conferir na abertura: quem digitou um resultado e fechou o app antes de
