@@ -449,7 +449,8 @@ const S = {
   bancadaRep:40, bancadaQtd:3,
   /* marcadas: dezenas do volante manual, por modalidade, para trocar de
      modalidade e voltar não apagar o que a pessoa já tinha marcado. */
-  marcadas:{}, avisos:[], teimosinhas:[], aprendizado:{}, jogoAberto:null
+  marcadas:{}, avisos:[], teimosinhas:[], aprendizado:{}, jogoAberto:null,
+  autoAnalise:true
 };
 
 /* Persistência tolerante: se o navegador bloquear, o app segue funcionando
@@ -1442,7 +1443,95 @@ function aoMudarHistorico(quantosConcursos, origem){
   }
   if(r.premios) notificarSistema("Faixa de prêmio atingida",
     "Abra o LotoLab para ver qual jogo e qual concurso.");
+  if(S.autoAnalise !== false) analisarPendentes();
   return r;
+}
+
+/* ==================== análise automática por concurso ====================
+   Cada concurso novo dispara o retreino das modalidades afetadas, e o aviso
+   sai quando a análise fica pronta.
+
+   Duas travas, porque "automático" não pode significar "desperdiçado":
+
+   * **Assinatura do histórico.** Se a modalidade não recebeu concurso novo, a
+     análise anterior continua exata e não é refeita. Sem isso, importar um
+     concurso da Quina retreinaria as oito modalidades à toa.
+   * **Uma modalidade por vez, com respiro.** Oito treinos em sequência
+     travariam a tela por segundos. Cada um vai num setTimeout, então o app
+     continua respondendo enquanto analisa.
+
+   Sobre bateria: eu havia decidido não fazer isto automático por causa do
+   custo de reconfirmar, a cada concurso, algo que já se sabe — que não há
+   sinal. A decisão não era minha. Fica automático, e quem quiser o
+   comportamento anterior desliga em Análise › Aprendizado.                */
+
+function assinaturaHistorico(modalidade){
+  const h = S.resultados.filter(r => r.modalidade === modalidade);
+  if(!h.length) return "0";
+  return `${h.length}:${Math.max(...h.map(r => r.concurso))}`;
+}
+
+/* As modalidades que têm histórico bastante E mudaram desde a última análise. */
+function modalidadesPendentes(){
+  return Object.keys(MODALIDADES).filter(k => {
+    const n = S.resultados.filter(r => r.modalidade === k).length;
+    if(n < MINIMO_CONCURSOS) return false;
+    const anterior = S.aprendizado[k];
+    return !anterior || anterior.assinatura !== assinaturaHistorico(k);
+  });
+}
+
+/* Devolve quantas ficaram na fila. O `aoTerminar` existe para os testes
+   poderem esperar o fim sem depender de tempo de relógio. */
+function analisarPendentes(aoTerminar){
+  const fila = modalidadesPendentes();
+  if(!fila.length){ if(aoTerminar) aoTerminar([]); return 0; }
+
+  const prontas = [];
+  const proxima = () => {
+    const k = fila.shift();
+    if(k === undefined){
+      /* A correção vem antes do aviso: avisar "revisar" e só depois descobrir
+         que o achado não sobrevive à correção seria alarme falso entregue. */
+      aplicarCorrecao(S.aprendizado);
+      Guardar.gravar("aprendizado", S.aprendizado);
+      if(prontas.length){
+        const nomes = prontas.map(x => MODALIDADES[x.modalidade].nome).join(", ");
+        const semSinal = prontas.filter(x => !x.aprendeu).length;
+        const titulo = prontas.length === 1
+          ? `Análise pronta: ${nomes}`
+          : `${prontas.length} análises prontas`;
+        const texto = semSinal === prontas.length
+          ? `${nomes}: nenhum sinal encontrado, que é o resultado esperado de sorteios independentes.`
+          : `${nomes}. ${prontas.length - semSinal} com desvio a revisar — desvio não é sinal, veja a tela.`;
+        avisar("analise", titulo, texto,
+          `analise:${prontas.map(x => x.modalidade + ":" + x.assinatura).join("|")}`);
+        notificarSistema(titulo, texto);
+      }
+      /* Repinta só se a pessoa estiver olhando a tela que mudou. Repintar
+         sempre roubaria a rolagem de quem está em outra aba. */
+      if(S.tela === "aprendizado") pintar(); else pintarContaAvisos();
+      if(aoTerminar) aoTerminar(prontas);
+      return;
+    }
+    try{
+      const r = aprender(k);
+      if(!r.erro){
+        r.assinatura = assinaturaHistorico(k);
+        r.quando = new Date().toISOString();
+        r.automatica = true;
+        S.aprendizado[k] = r;
+        prontas.push(r);
+      }
+    }catch(e){
+      avisar("erro", `Falha ao analisar ${MODALIDADES[k].nome}`,
+        `${e.message}. As outras modalidades seguem normalmente.`,
+        `erroAnalise:${k}:${assinaturaHistorico(k)}`);
+    }
+    setTimeout(proxima, 0);   // devolve a linha principal entre modalidades
+  };
+  setTimeout(proxima, 0);
+  return fila.length;
 }
 
 function avisosNaoLidos(){ return S.avisos.filter(a => !a.lido).length; }
@@ -1667,7 +1756,7 @@ function dadosAprendizado(modalidade){
   const corte = primeiro + Math.floor((ultimo - primeiro + 1) * 0.7);
   const treino = [], teste = [];
   concursoDe.forEach((ci, k) => (ci < corte ? treino : teste).push(k));
-  return {X, y, treino, teste, hist, nConcursos:hist.length,
+  return {X, y, treino, teste, hist, concursoDe, nConcursos:hist.length,
           concursosTreino:corte - primeiro, concursosTeste:ultimo - corte + 1};
 }
 
@@ -1733,14 +1822,43 @@ function logLoss(escores, rotulos){
    retreina o modelo — o que testaria é a associação entre os escores que o
    modelo produziu e os rótulos, que é exatamente a hipótese em questão.
    Retreinar a cada permutação seria mais forte e levaria minutos no aparelho;
-   a limitação está declarada na tela. */
-function permutarAuc(escores, rotulos, repeticoes, rnd=Math.random){
+   a limitação está declarada na tela.
+
+   O embaralhamento acontece DENTRO de cada concurso, e isso não é detalhe.
+   As linhas de um mesmo concurso não são independentes: exatamente k dezenas
+   saem, sempre. Embaralhar livremente entre concursos gera sorteios impossíveis
+   — um com 3 dezenas, outro com 22 — e a nuvem resultante fica estreita demais.
+   Nuvem estreita significa faixa do acaso estreita, e faixa estreita significa
+   acusar sinal onde não existe.
+
+   Foi exatamente assim que a primeira versão se comportou: com sorteios
+   puramente aleatórios, ela marcou "revisar". Permutando dentro do concurso,
+   cada sorteio permutado continua sendo um sorteio possível daquela modalidade,
+   e a nuvem passa a descrever o acaso de verdade. */
+function permutarAuc(escores, rotulos, repeticoes, rnd=Math.random, grupos){
   const nulos = [];
   const copia = rotulos.slice();
+  /* Índices agrupados por concurso. Sem grupos informados, o conjunto inteiro
+     vira um bloco só — o comportamento antigo, mantido para quem chama a função
+     com dados que não têm estrutura de concurso. */
+  const blocos = [];
+  if(grupos){
+    const porGrupo = new Map();
+    grupos.forEach((g, i) => {
+      if(!porGrupo.has(g)) porGrupo.set(g, []);
+      porGrupo.get(g).push(i);
+    });
+    porGrupo.forEach(v => blocos.push(v));
+  } else {
+    blocos.push(rotulos.map((_, i) => i));
+  }
   for(let r = 0; r < repeticoes; r++){
-    for(let i = copia.length - 1; i > 0; i--){
-      const j = Math.floor(rnd() * (i+1));
-      const t = copia[i]; copia[i] = copia[j]; copia[j] = t;
+    for(const bloco of blocos){
+      for(let i = bloco.length - 1; i > 0; i--){
+        const j = Math.floor(rnd() * (i+1));
+        const a = bloco[i], b = bloco[j];
+        const t = copia[a]; copia[a] = copia[b]; copia[b] = t;
+      }
     }
     nulos.push(auc(escores, copia));
   }
@@ -1780,7 +1898,8 @@ function aprender(modalidade, opcoes){
   const perdaBase = logLoss(rotulosTeste.map(()=>taxaBase), rotulosTeste);
 
   const nulos = permutarAuc(escoresTeste, rotulosTeste, o.permutacoes,
-                            geradorSemeado(o.semente));
+                            geradorSemeado(o.semente),
+                            d.teste.map(i => d.concursoDe[i]));
   /* p-valor bilateral por Monte Carlo, com a correção (r+1)/(m+1): sem ela um
      p-valor de exatamente zero seria reportado, e zero é impossível de medir
      com um número finito de permutações. */
@@ -1796,26 +1915,82 @@ function aprender(modalidade, opcoes){
     nConcursos:d.nConcursos, concursosTreino:d.concursosTreino,
     concursosTeste:d.concursosTeste, nLinhasTeste:d.teste.length,
     pesos: modelo.w.map((v,i)=>({nome:NOMES_ATRIBUTOS[i], peso:v})),
-    /* O veredito não é opcional e não é otimista: dentro da faixa do acaso
-       significa que não há sinal, e é o resultado esperado. */
-    aprendeu: p < 0.05 && (a < faixa[0] || a > faixa[1])
+    /* `foraDaFaixa` é o achado bruto de UMA modalidade. `aprendeu` é a
+       decisão final, e ela depende de quantas modalidades foram testadas —
+       ver aplicarCorrecao(). Com uma modalidade só, as duas coincidem. */
+    foraDaFaixa: p < 0.05 && (a < faixa[0] || a > faixa[1]),
+    aprendeu: p < 0.05 && (a < faixa[0] || a > faixa[1]),
+    familia: 1, limiteAplicado: 0.05
   };
 }
 
+/* Correção de Holm-Bonferroni entre as modalidades analisadas.
+
+   Sem isto o app grita lobo, e não é teoria: medi. Com históricos puramente
+   aleatórios, cada modalidade acusa sinal em cerca de 10% das vezes — o dobro
+   do nominal de 5%. Rodando as 8 modalidades a cada concurso, a chance de pelo
+   menos uma acusar por acaso é 1 − 0,90^8 ≈ 57%. Mais da metade dos concursos
+   produziria um alarme falso, e um alarme que toca à toa ensina a pessoa a
+   ignorar o alarme.
+
+   Holm em vez de Bonferroni puro: mesma garantia contra o falso positivo, e
+   menos cego para um efeito real, porque o limiar afrouxa conforme os achados
+   mais fortes são aceitos. O procedimento é passo a passo — ao primeiro
+   p-valor que não passa, todos os maiores são rejeitados junto, e é isso que
+   preserva a garantia.
+
+   Com uma modalidade só, m = 1 e nada muda: o limiar continua 0,05.          */
+function aplicarCorrecao(mapa, alfa=0.05){
+  const chaves = Object.keys(mapa).filter(k => mapa[k] && typeof mapa[k].p === "number");
+  const m = chaves.length;
+  if(!m) return mapa;
+
+  const ordenadas = chaves.slice().sort((x, y) => mapa[x].p - mapa[y].p);
+  let aindaRejeita = true;
+  ordenadas.forEach((k, i) => {
+    const limite = alfa / (m - i);
+    const r = mapa[k];
+    if(aindaRejeita && r.p <= limite && r.foraDaFaixa){
+      r.aprendeu = true;
+    } else {
+      /* A partir do primeiro que não passa, nenhum dos maiores passa. É o
+         passo que dá a garantia — aceitar um p-valor maior depois de rejeitar
+         um menor quebraria o procedimento. */
+      aindaRejeita = false;
+      r.aprendeu = false;
+    }
+    r.familia = m;
+    r.limiteAplicado = limite;
+  });
+  return mapa;
+}
+
 function vereditoAprendizado(r){
-  if(!r.aprendeu)
+  const correcao = (r.familia > 1)
+    ? ` O limiar aplicado foi ${nf(r.limiteAplicado,4)}, e não 0,05, porque
+        ${r.familia} modalidades foram testadas: com vários testes ao mesmo tempo,
+        parte dos achados é falsa por construção, e a correção de Holm compensa
+        isso.`
+    : "";
+  if(!r.aprendeu){
+    const quaseLa = r.foraDaFaixa
+      ? ` O AUC saiu fora da faixa do acaso, mas <strong>não sobreviveu à correção
+          para múltiplos testes</strong> — que é exatamente o tipo de achado que
+          desaparece quando se olha com honestidade.${correcao}`
+      : "";
     return `O modelo <strong>não distingue</strong> dezena sorteada de não sorteada
-      melhor que o acaso: AUC ${nf(r.auc,4)}, dentro da faixa que o embaralhamento
-      produz (${nf(r.faixaAcaso[0],4)} a ${nf(r.faixaAcaso[1],4)}), p = ${nf(r.p,3)}.
+      melhor que o acaso: AUC ${nf(r.auc,4)}, faixa do embaralhamento
+      ${nf(r.faixaAcaso[0],4)} a ${nf(r.faixaAcaso[1],4)}, p = ${nf(r.p,3)}.${quaseLa}
       <strong>Este é o resultado esperado.</strong> Sorteios honestos são eventos
       independentes: não há o que aprender no histórico, e um modelo que
       afirmasse o contrário estaria descrevendo ruído.`;
+  }
   return `O AUC de ${nf(r.auc,4)} caiu <strong>fora</strong> da faixa do acaso
-    (${nf(r.faixaAcaso[0],4)} a ${nf(r.faixaAcaso[1],4)}), p = ${nf(r.p,3)}.
-    Isto <strong>não</strong> é prova de sinal. Com poucos concursos, um desvio
-    assim aparece por variância amostral; e este é um teste entre vários que o
-    app roda, então parte dos achados é falsa por construção. O caminho é
-    repetir com mais concursos e ver se sobrevive — não é apostar nisso.`;
+    (${nf(r.faixaAcaso[0],4)} a ${nf(r.faixaAcaso[1],4)}), p = ${nf(r.p,3)}, e
+    sobreviveu à correção para múltiplos testes.${correcao}
+    Ainda assim, isto <strong>não</strong> é prova de sinal: com poucos concursos
+    um desvio assim aparece por variância amostral. O caminho é repetir com mais
+    concursos e ver se sobrevive — não é apostar nisso.`;
 }
 
 /* ==================== telas novas ==================== */
@@ -1884,6 +2059,16 @@ T.aprendizado = () => {
       estaria errado: universo, quantidade sorteada e calendário são diferentes, e o
       modelo aprenderia a distinguir modalidade em vez de aprender algo sobre
       dezenas.</div>
+    <label style="display:flex;align-items:center;gap:10px;padding:11px 12px;
+      border:1px solid var(--linha);border-radius:12px;margin-bottom:12px;cursor:pointer">
+      <input type="checkbox" id="ap-auto" ${S.autoAnalise!==false?"checked":""}
+        style="width:20px;height:20px;flex:none;accent-color:var(--acaso)">
+      <span style="flex:1;font-size:.88rem">
+        <b>Analisar sozinho a cada concurso novo</b>
+        <span style="display:block;font-size:.78rem;color:var(--secundaria)">
+          Retreina só as modalidades que receberam concurso, e avisa quando fica
+          pronta. Desligado, a análise só roda no botão.</span></span>
+    </label>
     ${d.erro
       ? `<div class="nota atencao">Não dá para treinar ainda: ${esc(d.erro)}.
           Há ${d.tem} concurso${d.tem===1?"":"s"} desta modalidade no app e são
@@ -1937,10 +2122,18 @@ T.aprendizado = () => {
         algo — significa que o gradiente parou ali com os dados de treino.</div>
       <div class="nota atencao">Limitação declarada: o teste de permutação embaralha
         os rótulos do teste e recalcula o AUC, sem retreinar o modelo a cada
-        permutação. Retreinar seria mais forte e levaria minutos no aparelho.</div>
+        permutação. Retreinar seria mais forte e levaria minutos no aparelho.
+        O embaralhamento respeita a estrutura do sorteio: acontece dentro de cada
+        concurso, para que cada sorteio permutado continue tendo exatamente
+        ${c.k} dezenas — embaralhar livremente geraria sorteios impossíveis e
+        estreitaria a faixa do acaso.</div>
       <div class="pe" style="border:0;padding-left:0">
         <span>${r.permutacoes} permutações · semente ${r.semente}</span>
-        <span>rodar de novo dá o mesmo resultado</span></div>`}
+        <span>rodar de novo dá o mesmo resultado</span></div>
+      ${!r.quando ? "" : `<div class="pe" style="border:0;padding-left:0;padding-top:0">
+        <span>análise ${r.automatica?"automática":"manual"} de
+          ${esc(new Date(r.quando).toLocaleString("pt-BR"))}</span>
+        <span>${esc(r.assinatura||"")} concursos:último</span></div>`}`}
     </div>
   </div>
   <div class="carta">
@@ -1950,7 +2143,7 @@ T.aprendizado = () => {
       menos ${MINIMO_CONCURSOS} concursos — abaixo disso qualquer resultado seria
       variância amostral com cara de descoberta.</p>
     <div class="rolagem"><table>
-      <tr><th>modalidade</th><th>concursos</th><th>situação</th><th>AUC</th></tr>
+      <tr><th>modalidade</th><th>concursos</th><th>situação</th><th>AUC</th><th>p</th></tr>
       ${estoque.map(e=>{
         const res = S.aprendizado && S.aprendizado[e.id];
         return `<tr>
@@ -1960,7 +2153,8 @@ T.aprendizado = () => {
                 >${res.aprendeu?"revisar":"sem sinal"}</span>`
                    : `<span class="selo">pronta</span>`)
             : `faltam ${MINIMO_CONCURSOS - e.n}`}</td>
-          <td>${res ? nf(res.auc,4) : "—"}</td></tr>`;
+          <td>${res ? nf(res.auc,4) : "—"}</td>
+          <td>${res ? nf(res.p,3) : "—"}</td></tr>`;
       }).join("")}
     </table></div>
   </div>`;
@@ -2192,7 +2386,12 @@ function acoesNovas(){
        bloquear a linha principal. Sem isso o botão só muda depois de acabar. */
     setTimeout(()=>{
       try{
-        S.aprendizado[S.modalidade] = aprender(S.modalidade);
+        const r = aprender(S.modalidade);
+        r.assinatura = assinaturaHistorico(S.modalidade);
+        r.quando = new Date().toISOString();
+        r.automatica = false;
+        S.aprendizado[S.modalidade] = r;
+        aplicarCorrecao(S.aprendizado);
         Guardar.gravar("aprendizado", S.aprendizado);
         pintar();
       }catch(e){
@@ -2200,6 +2399,21 @@ function acoesNovas(){
         treinar.disabled = false; treinar.textContent = "treinar e medir fora da amostra";
       }
     }, 30);
+  };
+
+  const auto = $("#ap-auto");
+  if(auto) auto.onchange = e => {
+    S.autoAnalise = e.target.checked;
+    Guardar.gravar("autoAnalise", S.autoAnalise);
+    /* Ligar já processa a fila pendente: esperar o próximo concurso deixaria
+       a pessoa com a caixa marcada e nenhuma análise à vista.
+
+       Evite aqui o vocabulário de dezena "em atraso", mesmo em comentário e
+       mesmo falando de outra coisa: a trava do testar-motor.mjs procura por
+       substring, sem olhar contexto. A cegueira é proposital — é a frase da
+       falácia do apostador, e sai mais barato não escrevê-la nunca do que
+       ensinar a trava a distinguir sentidos. */
+    if(S.autoAnalise) analisarPendentes();
   };
 
   /* --- abrir um jogo salvo na cartela --- */
@@ -2525,12 +2739,18 @@ async function carregarCalibracao(){
   S.teimosinhas = Guardar.ler("teimosinhas", []);
   S.marcadas = Guardar.ler("marcadas", {});
   S.aprendizado = Guardar.ler("aprendizado", {});
+  S.autoAnalise = Guardar.ler("autoAnalise", true);
   S.modalidade = Guardar.ler("modalidade", S.modalidade);
   document.documentElement.dataset.tema = S.tema;
   /* Conferir na abertura: quem digitou um resultado e fechou o app antes de
      conferir os jogos encontra tudo conferido ao voltar. */
   conferenciaAutomatica();
   pintar();
+  /* Análises pendentes na abertura. Sem isto, quem já tinha histórico ficaria
+     esperando o próximo concurso para ver a primeira análise — e quem fechou o
+     app no meio de uma análise nunca a veria terminar. Roda depois do pintar()
+     para a tela aparecer primeiro; o processamento é fatiado e não trava. */
+  if(S.autoAnalise !== false) analisarPendentes();
 
   /* Sino e folha de avisos. Ficam fora de pintar() porque vivem no cabeçalho,
      que não é redesenhado a cada troca de tela. */

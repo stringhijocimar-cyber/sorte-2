@@ -79,6 +79,8 @@ const EXPOSTOS = [
   "auc", "logLoss", "sigmoide", "treinarLogistica", "permutarAuc",
   "atributosDezena", "dadosAprendizado", "aprender", "vereditoAprendizado",
   "MINIMO_CONCURSOS", "NOMES_ATRIBUTOS", "blocoDaModalidade",
+  "assinaturaHistorico", "modalidadesPendentes", "analisarPendentes", "aplicarCorrecao",
+  "aoMudarHistorico", "guardarResultados",
 ];
 const epilogo = `\n;globalThis.__motor = {${EXPOSTOS.map((n) => `${n}: typeof ${n} !== "undefined" ? ${n} : undefined`).join(", ")}};\n`;
 vm.runInContext(fonte + epilogo, contexto, { filename: "index.html:script" });
@@ -767,6 +769,210 @@ secao("10. Placar — cada loteria com o seu próprio placar");
 
   motor.S.jogos = original.jogos; motor.S.teimosinhas = original.teim;
 }
+
+/* ==================================================================
+   11. Análise automática a cada concurso novo
+   ================================================================== */
+secao("11. Análise automática por concurso");
+
+function historicoFalso(modalidade, quantos, semente) {
+  const cfg = M[modalidade];
+  let s = semente;
+  const rnd = () => (s = (s * 1103515245 + 12345) % 2147483648) / 2147483648;
+  const saida = [];
+  for (let i = 1; i <= quantos; i++) {
+    const pool = Array.from({ length: cfg.N }, (_, k) => k + cfg.base);
+    for (let k = pool.length - 1; k > 0; k--) {
+      const j = Math.floor(rnd() * (k + 1));
+      const t = pool[k]; pool[k] = pool[j]; pool[j] = t;
+    }
+    saida.push({ concurso: i, data: "2025-01-01", modalidade,
+                 dezenas: pool.slice(0, cfg.k).sort((a, b) => a - b), origem: "colado" });
+  }
+  return saida;
+}
+
+await (async () => {
+  const S = motor.S;
+  const guardados = { r: S.resultados, a: S.aprendizado, av: S.avisos, auto: S.autoAnalise };
+  const esperar = () => new Promise(res => contexto.analisarPendentes(res));
+
+  S.resultados = []; S.aprendizado = {}; S.avisos = []; S.autoAnalise = true;
+
+  checar("sem histórico, nada está pendente",
+    contexto.modalidadesPendentes().length === 0);
+
+  // Histórico curto demais: não entra na fila.
+  S.resultados = historicoFalso("lotofacil", 30, 5);
+  checar("modalidade com histórico curto não entra na fila",
+    !contexto.modalidadesPendentes().includes("lotofacil"),
+    `${30} < ${contexto.MINIMO_CONCURSOS}`);
+
+  // Histórico suficiente: entra.
+  S.resultados = historicoFalso("lotofacil", 120, 5);
+  checar("modalidade com histórico suficiente entra na fila",
+    contexto.modalidadesPendentes().includes("lotofacil"));
+  checar("só a modalidade que tem histórico entra",
+    contexto.modalidadesPendentes().length === 1,
+    contexto.modalidadesPendentes().join(","));
+
+  const prontas = await esperar();
+  checar("a análise automática roda e produz resultado", prontas.length === 1);
+  checar("o resultado fica guardado na modalidade certa",
+    !!S.aprendizado["lotofacil"] && typeof S.aprendizado["lotofacil"].auc === "number",
+    `AUC ${S.aprendizado["lotofacil"] && S.aprendizado["lotofacil"].auc.toFixed(4)}`);
+  checar("fica marcado como automática e com carimbo de hora",
+    S.aprendizado["lotofacil"].automatica === true && !!S.aprendizado["lotofacil"].quando);
+  /* NÃO se afirma aqui que o modelo nunca acusa: com dados aleatórios ele
+     acusa em torno de 10% das vezes, e um teste que exigisse "nunca" seria
+     intermitente — o que de fato aconteceu na primeira escrita, com a semente 5.
+     O que se exige é que o AUC fique perto de 0,5, que é a propriedade real. */
+  checar("com sorteios independentes o AUC fica perto de 0,5",
+    Math.abs(S.aprendizado["lotofacil"].auc - 0.5) < 0.12,
+    `AUC ${S.aprendizado["lotofacil"].auc.toFixed(4)}`);
+
+  const avisoAnalise = S.avisos.find(a => a.tipo === "analise");
+  checar("sai um aviso de análise pronta", !!avisoAnalise,
+    avisoAnalise && avisoAnalise.titulo);
+  checar("o aviso descreve o achado sem prometer nada",
+    !!avisoAnalise && /(nenhum sinal|revisar)/i.test(avisoAnalise.texto) &&
+    !/aumenta|garant|vantagem/i.test(avisoAnalise.texto),
+    avisoAnalise && avisoAnalise.texto.slice(0, 90));
+
+  /* A trava que evita gastar bateria: sem concurso novo, não retreina. */
+  checar("sem concurso novo, nada fica pendente",
+    contexto.modalidadesPendentes().length === 0);
+  const semNada = await esperar();
+  checar("chamar de novo não refaz análise nenhuma", semNada.length === 0);
+  const avisosAntes = S.avisos.length;
+  await esperar();
+  checar("e não gera aviso repetido", S.avisos.length === avisosAntes);
+
+  /* Concurso novo na Lotofácil: só ela volta para a fila. */
+  const antes = contexto.assinaturaHistorico("lotofacil");
+  S.resultados = S.resultados.concat(historicoFalso("lotofacil", 121, 5).slice(120));
+  checar("a assinatura do histórico muda quando entra concurso",
+    contexto.assinaturaHistorico("lotofacil") !== antes,
+    `${antes} -> ${contexto.assinaturaHistorico("lotofacil")}`);
+  checar("a modalidade que recebeu concurso volta para a fila",
+    contexto.modalidadesPendentes().includes("lotofacil"));
+
+  /* Uma segunda modalidade não é arrastada junto sem motivo. */
+  S.resultados = S.resultados.concat(historicoFalso("quina", 120, 9));
+  const fila = contexto.modalidadesPendentes().sort();
+  checar("as duas com histórico entram, e só elas",
+    fila.length === 2 && fila[0] === "lotofacil" && fila[1] === "quina", fila.join(","));
+
+  const duas = await esperar();
+  checar("as duas são analisadas separadamente", duas.length === 2);
+  checar("cada uma guarda o seu próprio AUC",
+    S.aprendizado["lotofacil"].auc !== S.aprendizado["quina"].auc,
+    `${S.aprendizado["lotofacil"].auc.toFixed(4)} vs ${S.aprendizado["quina"].auc.toFixed(4)}`);
+  checar("modelos separados: cada um tem a sua assinatura",
+    S.aprendizado["lotofacil"].assinatura !== S.aprendizado["quina"].assinatura);
+
+  /* O interruptor desliga mesmo. */
+  S.autoAnalise = false;
+  S.resultados = S.resultados.concat(historicoFalso("lotofacil", 122, 5).slice(121));
+  const antesDesligado = JSON.stringify(S.aprendizado["lotofacil"].assinatura);
+  contexto.aoMudarHistorico(1, "teste");
+  await new Promise(res => setTimeout(res, 60));
+  checar("desligado, o concurso novo NÃO dispara análise",
+    JSON.stringify(S.aprendizado["lotofacil"].assinatura) === antesDesligado);
+  checar("mas continua pendente, esperando ligar ou o botão",
+    contexto.modalidadesPendentes().includes("lotofacil"));
+
+  S.resultados = guardados.r; S.aprendizado = guardados.a;
+  S.avisos = guardados.av; S.autoAnalise = guardados.auto;
+})();
+
+/* ==================================================================
+   12. Correção para múltiplos testes entre modalidades
+   ================================================================== */
+secao("12. Holm-Bonferroni entre as modalidades");
+
+{
+  const mk = (p, fora) => ({ p, foraDaFaixa: fora, auc: 0.5, aprendeu: fora });
+
+  /* Com uma modalidade só, o limiar continua 0,05 e nada muda. */
+  const um = { lotofacil: mk(0.04, true) };
+  contexto.aplicarCorrecao(um);
+  checar("família de 1: o limiar continua 0,05",
+    um.lotofacil.limiteAplicado === 0.05 && um.lotofacil.aprendeu === true);
+
+  /* Oito modalidades, uma com p = 0,04: sozinha passaria, na família não.
+     0,04 > 0,05/8 = 0,00625. */
+  const oito = {};
+  ["a","b","c","d","e","f","g","h"].forEach((k, i) =>
+    oito[k] = mk(i === 0 ? 0.04 : 0.4 + i * 0.05, i === 0));
+  contexto.aplicarCorrecao(oito);
+  checar("achado de p=0,04 NÃO sobrevive a 8 testes simultâneos",
+    oito.a.aprendeu === false, `limiar ${oito.a.limiteAplicado.toFixed(5)}`);
+  checar("o limiar do menor p-valor é alfa/m", 
+    Math.abs(oito.a.limiteAplicado - 0.05 / 8) < 1e-12);
+  checar("a família é registrada em todas", 
+    Object.values(oito).every(r => r.familia === 8));
+
+  /* Um efeito forte sobrevive mesmo com 8 testes. */
+  const forte = {};
+  ["a","b","c","d","e","f","g","h"].forEach((k, i) =>
+    forte[k] = mk(i === 0 ? 0.0001 : 0.4 + i * 0.05, i === 0));
+  contexto.aplicarCorrecao(forte);
+  checar("um efeito forte sobrevive à correção", forte.a.aprendeu === true);
+
+  /* Holm afrouxa depois de aceitar: dois achados fortes passam, e o segundo
+     usa alfa/(m-1), que é mais permissivo que alfa/m. Com Bonferroni puro o
+     segundo seria comparado ao mesmo alfa/m. */
+  const dois = {};
+  ["a","b","c","d","e","f","g","h"].forEach((k, i) =>
+    dois[k] = mk(i < 2 ? 0.001 + i * 0.005 : 0.4 + i * 0.05, i < 2));
+  contexto.aplicarCorrecao(dois);
+  checar("Holm afrouxa o limiar após aceitar o primeiro",
+    dois.b.limiteAplicado > dois.a.limiteAplicado,
+    `${dois.a.limiteAplicado.toFixed(5)} -> ${dois.b.limiteAplicado.toFixed(5)}`);
+  checar("os dois achados fortes sobrevivem",
+    dois.a.aprendeu === true && dois.b.aprendeu === true);
+
+  /* A trava do procedimento: ao primeiro que não passa, os maiores caem junto,
+     mesmo que algum deles passasse no seu próprio limiar isolado. */
+  const cascata = {};
+  ["a","b","c"].forEach((k, i) => cascata[k] = mk([0.02, 0.03, 0.04][i], true));
+  contexto.aplicarCorrecao(cascata);
+  checar("ao primeiro que falha, os maiores caem junto (garantia de Holm)",
+    cascata.a.aprendeu === false && cascata.b.aprendeu === false &&
+    cascata.c.aprendeu === false,
+    "0,020 falha em 0,05/3 = 0,01667 e derruba os outros dois");
+  /* O 0,04 é o caso que dá sentido ao teste: no seu próprio passo o limiar
+     seria 0,05 e ele passaria. Só não passa porque o procedimento já parou. */
+  checar("o maior p-valor passaria no limiar do próprio passo, e mesmo assim cai",
+    cascata.c.limiteAplicado === 0.05 && 0.04 <= cascata.c.limiteAplicado &&
+    cascata.c.aprendeu === false,
+    "0,04 ≤ 0,05 e ainda assim é rejeitado");
+
+  /* Fora da faixa mas com p alto não vira sinal em nenhum cenário. */
+  const incoerente = { x: { p: 0.9, foraDaFaixa: true, auc: 0.5, aprendeu: true } };
+  contexto.aplicarCorrecao(incoerente);
+  checar("p alto não vira sinal nem estando fora da faixa",
+    incoerente.x.aprendeu === false);
+
+  checar("mapa vazio não quebra",
+    JSON.stringify(contexto.aplicarCorrecao({})) === "{}");
+}
+
+/* O veredito muda de texto quando houve correção, e nunca promete vantagem. */
+{
+  const r = { auc: 0.44, p: 0.03, faixaAcaso: [0.46, 0.54], foraDaFaixa: true,
+              aprendeu: false, familia: 8, limiteAplicado: 0.00625 };
+  const t = contexto.vereditoAprendizado(r);
+  checar("o veredito explica que o achado morreu na correção",
+    /não sobreviveu à correção/i.test(t));
+  checar("o veredito cita o limiar aplicado e o tamanho da família",
+    /8 modalidades/.test(t));
+  checar("mesmo com achado, o veredito não promete vantagem",
+    !/aumenta a chance|vantagem real|garantid/i.test(t));
+}
+
+
 
 /* ---------- saída ---------- */
 console.log(linhas.join("\n"));
