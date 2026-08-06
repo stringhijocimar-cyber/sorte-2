@@ -1,0 +1,76 @@
+# Atualiza os resultados das loterias todo dia.
+#
+# Por que aqui e não no aplicativo: um runner do GitHub é um servidor. Não há
+# CORS, não há bloqueio de origem e não há dependência de proxy de terceiro —
+# os três motivos pelos quais a busca falhava dentro do navegador.
+#
+# O app depois lê dados/*.json por raw.githubusercontent.com, que serve com
+# CORS liberado e disponibilidade de CDN. Quem usa o app nunca precisa colar
+# nada, e nunca depende de um espelho público estar de pé.
+
+name: Atualizar resultados
+
+on:
+  schedule:
+    # 04:00 e 12:00 UTC = 01:00 e 09:00 em Brasília. Os sorteios da Caixa
+    # ocorrem à noite, então a primeira execução já pega o resultado do dia
+    # anterior; a segunda é a rede de segurança para quando a primeira falha.
+    - cron: "0 4,12 * * *"
+  workflow_dispatch:
+    inputs:
+      tudo:
+        description: "Backfill completo (mais lento, várias execuções)"
+        type: boolean
+        default: false
+
+# Precisa escrever no repositório para commitar os JSONs.
+permissions:
+  contents: write
+
+concurrency:
+  # Duas execuções ao mesmo tempo commitariam por cima uma da outra.
+  group: resultados
+  cancel-in-progress: false
+
+jobs:
+  atualizar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Buscar resultados
+        run: |
+          if [ "${{ inputs.tudo }}" = "true" ]; then
+            node ferramentas/atualizar-resultados.mjs --tudo
+          else
+            node ferramentas/atualizar-resultados.mjs
+          fi
+
+      - name: Conferir o motor antes de publicar
+        # Se o app estiver quebrado, publicar dado novo não ajuda ninguém —
+        # e esconde a quebra atrás de um commit automático.
+        run: node ferramentas/testar-motor.mjs
+
+      - name: Commitar o que mudou
+        run: |
+          if [ -z "$(git status --porcelain dados/)" ]; then
+            echo "nada mudou"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add dados/
+          git commit -m "Resultados atualizados automaticamente
+
+          $(node -e '
+            const {readdirSync,readFileSync}=require("fs");
+            for(const f of readdirSync("dados").filter(x=>x.endsWith(".json"))){
+              const d=JSON.parse(readFileSync("dados/"+f,"utf8"));
+              const u=d.concursos[d.concursos.length-1];
+              console.log(`  ${d.modalidade}: ${d.total} concursos, último ${u?u.concurso:"-"}`);
+            }')"
+          git push
