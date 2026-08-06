@@ -2319,14 +2319,116 @@ function premioDoAcerto(resultado, acertos, modalidade){
   return f ? f.premio : 0;
 }
 
+/* Formato alternativo, publicado por espelhos da API da Caixa. Muda o nome de
+   quase tudo, então precisa de conversão própria — e a conversão recusa o que
+   não reconhece, em vez de completar com zeros. */
+function normalizarEspelho(bruto, modalidade){
+  const c = MODALIDADES[modalidade];
+  const dezenas = (bruto.dezenas || bruto.dezenasOrdemSorteio || [])
+    .map(x => parseInt(String(x), 10)).filter(Number.isFinite);
+  if(dezenas.length !== c.k)
+    throw new Error(`o espelho devolveu ${dezenas.length} dezenas, esperava ${c.k}`);
+  const concurso = parseInt(bruto.concurso ?? bruto.numero, 10);
+  if(!Number.isFinite(concurso)) throw new Error("o espelho não informou o concurso");
+  const r = {concurso, data: dataBrParaIso(bruto.data || bruto.dataApuracao),
+             dezenas: dezenas.sort((a,b)=>a-b), modalidade, origem:"espelho"};
+  const prem = (bruto.premiacoes || []).map((f, i) => ({
+    faixa: parseInt(f.faixa, 10) || (i + 1),
+    descricao: String(f.descricao || f.acertos || "").trim(),
+    ganhadores: parseInt(f.ganhadores || f.vencedores, 10) || 0,
+    premio: Number(f.valorPremio || f.premio) || 0
+  }));
+  if(prem.length) r.rateio = prem;
+  const locais = (bruto.localGanhadores || []).map(g => ({
+    municipio: String(g.municipio || g.cidade || "").trim(),
+    uf: String(g.uf || g.estado || "").trim(),
+    ganhadores: parseInt(g.ganhadores, 10) || 1,
+    canal: String(g.nomeFatansiaUL || "").trim()
+  })).filter(g => g.municipio);
+  if(locais.length) r.cidades = locais;
+  if(bruto.dataProximoConcurso) r.dataProximo = dataBrParaIso(bruto.dataProximoConcurso);
+  if(bruto.valorEstimadoProximoConcurso)
+    r.estimativaProximo = Number(bruto.valorEstimadoProximoConcurso) || null;
+  if(bruto.proximoConcurso) r.concursoProximo = parseInt(bruto.proximoConcurso, 10);
+  if(typeof bruto.acumulou === "boolean") r.acumulou = bruto.acumulou;
+  return r;
+}
+
+/* ---------- as fontes, em ordem de preferência ----------------------------
+   Por que mais de uma: o serviço da Caixa não manda cabeçalho de CORS, então
+   o NAVEGADOR bloqueia a chamada antes de ela sair — é o "Failed to fetch"
+   que aparece na tela. Dentro do APK a requisição passa pela camada nativa e
+   o CORS não se aplica, então lá a fonte direta funciona.
+
+   Como o app roda nos dois lugares, ele tenta em cadeia: direto primeiro
+   (melhor caminho, e o único oficial), depois espelhos e um proxy de CORS. A
+   tela informa qual fonte respondeu, porque saber de onde veio o dado importa.
+
+   NENHUMA destas foi testada por mim: a rede onde este código foi escrito
+   bloqueia todos esses domínios. O que está testado é a conversão de cada
+   formato, contra respostas controladas. */
+const FONTES = [
+  {
+    id: "caixa",
+    nome: "Caixa (oficial)",
+    url: (slug, concurso) =>
+      `https://servicebus2.caixa.gov.br/portaldeloterias/api/${slug}` +
+      (concurso ? `/${concurso}` : ""),
+    converter: normalizarCaixa
+  },
+  {
+    id: "espelho-guidi",
+    nome: "espelho loteriascaixa",
+    url: (slug, concurso) =>
+      `https://loteriascaixa-api.herokuapp.com/api/${slug}/` + (concurso || "latest"),
+    converter: normalizarEspelho
+  },
+  {
+    id: "proxy",
+    nome: "Caixa via proxy de CORS",
+    /* Último recurso: um proxy público reenvia a resposta da Caixa com o
+       cabeçalho que falta. O dado continua sendo o oficial; o que muda é
+       quem o entrega. Fica por último porque depende de um terceiro que pode
+       sair do ar ou ficar lento. */
+    url: (slug, concurso) => "https://api.allorigins.win/raw?url=" +
+      encodeURIComponent(`https://servicebus2.caixa.gov.br/portaldeloterias/api/${slug}` +
+        (concurso ? `/${concurso}` : "")),
+    converter: normalizarCaixa
+  }
+];
+
+//: Fonte que respondeu por último. Tentar a que já funcionou antes economiza
+//: duas requisições falhas em cada busca seguinte.
+let FONTE_PREFERIDA = null;
+
 async function buscarNaCaixa(modalidade, concurso){
   const slug = SLUG_CAIXA[modalidade];
   if(!slug) throw new Error("modalidade sem serviço público conhecido");
-  const url = `https://servicebus2.caixa.gov.br/portaldeloterias/api/${slug}` +
-              (concurso ? `/${concurso}` : "");
-  const resp = await fetch(url, {cache:"no-cache", headers:{Accept:"application/json"}});
-  if(!resp.ok) throw new Error(`o serviço respondeu ${resp.status}`);
-  return normalizarCaixa(await resp.json(), modalidade);
+
+  const ordem = FONTE_PREFERIDA
+    ? [FONTES.find(f => f.id === FONTE_PREFERIDA), ...FONTES.filter(f => f.id !== FONTE_PREFERIDA)]
+        .filter(Boolean)
+    : FONTES;
+
+  const falhas = [];
+  for(const fonte of ordem){
+    try{
+      const resp = await fetch(fonte.url(slug, concurso),
+        {cache:"no-cache", headers:{Accept:"application/json"}});
+      if(!resp.ok) throw new Error(`respondeu ${resp.status}`);
+      const r = fonte.converter(await resp.json(), modalidade);
+      r.fonte = fonte.id;
+      FONTE_PREFERIDA = fonte.id;
+      return r;
+    }catch(e){
+      falhas.push(`${fonte.nome}: ${e.message}`);
+    }
+  }
+  /* Erro que nomeia cada tentativa. "Failed to fetch" sozinho não diz se o
+     problema é falta de sinal, serviço fora ou bloqueio do navegador. */
+  const err = new Error(falhas.join(" · "));
+  err.todasFalharam = true;
+  throw err;
 }
 
 /* Colagem: aceita JSON (array de objetos) ou linhas soltas
@@ -3164,11 +3266,15 @@ T.resultados = () => {
           Uma vez a cada 12 horas, ao abrir o app, só nas modalidades que você já
           acompanha. Falha em silêncio quando não há sinal.</span></span>
     </label>
-    <div class="nota atencao"><strong>A busca online não pôde ser testada por mim.</strong>
-      O ambiente onde este código foi escrito bloqueia o domínio da Caixa, então a via
-      online segue o formato publicado pelo portal mas não foi verificada contra ele.
-      Se o serviço mudar, a tela mostra o erro em vez de inventar um resultado. A via de
-      colagem abaixo funciona sem rede e é a verificada.</div>
+    <div class="nota atencao"><strong>A busca online tenta ${FONTES.length} fontes em
+      sequência</strong> — a da Caixa primeiro, depois um espelho e um proxy de CORS. Ela
+      existe porque o serviço oficial não autoriza chamadas de outra origem: no navegador
+      o pedido é bloqueado antes de sair (<em>Failed to fetch</em>), enquanto dentro do
+      APK passa pela camada nativa e funciona.
+      <span style="display:block;margin-top:6px">Nenhuma das fontes pôde ser testada por
+      mim: a rede onde este código foi escrito bloqueia todos esses domínios. O que está
+      testado é a conversão de cada formato. A colagem abaixo não depende de rede e é a
+      via garantida.</span></div>
     <label class="campo"><label>colar resultados</label>
       <textarea id="r-texto" rows="4" placeholder="${esc(
         `Um concurso por linha: 3421; 21/06/2025; ${Array.from({length:c.k},(_,i)=>pad(i+c.base)).join(" ")}`)}"
@@ -3344,15 +3450,22 @@ function acoesNovas(){
         catch(e){ break; }   // para no primeiro que falhar; o que veio já vale
       }
       const n = guardarResultados(lote);
-      const r = aoMudarHistorico(n, "caixa");
+      const nome = (FONTES.find(f => f.id === lote[0].fonte) || {}).nome || "fonte desconhecida";
+      const r = aoMudarHistorico(n, nome);
       saida.innerHTML = `<div class="nota"><strong>${lote.length} concurso${lote.length===1?"":"s"}
         recebido${lote.length===1?"":"s"}</strong>, ${n} novo${n===1?"":"s"}.
-        ${r.novas} conferência${r.novas===1?"":"s"} automática${r.novas===1?"":"s"}.</div>`;
+        ${r.novas} conferência${r.novas===1?"":"s"} automática${r.novas===1?"":"s"}.
+        <span style="display:block;margin-top:4px;font-size:.9em">Fonte: ${esc(nome)}.</span></div>`;
       setTimeout(pintar, 900);
     }catch(e){
-      saida.innerHTML = `<div class="nota atencao">A busca falhou: ${esc(e.message)}.
-        Isto acontece sem internet, se o serviço estiver fora, ou se o formato dele
-        mudou. Use a colagem abaixo — ela não depende de rede.</div>`;
+      saida.innerHTML = `<div class="nota atencao">
+        <strong>Nenhuma fonte respondeu.</strong>
+        <span style="display:block;margin-top:6px;font-family:var(--mono);font-size:.76rem"
+          >${esc(e.message)}</span>
+        <span style="display:block;margin-top:8px">Se aparece <em>Failed to fetch</em> em
+        todas, o navegador está bloqueando por CORS — os serviços de loteria não autorizam
+        chamadas de outra origem. Dentro do APK a requisição passa pela camada nativa e
+        funciona. Enquanto isso, a colagem abaixo não depende de rede.</span></div>`;
     }
   };
   if($("#r-caixa")) $("#r-caixa").onclick = () => buscar(1);
