@@ -97,6 +97,8 @@ const EXPOSTOS = [
   "atributosDezena", "dadosAprendizado", "aprender", "vereditoAprendizado",
   "MINIMO_CONCURSOS", "NOMES_ATRIBUTOS", "blocoDaModalidade",
   "fibonacciAte", "observacoes", "PESOS", "referencia",
+  "porDezena", "contagemPorConcurso", "repeticoesAnterior", "somaDasDezenas",
+  "sequencias", "ciclos", "linhasEColunas", "historicoDe", "TIPOS_ESTATISTICA",
   "assinaturaHistorico", "modalidadesPendentes", "analisarPendentes", "aplicarCorrecao",
   "aoMudarHistorico", "guardarResultados",
 ];
@@ -1068,6 +1070,163 @@ secao("13. Fibonacci");
   checar("a observação descreve a forma, não promete acerto",
     !/chance|prov[áa]vel|sair|ganhar/i.test(textoFib), textoFib);
 }
+
+/* ==================================================================
+   14. Estatísticas descritivas
+   ================================================================== */
+secao("14. Estatísticas do histórico");
+
+{
+  const S = motor.S;
+  const guardado = S.resultados;
+
+  /* Histórico construído à mão, para os valores serem conferíveis por conta.
+     Lotofácil, 4 concursos. */
+  S.resultados = [
+    { concurso: 1, data: "2025-01-01", modalidade: "lotofacil",
+      dezenas: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15] },
+    { concurso: 2, data: "2025-01-02", modalidade: "lotofacil",
+      dezenas: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,16] },
+    { concurso: 3, data: "2025-01-03", modalidade: "lotofacil",
+      dezenas: [11,12,13,14,15,16,17,18,19,20,21,22,23,24,25] },
+    { concurso: 4, data: "2025-01-04", modalidade: "lotofacil",
+      dezenas: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15] },
+  ];
+
+  const d = contexto.porDezena("lotofacil");
+  const dez1 = d.linhas.find(l => l.dezena === 1);
+  const dez25 = d.linhas.find(l => l.dezena === 25);
+  checar("contagem por dezena confere com a contagem à mão",
+    dez1.vezes === 3 && dez25.vezes === 1, `1 saiu ${dez1.vezes}x, 25 saiu ${dez25.vezes}x`);
+  checar("o esperado é n·k/N", Math.abs(d.esperado - 4 * 15 / 25) < 1e-12,
+    `${d.esperado}`);
+  checar("ausência conta concursos desde a última aparição",
+    dez1.ausencia === 0 && dez25.ausencia === 1,
+    `1 há ${dez1.ausencia}, 25 há ${dez25.ausencia}`);
+  {
+    /* Dezena que nunca saiu: ausência = n, e não infinito nem NaN. */
+    S.resultados = S.resultados.map(r => ({...r,
+      dezenas: r.dezenas.filter(x => x !== 25).concat(r.dezenas.includes(25) ? [24] : [])
+        .slice(0,15) }));
+    const d2 = contexto.porDezena("lotofacil");
+    const nunca = d2.linhas.find(l => l.dezena === 25);
+    checar("dezena que nunca saiu tem ausência = nº de concursos",
+      nunca.vezes === 0 && nunca.ausencia === d2.n, `${nunca.ausencia} de ${d2.n}`);
+  }
+
+  /* Paridade: o esperado tem de vir da matemática, não do próprio código. */
+  S.resultados = [
+    { concurso: 1, data: "2025-01-01", modalidade: "megasena-inexistente", dezenas: [] },
+  ];
+  S.resultados = [];
+  for (let i = 1; i <= 200; i++) {
+    const pool = Array.from({ length: 60 }, (_, k) => k + 1);
+    for (let k = 59; k > 0; k--) { const j = Math.floor(Math.random() * (k + 1));
+      const t = pool[k]; pool[k] = pool[j]; pool[j] = t; }
+    S.resultados.push({ concurso: i, data: "2025-01-01", modalidade: "mega-sena",
+      dezenas: pool.slice(0, 6).sort((a, b) => a - b) });
+  }
+  const par = contexto.contagemPorConcurso("mega-sena", x => x % 2 === 0);
+  /* Mega-Sena: 30 pares em 60, k=6 -> esperado 3,0 pares por concurso. */
+  checar("o esperado de pares vem da hipergeométrica, não do observado",
+    Math.abs(par.esperado - 3.0) < 1e-12, `${par.esperado}`);
+  checar("com 200 sorteios honestos, os pares ficam dentro da faixa",
+    par.dentro, `média ${par.media.toFixed(3)} vs ${par.esperado}`);
+  checar("a distribuição soma o número de concursos",
+    Object.values(par.dist).reduce((a, b) => a + b, 0) === par.n);
+
+  /* Repetições: esperado = k²/N. Mega-Sena -> 36/60 = 0,6. */
+  const rep = contexto.repeticoesAnterior("mega-sena");
+  checar("o esperado de repetições é k²/N",
+    Math.abs(rep.esperado - 36 / 60) < 1e-12, `${rep.esperado}`);
+  checar("há n−1 comparações, não n", rep.n === 199, `${rep.n}`);
+
+  /* Soma: esperado = k·(N+1)/2 para base 1. Mega-Sena -> 6·30,5 = 183. */
+  const soma = contexto.somaDasDezenas("mega-sena");
+  checar("o esperado da soma é k·(N+1)/2",
+    Math.abs(soma.esperado - 183) < 1e-12, `${soma.esperado}`);
+  checar("mínimo, mediana e máximo estão em ordem",
+    soma.minimo <= soma.mediana && soma.mediana <= soma.maximo,
+    `${soma.minimo} ≤ ${soma.mediana} ≤ ${soma.maximo}`);
+  checar("a soma mínima possível não é violada",
+    soma.minimo >= 1 + 2 + 3 + 4 + 5 + 6, `${soma.minimo}`);
+
+  /* Sequências: pares consecutivos esperados = (N−1)·k(k−1)/(N(N−1)). */
+  const seq = contexto.sequencias("mega-sena");
+  checar("o esperado de pares consecutivos confere com a fórmula",
+    Math.abs(seq.esperado - 59 * 6 * 5 / (60 * 59)) < 1e-12, `${seq.esperado.toFixed(4)}`);
+  checar("a fração com sequência fica entre 0 e 1",
+    seq.fracaoComSequencia >= 0 && seq.fracaoComSequencia <= 1);
+
+  /* Linhas e colunas: a soma das contagens tem de fechar com o total. */
+  const g = contexto.linhasEColunas("mega-sena");
+  const somaLinhas = g.porLinha.reduce((a, x) => a + x.vezes, 0);
+  const somaColunas = g.porColuna.reduce((a, x) => a + x.vezes, 0);
+  checar("as linhas somam todas as dezenas sorteadas",
+    somaLinhas === g.total, `${somaLinhas} de ${g.total}`);
+  checar("as colunas somam o mesmo total", somaColunas === g.total);
+  checar("os esperados das linhas somam o total",
+    Math.abs(g.porLinha.reduce((a, x) => a + x.esperado, 0) - g.total) < 1e-6);
+
+  /* Ciclos: com 200 concursos de Mega-Sena, o esperado é ~47 e alguns fecham. */
+  const cic = contexto.ciclos("mega-sena");
+  checar("o ciclo esperado vem do colecionador de figurinhas",
+    cic.esperado > 40 && cic.esperado < 55, `${cic.esperado.toFixed(1)} concursos`);
+  checar("as dezenas em aberto nunca passam do universo",
+    cic.emAberto <= 60 && cic.faltam >= 0, `${cic.emAberto} vistas, faltam ${cic.faltam}`);
+
+  /* A tela renderiza os nove tipos sem quebrar. */
+  S.modalidade = "mega-sena";
+  let quebrou = "";
+  for (const t of contexto.TIPOS_ESTATISTICA) {
+    S.tipoEstatistica = t.id;
+    try {
+      const html2 = contexto.T.estatisticas();
+      if (typeof html2 !== "string" || html2.length < 200) quebrou += t.id + "(curto) ";
+    } catch (e) { quebrou += `${t.id}(${e.message}) `; }
+  }
+  checar("os nove tipos de estatística renderizam", quebrou === "", quebrou);
+
+  /* Histórico curto convida em vez de mentir com dois concursos. */
+  S.resultados = S.resultados.slice(0, 3);
+  S.tipoEstatistica = "dezenas";
+  checar("com histórico curto, a tela pede mais dados em vez de calcular",
+    /Traga histórico/.test(contexto.T.estatisticas()));
+
+  /* O texto não pode sugerir que ausência prevê aparição. */
+  S.resultados = guardado;
+  S.modalidade = "lotofacil";
+}
+
+{
+  /* A trava de linguagem desta tela, verificada no texto renderizado. */
+  const S = motor.S;
+  const guardado = S.resultados, guardadaMod = S.modalidade;
+  S.modalidade = "lotofacil";
+  S.resultados = [];
+  for (let i = 1; i <= 60; i++) {
+    const pool = Array.from({ length: 25 }, (_, k) => k + 1);
+    for (let k = 24; k > 0; k--) { const j = Math.floor(Math.random() * (k + 1));
+      const t = pool[k]; pool[k] = pool[j]; pool[j] = t; }
+    S.resultados.push({ concurso: i, data: "2025-01-01", modalidade: "lotofacil",
+      dezenas: pool.slice(0, 15).sort((a, b) => a - b) });
+  }
+  S.tipoEstatistica = "dezenas";
+  const texto = contexto.T.estatisticas();
+  checar("a tela de dezenas nega explicitamente a falácia do apostador",
+    /não<\/strong> torna a dezena mais nem menos provável/.test(texto) &&
+    /independente/i.test(texto));
+  checar("a tela declara a base de concursos usada",
+    /Base: <strong>60 concursos/.test(texto));
+  S.tipoEstatistica = "ciclos";
+  /* O \s+ não é preciosismo: o texto do app quebra linha entre "têm" e
+     "prioridade", e um espaço literal aqui produziria falso negativo — o teste
+     reprovaria justamente o texto correto. */
+  checar("a tela de ciclos nega prioridade para as dezenas que faltam",
+    /não<\/strong>\s+têm\s+prioridade\s+nenhuma/.test(contexto.T.estatisticas()));
+  S.resultados = guardado; S.modalidade = guardadaMod; S.tipoEstatistica = "dezenas";
+}
+
 
 
 
