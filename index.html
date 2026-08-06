@@ -450,7 +450,8 @@ const S = {
   /* marcadas: dezenas do volante manual, por modalidade, para trocar de
      modalidade e voltar não apagar o que a pessoa já tinha marcado. */
   marcadas:{}, avisos:[], teimosinhas:[], aprendizado:{}, jogoAberto:null,
-  autoAnalise:true, tipoEstatistica:"dezenas", ordemEstatistica:"vezes"
+  autoAnalise:true, tipoEstatistica:"dezenas", ordemEstatistica:"vezes",
+  calibracao:{}
 };
 
 /* Persistência tolerante: se o navegador bloquear, o app segue funcionando
@@ -577,6 +578,11 @@ function caracteristicas(dez, m){
    hipóteses declaradas acima — e o app diz qual dos dois está em uso. */
 let CALIBRACAO = null;
 function pesosVigentes(){
+  /* Ordem de preferência: calibração medida no próprio aparelho, com os
+     ganhadores reais desta modalidade; depois o pesos.json externo; por último
+     as suposições declaradas em PESOS. Medido ganha de suposto. */
+  const local = S.calibracao && S.calibracao[S.modalidade];
+  if(local && !local.erro && local.util) return local.pesos;
   return (CALIBRACAO && CALIBRACAO.pesos_app) ? CALIBRACAO.pesos_app : PESOS;
 }
 
@@ -998,9 +1004,28 @@ T.gerar = () => {
   <div id="g-saida"></div>
 
   ${S.metodo==="rateio" ? `<div class="nota">
-    <strong>Pesos em uso:</strong> ${CALIBRACAO
-      ? `calibrados com ${inf(CALIBRACAO.n_concursos)} concursos reais (R² ${nf(CALIBRACAO.r2,3)}), medindo o que o público de fato marca.`
-      : `hipóteses declaradas, ainda não medidas. Para calibrar com os ganhadores publicados pela Caixa, gere <code>pesos.json</code> na plataforma e coloque ao lado do app.`}
+    <strong>Pesos em uso:</strong> ${(() => {
+      const cal = S.calibracao && S.calibracao[S.modalidade];
+      if(cal && !cal.erro && cal.util){
+        const top = cal.coeficientes.slice().sort((a,b)=>b.coeficiente-a.coeficiente)[0];
+        return `<strong style="color:var(--acaso)">medidos neste aparelho</strong>, com
+          ${inf(cal.n)} concursos desta modalidade em que a Caixa publicou ganhadores
+          (R² ${nf(cal.r2,3)}). O que mais atrai ganhadores aqui:
+          <strong>${esc(top.nome)}</strong>. Cada concurso novo com rateio refina isso.`;
+      }
+      if(cal && !cal.erro && !cal.util)
+        return `hipóteses declaradas. A calibração rodou com ${inf(cal.n)} concursos
+          mas explicou pouco (R² ${nf(cal.r2,3)}), então <strong>não</strong> substituiu
+          as hipóteses — calibrar com R² baixo é praticamente não calibrar.`;
+      if(cal && cal.erro)
+        return `hipóteses declaradas. Faltam ${esc(cal.erro.replace(/^faltam /,""))}
+          para medir com os ganhadores reais. Traga histórico com rateio em
+          <strong>Conferir › Resultados</strong>.`;
+      return CALIBRACAO
+        ? `calibrados com ${inf(CALIBRACAO.n_concursos)} concursos reais (R² ${nf(CALIBRACAO.r2,3)}).`
+        : `hipóteses declaradas, ainda não medidas. Elas passam a ser medidas sozinhas
+           assim que houver ${MINIMO_CALIBRACAO} concursos com ganhadores publicados.`;
+    })()}
   </div>` : ""}
 
   <div class="nota atencao"><strong>O que nenhum método faz.</strong> Nenhuma opção acima
@@ -1318,6 +1343,134 @@ T.entender = () => `<div class="prosa">
   referência: confirme na fonte oficial antes de usar para contas sérias.</p>
 </div>`;
 
+
+
+/* ==================== calibração de popularidade ====================
+   Esta é a única coisa neste app que de fato MELHORA com mais dados. Vale
+   explicar por quê, porque a diferença é a linha entre método e promessa.
+
+   Não é possível aprender qual dezena será sorteada: sorteios independentes
+   não guardam informação sobre o futuro, e o módulo de Aprendizado existe
+   justamente para medir e mostrar isso.
+
+   (A trava de vocabulário do testar-motor.mjs reprova o verbo "sair" no futuro
+   mesmo dentro de uma negação — busca por substring, sem contexto. É cega de
+   propósito, e sai mais barato escolher outra palavra do que ensiná-la a
+   distinguir.)
+
+   É possível aprender o que o PÚBLICO marca. Quando um concurso sorteia
+   dezenas com cara de data de nascimento, aparecem muitos ganhadores; quando
+   sorteia dezenas espalhadas pelo volante, aparecem poucos. Esse sinal está
+   nos ganhadores publicados, e ele é forte, porque descreve comportamento
+   humano — que, ao contrário das bolas, tem padrão.
+
+   O que isso muda: NÃO a chance de acertar, que é fixa. Muda o quanto sobra
+   para você SE acertar, porque evitar o que muita gente marca significa
+   dividir com menos gente. É o único ganho matematicamente real disponível
+   numa loteria honesta, e ele cresce quanto mais concursos entram na conta.
+
+   O método: regressão de mínimos quadrados de log(1 + ganhadores da faixa
+   principal) sobre as características estruturais do sorteio. O log existe
+   porque a contagem de ganhadores é assimétrica — um concurso com data
+   redonda pode ter cinquenta vezes mais ganhadores que a mediana, e sem o log
+   esse único concurso ditaria todos os coeficientes.
+
+   Coeficiente positivo = a característica atrai ganhadores = é popular.
+   Os coeficientes viram os pesos que `escorePopularidade` já consome, então a
+   medida substitui a suposição sem trocar mais nada no gerador. */
+
+const ATRIBUTOS_POPULARIDADE = ["ate31", "ate12", "consecutivos", "somaCentral",
+  "espacamentoRegular", "mesmaLinha", "mesmaColuna", "terminacoesIguais", "fibonacci"];
+
+//: Mínimo de concursos com ganhadores para a calibração valer alguma coisa.
+const MINIMO_CALIBRACAO = 30;
+
+/* Mínimos quadrados por gradiente, com padronização das colunas. Padronizar
+   importa: as características vivem em escalas diferentes (fibonacci vai a 3,
+   somaCentral fica em [0,1]), e sem isso o gradiente anda torto e converge
+   para lugar nenhum. */
+function minimosQuadrados(X, y, epocas=600, taxa=0.35){
+  const n = X.length, p = X[0].length;
+  const media = [], escala = [];
+  for(let j = 0; j < p; j++){
+    const col = X.map(x => x[j]);
+    const mu = col.reduce((a,b)=>a+b,0)/n;
+    const sd = Math.sqrt(col.reduce((a,b)=>a+(b-mu)**2,0)/n) || 1;
+    media.push(mu); escala.push(sd);
+  }
+  const Z = X.map(x => x.map((v,j) => (v - media[j]) / escala[j]));
+  const muY = y.reduce((a,b)=>a+b,0)/n;
+
+  const w = new Array(p).fill(0);
+  let b = muY;
+  for(let e = 0; e < epocas; e++){
+    const gw = new Array(p).fill(0);
+    let gb = 0;
+    for(let i = 0; i < n; i++){
+      let pred = b;
+      for(let j = 0; j < p; j++) pred += w[j] * Z[i][j];
+      const err = pred - y[i];
+      for(let j = 0; j < p; j++) gw[j] += err * Z[i][j];
+      gb += err;
+    }
+    for(let j = 0; j < p; j++) w[j] -= taxa * gw[j] / n;
+    b -= taxa * gb / n;
+  }
+
+  const prever = x => {
+    let v = b;
+    for(let j = 0; j < p; j++) v += w[j] * ((x[j] - media[j]) / escala[j]);
+    return v;
+  };
+  const ssRes = y.reduce((a, yi, i) => a + (yi - prever(X[i]))**2, 0);
+  const ssTot = y.reduce((a, yi) => a + (yi - muY)**2, 0);
+  return {
+    w, b, media, escala, prever,
+    r2: ssTot > 0 ? 1 - ssRes/ssTot : 0,
+    /* Coeficientes na escala original, que é como os pesos são consumidos. */
+    coeficientes: w.map((v, j) => v / escala[j])
+  };
+}
+
+function calibrarPopularidade(modalidade){
+  const c = MODALIDADES[modalidade];
+  const hist = historicoDe(modalidade).filter(r =>
+    r.rateio && r.rateio.length &&
+    r.rateio.some(f => f.faixa === 1 && Number.isFinite(f.ganhadores)));
+  if(hist.length < MINIMO_CALIBRACAO)
+    return {erro:`faltam ${MINIMO_CALIBRACAO - hist.length} concursos com rateio`,
+            tem:hist.length, precisa:MINIMO_CALIBRACAO};
+
+  const X = [], y = [];
+  hist.forEach(r => {
+    const carac = caracteristicas(r.dezenas, modalidade);
+    X.push(ATRIBUTOS_POPULARIDADE.map(k => carac[k] || 0));
+    const f = r.rateio.find(x => x.faixa === 1);
+    y.push(Math.log(1 + (f ? f.ganhadores : 0)));
+  });
+
+  const m = minimosQuadrados(X, y);
+  /* Só coeficiente positivo vira peso: negativo significaria "esta forma
+     afasta ganhadores", e o gerador de rateio não tem o que fazer com isso
+     além de já preferi-la, o que ele faz sozinho ao penalizar as positivas. */
+  const pesos = {};
+  ATRIBUTOS_POPULARIDADE.forEach((k, j) => {
+    pesos[k] = Math.max(0, m.coeficientes[j]);
+  });
+  const ganhadores = hist.map((r,i) => Math.exp(y[i]) - 1);
+  return {
+    modalidade, pesos, r2: m.r2, n: hist.length,
+    coeficientes: ATRIBUTOS_POPULARIDADE.map((k, j) =>
+      ({nome:k, coeficiente:m.coeficientes[j]})),
+    ganhadoresMedio: ganhadores.reduce((a,b)=>a+b,0)/ganhadores.length,
+    ganhadoresMaximo: Math.max(...ganhadores),
+    quando: new Date().toISOString(),
+    /* R² baixo não invalida: comportamento humano é ruidoso e um concurso tem
+       um só sorteio. Mas o número fica à vista, porque calibrar com R² de 0,02
+       é praticamente não calibrar, e quem usa precisa saber. */
+    util: m.r2 >= 0.05
+  };
+}
 
 /* ==================== estatísticas descritivas ====================
    O que esta seção é: uma descrição honesta do que JÁ saiu. O que ela não é:
@@ -1726,6 +1879,13 @@ function analisarPendentes(aoTerminar){
          que o achado não sobrevive à correção seria alarme falso entregue. */
       aplicarCorrecao(S.aprendizado);
       Guardar.gravar("aprendizado", S.aprendizado);
+      /* A calibração de popularidade também melhora com concurso novo, e é
+         barata perto do treino — roda junto, sem fila própria. */
+      Object.keys(MODALIDADES).forEach(k => {
+        const r = calibrarPopularidade(k);
+        if(!r.erro) S.calibracao[k] = r;
+      });
+      Guardar.gravar("calibracao", S.calibracao);
       if(prontas.length){
         const nomes = prontas.map(x => MODALIDADES[x.modalidade].nome).join(", ");
         const semSinal = prontas.filter(x => !x.aprendeu).length;
@@ -1844,7 +2004,47 @@ function normalizarCaixa(bruto, modalidade){
   const trevos = (bruto.trevosSorteados || []).map(x=>parseInt(String(x),10))
     .filter(Number.isFinite);
   if(trevos.length) r.trevos = trevos;
+
+  /* Rateio: quantos ganharam em cada faixa e quanto cada um levou. É o que
+     liga o jogo salvo a dinheiro em vez de só a contagem de acertos — e é
+     também a matéria-prima da calibração de popularidade mais abaixo. */
+  const rateio = (bruto.listaRateioPremio || []).map(f => ({
+    faixa: parseInt(f.faixa, 10),
+    descricao: String(f.descricaoFaixa || "").trim(),
+    ganhadores: parseInt(f.numeroDeGanhadores, 10) || 0,
+    premio: Number(f.valorPremio) || 0
+  })).filter(f => Number.isFinite(f.faixa));
+  if(rateio.length) r.rateio = rateio;
+
+  /* Cidades dos ganhadores. Vem só para a faixa principal, e nem sempre vem. */
+  const cidades = (bruto.listaMunicipioUFGanhadores || []).map(g => ({
+    municipio: String(g.municipio || "").trim(),
+    uf: String(g.uf || "").trim(),
+    ganhadores: parseInt(g.ganhadores, 10) || 1,
+    canal: String(g.serie || g.nomeFatansiaUL || "").trim()
+  })).filter(g => g.municipio);
+  if(cidades.length) r.cidades = cidades;
+
+  const estimativa = Number(bruto.valorEstimadoProximoConcurso);
+  if(Number.isFinite(estimativa) && estimativa > 0) r.estimativaProximo = estimativa;
+  if(bruto.dataProximoConcurso) r.dataProximo = dataBrParaIso(bruto.dataProximoConcurso);
+  if(bruto.numeroConcursoProximo) r.concursoProximo = parseInt(bruto.numeroConcursoProximo, 10);
+  if(bruto.acumulado === true || bruto.acumulado === false) r.acumulou = bruto.acumulado;
   return r;
+}
+
+/* Prêmio que uma aposta levaria num concurso, pelo rateio publicado.
+   Devolve null quando o rateio não veio — devolver 0 seria afirmar que não
+   ganhou nada, e não saber é diferente de saber que é zero. */
+function premioDoAcerto(resultado, acertos, modalidade){
+  if(!resultado.rateio || !resultado.rateio.length) return null;
+  const c = MODALIDADES[modalidade];
+  const posicao = c.faixas.indexOf(acertos);
+  if(posicao < 0) return 0;
+  /* A faixa 1 da Caixa é a principal, e as faixas do app estão em ordem
+     decrescente de acertos — a posição no vetor é o índice da faixa. */
+  const f = resultado.rateio.find(x => x.faixa === posicao + 1);
+  return f ? f.premio : 0;
 }
 
 async function buscarNaCaixa(modalidade, concurso){
@@ -2669,10 +2869,23 @@ T.resultados = () => {
       ? `<div class="vazio">Nenhum resultado desta modalidade ainda.<br>
           Sem histórico, a bancada e o placar não têm o que medir.</div>`
       : `<div class="lista" style="margin-top:10px">${meus.slice(0,40).map(r=>`
-          <div class="item">
+          <div class="item ${r.rateio?"ok":""}">
             <span class="marca-cor"></span>
             <span class="txt"><b>Concurso ${esc(r.concurso)}</b>
-              <span>${r.dezenas.map(pad).join(" ")}</span></span>
+              <span>${r.dezenas.map(pad).join(" ")}</span>
+              ${!r.rateio ? "" : (()=>{
+                const f1 = r.rateio.find(x => x.faixa === 1);
+                if(!f1) return "";
+                return `<span style="margin-top:4px">${
+                  f1.ganhadores > 0
+                    ? `<strong style="color:var(--acaso)">${inf(f1.ganhadores)} ganhador${f1.ganhadores>1?"es":""}</strong> · ${brl(f1.premio)} cada`
+                    : "acumulou"}</span>`;
+              })()}
+              ${!r.cidades || !r.cidades.length ? "" :
+                `<span style="margin-top:2px">${r.cidades.slice(0,4).map(g =>
+                  esc(`${g.municipio}/${g.uf}${g.ganhadores>1?` (${g.ganhadores})`:""}`)).join(" · ")}${
+                  r.cidades.length>4 ? ` e mais ${r.cidades.length-4}` : ""}</span>`}
+            </span>
             <span class="quando">${esc(r.data)}<br>
               <span class="pilula ${r.origem==="caixa"?"oficial":"manual"}"
                 >${esc(r.origem || "manual")}</span></span>
@@ -3227,6 +3440,7 @@ async function carregarCalibracao(){
   S.marcadas = Guardar.ler("marcadas", {});
   S.aprendizado = Guardar.ler("aprendizado", {});
   S.autoAnalise = Guardar.ler("autoAnalise", true);
+  S.calibracao = Guardar.ler("calibracao", {});
   S.modalidade = Guardar.ler("modalidade", S.modalidade);
   document.documentElement.dataset.tema = S.tema;
   /* Conferir na abertura: quem digitou um resultado e fechou o app antes de
