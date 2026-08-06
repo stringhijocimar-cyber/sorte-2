@@ -100,6 +100,7 @@ const EXPOSTOS = [
   "porDezena", "contagemPorConcurso", "repeticoesAnterior", "somaDasDezenas",
   "calibrarPopularidade", "minimosQuadrados", "premioDoAcerto", "pesosVigentes",
   "proximoConcurso", "diasAte", "cartaoProximo", "INTERVALO_BUSCA",
+  "perfilDoJogo", "lerTipicidade", "ehPrimo", "naMoldura", "medidasDoPerfil",
   "MINIMO_CALIBRACAO", "ATRIBUTOS_POPULARIDADE",
   "sequencias", "ciclos", "linhasEColunas", "historicoDe", "TIPOS_ESTATISTICA",
   "assinaturaHistorico", "modalidadesPendentes", "analisarPendentes", "aplicarCorrecao",
@@ -1419,6 +1420,116 @@ secao("16. Próximo concurso");
 
   S.resultados = guardado.r; S.modalidade = guardado.m;
 }
+
+/* ==================================================================
+   17. Perfil do jogo contra o histórico
+   ================================================================== */
+secao("17. Perfil do jogo");
+
+{
+  const S = motor.S;
+  const guardado = { r: S.resultados, m: S.modalidade };
+  S.modalidade = "lotofacil";
+
+  checar("primos: 2, 3, 5, 7 sim; 1, 4, 9 não",
+    [2,3,5,7].every(contexto.ehPrimo) && ![1,4,9].some(contexto.ehPrimo));
+
+  /* Moldura da Lotofácil: grade 5x5, borda são 16 das 25 dezenas. */
+  {
+    const naBorda = [];
+    for (let d = 1; d <= 25; d++) if (contexto.naMoldura(d, "lotofacil")) naBorda.push(d);
+    checar("a moldura da Lotofácil tem 16 dezenas", naBorda.length === 16,
+      naBorda.join(","));
+    checar("o centro (13) não está na moldura", !contexto.naMoldura(13, "lotofacil"));
+    checar("os cantos estão na moldura",
+      [1, 5, 21, 25].every(d => contexto.naMoldura(d, "lotofacil")));
+  }
+
+  /* Histórico curto: recusa em vez de comparar contra nada. */
+  S.resultados = [{ concurso: 1, data: "2025-01-01", modalidade: "lotofacil",
+    dezenas: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15] }];
+  {
+    const p2 = contexto.perfilDoJogo([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15], "lotofacil");
+    checar("com histórico curto, o perfil recusa e diz quanto falta",
+      !!p2.erro && p2.tem === 1, p2.erro);
+  }
+
+  /* Histórico em que TODOS os concursos têm 8 pares: um jogo com 8 pares tem
+     de dar 100%, e um com 7 tem de dar 0%. É a checagem que prova que a
+     fração é medida no histórico, e não estimada. */
+  {
+    S.resultados = [];
+    for (let i = 1; i <= 40; i++)
+      S.resultados.push({ concurso: i, data: "2025-01-01", modalidade: "lotofacil",
+        dezenas: [2,4,6,8,10,12,14,16,1,3,5,7,9,11,13].sort((a,b)=>a-b) });
+    const p3 = contexto.perfilDoJogo([2,4,6,8,10,12,14,16,1,3,5,7,9,11,13], "lotofacil");
+    const par = p3.linhas.find(l => l.id === "paridade");
+    checar("configuração que ocorre em todo concurso dá 100%",
+      Math.abs(par.fracao - 1) < 1e-9, `${(100*par.fracao).toFixed(1)}%`);
+    const p4 = contexto.perfilDoJogo([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15], "lotofacil");
+    const par4 = p4.linhas.find(l => l.id === "paridade");
+    checar("configuração que nunca ocorreu dá 0%", par4.fracao === 0,
+      `${(100*par4.fracao).toFixed(1)}%`);
+  }
+
+  /* A leitura inverte o veredito do app de referência: comum é ALERTA. */
+  checar("muito comum é sinalizado como alerta, não como ótimo",
+    contexto.lerTipicidade(0.5).rotulo === "muito comum" &&
+    contexto.lerTipicidade(0.5).cor === "var(--alerta)");
+  checar("raro é sinalizado a favor, não contra",
+    contexto.lerTipicidade(0.001).rotulo === "raro" &&
+    contexto.lerTipicidade(0.001).cor === "var(--acaso)");
+  checar("a leitura de muito comum fala em dividir com mais gente",
+    /mais gente para dividir/.test(contexto.lerTipicidade(0.5).leitura));
+  checar("a leitura de raro fala em dividir com menos gente",
+    /menos gente para dividir/.test(contexto.lerTipicidade(0.001).leitura));
+  checar("nenhuma leitura promete acerto",
+    [0.5, 0.1, 0.03, 0.001].every(f =>
+      !/chance|mais prov|melhor jogo|ganhar/i.test(contexto.lerTipicidade(f).leitura)));
+
+  /* A tipicidade global usa média geométrica: uma característica raríssima não
+     pode ser mascarada por várias comuns, porque é a rara que decide o rateio. */
+  {
+    S.resultados = [];
+    let s5 = 13;
+    const rnd = () => (s5 = (s5 * 1103515245 + 12345) % 2147483648) / 2147483648;
+    for (let i = 1; i <= 200; i++) {
+      const pool = Array.from({ length: 25 }, (_, k) => k + 1);
+      for (let k = 24; k > 0; k--) { const j = Math.floor(rnd() * (k + 1));
+        const t = pool[k]; pool[k] = pool[j]; pool[j] = t; }
+      S.resultados.push({ concurso: i, data: "2025-01-01", modalidade: "lotofacil",
+        dezenas: pool.slice(0, 15).sort((a, b) => a - b) });
+    }
+    const comum = contexto.perfilDoJogo(
+      S.resultados[100].dezenas, "lotofacil");
+    const extremo = contexto.perfilDoJogo(
+      [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15], "lotofacil");
+    checar("um jogo extremo é menos típico que um sorteio real",
+      extremo.tipicidade < comum.tipicidade,
+      `extremo ${extremo.tipicidade.toFixed(4)} vs real ${comum.tipicidade.toFixed(4)}`);
+    checar("a tipicidade fica entre 0 e 1",
+      extremo.tipicidade >= 0 && extremo.tipicidade <= 1 &&
+      comum.tipicidade >= 0 && comum.tipicidade <= 1);
+    checar("todas as medidas aparecem, e a de repetidas também",
+      comum.linhas.length >= 10 && comum.linhas.some(l => l.id === "repetidas"),
+      `${comum.linhas.length} linhas`);
+  }
+
+  /* O texto na tela precisa desmentir a leitura invertida, explicitamente. */
+  {
+    S.marcadas = { lotofacil: [1,3,5,7,9,11,13,15,17,19,21,23,25,2,4] };
+    S.tela = "montar";
+    const html3 = contexto.T.montar();
+    checar("a tela avisa sobre a leitura invertida do 'ótimo'",
+      /leitura invertida/i.test(html3) && /exatamente a mesma\s*<\/strong>?\s*chance|mesma\s+chance/i.test(html3));
+    checar("a tela diz que 'raro' é a favor do bolso",
+      /"raro" é a coluna a favor/.test(html3));
+    S.marcadas = {};
+  }
+
+  S.resultados = guardado.r; S.modalidade = guardado.m;
+}
+
 
 
 
