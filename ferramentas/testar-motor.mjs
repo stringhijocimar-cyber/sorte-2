@@ -101,6 +101,7 @@ const EXPOSTOS = [
   "calibrarPopularidade", "minimosQuadrados", "premioDoAcerto", "pesosVigentes",
   "proximoConcurso", "diasAte", "cartaoProximo", "INTERVALO_BUSCA",
   "perfilDoJogo", "lerTipicidade", "ehPrimo", "naMoldura", "medidasDoPerfil",
+  "FONTES", "normalizarEspelho", "buscarNaCaixa",
   "MINIMO_CALIBRACAO", "ATRIBUTOS_POPULARIDADE",
   "sequencias", "ciclos", "linhasEColunas", "historicoDe", "TIPOS_ESTATISTICA",
   "assinaturaHistorico", "modalidadesPendentes", "analisarPendentes", "aplicarCorrecao",
@@ -1529,6 +1530,95 @@ secao("17. Perfil do jogo");
 
   S.resultados = guardado.r; S.modalidade = guardado.m;
 }
+
+/* ==================================================================
+   18. Fontes de resultado e conversão de formatos
+   ================================================================== */
+secao("18. Fontes de resultado");
+
+{
+  checar("há mais de uma fonte, e a oficial vem primeiro",
+    contexto.FONTES.length >= 2 && contexto.FONTES[0].id === "caixa",
+    contexto.FONTES.map(f => f.id).join(" -> "));
+  checar("toda fonte tem url e conversor",
+    contexto.FONTES.every(f => typeof f.url === "function" &&
+      typeof f.converter === "function" && f.nome));
+  checar("o proxy embute a url da Caixa codificada",
+    /allorigins/.test(contexto.FONTES[2].url("megasena", null)) &&
+    /caixa\.gov\.br/.test(decodeURIComponent(contexto.FONTES[2].url("megasena", null))));
+  checar("a url oficial muda quando se pede um concurso específico",
+    contexto.FONTES[0].url("megasena", 2700).endsWith("/2700") &&
+    !contexto.FONTES[0].url("megasena", null).endsWith("/null"));
+
+  /* Formato do espelho: nomes diferentes, mesmo resultado. */
+  {
+    const bruto = {
+      concurso: 2750, data: "05/08/2026",
+      dezenas: ["04", "11", "23", "38", "45", "52"],
+      premiacoes: [
+        { faixa: 1, descricao: "6 acertos", ganhadores: 2, valorPremio: 40000000 },
+        { faixa: 2, descricao: "5 acertos", ganhadores: 55, valorPremio: 60000 }
+      ],
+      localGanhadores: [{ municipio: "Belo Horizonte", uf: "MG", ganhadores: 1 }],
+      dataProximoConcurso: "08/08/2026", valorEstimadoProximoConcurso: 55000000,
+      proximoConcurso: 2751, acumulou: false
+    };
+    const r = contexto.normalizarEspelho(bruto, "mega-sena");
+    checar("o espelho converte dezenas, data e concurso",
+      r.concurso === 2750 && r.data === "2026-08-05" &&
+      r.dezenas.join(",") === "4,11,23,38,45,52",
+      `${r.data} · ${r.dezenas.join(",")}`);
+    checar("o espelho converte o rateio",
+      r.rateio.length === 2 && r.rateio[0].ganhadores === 2 &&
+      r.rateio[0].premio === 40000000);
+    checar("o espelho converte as cidades",
+      r.cidades.length === 1 && r.cidades[0].municipio === "Belo Horizonte");
+    checar("o espelho traz o próximo concurso e a estimativa",
+      r.concursoProximo === 2751 && r.estimativaProximo === 55000000 &&
+      r.dataProximo === "2026-08-08");
+    checar("o espelho marca a origem", r.origem === "espelho");
+  }
+
+  /* Recusa em vez de completar: dezenas a menos é erro, não resultado parcial. */
+  {
+    let recusou = false, msg = "";
+    try { contexto.normalizarEspelho({ concurso: 1, dezenas: ["1","2","3"] }, "mega-sena"); }
+    catch (e) { recusou = true; msg = e.message; }
+    checar("o espelho recusa resposta com dezenas faltando", recusou, msg);
+
+    let recusou2 = false;
+    try { contexto.normalizarEspelho(
+      { dezenas: ["1","2","3","4","5","6"] }, "mega-sena"); }
+    catch (e) { recusou2 = true; }
+    checar("o espelho recusa resposta sem número de concurso", recusou2);
+  }
+
+  /* Sem rede, a cadeia tenta todas e o erro nomeia cada uma. O fetch do arnês
+     rejeita de propósito — é o mesmo caminho do "Failed to fetch" real. */
+  await (async () => {
+    let erro = null;
+    try { await contexto.buscarNaCaixa("mega-sena", null); }
+    catch (e) { erro = e; }
+    checar("sem rede, a cadeia falha depois de tentar todas", !!erro && erro.todasFalharam);
+    checar("o erro nomeia cada fonte tentada",
+      contexto.FONTES.every(f => erro.message.includes(f.nome)),
+      erro.message.slice(0, 110));
+    checar("o erro não é só 'Failed to fetch' sem contexto",
+      erro.message.length > 40);
+  })();
+
+  /* A função é async, então o try/catch síncrono não pega nada — a primeira
+     versão deste teste tinha um `|| true` no fim e passava sempre, que é pior
+     que não existir. Com await, ele testa de verdade. */
+  await (async () => {
+    let msg = "";
+    try { await contexto.buscarNaCaixa("inexistente", null); }
+    catch (e) { msg = e.message; }
+    checar("modalidade sem serviço conhecido falha sem tentar rede",
+      /sem serviço público/.test(msg), msg);
+  })();
+}
+
 
 
 
