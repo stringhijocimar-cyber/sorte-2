@@ -78,7 +78,7 @@ const EXPOSTOS = [
   "dataBrParaIso", "SLUG_CAIXA",
   "auc", "logLoss", "sigmoide", "treinarLogistica", "permutarAuc",
   "atributosDezena", "dadosAprendizado", "aprender", "vereditoAprendizado",
-  "MINIMO_CONCURSOS", "NOMES_ATRIBUTOS",
+  "MINIMO_CONCURSOS", "NOMES_ATRIBUTOS", "blocoDaModalidade",
 ];
 const epilogo = `\n;globalThis.__motor = {${EXPOSTOS.map((n) => `${n}: typeof ${n} !== "undefined" ? ${n} : undefined`).join(", ")}};\n`;
 vm.runInContext(fonte + epilogo, contexto, { filename: "index.html:script" });
@@ -697,6 +697,76 @@ checar("tela de aprendizado renderiza", typeof contexto.T.aprendizado() === "str
   contexto.T.aprendizado().length > 200);
 checar("aba aprendizado registrada",
   contexto.SECOES.some(s => s.telas.some(t => t.id === "aprendizado")));
+
+/* ==================================================================
+   10. Placar separado por modalidade
+   ================================================================== */
+secao("10. Placar — cada loteria com o seu próprio placar");
+
+{
+  const original = { jogos: motor.S.jogos, teim: motor.S.teimosinhas };
+  /* Mega-Sena e Lotofácil juntas. O acaso espera 0,6 acerto numa e 9,0 na
+     outra: se o placar somasse as duas, a média sairia perto de 4,8 e não
+     descreveria nem uma nem outra. */
+  motor.S.jogos = [
+    { id: "a", modalidade: "mega-sena", dezenas: [1,2,3,4,5,6], metodo: "uniforme",
+      data: "2025-01-01", lote: "L1",
+      conferencias: [{ concurso: 10, data: "2025-01-02", dezenas: [1,2,7,8,9,10], acertos: 2 }] },
+    { id: "b", modalidade: "lotofacil",
+      dezenas: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15], metodo: "uniforme",
+      data: "2025-01-01", lote: "L2",
+      conferencias: [{ concurso: 20, data: "2025-01-02",
+        dezenas: [1,2,3,4,5,6,7,8,9,10,11,12,13,16,17], acertos: 13 }] },
+  ];
+  motor.S.teimosinhas = [];
+
+  const tela = contexto.T.placar();
+  checar("o placar nomeia as duas modalidades",
+    /Mega-Sena/.test(tela) && /Lotofácil/.test(tela));
+  checar("avisa que cada loteria tem o seu placar",
+    /Cada loteria tem o seu placar/.test(tela));
+  checar("a média conjunta 7,5 NÃO aparece — seria a soma indevida",
+    !/7,500/.test(tela), "média de (2+13)/2 não pode existir na tela");
+
+  /* Cada bloco compara contra o esperado da SUA modalidade. */
+  const mega = contexto.blocoDaModalidade("mega-sena", [
+    { concurso: 10, acertos: 2, tamanho: 6, metodo: "uniforme" }]);
+  const facil = contexto.blocoDaModalidade("lotofacil", [
+    { concurso: 20, acertos: 13, tamanho: 15, metodo: "uniforme" }]);
+  const esperadoMega = contexto.esperadoAcertos("mega-sena", 6);
+  const esperadoFacil = contexto.esperadoAcertos("lotofacil", 15);
+  checar("Mega-Sena compara contra o acaso da Mega-Sena",
+    mega.includes(esperadoMega.toLocaleString("pt-BR",
+      { minimumFractionDigits: 3, maximumFractionDigits: 3 })),
+    `esperado ${esperadoMega.toFixed(3)}`);
+  checar("Lotofácil compara contra o acaso da Lotofácil",
+    facil.includes(esperadoFacil.toLocaleString("pt-BR",
+      { minimumFractionDigits: 3, maximumFractionDigits: 3 })),
+    `esperado ${esperadoFacil.toFixed(3)}`);
+  checar("os dois esperados são mesmo diferentes (senão o teste não prova nada)",
+    Math.abs(esperadoMega - esperadoFacil) > 1,
+    `${esperadoMega.toFixed(2)} vs ${esperadoFacil.toFixed(2)}`);
+
+  /* 13 de 15 na Lotofácil é faixa de prêmio; 2 de 6 na Mega não é. */
+  checar("conta faixa de prêmio pela regra da modalidade certa",
+    /em faixa de pr/i.test(facil) && facil.includes(">1<"),
+    "Lotofácil com 13 acertos premia");
+
+  /* O dinheiro continua somado, porque real é real. */
+  checar("o gasto somado aparece uma vez só",
+    (tela.match(/gasto somado/g) || []).length === 1);
+
+  /* Com uma modalidade só, o aviso de separação não faz sentido e some. */
+  motor.S.jogos = [motor.S.jogos[0]];
+  checar("com uma modalidade só, o app não explica separação à toa",
+    !/Cada loteria tem o seu placar/.test(contexto.T.placar()));
+
+  motor.S.jogos = []; motor.S.teimosinhas = [];
+  checar("sem conferência, o placar convida em vez de mostrar zero",
+    /Nenhuma conferência ainda/.test(contexto.T.placar()));
+
+  motor.S.jogos = original.jogos; motor.S.teimosinhas = original.teim;
+}
 
 /* ---------- saída ---------- */
 console.log(linhas.join("\n"));
