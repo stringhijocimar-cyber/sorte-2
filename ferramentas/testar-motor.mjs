@@ -101,7 +101,8 @@ const EXPOSTOS = [
   "calibrarPopularidade", "minimosQuadrados", "premioDoAcerto", "pesosVigentes",
   "proximoConcurso", "diasAte", "cartaoProximo", "INTERVALO_BUSCA",
   "perfilDoJogo", "lerTipicidade", "ehPrimo", "naMoldura", "medidasDoPerfil",
-  "FONTES", "normalizarEspelho", "buscarNaCaixa",
+  "FONTES", "normalizarEspelho", "buscarNaCaixa", "normalizarRepositorio",
+  "baixarHistoricoDoRepositorio", "REPO_DADOS",
   "MINIMO_CALIBRACAO", "ATRIBUTOS_POPULARIDADE",
   "sequencias", "ciclos", "linhasEColunas", "historicoDe", "TIPOS_ESTATISTICA",
   "assinaturaHistorico", "modalidadesPendentes", "analisarPendentes", "aplicarCorrecao",
@@ -1537,18 +1538,62 @@ secao("17. Perfil do jogo");
 secao("18. Fontes de resultado");
 
 {
-  checar("há mais de uma fonte, e a oficial vem primeiro",
-    contexto.FONTES.length >= 2 && contexto.FONTES[0].id === "caixa",
+  /* Buscar por id, e não por posição: indexar por número quebrou este teste
+     quando a fonte do repositório entrou na frente, e o teste apontava para a
+     fonte errada em vez de acusar o que importava. */
+  const fonte = id => contexto.FONTES.find(f => f.id === id);
+
+  checar("o repositório é a primeira fonte tentada",
+    contexto.FONTES[0].id === "repositorio",
     contexto.FONTES.map(f => f.id).join(" -> "));
+  checar("as fontes de rede continuam como reserva",
+    ["caixa", "espelho-guidi", "proxy"].every(id => !!fonte(id)));
   checar("toda fonte tem url e conversor",
     contexto.FONTES.every(f => typeof f.url === "function" &&
       typeof f.converter === "function" && f.nome));
+  checar("a url do repositório aponta para raw.githubusercontent",
+    /raw\.githubusercontent\.com/.test(fonte("repositorio").url("megasena", null, "mega-sena")) &&
+    /mega-sena\.json$/.test(fonte("repositorio").url("megasena", null, "mega-sena")),
+    fonte("repositorio").url("megasena", null, "mega-sena"));
   checar("o proxy embute a url da Caixa codificada",
-    /allorigins/.test(contexto.FONTES[2].url("megasena", null)) &&
-    /caixa\.gov\.br/.test(decodeURIComponent(contexto.FONTES[2].url("megasena", null))));
+    /allorigins/.test(fonte("proxy").url("megasena", null)) &&
+    /caixa\.gov\.br/.test(decodeURIComponent(fonte("proxy").url("megasena", null))));
   checar("a url oficial muda quando se pede um concurso específico",
-    contexto.FONTES[0].url("megasena", 2700).endsWith("/2700") &&
-    !contexto.FONTES[0].url("megasena", null).endsWith("/null"));
+    fonte("caixa").url("megasena", 2700).endsWith("/2700") &&
+    !fonte("caixa").url("megasena", null).endsWith("/null"));
+
+  /* Conversor do arquivo do repositório. */
+  {
+    const arquivo = { modalidade: "mega-sena", total: 2, concursos: [
+      { concurso: 100, data: "2025-01-01", dezenas: [1,2,3,4,5,6] },
+      { concurso: 101, data: "2025-01-04", dezenas: [7,8,9,10,11,12],
+        rateio: [{faixa:1, ganhadores:0, premio:0}] }
+    ]};
+    const ultimo = contexto.normalizarRepositorio(arquivo, "mega-sena", null);
+    checar("sem concurso pedido, o repositório devolve o mais recente",
+      ultimo.concurso === 101 && ultimo.origem === "repositorio");
+    const especifico = contexto.normalizarRepositorio(arquivo, "mega-sena", 100);
+    checar("com concurso pedido, devolve o certo", especifico.concurso === 100);
+
+    let faltou = "";
+    try { contexto.normalizarRepositorio(arquivo, "mega-sena", 999); }
+    catch (e) { faltou = e.message; }
+    checar("concurso ausente do arquivo é erro, não silêncio",
+      /ainda não está no arquivo/.test(faltou), faltou);
+
+    let vazio = "";
+    try { contexto.normalizarRepositorio({ concursos: [] }, "mega-sena", null); }
+    catch (e) { vazio = e.message; }
+    checar("arquivo vazio é recusado", /vazio/.test(vazio), vazio);
+
+    let curto = "";
+    try { contexto.normalizarRepositorio(
+      { concursos: [{ concurso: 1, dezenas: [1,2,3] }] }, "mega-sena", null); }
+    catch (e) { curto = e.message; }
+    checar("concurso com dezenas faltando é recusado",
+      /3 dezenas, esperava 6/.test(curto), curto);
+  }
+
 
   /* Formato do espelho: nomes diferentes, mesmo resultado. */
   {

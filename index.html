@@ -1525,6 +1525,16 @@ const INTERVALO_BUSCA = 12 * 60 * 60 * 1000;
    melhor que devolver nada: um histórico de 400 concursos ainda calibra e
    ainda faz estatística, e a tela informa quantos vieram. */
 async function buscarHistorico(modalidade, quantos, aoProgresso){
+  /* Primeiro o arquivo do repositório: uma requisição traz o histórico
+     inteiro. Só se ele falhar é que se cai no laço concurso a concurso, que
+     custa centenas de requisições para o mesmo resultado. */
+  try{
+    const tudo = await baixarHistoricoDoRepositorio(modalidade);
+    if(aoProgresso) aoProgresso(tudo.length, tudo.length,
+      tudo[tudo.length-1].concurso);
+    return tudo;
+  }catch(e){ /* segue para o caminho lento */ }
+
   const ultimo = await buscarNaCaixa(modalidade, null);
   const lote = [ultimo];
   if(aoProgresso) aoProgresso(1, quantos, ultimo.concurso);
@@ -2374,7 +2384,68 @@ function normalizarEspelho(bruto, modalidade){
    NENHUMA destas foi testada por mim: a rede onde este código foi escrito
    bloqueia todos esses domínios. O que está testado é a conversão de cada
    formato, contra respostas controladas. */
+/* O repositório do próprio app, servido por raw.githubusercontent.com.
+   Vem PRIMEIRO, e é a mudança de arquitetura que faz a busca deixar de
+   depender da sorte:
+
+   * CORS liberado — o navegador não bloqueia, ao contrário do serviço da
+     Caixa, que é a causa do "Failed to fetch";
+   * CDN do GitHub — disponibilidade muito maior que a de um espelho mantido
+     por voluntário, que é o que sai do ar;
+   * um arquivo por modalidade, com o histórico INTEIRO — uma requisição traz
+     tudo, em vez de uma por concurso.
+
+   Quem mantém o arquivo é um GitHub Action que roda duas vezes por dia
+   (.github/workflows/resultados.yml). O runner é um servidor: lá não existe
+   CORS nem bloqueio de origem. Foi buscar no lugar errado — do aparelho, num
+   serviço que não autoriza navegador — que quebrava tudo.
+
+   As fontes seguintes continuam existindo como rede de segurança para o caso
+   de o arquivo estar atrasado. */
+const REPO_DADOS =
+  "https://raw.githubusercontent.com/stringhijocimar-cyber/sorte-2/main/dados";
+
+/* Converte o arquivo do repositório. Ele já vem no formato do app — foi
+   gravado pelo mesmo conversor —, então aqui só se escolhe o concurso e se
+   valida o que chegou. */
+function normalizarRepositorio(bruto, modalidade, concurso){
+  const c = MODALIDADES[modalidade];
+  const lista = (bruto && bruto.concursos) || [];
+  if(!lista.length) throw new Error("o arquivo do repositório está vazio");
+  const achado = concurso
+    ? lista.find(x => x.concurso === concurso)
+    : lista[lista.length - 1];
+  if(!achado) throw new Error(`concurso ${concurso} ainda não está no arquivo`);
+  if(!Array.isArray(achado.dezenas) || achado.dezenas.length !== c.k)
+    throw new Error(`o arquivo trouxe ${(achado.dezenas||[]).length} dezenas, esperava ${c.k}`);
+  return Object.assign({}, achado, {modalidade, origem:"repositorio"});
+}
+
+/* Baixa o histórico inteiro de uma vez. É o que torna desnecessário pedir
+   concurso a concurso — e o que faz o app ter estatística de verdade logo na
+   primeira abertura, em vez de depois de alguém colar planilha. */
+async function baixarHistoricoDoRepositorio(modalidade){
+  const resp = await fetch(`${REPO_DADOS}/${modalidade}.json`,
+    {cache:"no-cache", headers:{Accept:"application/json"}});
+  if(!resp.ok) throw new Error(`o repositório respondeu ${resp.status}`);
+  const bruto = await resp.json();
+  const c = MODALIDADES[modalidade];
+  const lista = (bruto && bruto.concursos) || [];
+  const validos = lista.filter(x =>
+    Array.isArray(x.dezenas) && x.dezenas.length === c.k &&
+    Number.isFinite(x.concurso));
+  if(!validos.length) throw new Error("nenhum concurso válido no arquivo");
+  return validos.map(x => Object.assign({}, x, {modalidade, origem:"repositorio"}));
+}
+
 const FONTES = [
+  {
+    id: "repositorio",
+    nome: "repositório do app",
+    url: (slug, concurso, modalidade) => `${REPO_DADOS}/${modalidade}.json`,
+    converter: (json, modalidade, concurso) =>
+      normalizarRepositorio(json, modalidade, concurso)
+  },
   {
     id: "caixa",
     nome: "Caixa (oficial)",
@@ -2420,10 +2491,10 @@ async function buscarNaCaixa(modalidade, concurso){
   const falhas = [];
   for(const fonte of ordem){
     try{
-      const resp = await fetch(fonte.url(slug, concurso),
+      const resp = await fetch(fonte.url(slug, concurso, modalidade),
         {cache:"no-cache", headers:{Accept:"application/json"}});
       if(!resp.ok) throw new Error(`respondeu ${resp.status}`);
-      const r = fonte.converter(await resp.json(), modalidade);
+      const r = fonte.converter(await resp.json(), modalidade, concurso);
       r.fonte = fonte.id;
       FONTE_PREFERIDA = fonte.id;
       return r;
