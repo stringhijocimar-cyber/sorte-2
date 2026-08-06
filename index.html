@@ -221,6 +221,35 @@ nav button svg{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width
   stroke-linecap:round;stroke-linejoin:round;transition:stroke-width .18s ease}
 nav button[aria-current="page"] svg{stroke-width:2.2}
 
+
+/* ---------- cartão do próximo concurso ------------------------------------
+   A primeira coisa que se vê ao abrir. Fundo de tinta naval em vez de carta
+   branca porque ele é o único bloco que não é conteúdo de trabalho: é o
+   contexto de tudo o que vem abaixo, e precisa se distinguir sem gritar.
+   Nada de dourado, nada de brilho — o valor é grande por si só.            */
+.proximo{position:relative;overflow:hidden;border-radius:var(--r);
+  background:linear-gradient(150deg,var(--tinta) 0%,
+    color-mix(in srgb,var(--tinta) 82%,var(--acaso)) 100%);
+  color:var(--carta);padding:15px 16px;margin-bottom:var(--e3);
+  box-shadow:var(--sombra-alta)}
+.proximo::after{content:"";position:absolute;right:-28px;top:-28px;width:130px;
+  height:130px;border-radius:50%;
+  background:radial-gradient(circle,color-mix(in srgb,var(--acaso) 34%,transparent) 0%,
+    transparent 70%);pointer-events:none}
+.proximo .rot{font-family:var(--mono);font-size:.6rem;text-transform:uppercase;
+  letter-spacing:.14em;opacity:.72}
+.proximo .valor{font-family:var(--mono);font-size:1.75rem;font-weight:650;
+  letter-spacing:-.03em;margin:3px 0 1px;line-height:1.15}
+.proximo .quando{font-size:.82rem;opacity:.82}
+.proximo .selo-acumulou{display:inline-block;font-family:var(--mono);font-size:.58rem;
+  letter-spacing:.1em;text-transform:uppercase;padding:2px 8px;border-radius:20px;
+  border:1px solid color-mix(in srgb,var(--carta) 45%,transparent);margin-top:8px}
+.proximo .contagem{position:absolute;right:16px;top:15px;text-align:right}
+.proximo .contagem b{display:block;font-family:var(--mono);font-size:1.6rem;
+  font-weight:650;line-height:1}
+.proximo .contagem span{font-size:.6rem;text-transform:uppercase;letter-spacing:.1em;
+  opacity:.72}
+
 /* ---------- blocos ---------- */
 .carta{background:var(--carta);border:1px solid var(--linha);border-radius:var(--r);
   padding:15px;box-shadow:var(--sombra);margin-bottom:12px}
@@ -451,7 +480,7 @@ const S = {
      modalidade e voltar não apagar o que a pessoa já tinha marcado. */
   marcadas:{}, avisos:[], teimosinhas:[], aprendizado:{}, jogoAberto:null,
   autoAnalise:true, tipoEstatistica:"dezenas", ordemEstatistica:"vezes",
-  calibracao:{}
+  calibracao:{}, buscaAutomatica:true, ultimaBusca:{}
 };
 
 /* Persistência tolerante: se o navegador bloquear, o app segue funcionando
@@ -1345,6 +1374,98 @@ T.entender = () => `<div class="prosa">
 
 
 
+
+/* ==================== busca de histórico e busca diária ====================
+   Não pude testar a chamada real: a rede onde este código foi escrito bloqueia
+   o domínio da Caixa. O que está testado é o processamento da resposta, contra
+   respostas controladas. Se o formato do serviço mudar, a tela mostra o erro em
+   vez de inventar resultado — e a importação por colagem, que não depende de
+   rede, continua sendo o caminho garantido. */
+
+//: Intervalo mínimo entre buscas automáticas. Sorteios acontecem no máximo uma
+//: vez por dia por modalidade; buscar de hora em hora só gastaria bateria e
+//: bateria alheia.
+const INTERVALO_BUSCA = 12 * 60 * 60 * 1000;
+
+/* Busca do fim para trás, parando no primeiro erro. Devolver o que já veio é
+   melhor que devolver nada: um histórico de 400 concursos ainda calibra e
+   ainda faz estatística, e a tela informa quantos vieram. */
+async function buscarHistorico(modalidade, quantos, aoProgresso){
+  const ultimo = await buscarNaCaixa(modalidade, null);
+  const lote = [ultimo];
+  if(aoProgresso) aoProgresso(1, quantos, ultimo.concurso);
+  for(let i = 1; i < quantos; i++){
+    const n = ultimo.concurso - i;
+    if(n < 1) break;
+    try{
+      lote.push(await buscarNaCaixa(modalidade, n));
+      if(aoProgresso) aoProgresso(lote.length, quantos, n);
+    }catch(e){ break; }
+  }
+  return lote;
+}
+
+/* O que o app sabe sobre o próximo concurso, a partir do último resultado
+   guardado. Vem do próprio serviço da Caixa, junto do resultado. */
+function proximoConcurso(modalidade){
+  const hist = historicoDe(modalidade);
+  for(let i = hist.length - 1; i >= 0; i--){
+    const r = hist[i];
+    if(r.dataProximo || r.estimativaProximo){
+      return {
+        concurso: r.concursoProximo || (r.concurso + 1),
+        data: r.dataProximo || null,
+        estimativa: r.estimativaProximo || null,
+        acumulou: r.acumulou === true,
+        base: r.concurso
+      };
+    }
+  }
+  return null;
+}
+
+/* Dias até uma data ISO. Compara só a parte da data para não errar por fuso —
+   um sorteio "hoje à noite" não pode aparecer como "faltam 0,7 dias". */
+function diasAte(iso){
+  if(!iso) return null;
+  const hoje2 = new Date(hoje() + "T00:00:00");
+  const alvo = new Date(String(iso).slice(0,10) + "T00:00:00");
+  if(isNaN(alvo)) return null;
+  return Math.round((alvo - hoje2) / 86400000);
+}
+
+/* Busca diária: roda na abertura, uma vez por modalidade que já tem histórico.
+   Só o último concurso — quem quer o histórico inteiro pede explicitamente. */
+async function buscaDiaria(){
+  if(S.buscaAutomatica === false) return {tentadas:0, novos:0};
+  const agora = Date.now();
+  const marcas = S.ultimaBusca || {};
+  const alvos = Object.keys(MODALIDADES).filter(k =>
+    SLUG_CAIXA[k] &&
+    historicoDe(k).length > 0 &&
+    agora - (marcas[k] || 0) > INTERVALO_BUSCA);
+  if(!alvos.length) return {tentadas:0, novos:0};
+
+  let novos = 0, falhas = 0;
+  for(const k of alvos){
+    try{
+      const r = await buscarNaCaixa(k, null);
+      novos += guardarResultados([r]);
+      marcas[k] = agora;
+    }catch(e){ falhas++; }
+  }
+  S.ultimaBusca = marcas;
+  Guardar.gravar("ultimaBusca", marcas);
+  if(novos) aoMudarHistorico(novos, "busca diária");
+  else if(falhas === alvos.length && alvos.length)
+    /* Falhar em todas é sinal de rede ausente ou serviço fora, e não vale um
+       aviso — o app funciona sem. Falha parcial também não, pelo mesmo motivo.
+       O silêncio aqui é deliberado: avisar "não consegui buscar" toda vez que o
+       celular está sem sinal treinaria a pessoa a ignorar o sino. */
+    void 0;
+  return {tentadas:alvos.length, novos, falhas};
+}
+
 /* ==================== calibração de popularidade ====================
    Esta é a única coisa neste app que de fato MELHORA com mais dados. Vale
    explicar por quê, porque a diferença é a linha entre método e promessa.
@@ -1668,6 +1789,30 @@ function linhasEColunas(modalidade){
       esperado: total * dezenasNaColuna / c.N, tamanho: dezenasNaColuna});
   }
   return {porLinha, porColuna, total, cols};
+}
+
+
+/* Cartão do próximo concurso. Devolve string vazia quando não há informação —
+   um cartão dizendo "não sei quando é o próximo sorteio" ocuparia o lugar mais
+   nobre da tela para não informar nada. */
+function cartaoProximo(modalidade){
+  const p = proximoConcurso(modalidade);
+  if(!p) return "";
+  const c = MODALIDADES[modalidade];
+  const dias = diasAte(p.data);
+  const quando = dias === null ? "" :
+    dias < 0 ? "resultado deve ter saído" :
+    dias === 0 ? "hoje" : dias === 1 ? "amanhã" : `em ${dias} dias`;
+  return `<div class="proximo">
+    ${dias === null || dias < 0 ? "" : `<div class="contagem">
+      <b>${dias}</b><span>${dias === 1 ? "dia" : "dias"}</span></div>`}
+    <div class="rot">${esc(c.nome)} · concurso ${esc(p.concurso)}</div>
+    <div class="valor">${p.estimativa ? brl(p.estimativa) : "prêmio não informado"}</div>
+    <div class="quando">${p.data ? esc(new Date(p.data + "T12:00:00")
+      .toLocaleDateString("pt-BR", {weekday:"long", day:"2-digit", month:"long"}))
+      : "data não informada"}${quando ? ` · ${quando}` : ""}</div>
+    ${p.acumulou ? `<span class="selo-acumulou">acumulou</span>` : ""}
+  </div>`;
 }
 
 /* ==================== a cartela ====================
@@ -2848,7 +2993,17 @@ T.resultados = () => {
     <div class="botoes" style="margin:10px 0">
       <button class="acao mini" id="r-caixa" ${temServico?"":"disabled"}>buscar último na Caixa</button>
       <button class="acao contorno mini" id="r-varios" ${temServico?"":"disabled"}>buscar os 20 últimos</button>
+      <button class="acao contorno mini" id="r-tudo" ${temServico?"":"disabled"}>histórico completo</button>
     </div>
+    <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;
+      border:1px solid var(--linha);border-radius:12px;margin-bottom:10px;cursor:pointer">
+      <input type="checkbox" id="r-auto" ${S.buscaAutomatica!==false?"checked":""}
+        style="width:20px;height:20px;flex:none;accent-color:var(--acaso)">
+      <span style="flex:1;font-size:.86rem"><b>Buscar o último concurso sozinho</b>
+        <span style="display:block;font-size:.76rem;color:var(--secundaria)">
+          Uma vez a cada 12 horas, ao abrir o app, só nas modalidades que você já
+          acompanha. Falha em silêncio quando não há sinal.</span></span>
+    </label>
     <div class="nota atencao"><strong>A busca online não pôde ser testada por mim.</strong>
       O ambiente onde este código foi escrito bloqueia o domínio da Caixa, então a via
       online segue o formato publicado pelo portal mas não foi verificada contra ele.
@@ -3042,6 +3197,40 @@ function acoesNovas(){
   };
   if($("#r-caixa")) $("#r-caixa").onclick = () => buscar(1);
   if($("#r-varios")) $("#r-varios").onclick = () => buscar(20);
+
+  const tudo = $("#r-tudo");
+  if(tudo) tudo.onclick = async () => {
+    const saida = $("#r-saida");
+    tudo.disabled = true;
+    /* Teto de 1200 concursos por vez. Sem teto, a Lotofácil pediria mais de
+       três mil requisições de uma vez — o serviço recusaria no meio e a pessoa
+       ficaria olhando uma barra parada. Com teto, ela roda de novo e continua. */
+    const TETO = 1200;
+    try{
+      const lote = await buscarHistorico(S.modalidade, TETO, (feitos, alvo, n) => {
+        saida.innerHTML = `<div class="nota"><span class="girando"></span>
+          ${feitos} concursos recebidos… (buscando o ${n})</div>`;
+      });
+      const novos = guardarResultados(lote);
+      const r = aoMudarHistorico(novos, "histórico completo");
+      saida.innerHTML = `<div class="nota"><strong>${lote.length} concursos recebidos</strong>,
+        ${novos} novo${novos===1?"":"s"}. ${r.novas} conferência${r.novas===1?"":"s"}
+        automática${r.novas===1?"":"s"}.${lote.length >= TETO
+          ? " O teto de " + TETO + " foi atingido — rode de novo para continuar de onde parou."
+          : ""}</div>`;
+      setTimeout(pintar, 1200);
+    }catch(e){
+      saida.innerHTML = `<div class="nota atencao">A busca falhou: ${esc(e.message)}.
+        Use a colagem abaixo — ela não depende de rede.</div>`;
+      tudo.disabled = false;
+    }
+  };
+
+  const rauto = $("#r-auto");
+  if(rauto) rauto.onchange = e => {
+    S.buscaAutomatica = e.target.checked;
+    Guardar.gravar("buscaAutomatica", S.buscaAutomatica);
+  };
 
   /* --- teimosinha --- */
   const criar = $("#t-criar");
@@ -3408,8 +3597,13 @@ function pintar(){
     `<div class="segmento" role="tablist">${sec.telas.map(t=>
       `<button role="tab" data-tela="${t.id}" aria-selected="${t.id===tela.id}">
         ${esc(t.nome)}</button>`).join("")}</div>`;
+  /* O cartão do próximo concurso só aparece onde é contexto para a ação: ao
+     montar jogo, ao olhar os jogos e ao conferir. Em Estatísticas ou Entender
+     ele seria enfeite roubando o topo da tela. */
+  const comProximo = ["gerar","montar","jogos","teimosinha","conferir","resultados"];
   $("#tela").innerHTML = segmento +
     `<div class="titulo"><h1>${esc(tela.titulo)}</h1><p>${esc(tela.sub)}</p></div>` +
+    (comProximo.includes(tela.id) ? cartaoProximo(S.modalidade) : "") +
     T[tela.id]() +
     `<div class="aviso-fixo">Nenhum método aumenta a chance de acertar.<br>
      Loteria é gasto de entretenimento, não investimento.</div>`;
@@ -3441,6 +3635,8 @@ async function carregarCalibracao(){
   S.aprendizado = Guardar.ler("aprendizado", {});
   S.autoAnalise = Guardar.ler("autoAnalise", true);
   S.calibracao = Guardar.ler("calibracao", {});
+  S.buscaAutomatica = Guardar.ler("buscaAutomatica", true);
+  S.ultimaBusca = Guardar.ler("ultimaBusca", {});
   S.modalidade = Guardar.ler("modalidade", S.modalidade);
   document.documentElement.dataset.tema = S.tema;
   /* Conferir na abertura: quem digitou um resultado e fechou o app antes de
@@ -3452,6 +3648,10 @@ async function carregarCalibracao(){
      app no meio de uma análise nunca a veria terminar. Roda depois do pintar()
      para a tela aparecer primeiro; o processamento é fatiado e não trava. */
   if(S.autoAnalise !== false) analisarPendentes();
+  /* Busca diária em segundo plano. Não bloqueia a abertura e não avisa quando
+     falha: sem sinal é o caso comum, e um aviso a cada abertura offline
+     treinaria a pessoa a ignorar o sino. */
+  buscaDiaria().then(r => { if(r.novos) pintar(); }).catch(()=>{});
 
   /* Sino e folha de avisos. Ficam fora de pintar() porque vivem no cabeçalho,
      que não é redesenhado a cada troca de tela. */

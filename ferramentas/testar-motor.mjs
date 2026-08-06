@@ -99,6 +99,7 @@ const EXPOSTOS = [
   "fibonacciAte", "observacoes", "PESOS", "referencia",
   "porDezena", "contagemPorConcurso", "repeticoesAnterior", "somaDasDezenas",
   "calibrarPopularidade", "minimosQuadrados", "premioDoAcerto", "pesosVigentes",
+  "proximoConcurso", "diasAte", "cartaoProximo", "INTERVALO_BUSCA",
   "MINIMO_CALIBRACAO", "ATRIBUTOS_POPULARIDADE",
   "sequencias", "ciclos", "linhasEColunas", "historicoDe", "TIPOS_ESTATISTICA",
   "assinaturaHistorico", "modalidadesPendentes", "analisarPendentes", "aplicarCorrecao",
@@ -1356,6 +1357,69 @@ secao("15. Calibração pelos ganhadores");
 
   S.resultados = guardado.r; S.calibracao = guardado.c; S.modalidade = guardado.m;
 }
+
+/* ==================================================================
+   16. Próximo concurso e busca
+   ================================================================== */
+secao("16. Próximo concurso");
+
+{
+  const S = motor.S;
+  const guardado = { r: S.resultados, m: S.modalidade };
+  S.modalidade = "mega-sena";
+
+  checar("dias até hoje é 0", contexto.diasAte(new Date().toISOString().slice(0,10)) === 0);
+  checar("data inválida devolve null", contexto.diasAte("banana") === null);
+  checar("sem data devolve null", contexto.diasAte(null) === null);
+  {
+    /* Fuso: um sorteio "amanhã" não pode virar 0 nem 2 por causa de hora. */
+    const amanha = new Date(Date.now() + 86400000).toISOString().slice(0,10);
+    checar("amanhã é exatamente 1 dia, independentemente da hora",
+      contexto.diasAte(amanha) === 1, `${contexto.diasAte(amanha)}`);
+    checar("data com hora junto não confunde a conta",
+      contexto.diasAte(amanha + "T23:59:00") === 1);
+  }
+
+  /* Sem informação do próximo, não se inventa cartão. */
+  S.resultados = [{ concurso: 1, data: "2025-01-01", modalidade: "mega-sena",
+    dezenas: [1,2,3,4,5,6] }];
+  checar("sem dados do próximo concurso, não há cartão",
+    contexto.proximoConcurso("mega-sena") === null &&
+    contexto.cartaoProximo("mega-sena") === "");
+
+  /* Com informação, o cartão mostra valor e data. */
+  const daquiA3 = new Date(Date.now() + 3 * 86400000).toISOString().slice(0,10);
+  S.resultados = [{ concurso: 100, data: "2025-01-01", modalidade: "mega-sena",
+    dezenas: [1,2,3,4,5,6], dataProximo: daquiA3, estimativaProximo: 75000000,
+    concursoProximo: 101, acumulou: true }];
+  const p2 = contexto.proximoConcurso("mega-sena");
+  checar("o próximo concurso é lido do último resultado",
+    p2.concurso === 101 && p2.estimativa === 75000000 && p2.acumulou === true);
+  const cartao = contexto.cartaoProximo("mega-sena");
+  checar("o cartão mostra a estimativa formatada em reais",
+    /75\.000\.000/.test(cartao), cartao.slice(0, 80));
+  checar("o cartão conta os dias que faltam", /<b>3<\/b>/.test(cartao));
+  checar("o cartão marca que acumulou", /acumulou/.test(cartao));
+
+  /* Sem número do próximo, deduz do atual — e não some. */
+  S.resultados = [{ concurso: 100, data: "2025-01-01", modalidade: "mega-sena",
+    dezenas: [1,2,3,4,5,6], estimativaProximo: 1000 }];
+  checar("sem numeroConcursoProximo, deduz concurso + 1",
+    contexto.proximoConcurso("mega-sena").concurso === 101);
+
+  /* Concurso já sorteado não vira contagem regressiva negativa na tela. */
+  S.resultados = [{ concurso: 100, data: "2025-01-01", modalidade: "mega-sena",
+    dezenas: [1,2,3,4,5,6], dataProximo: "2020-01-01", estimativaProximo: 1000 }];
+  const antigo = contexto.cartaoProximo("mega-sena");
+  checar("data no passado não mostra contagem regressiva",
+    !/class="contagem"/.test(antigo) && /deve ter saído/.test(antigo));
+
+  checar("o intervalo entre buscas automáticas é de 12 horas",
+    contexto.INTERVALO_BUSCA === 12 * 60 * 60 * 1000);
+
+  S.resultados = guardado.r; S.modalidade = guardado.m;
+}
+
 
 
 
