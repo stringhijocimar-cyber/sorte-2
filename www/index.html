@@ -1070,56 +1070,118 @@ T.conferir = () => {
       <td>${r.dezenas.map(pad).join(" ")}</td></tr>`).join("")}</tbody></table></div>` : ""}`;
 };
 
-T.placar = () => {
-  const conf = [];
-  S.jogos.forEach(j => (j.conferencias||[]).forEach(cf =>
-    conf.push({...cf, modalidade:j.modalidade, tamanho:j.dezenas.length, metodo:j.metodo})));
-  if(!conf.length) return `<div class="vazio">Nenhuma conferência ainda.<br>
-    Salve jogos, confira contra os concursos e o placar aparece aqui.</div>`;
+/* O placar é POR MODALIDADE, e isso não é preferência de layout.
 
+   A versão anterior somava os acertos de todas as loterias e tirava uma média.
+   O número saía bonito e não significava nada: o acaso espera 0,6 acerto na
+   Mega-Sena e 9,0 na Lotofácil, então a média conjunta mede principalmente
+   qual mistura de modalidades a pessoa jogou — não o desempenho dela. Somar
+   grandezas com esperanças diferentes é o mesmo erro de somar temperaturas em
+   Celsius e Fahrenheit.
+
+   O que continua junto é o dinheiro, porque real é real em qualquer
+   modalidade, e o total gasto é a informação que mais importa para quem joga.
+
+   Por método, a comparação vive DENTRO de cada modalidade pela mesma razão. */
+function blocoDaModalidade(codigo, conf){
+  const c = MODALIDADES[codigo];
   const total = conf.length;
-  const somaAcertos = conf.reduce((a,b)=>a+b.acertos,0);
-  const media = somaAcertos/total;
-  const esperado = conf.reduce((a,b)=> a + esperadoAcertos(b.modalidade, b.tamanho), 0)/total;
-  const dp = Math.sqrt(conf.reduce((a,b)=> a + desvioAcertos(b.modalidade,b.tamanho)**2, 0))/total;
+  const media = conf.reduce((a,b)=>a+b.acertos,0)/total;
+  const esperado = conf.reduce((a,b)=> a + esperadoAcertos(codigo, b.tamanho), 0)/total;
+  /* Erro padrão da média: o desvio de um jogo dividido pela raiz do número de
+     jogos. Sem dividir, a faixa ficaria larga demais e nunca acusaria nada. */
+  const dp = Math.sqrt(conf.reduce((a,b)=> a + desvioAcertos(codigo,b.tamanho)**2, 0))/total;
   const melhor = conf.reduce((a,b)=> b.acertos>a.acertos ? b : a);
+  const dentro = Math.abs(media - esperado) <= 2*Math.max(dp,1e-9);
+  const premiados = conf.filter(x => faixaAtingida(codigo, x.acertos) !== null).length;
 
   const porMetodo = {};
   conf.forEach(cf=>{
     const m = porMetodo[cf.metodo] = porMetodo[cf.metodo] || {n:0, acertos:0, esperado:0};
-    m.n++; m.acertos += cf.acertos; m.esperado += esperadoAcertos(cf.modalidade, cf.tamanho);
+    m.n++; m.acertos += cf.acertos; m.esperado += esperadoAcertos(codigo, cf.tamanho);
   });
 
-  const dentro = Math.abs(media - esperado) <= 2*Math.max(dp,1e-9);
-
-  return `<div class="kpis">
-    <div class="kpi"><div class="rot">jogos conferidos</div><div class="val">${inf(total)}</div>
-      <div class="sub">em ${inf(new Set(conf.map(c=>c.concurso)).size)} concursos</div></div>
-    <div class="kpi"><div class="rot">melhor resultado</div><div class="val">${melhor.acertos}</div>
-      <div class="sub">concurso ${esc(melhor.concurso)}</div></div>
-  </div>
-  <div class="carta">
-    <div class="rot" style="font-size:.62rem;text-transform:uppercase;letter-spacing:.1em;
-      color:var(--secundaria);font-weight:600">acertos médios por jogo</div>
-    <div class="val num" style="font-size:1.9rem;font-weight:650;margin-top:2px">${nf(media,3)}</div>
-    ${faixaAcaso(media, esperado, Math.max(dp,0.02))}
-    <div class="nota ${dentro?"":"atencao"}" style="margin-bottom:0">
-      ${dentro
-        ? `Seus jogos estão <strong>dentro da faixa do acaso</strong>. É o resultado esperado: em um sorteio honesto nenhum método muda essa média.`
-        : `Sua média está fora da faixa normal. Com poucas conferências isso acontece por variação comum — com o tempo tende a voltar para a linha do acaso.`}
+  return `<div class="carta">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;
+      margin-bottom:10px">
+      <h3>${esc(c.nome)}</h3>
+      <span class="selo ${dentro?"ok":"seu"}">${dentro?"dentro do acaso":"fora da faixa"}</span>
     </div>
-  </div>
-  <h2 style="margin:18px 0 8px">por método</h2>
-  <div class="rolagem"><table>
-    <thead><tr><th>método</th><th>jogos</th><th>média</th><th>acaso</th><th>diferença</th></tr></thead>
-    <tbody>${Object.entries(porMetodo).map(([k,v])=>{
-      const m = v.acertos/v.n, e = v.esperado/v.n;
-      return `<tr><td>${esc(k)}</td><td>${v.n}</td><td>${nf(m,3)}</td><td>${nf(e,3)}</td>
-        <td style="color:${m-e>=0?"var(--acaso)":"var(--alerta)"}">${m-e>=0?"+":""}${nf(m-e,3)}</td></tr>`;
-    }).join("")}</tbody></table></div>
-  <div class="nota">Esta tabela é o teste mais honesto que o app faz com você: se algum
-  método tivesse vantagem real, a diferença cresceria de forma consistente conforme os
-  concursos passam. O que se observa, com amostra suficiente, é oscilação em torno de zero.</div>`;
+    <div class="kpis">
+      <div class="kpi"><div class="rot">acertos médios</div>
+        <div class="val">${nf(media,3)}</div>
+        <div class="sub">acaso: ${nf(esperado,3)}</div></div>
+      <div class="kpi"><div class="rot">melhor resultado</div>
+        <div class="val">${melhor.acertos}</div>
+        <div class="sub">concurso ${esc(melhor.concurso)}</div></div>
+      <div class="kpi"><div class="rot">jogos conferidos</div>
+        <div class="val" style="font-size:1.15rem">${inf(total)}</div>
+        <div class="sub">em ${inf(new Set(conf.map(x=>x.concurso)).size)} concursos</div></div>
+      <div class="kpi"><div class="rot">em faixa de prêmio</div>
+        <div class="val" style="font-size:1.15rem">${inf(premiados)}</div>
+        <div class="sub">de ${inf(total)}</div></div>
+    </div>
+    ${faixaAcaso(media, esperado, Math.max(dp,0.02))}
+    <div class="nota ${dentro?"":"atencao"}">
+      ${dentro
+        ? `Dentro da faixa do acaso nesta modalidade. É o resultado esperado: num sorteio honesto nenhum método muda essa média.`
+        : `Fora da faixa normal nesta modalidade. Com poucas conferências isso acontece por variação comum — com o tempo tende a voltar para a linha do acaso.`}
+    </div>
+    ${Object.keys(porMetodo).length < 2 ? "" : `
+      <h2 style="margin:14px 0 8px">por método, dentro da ${esc(c.nome)}</h2>
+      <div class="rolagem"><table>
+        <thead><tr><th>método</th><th>jogos</th><th>média</th><th>acaso</th><th>diferença</th></tr></thead>
+        <tbody>${Object.entries(porMetodo).map(([k,v])=>{
+          const m = v.acertos/v.n, e = v.esperado/v.n;
+          return `<tr><td>${esc(k)}</td><td>${v.n}</td><td>${nf(m,3)}</td><td>${nf(e,3)}</td>
+            <td style="color:${m-e>=0?"var(--acaso)":"var(--alerta)"}">${m-e>=0?"+":""}${nf(m-e,3)}</td></tr>`;
+        }).join("")}</tbody></table></div>`}
+  </div>`;
+}
+
+T.placar = () => {
+  const porModalidade = {};
+  S.jogos.concat(S.teimosinhas||[]).forEach(j =>
+    (j.conferencias||[]).forEach(cf => {
+      (porModalidade[j.modalidade] = porModalidade[j.modalidade] || []).push({
+        ...cf, tamanho:j.dezenas.length, metodo:j.metodo});
+    }));
+
+  const codigos = Object.keys(porModalidade);
+  if(!codigos.length) return `<div class="vazio">Nenhuma conferência ainda.<br>
+    Salve jogos, confira contra os concursos e o placar aparece aqui.</div>`;
+
+  /* Gasto: somável entre modalidades porque real é real. Usa o preço vigente
+     da modalidade, e assume aposta simples — o app não guarda o preço pago no
+     dia, então este é um total aproximado, e a tela diz isso. */
+  let gasto = 0;
+  S.jogos.concat(S.teimosinhas||[]).forEach(j => {
+    const c = MODALIDADES[j.modalidade];
+    const apostas = combinacoes(j.dezenas.length, c.k);
+    gasto += apostas * c.preco * ((j.conferencias||[]).length || 0);
+  });
+
+  const cabeca = codigos.length < 2 ? "" : `<div class="nota">
+    <strong>Cada loteria tem o seu placar.</strong> Somar acertos de modalidades
+    diferentes produziria um número sem sentido: o acaso espera
+    ${nf(esperadoAcertos("mega-sena", 6),1)} acerto na Mega-Sena e
+    ${nf(esperadoAcertos("lotofacil", 15),1)} na Lotofácil. A única coisa somável
+    entre elas é o dinheiro.</div>`;
+
+  const totalGasto = `<div class="carta">
+    <div class="rot" style="font-size:.62rem;text-transform:uppercase;letter-spacing:.1em;
+      color:var(--secundaria);font-weight:600">gasto somado, todas as loterias</div>
+    <div class="val num" style="font-size:1.9rem;font-weight:650;margin-top:2px">${brl(gasto)}</div>
+    <div class="sub" style="font-size:.7rem;color:var(--secundaria);font-family:var(--mono)">
+      ${codigos.length} modalidade${codigos.length>1?"s":""} · preço atual, aposta simples</div>
+    <div class="nota" style="margin-bottom:0">Aproximado: o app não guarda o preço pago
+      no dia de cada aposta, então usa o preço vigente da modalidade. Loteria é gasto de
+      entretenimento — este é o número que importa acompanhar.</div>
+  </div>`;
+
+  return cabeca + totalGasto +
+    codigos.sort((a,b)=> porModalidade[b].length - porModalidade[a].length)
+      .map(k => blocoDaModalidade(k, porModalidade[k])).join("");
 };
 
 T.bancada = () => {
