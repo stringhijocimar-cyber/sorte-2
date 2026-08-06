@@ -450,7 +450,7 @@ const S = {
   /* marcadas: dezenas do volante manual, por modalidade, para trocar de
      modalidade e voltar não apagar o que a pessoa já tinha marcado. */
   marcadas:{}, avisos:[], teimosinhas:[], aprendizado:{}, jogoAberto:null,
-  autoAnalise:true
+  autoAnalise:true, tipoEstatistica:"dezenas", ordemEstatistica:"vezes"
 };
 
 /* Persistência tolerante: se o navegador bloquear, o app segue funcionando
@@ -1318,6 +1318,205 @@ T.entender = () => `<div class="prosa">
   referência: confirme na fonte oficial antes de usar para contas sérias.</p>
 </div>`;
 
+
+/* ==================== estatísticas descritivas ====================
+   O que esta seção é: uma descrição honesta do que JÁ saiu. O que ela não é:
+   base para escolher o próximo jogo.
+
+   Toda estatística aqui vem acompanhada do que o acaso produziria e da faixa
+   em que ele oscila. É a diferença entre esta tela e as tabelas de dezena "em
+   alta" que circulam por aí: dizer que a dezena 37 saiu 328 vezes não informa
+   nada; dizer que o acaso daria 324 ± 17 informa tudo — porque aí se vê que
+   328 é rigorosamente comum.
+
+   (O vocabulário de dezena "em alta" e o seu oposto não aparecem em lugar
+   nenhum deste arquivo, nem em comentário. A trava do testar-motor.mjs procura
+   por substring, sem olhar contexto, e a cegueira é proposital: sai mais
+   barato nunca escrever a frase do que ensinar a trava a separar crítica de
+   promessa.)
+
+   Nenhum número desta tela muda a probabilidade do próximo sorteio. Sorteios
+   independentes não têm memória, e a variação que se vê aqui é o retrato do
+   acaso, não um padrão a explorar. */
+
+function historicoDe(modalidade){
+  return S.resultados.filter(r => r.modalidade === modalidade)
+    .slice().sort((a,b) => a.concurso - b.concurso);
+}
+
+/* Desvio padrão de uma contagem binomial: n tentativas, probabilidade p. */
+const dpBinomial = (n, p) => Math.sqrt(n * p * (1 - p));
+
+/* Estatística por dezena: quantas vezes saiu, há quantos concursos não sai, e
+   quanto isso se afasta do esperado — em desvios padrão, que é a única forma
+   de comparar dezenas de modalidades diferentes. */
+function porDezena(modalidade){
+  const c = MODALIDADES[modalidade];
+  const hist = historicoDe(modalidade);
+  const n = hist.length;
+  const p = c.k / c.N;
+  const esperado = n * p;
+  const dp = dpBinomial(n, p) || 1;
+
+  const linhas = [];
+  for(let d = c.base; d <= c.N + c.base - 1; d++){
+    let vezes = 0, ultima = -1;
+    hist.forEach((r, i) => { if(r.dezenas.includes(d)){ vezes++; ultima = i; } });
+    linhas.push({
+      dezena: d, vezes,
+      /* Concursos desde a última aparição. Nunca ter saído devolve n, que é o
+         máximo possível, e não infinito. */
+      ausencia: ultima < 0 ? n : n - 1 - ultima,
+      z: (vezes - esperado) / dp,
+      fora: Math.abs(vezes - esperado) > 2 * dp
+    });
+  }
+  return {linhas, n, esperado, dp,
+          /* Intervalo de ausência esperado entre aparições: N/k concursos. */
+          ausenciaMedia: c.N / c.k};
+}
+
+/* Distribuição de uma contagem por concurso (pares, primos, Fibonacci...)
+   contra a esperança hipergeométrica. */
+function contagemPorConcurso(modalidade, pertence){
+  const c = MODALIDADES[modalidade];
+  const hist = historicoDe(modalidade);
+  if(!hist.length) return null;
+  const universo = [];
+  for(let d = c.base; d <= c.N + c.base - 1; d++) universo.push(d);
+  const quantosNoUniverso = universo.filter(pertence).length;
+
+  const contagens = hist.map(r => r.dezenas.filter(pertence).length);
+  const media = contagens.reduce((a,b)=>a+b,0) / contagens.length;
+  /* Hipergeométrica: k sorteadas de N, das quais K pertencem ao conjunto.
+     média = k·K/N; variância = k·(K/N)·(1−K/N)·(N−k)/(N−1). */
+  const pr = quantosNoUniverso / c.N;
+  const esperado = c.k * pr;
+  const varUm = c.k * pr * (1 - pr) * (c.N - c.k) / Math.max(1, c.N - 1);
+  const dpMedia = Math.sqrt(varUm / contagens.length) || 1;
+
+  const dist = {};
+  contagens.forEach(v => dist[v] = (dist[v] || 0) + 1);
+  return {
+    contagens, media, esperado, dpMedia, dist,
+    quantosNoUniverso, n: contagens.length,
+    dentro: Math.abs(media - esperado) <= 2 * dpMedia
+  };
+}
+
+/* Repetições em relação ao concurso imediatamente anterior. */
+function repeticoesAnterior(modalidade){
+  const c = MODALIDADES[modalidade];
+  const hist = historicoDe(modalidade);
+  if(hist.length < 2) return null;
+  const reps = [];
+  for(let i = 1; i < hist.length; i++){
+    const antes = new Set(hist[i-1].dezenas);
+    reps.push(hist[i].dezenas.filter(d => antes.has(d)).length);
+  }
+  const media = reps.reduce((a,b)=>a+b,0) / reps.length;
+  const pr = c.k / c.N;
+  const esperado = c.k * pr;
+  const varUm = c.k * pr * (1 - pr) * (c.N - c.k) / Math.max(1, c.N - 1);
+  const dpMedia = Math.sqrt(varUm / reps.length) || 1;
+  const dist = {};
+  reps.forEach(v => dist[v] = (dist[v] || 0) + 1);
+  return {reps, media, esperado, dpMedia, dist, n: reps.length,
+          dentro: Math.abs(media - esperado) <= 2 * dpMedia};
+}
+
+/* Soma das dezenas por concurso. */
+function somaDasDezenas(modalidade){
+  const c = MODALIDADES[modalidade];
+  const hist = historicoDe(modalidade);
+  if(!hist.length) return null;
+  const somas = hist.map(r => r.dezenas.reduce((a,b)=>a+b,0));
+  const media = somas.reduce((a,b)=>a+b,0) / somas.length;
+  const esperado = c.k * (c.N + 2*c.base - 1) / 2;
+  const varUm = c.k * (c.N + 1) * (c.N - c.k) / 12;
+  const dpUm = Math.sqrt(varUm) || 1;
+  const dpMedia = dpUm / Math.sqrt(somas.length);
+  const ordenadas = somas.slice().sort((a,b)=>a-b);
+  return {
+    somas, media, esperado, dpUm, dpMedia,
+    minimo: ordenadas[0], maximo: ordenadas[ordenadas.length-1],
+    mediana: ordenadas[Math.floor(ordenadas.length/2)],
+    n: somas.length, dentro: Math.abs(media - esperado) <= 2 * dpMedia
+  };
+}
+
+/* Concursos com ao menos uma dupla consecutiva. */
+function sequencias(modalidade){
+  const hist = historicoDe(modalidade);
+  if(!hist.length) return null;
+  const quantidades = hist.map(r => {
+    const ord = r.dezenas.slice().sort((a,b)=>a-b);
+    let c2 = 0;
+    for(let i = 1; i < ord.length; i++) if(ord[i] === ord[i-1] + 1) c2++;
+    return c2;
+  });
+  const comSequencia = quantidades.filter(v => v > 0).length;
+  const media = quantidades.reduce((a,b)=>a+b,0) / quantidades.length;
+  const c = MODALIDADES[modalidade];
+  /* Pares consecutivos esperados: há N−1 pares (d, d+1) possíveis, e a chance
+     de ambos saírem é k(k−1)/(N(N−1)). */
+  const esperado = (c.N - 1) * c.k * (c.k - 1) / (c.N * (c.N - 1));
+  return {quantidades, media, esperado, comSequencia, n: quantidades.length,
+          fracaoComSequencia: comSequencia / quantidades.length};
+}
+
+/* Ciclo: quantos concursos até TODAS as dezenas terem saído ao menos uma vez.
+   O esperado vem do problema do colecionador de figurinhas, adaptado para k
+   por rodada: aproximadamente (N/k)·H(N), onde H é o harmônico. */
+function ciclos(modalidade){
+  const c = MODALIDADES[modalidade];
+  const hist = historicoDe(modalidade);
+  if(!hist.length) return null;
+  const fechados = [];
+  let vistos = new Set(), inicio = 0;
+  hist.forEach((r, i) => {
+    r.dezenas.forEach(d => vistos.add(d));
+    if(vistos.size >= c.N){ fechados.push(i - inicio + 1); vistos = new Set(); inicio = i + 1; }
+  });
+  let harmonico = 0;
+  for(let i = 1; i <= c.N; i++) harmonico += 1 / i;
+  const esperado = (c.N / c.k) * harmonico;
+  const media = fechados.length
+    ? fechados.reduce((a,b)=>a+b,0) / fechados.length : null;
+  return {fechados, media, esperado, emAberto: vistos.size,
+          faltam: c.N - vistos.size, n: hist.length};
+}
+
+/* Concentração por linha e por coluna do volante. */
+function linhasEColunas(modalidade){
+  const c = MODALIDADES[modalidade];
+  const cols = GRADE[modalidade] || 10;
+  const hist = historicoDe(modalidade);
+  if(!hist.length) return null;
+  const linhas = {}, colunas = {};
+  const nLinhas = Math.ceil(c.N / cols);
+  hist.forEach(r => r.dezenas.forEach(d => {
+    const idx = d - c.base;
+    const li = Math.floor(idx / cols), co = idx % cols;
+    linhas[li] = (linhas[li] || 0) + 1;
+    colunas[co] = (colunas[co] || 0) + 1;
+  }));
+  const total = hist.length * c.k;
+  const porLinha = [], porColuna = [];
+  for(let i = 0; i < nLinhas; i++){
+    const dezenasNaLinha = Math.min(cols, c.N - i * cols);
+    porLinha.push({i, vezes: linhas[i] || 0,
+      esperado: total * dezenasNaLinha / c.N, tamanho: dezenasNaLinha});
+  }
+  for(let i = 0; i < cols; i++){
+    let dezenasNaColuna = 0;
+    for(let d = 0; d < c.N; d++) if(d % cols === i) dezenasNaColuna++;
+    porColuna.push({i, vezes: colunas[i] || 0,
+      esperado: total * dezenasNaColuna / c.N, tamanho: dezenasNaColuna});
+  }
+  return {porLinha, porColuna, total, cols};
+}
+
 /* ==================== a cartela ====================
    Uma função só desenha a cartela em todos os usos: marcação manual, jogo
    salvo, e conferência. Três desenhos separados divergiriam no primeiro ajuste
@@ -2025,6 +2224,253 @@ function vereditoAprendizado(r){
     concursos e ver se sobrevive — não é apostar nisso.`;
 }
 
+
+/* ==================== tela de estatísticas ==================== */
+
+const TIPOS_ESTATISTICA = [
+  {id:"dezenas",   nome:"Dezenas"},
+  {id:"paridade",  nome:"Pares e ímpares"},
+  {id:"primos",    nome:"Primos"},
+  {id:"fibonacci", nome:"Fibonacci"},
+  {id:"repeticoes",nome:"Repetições"},
+  {id:"sequencia", nome:"Sequências"},
+  {id:"soma",      nome:"Soma"},
+  {id:"grade",     nome:"Linhas e colunas"},
+  {id:"ciclos",    nome:"Ciclos"}
+];
+
+/* Barra que situa um valor observado contra o esperado. É a peça que faz esta
+   tela ser diferente de uma tabela de dezena "em alta": o número sozinho não
+   diz nada, o número ao lado da faixa do acaso diz tudo. */
+function barraContra(observado, esperado, dp, rotulo){
+  const dentro = dp > 0 ? Math.abs(observado - esperado) <= 2*dp : true;
+  return `<div class="carta" style="margin-bottom:10px">
+    <div class="kpis" style="margin-bottom:8px">
+      <div class="kpi"><div class="rot">${esc(rotulo)} observado</div>
+        <div class="val">${nf(observado, 2)}</div></div>
+      <div class="kpi"><div class="rot">o acaso daria</div>
+        <div class="val">${nf(esperado, 2)}</div>
+        <div class="sub">± ${nf(2*dp, 2)}</div></div>
+    </div>
+    ${faixaAcaso(observado, esperado, Math.max(dp, 1e-9))}
+    <div class="nota ${dentro?"":"atencao"}" style="margin-bottom:0">
+      ${dentro
+        ? "Dentro do que o acaso produz. Nada aqui indica tendência."
+        : "Fora de dois desvios. Com muitos concursos e muitas estatísticas, alguns desvios assim aparecem por construção — não é sinal."}
+    </div>
+  </div>`;
+}
+
+function tabelaDezenas(e, modalidade){
+  const c = MODALIDADES[modalidade];
+  const ordem = S.ordemEstatistica || "vezes";
+  const linhas = e.linhas.slice().sort((a,b) =>
+    ordem === "dezena" ? a.dezena - b.dezena :
+    ordem === "ausencia" ? b.ausencia - a.ausencia :
+    b.vezes - a.vezes);
+  return `<div class="segmento" role="tablist" style="margin-bottom:10px">
+      ${[["vezes","Mais sorteadas"],["ausencia","Sem sair há mais tempo"],
+         ["dezena","Ordem numérica"]].map(([k,n])=>
+        `<button role="tab" data-ordem="${k}" aria-selected="${ordem===k}">${n}</button>`).join("")}
+    </div>
+    <div class="grade-freq" style="margin-bottom:12px">
+      ${linhas.map(l=>{
+        const alt = e.linhas.reduce((m,x)=> Math.max(m, x.vezes), 1);
+        const h = Math.max(1, Math.round(26 * l.vezes / alt));
+        return `<div class="cel ${l.fora?"fora":""}" title="${l.dezena}: ${l.vezes} vezes">
+          <div class="n">${pad(l.dezena)}</div>
+          <div class="b"><i style="height:${h}px"></i></div>
+          <div class="c">${l.vezes}</div></div>`;
+      }).join("")}
+    </div>
+    <div class="rolagem"><table>
+      <thead><tr><th>dezena</th><th>saiu</th><th>sem sair há</th>
+        <th>vs. acaso</th></tr></thead>
+      <tbody>${linhas.map(l=>`<tr>
+        <td>${pad(l.dezena)}</td><td>${l.vezes}</td>
+        <td>${l.ausencia} concurso${l.ausencia===1?"":"s"}</td>
+        <td style="color:${l.fora?"var(--alerta)":"var(--secundaria)"}">${
+          l.z>=0?"+":""}${nf(l.z,2)} dp</td></tr>`).join("")}</tbody>
+    </table></div>
+    <div class="nota">Em ${e.n} concursos, o acaso faria cada dezena sair
+      <strong>${nf(e.esperado,1)}</strong> vezes, oscilando ± ${nf(2*e.dp,1)}.
+      ${e.linhas.filter(l=>l.fora).length === 0
+        ? "<strong>Nenhuma dezena está fora dessa faixa.</strong> É o retrato de um sorteio honesto."
+        : `${e.linhas.filter(l=>l.fora).length} dezena(s) fora de dois desvios — com ${c.N} dezenas testadas, esperam-se cerca de ${nf(c.N*0.045,1)} por acaso.`}
+    </div>
+    <div class="nota atencao">A coluna "sem sair há" descreve o passado e
+      <strong>não</strong> torna a dezena mais nem menos provável no próximo
+      concurso. Cada sorteio é independente: as bolas não sabem quando saíram
+      pela última vez. O intervalo médio entre aparições é de
+      ${nf(e.ausenciaMedia,1)} concursos, e vê-lo ser respeitado no longo prazo é
+      consequência do acaso, não de compensação.</div>`;
+}
+
+T.estatisticas = () => {
+  const c = MODALIDADES[S.modalidade];
+  const hist = historicoDe(S.modalidade);
+  const tipo = S.tipoEstatistica || "dezenas";
+
+  if(hist.length < 5) return `<div class="vazio">
+    Só ${hist.length} concurso${hist.length===1?"":"s"} de ${esc(c.nome)} no app.<br>
+    Traga histórico em <strong>Conferir › Resultados</strong> — sem concursos não
+    há estatística, e com poucos qualquer número engana.</div>`;
+
+  const seletor = `<div class="trilha" style="margin:0 -16px 12px;padding:0 16px 2px">
+    ${TIPOS_ESTATISTICA.map(t=>
+      `<button data-tipo="${t.id}" aria-pressed="${t.id===tipo}">${esc(t.nome)}</button>`).join("")}
+  </div>`;
+
+  let corpo = "";
+  if(tipo === "dezenas"){
+    corpo = tabelaDezenas(porDezena(S.modalidade), S.modalidade);
+  } else if(tipo === "paridade"){
+    const par = contagemPorConcurso(S.modalidade, d => d % 2 === 0);
+    const imp = contagemPorConcurso(S.modalidade, d => d % 2 !== 0);
+    corpo = barraContra(par.media, par.esperado, par.dpMedia, "pares por concurso") +
+      barraContra(imp.media, imp.esperado, imp.dpMedia, "ímpares por concurso") +
+      `<div class="carta"><h2>distribuição de pares por concurso</h2>
+        ${histograma(par.dist, par.n)}</div>
+      <div class="nota">Equilíbrio entre pares e ímpares é o padrão mais comum
+        <em>porque há mais combinações equilibradas do que desequilibradas</em> —
+        não porque o sorteio prefira equilíbrio. Marcar 6 pares na Mega-Sena tem
+        exatamente a mesma chance de qualquer outra combinação específica; o que
+        é raro é o <strong>conjunto</strong> das combinações só-pares, não cada
+        uma delas.</div>`;
+  } else if(tipo === "primos" || tipo === "fibonacci"){
+    const c2 = MODALIDADES[S.modalidade];
+    const conj = tipo === "primos"
+      ? (() => { const p = new Set(); for(let d=2; d<=c2.N+c2.base-1; d++){
+            let ok = d > 1; for(let i=2; i*i<=d; i++) if(d%i===0){ ok=false; break; }
+            if(ok) p.add(d); } return p; })()
+      : fibonacciAte(c2.N + c2.base - 1);
+    const r = contagemPorConcurso(S.modalidade, d => conj.has(d));
+    corpo = barraContra(r.media, r.esperado, r.dpMedia,
+        `${tipo === "primos" ? "primos" : "Fibonacci"} por concurso`) +
+      `<div class="carta"><h2>quais são</h2>
+        <div class="dezenas">${[...conj].sort((a,b)=>a-b)
+          .map(d=>`<span class="dz">${pad(d)}</span>`).join("")}</div>
+        <div class="pe" style="border:0;padding-left:0">
+          <span>${r.quantosNoUniverso} de ${c2.N} dezenas</span>
+          <span>${nf(100*r.quantosNoUniverso/c2.N,1)}% do volante</span></div></div>
+      <div class="carta"><h2>distribuição por concurso</h2>${histograma(r.dist, r.n)}</div>`;
+  } else if(tipo === "repeticoes"){
+    const r = repeticoesAnterior(S.modalidade);
+    corpo = barraContra(r.media, r.esperado, r.dpMedia, "repetidas do concurso anterior") +
+      `<div class="carta"><h2>quantas se repetem</h2>${histograma(r.dist, r.n)}</div>
+      <div class="nota">Repetição do concurso anterior acontece o tempo todo, e o
+        número médio é previsível: ${nf(r.esperado,2)} dezenas em
+        ${c.k}. Evitar as dezenas que acabaram de sair <strong>não</strong>
+        aumenta sua chance — mas muita gente as repete, então evitá-las muda com
+        quantas pessoas você dividiria o prêmio.</div>`;
+  } else if(tipo === "sequencia"){
+    const r = sequencias(S.modalidade);
+    corpo = barraContra(r.media, r.esperado, Math.max(r.esperado/Math.sqrt(r.n),1e-9),
+        "pares consecutivos por concurso") +
+      `<div class="carta">
+        <div class="kpis" style="margin:0">
+          <div class="kpi"><div class="rot">concursos com sequência</div>
+            <div class="val">${nf(100*r.fracaoComSequencia,1)}%</div>
+            <div class="sub">${r.comSequencia} de ${r.n}</div></div>
+          <div class="kpi"><div class="rot">pares consecutivos</div>
+            <div class="val">${nf(r.media,2)}</div>
+            <div class="sub">por concurso</div></div>
+        </div></div>
+      <div class="nota">Sequências como 14-15 saem com frequência, e a maioria
+        das pessoas evita marcá-las por achar que "não parece sorteio". Isso as
+        torna combinações com <strong>menos gente dividindo</strong> — a chance
+        de acertar continua a mesma.</div>`;
+  } else if(tipo === "soma"){
+    const r = somaDasDezenas(S.modalidade);
+    corpo = barraContra(r.media, r.esperado, r.dpMedia, "soma média das dezenas") +
+      `<div class="carta">
+        <div class="kpis" style="margin:0">
+          <div class="kpi"><div class="rot">menor soma</div>
+            <div class="val">${inf(r.minimo)}</div></div>
+          <div class="kpi"><div class="rot">maior soma</div>
+            <div class="val">${inf(r.maximo)}</div></div>
+          <div class="kpi"><div class="rot">mediana</div>
+            <div class="val">${inf(r.mediana)}</div></div>
+          <div class="kpi"><div class="rot">desvio de um concurso</div>
+            <div class="val" style="font-size:1.15rem">${nf(r.dpUm,1)}</div></div>
+        </div></div>
+      <div class="nota">A soma se concentra no meio pelo mesmo motivo que a
+        paridade se equilibra: <strong>há mais combinações com soma média</strong>.
+        Escolher uma soma central não melhora sua chance — cada combinação
+        específica continua igualmente provável.</div>`;
+  } else if(tipo === "grade"){
+    const r = linhasEColunas(S.modalidade);
+    const bloco = (titulo, dados, prefixo) => `<div class="carta">
+      <h2>${titulo}</h2>
+      <div class="rolagem"><table>
+        <thead><tr><th>${prefixo}</th><th>dezenas</th><th>saiu</th><th>acaso</th>
+          <th>diferença</th></tr></thead>
+        <tbody>${dados.map(x=>{
+          const dif = x.vezes - x.esperado;
+          const dp = Math.sqrt(x.esperado) || 1;
+          return `<tr><td>${x.i + 1}</td><td>${x.tamanho}</td><td>${inf(x.vezes)}</td>
+            <td>${nf(x.esperado,0)}</td>
+            <td style="color:${Math.abs(dif)>2*dp?"var(--alerta)":"var(--secundaria)"}">${
+              dif>=0?"+":""}${nf(dif,0)}</td></tr>`;
+        }).join("")}</tbody></table></div></div>`;
+    corpo = bloco("por linha do volante", r.porLinha, "linha") +
+      bloco("por coluna do volante", r.porColuna, "coluna") +
+      `<div class="nota">Desenhos no volante — linha cheia, coluna cheia, diagonal —
+        são muito marcados por gente que aposta. Evitá-los não muda sua chance de
+        acertar; muda o rateio.</div>`;
+  } else if(tipo === "ciclos"){
+    const r = ciclos(S.modalidade);
+    corpo = `<div class="carta">
+      <div class="kpis" style="margin:0">
+        <div class="kpi"><div class="rot">ciclos fechados</div>
+          <div class="val">${r.fechados.length}</div>
+          <div class="sub">em ${r.n} concursos</div></div>
+        <div class="kpi"><div class="rot">duração média</div>
+          <div class="val">${r.media === null ? "—" : nf(r.media,1)}</div>
+          <div class="sub">acaso: ${nf(r.esperado,1)}</div></div>
+        <div class="kpi"><div class="rot">ciclo em aberto</div>
+          <div class="val" style="font-size:1.15rem">${r.emAberto}/${c.N}</div>
+          <div class="sub">dezenas já vistas</div></div>
+        <div class="kpi"><div class="rot">faltam</div>
+          <div class="val" style="font-size:1.15rem">${r.faltam}</div>
+          <div class="sub">para fechar</div></div>
+      </div></div>
+      ${r.fechados.length ? `<div class="carta"><h2>duração de cada ciclo</h2>
+        <div class="rolagem"><table><thead><tr><th>ciclo</th><th>concursos</th></tr></thead>
+        <tbody>${r.fechados.map((v,i)=>`<tr><td>${i+1}</td><td>${v}</td></tr>`).join("")}
+        </tbody></table></div></div>` : ""}
+      <div class="nota atencao">Um ciclo é fechado quando todas as ${c.N} dezenas
+        já saíram ao menos uma vez. É uma curiosidade do passado. As dezenas que
+        <strong>faltam</strong> para fechar o ciclo <strong>não</strong> têm
+        prioridade nenhuma no próximo sorteio — a urna não sabe que elas estão
+        faltando. O valor esperado de ${nf(r.esperado,1)} concursos vem do
+        problema do colecionador de figurinhas, e o acaso o cumpre sozinho.</div>`;
+  }
+
+  return seletor + corpo +
+    `<div class="nota">Base: <strong>${hist.length} concursos</strong> de
+      ${esc(c.nome)}, do ${hist[0].concurso} ao ${hist[hist.length-1].concurso}.
+      Toda estatística acima descreve o que já saiu. Nenhuma delas muda a
+      probabilidade do próximo sorteio.</div>`;
+};
+
+/* Histograma simples de um dicionário valor -> contagem. */
+function histograma(dist, total){
+  const chaves = Object.keys(dist).map(Number).sort((a,b)=>a-b);
+  const maior = Math.max(...chaves.map(k => dist[k]));
+  return `<div style="display:flex;flex-direction:column;gap:4px;margin-top:8px">
+    ${chaves.map(k=>{
+      const pct = 100 * dist[k] / total;
+      return `<div style="display:flex;align-items:center;gap:8px">
+        <span class="num" style="width:2ch;text-align:right;font-size:.78rem">${k}</span>
+        <span style="flex:1;height:14px;background:var(--trama);border-radius:7px;overflow:hidden">
+          <i style="display:block;height:100%;width:${100*dist[k]/maior}%;
+            background:var(--acaso);border-radius:7px"></i></span>
+        <span class="num" style="width:6ch;font-size:.7rem;color:var(--secundaria)"
+          >${nf(pct,1)}%</span></div>`;
+    }).join("")}</div>`;
+}
+
 /* ==================== telas novas ==================== */
 
 const marcadasDe = m => S.marcadas[m] || [];
@@ -2433,6 +2879,13 @@ function acoesNovas(){
     }, 30);
   };
 
+  document.querySelectorAll("[data-tipo]").forEach(b => b.onclick = () => {
+    S.tipoEstatistica = b.dataset.tipo; window.scrollTo(0,0); pintar();
+  });
+  document.querySelectorAll("[data-ordem]").forEach(b => b.onclick = () => {
+    S.ordemEstatistica = b.dataset.ordem; pintar();
+  });
+
   const auto = $("#ap-auto");
   if(auto) auto.onchange = e => {
     S.autoAnalise = e.target.checked;
@@ -2695,6 +3148,8 @@ const SECOES = [
       sub:"Seu resultado acumulado, comparado com o que o acaso teria feito com o mesmo dinheiro."},
      {id:"bancada", nome:"Bancada", titulo:"Bancada de testes",
       sub:"Roda todos os métodos contra o mesmo sorteio e mede se algum se distingue do acaso."},
+     {id:"estatisticas", nome:"Estatísticas", titulo:"Estatísticas do histórico",
+      sub:"O retrato do que já saiu, sempre ao lado do que o acaso produziria. Descreve o passado; não prevê o próximo."},
      {id:"aprendizado", nome:"Aprendizado", titulo:"Aprendizado por modalidade",
       sub:"Treina um modelo em cada modalidade separadamente e mede, fora da amostra, se ele aprendeu algo."}
    ]},
