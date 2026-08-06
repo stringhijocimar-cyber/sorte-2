@@ -98,6 +98,8 @@ const EXPOSTOS = [
   "MINIMO_CONCURSOS", "NOMES_ATRIBUTOS", "blocoDaModalidade",
   "fibonacciAte", "observacoes", "PESOS", "referencia",
   "porDezena", "contagemPorConcurso", "repeticoesAnterior", "somaDasDezenas",
+  "calibrarPopularidade", "minimosQuadrados", "premioDoAcerto", "pesosVigentes",
+  "MINIMO_CALIBRACAO", "ATRIBUTOS_POPULARIDADE",
   "sequencias", "ciclos", "linhasEColunas", "historicoDe", "TIPOS_ESTATISTICA",
   "assinaturaHistorico", "modalidadesPendentes", "analisarPendentes", "aplicarCorrecao",
   "aoMudarHistorico", "guardarResultados",
@@ -1226,6 +1228,135 @@ secao("14. Estatísticas do histórico");
     /não<\/strong>\s+têm\s+prioridade\s+nenhuma/.test(contexto.T.estatisticas()));
   S.resultados = guardado; S.modalidade = guardadaMod; S.tipoEstatistica = "dezenas";
 }
+
+/* ==================================================================
+   15. Calibração de popularidade a partir dos ganhadores
+   ================================================================== */
+secao("15. Calibração pelos ganhadores");
+
+{
+  const S = motor.S;
+  const guardado = { r: S.resultados, c: S.calibracao, m: S.modalidade };
+  S.modalidade = "mega-sena";
+
+  /* Mínimos quadrados: precisa recuperar um coeficiente que existe. Sem este
+     teste, uma regressão quebrada devolveria pesos zerados e passaria por
+     "não há sinal", que é o resultado que ela produz sempre. */
+  {
+    const X = [], y = [];
+    let s2 = 3;
+    const rnd = () => (s2 = (s2 * 1103515245 + 12345) % 2147483648) / 2147483648;
+    for (let i = 0; i < 300; i++) {
+      const a = rnd(), b = rnd();
+      X.push([a, b]);
+      y.push(5 + 3 * a + 0 * b + (rnd() - 0.5) * 0.2);   // só `a` importa
+    }
+    const m = contexto.minimosQuadrados(X, y);
+    checar("a regressão recupera o coeficiente verdadeiro",
+      Math.abs(m.coeficientes[0] - 3) < 0.4, `${m.coeficientes[0].toFixed(3)} (verdadeiro 3)`);
+    checar("e zera o que não importa",
+      Math.abs(m.coeficientes[1]) < 0.4, `${m.coeficientes[1].toFixed(3)}`);
+    checar("R² alto quando o modelo explica", m.r2 > 0.95, m.r2.toFixed(4));
+  }
+
+  /* Histórico curto: recusa em vez de calibrar com o que não dá. */
+  S.resultados = [];
+  for (let i = 1; i <= 10; i++)
+    S.resultados.push({ concurso: i, data: "2025-01-01", modalidade: "mega-sena",
+      dezenas: [1,2,3,4,5,6], rateio: [{faixa:1, ganhadores:1, premio:1000}] });
+  {
+    const r = contexto.calibrarPopularidade("mega-sena");
+    checar("com poucos concursos, a calibração recusa e diz quanto falta",
+      !!r.erro && r.precisa === contexto.MINIMO_CALIBRACAO && r.tem === 10,
+      `${r.tem} de ${r.precisa}`);
+  }
+
+  /* Concursos sem rateio não entram na conta. */
+  S.resultados = S.resultados.map(r => ({ ...r, rateio: undefined }));
+  checar("concursos sem rateio são ignorados",
+    contexto.calibrarPopularidade("mega-sena").tem === 0);
+
+  /* O teste que dá sentido ao módulo: um público SIMULADO que marca datas.
+     Se a calibração não detectar isso, ela não serve para nada. */
+  {
+    let s3 = 77;
+    const rnd = () => (s3 = (s3 * 1103515245 + 12345) % 2147483648) / 2147483648;
+    S.resultados = [];
+    for (let i = 1; i <= 160; i++) {
+      const pool = Array.from({ length: 60 }, (_, k) => k + 1);
+      for (let k = 59; k > 0; k--) { const j = Math.floor(rnd() * (k + 1));
+        const t = pool[k]; pool[k] = pool[j]; pool[j] = t; }
+      const dezenas = pool.slice(0, 6).sort((a, b) => a - b);
+      /* Público que marca aniversário: quanto mais dezenas ≤ 31 saírem, mais
+         gente acerta. A relação é exponencial, como é na realidade. */
+      const ate31 = dezenas.filter(d => d <= 31).length;
+      const ganhadores = Math.round(Math.exp(0.9 * ate31) * (0.6 + rnd() * 0.8));
+      S.resultados.push({ concurso: i, data: "2025-01-01", modalidade: "mega-sena",
+        dezenas, rateio: [{ faixa: 1, ganhadores, premio: 1e6 }] });
+    }
+    const r = contexto.calibrarPopularidade("mega-sena");
+    checar("a calibração roda com histórico suficiente", !r.erro, r.erro || `n=${r.n}`);
+    checar("detecta que o público marca datas (1–31)",
+      r.pesos.ate31 > 0 && r.pesos.ate31 === Math.max(...Object.values(r.pesos)),
+      `ate31=${r.pesos.ate31.toFixed(3)} contra ` +
+      Object.entries(r.pesos).filter(([k]) => k !== "ate31")
+        .map(([k, v]) => `${k}=${v.toFixed(2)}`).join(" "));
+    checar("o R² é reportado e reconhece o sinal", r.r2 > 0.3, r.r2.toFixed(3));
+    checar("a calibração se declara útil", r.util === true);
+    checar("nenhum peso é negativo",
+      Object.values(r.pesos).every(v => v >= 0));
+
+    /* E o gerador passa a usar a medida no lugar da suposição. */
+    S.calibracao = { "mega-sena": r };
+    const usados = contexto.pesosVigentes();
+    checar("pesosVigentes prefere a calibração medida",
+      usados.ate31 === r.pesos.ate31,
+      `${usados.ate31.toFixed(3)} (PESOS declarava ${contexto.PESOS.ate31})`);
+  }
+
+  /* Público que NÃO tem padrão: a calibração não pode inventar um. */
+  {
+    let s4 = 991;
+    const rnd = () => (s4 = (s4 * 1103515245 + 12345) % 2147483648) / 2147483648;
+    S.resultados = [];
+    for (let i = 1; i <= 160; i++) {
+      const pool = Array.from({ length: 60 }, (_, k) => k + 1);
+      for (let k = 59; k > 0; k--) { const j = Math.floor(rnd() * (k + 1));
+        const t = pool[k]; pool[k] = pool[j]; pool[j] = t; }
+      S.resultados.push({ concurso: i, data: "2025-01-01", modalidade: "mega-sena",
+        dezenas: pool.slice(0, 6).sort((a, b) => a - b),
+        rateio: [{ faixa: 1, ganhadores: Math.floor(rnd() * 20), premio: 1e6 }] });
+    }
+    const r = contexto.calibrarPopularidade("mega-sena");
+    checar("sem padrão no público, o R² fica baixo", r.r2 < 0.15, r.r2.toFixed(4));
+    checar("e a calibração se declara NÃO útil", r.util === false);
+    S.calibracao = { "mega-sena": r };
+    checar("calibração inútil não substitui os pesos declarados",
+      contexto.pesosVigentes().ate31 === contexto.PESOS.ate31);
+  }
+
+  /* Prêmio pelo rateio: liga o jogo ao dinheiro, e distingue "não ganhou" de
+     "não sei quanto". */
+  {
+    const res = { concurso: 1, modalidade: "mega-sena", dezenas: [1,2,3,4,5,6],
+      rateio: [{faixa:1, ganhadores:1, premio:50e6},
+               {faixa:2, ganhadores:60, premio:50000},
+               {faixa:3, ganhadores:4000, premio:900}] };
+    checar("6 acertos paga a faixa 1",
+      contexto.premioDoAcerto(res, 6, "mega-sena") === 50e6);
+    checar("5 acertos paga a faixa 2",
+      contexto.premioDoAcerto(res, 5, "mega-sena") === 50000);
+    checar("3 acertos não está em faixa nenhuma e paga 0",
+      contexto.premioDoAcerto(res, 3, "mega-sena") === 0);
+    checar("sem rateio devolve null, e não 0",
+      contexto.premioDoAcerto({concurso:1, modalidade:"mega-sena", dezenas:[]},
+        6, "mega-sena") === null,
+      "não saber quanto é diferente de saber que é zero");
+  }
+
+  S.resultados = guardado.r; S.calibracao = guardado.c; S.modalidade = guardado.m;
+}
+
 
 
 
