@@ -1383,6 +1383,58 @@ T.entender = () => `<div class="prosa">
 
 
 
+
+/* ==================== o jogo contra todo o histórico ====================
+   A pergunta que todo mundo faz e que nenhum app responde direito: "se eu
+   tivesse jogado ISTO em todos os concursos, o que teria acontecido?"
+
+   Os concorrentes mostram a configuração do jogo e um selo de "ótimo". Isto
+   aqui mostra o extrato: quantos concursos, quanto teria custado, quanto teria
+   voltado, e a distribuição completa de acertos. É o número que decide se vale
+   a pena, e é o número que ninguém publica.
+
+   O prêmio usa o rateio real de cada concurso quando ele existe. Onde não
+   existe, o concurso entra no custo e no histograma mas NÃO no retorno — e a
+   tela informa quantos ficaram de fora. Estimar prêmio ausente inflaria o
+   retorno com número inventado, que é exatamente o vício que este app
+   combate. */
+function retrospectiva(dezenas, modalidade){
+  const c = MODALIDADES[modalidade];
+  const hist = historicoDe(modalidade);
+  if(hist.length < 10) return {erro:`faltam ${10 - hist.length} concursos`, tem:hist.length};
+
+  const apostas = combinacoes(dezenas.length, c.k);
+  const custoPorConcurso = apostas * c.preco;
+  const distribuicao = {};
+  let retorno = 0, premiados = 0, semRateio = 0, melhor = null;
+
+  hist.forEach(r => {
+    const acertos = dezenas.filter(d => r.dezenas.includes(d)).length;
+    distribuicao[acertos] = (distribuicao[acertos] || 0) + 1;
+    const faixa = faixaAtingida(modalidade, acertos);
+    if(faixa === null) return;
+    premiados++;
+    const p = premioDoAcerto(r, acertos, modalidade);
+    if(p === null){ semRateio++; return; }
+    retorno += p;
+    if(!melhor || p > melhor.premio)
+      melhor = {concurso:r.concurso, data:r.data, acertos, premio:p};
+  });
+
+  const custo = custoPorConcurso * hist.length;
+  return {
+    n: hist.length, apostas, custoPorConcurso, custo, retorno,
+    liquido: retorno - custo,
+    roi: custo > 0 ? (retorno - custo) / custo : 0,
+    distribuicao, premiados, semRateio, melhor,
+    de: hist[0].concurso, ate: hist[hist.length-1].concurso,
+    /* Acertos esperados por concurso, para comparar o observado com o acaso —
+       um jogo pode ter tido sorte no recorte, e sem essa linha o extrato
+       viraria propaganda de si mesmo. */
+    esperado: esperadoAcertos(modalidade, dezenas.length)
+  };
+}
+
 /* ==================== perfil do jogo contra o histórico ====================
    Para cada característica do jogo marcado, diz em que fração dos concursos
    passados aquela mesma configuração apareceu.
@@ -3152,6 +3204,49 @@ T.montar = () => {
       <button class="acao contorno mini" id="m-completar">completar ao acaso</button>
       <button class="acao contorno mini" id="m-limpar" ${dez.length?"":"disabled"}>limpar</button>
     </div>
+    ${dez.length < c.k ? "" : (() => {
+      const r = retrospectiva(dez, S.modalidade);
+      if(r.erro) return "";
+      const media = Object.entries(r.distribuicao)
+        .reduce((a,[k,v]) => a + Number(k)*v, 0) / r.n;
+      const chaves = Object.keys(r.distribuicao).map(Number).sort((a,b)=>b-a);
+      return `<div class="carta">
+        <h2>se você tivesse jogado isto sempre</h2>
+        <p style="font-size:.85rem;color:var(--secundaria);margin:6px 0 10px">
+          Concursos ${r.de} a ${r.ate}, com o preço de hoje.</p>
+        <div class="kpis">
+          <div class="kpi"><div class="rot">teria custado</div>
+            <div class="val" style="font-size:1.15rem">${brl(r.custo)}</div>
+            <div class="sub">${inf(r.n)} concursos × ${brl(r.custoPorConcurso)}</div></div>
+          <div class="kpi"><div class="rot">teria voltado</div>
+            <div class="val" style="font-size:1.15rem">${brl(r.retorno)}</div>
+            <div class="sub">${r.premiados} vez${r.premiados===1?"":"es"} em faixa</div></div>
+          <div class="kpi"><div class="rot">resultado</div>
+            <div class="val" style="font-size:1.15rem;color:${
+              r.liquido>=0?"var(--acaso)":"var(--alerta)"}">${brl(r.liquido)}</div>
+            <div class="sub">ROI ${nf(100*r.roi,1)}%</div></div>
+          <div class="kpi"><div class="rot">acertos médios</div>
+            <div class="val">${nf(media,2)}</div>
+            <div class="sub">acaso: ${nf(r.esperado,2)}</div></div>
+        </div>
+        <h2 style="margin:14px 0 6px">quantas vezes deu cada resultado</h2>
+        ${histograma(Object.fromEntries(chaves.map(k=>[k, r.distribuicao[k]])), r.n)}
+        ${r.melhor ? `<div class="nota">Melhor momento: concurso
+          ${esc(r.melhor.concurso)}, ${r.melhor.acertos} acertos,
+          <strong>${brl(r.melhor.premio)}</strong>.</div>` : ""}
+        ${r.semRateio ? `<div class="nota atencao">${r.semRateio} concurso${
+          r.semRateio===1?"":"s"} em faixa de prêmio ${r.semRateio===1?"ficou":"ficaram"}
+          fora do retorno porque o histórico não trouxe o rateio. O valor acima é
+          um piso, não uma estimativa — prefiro faltar dinheiro na conta a
+          inventar.</div>` : ""}
+        <div class="nota atencao"><strong>Isto é o passado, e o passado não se
+          repete.</strong> Este extrato não diz o que o jogo fará: diz o que
+          teria feito, o que é uma pergunta diferente. Nenhuma combinação tem
+          desempenho futuro previsível — todas têm a mesma chance. O valor deste
+          número é outro: ele mostra o <strong>custo real</strong> de jogar
+          sempre, que é a única parte da conta que não depende de sorte.</div>
+      </div>`;
+    })()}
     ${dez.length < c.k ? "" : (() => {
       const perfil = perfilDoJogo(dez, S.modalidade);
       if(perfil.erro) return `<div class="carta"><h2>análise das dezenas</h2>
