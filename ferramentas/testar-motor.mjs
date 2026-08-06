@@ -1619,6 +1619,32 @@ secao("18. Fontes de resultado");
   })();
 }
 
+/* ==================================================================
+   19. A tela de Conferir não pode mentir sobre o que o app faz
+   ================================================================== */
+secao("19. Conferir: texto e busca");
+
+{
+  const S = motor.S;
+  const guardado = S.modalidade;
+  S.modalidade = "mega-sena";
+  const tela = contexto.T.conferir();
+
+  /* O texto dizia "não busca nada sozinho". Passou a ser falso quando a busca
+     entrou, e ficou na tela. Este teste impede que volte. */
+  checar("a tela NÃO afirma que o app não busca nada sozinho",
+    !/não busca nada sozinho/i.test(tela));
+  checar("a tela continua afirmando que o app não inventa resultado",
+    /não inventa[\s\S]{0,40}resultado/i.test(tela));
+  checar("a tela oferece buscar o resultado",
+    /id="c-buscar"/.test(tela) && /id="c-ultimo"/.test(tela));
+  checar("a digitação continua oferecida como via válida",
+    /digite o resultado/i.test(tela) && /c-dez/.test(tela));
+
+  S.modalidade = guardado;
+}
+
+
 
 
 
