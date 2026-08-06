@@ -1148,8 +1148,15 @@ T.conferir = () => {
     <button class="acao" id="c-go">Conferir ${naoConferidos} jogo${naoConferidos===1?"":"s"} salvos</button>
   </div>
   <div id="c-saida"></div>
-  <div class="nota">Digite o resultado oficial publicado pela Caixa. O app não inventa
-  resultado e não busca nada sozinho — o que você digita é o que ele usa.</div>
+  <div class="botoes" style="margin-bottom:10px">
+    <button class="acao mini" id="c-buscar">buscar este resultado</button>
+    <button class="acao contorno mini" id="c-ultimo">buscar o último concurso</button>
+  </div>
+  <div id="c-busca"></div>
+  <div class="nota">Se a busca não funcionar, digite o resultado oficial publicado pela
+  Caixa — é sempre uma via válida. O app não inventa
+  resultado: o que ele usa é o que você digitar ou o que a
+  busca trouxer de uma fonte pública, nunca um número estimado.</div>
   ${S.resultados.length ? `<h2 style="margin:18px 0 8px">concursos já registrados</h2>
     <div class="rolagem"><table><thead><tr><th>concurso</th><th>data</th><th>dezenas</th></tr></thead>
     <tbody>${S.resultados.slice().reverse().slice(0,20).map(r=>`<tr>
@@ -3504,6 +3511,39 @@ function acoesNovas(){
     S.buscaAutomatica = e.target.checked;
     Guardar.gravar("buscaAutomatica", S.buscaAutomatica);
   };
+
+  /* --- buscar resultado direto na tela de conferir --- */
+  const preencher = async (qual) => {
+    const alvo = $("#c-busca");
+    const num = $("#c-num");
+    const concurso = qual === "este" ? parseInt(num.value, 10) : null;
+    if(qual === "este" && !Number.isFinite(concurso)){
+      alvo.innerHTML = `<div class="nota atencao">Informe o número do concurso primeiro,
+        ou use "buscar o último".</div>`;
+      return;
+    }
+    alvo.innerHTML = `<div class="nota"><span class="girando"></span>buscando…</div>`;
+    try{
+      const r = await buscarNaCaixa(S.modalidade, concurso);
+      num.value = r.concurso;
+      $("#c-dez").value = r.dezenas.map(pad).join(" ");
+      const dt = $("#c-data"); if(dt && r.data) dt.value = r.data;
+      /* Guarda o resultado inteiro, com rateio e cidades — a conferência
+         manual usaria só as dezenas e jogaria fora o resto. */
+      guardarResultados([r]);
+      const nome = (FONTES.find(f => f.id === r.fonte) || {}).nome || "fonte desconhecida";
+      alvo.innerHTML = `<div class="nota"><strong>Concurso ${esc(r.concurso)}</strong>
+        preenchido. Fonte: ${esc(nome)}. Toque em conferir.</div>`;
+    }catch(e){
+      alvo.innerHTML = `<div class="nota atencao"><strong>Nenhuma fonte respondeu.</strong>
+        <span style="display:block;margin-top:6px;font-family:var(--mono);font-size:.76rem"
+          >${esc(e.message)}</span>
+        <span style="display:block;margin-top:8px">Digite o resultado abaixo — funciona
+        sempre, e é a via que não depende de rede.</span></div>`;
+    }
+  };
+  if($("#c-buscar")) $("#c-buscar").onclick = () => preencher("este");
+  if($("#c-ultimo")) $("#c-ultimo").onclick = () => preencher("ultimo");
 
   /* --- teimosinha --- */
   const criar = $("#t-criar");
