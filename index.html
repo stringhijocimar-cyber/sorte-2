@@ -505,8 +505,23 @@ function tamanhoPadrao(m){ return S.tamanho || MODALIDADES[m].min; }
 const PESOS = {
   ate31:1.20, ate12:0.45, consecutivos:0.55, somaCentral:0.40,
   espacamentoRegular:0.50, mesmaLinha:0.60, mesmaColuna:0.60,
-  terminacoesIguais:0.35, contem7:0.15
+  terminacoesIguais:0.35, contem7:0.15,
+  /* Peso baixo, e deliberadamente. Fibonacci é padrão que gente que programa
+     acha bonito, não hábito comum de apostador — ao contrário de data de
+     nascimento, que domina o volante. Dar peso alto aqui seria fingir uma
+     popularidade que não medi. Se a calibração do pesos.json vier dos
+     ganhadores reais, ela substitui esta suposição por dado. */
+  fibonacci:0.12
 };
+/* Fibonacci dentro do universo da modalidade. O 1 entra uma vez só — a
+   sequência tem 1,1,2,3,5… e repetir a dezena 1 não faz sentido num volante. */
+function fibonacciAte(n){
+  const saida = new Set();
+  let a = 1, b = 2;
+  while(a <= n){ saida.add(a); const t = b; b = a + b; a = t; }
+  return saida;
+}
+
 const GRADE = {"mega-sena":10, "lotofacil":5, "quina":10, "lotomania":10,
                "dupla-sena":10, "dia-de-sorte":7, "timemania":10, "mais-milionaria":10};
 
@@ -537,7 +552,22 @@ function caracteristicas(dez, m){
     mesmaLinha: Math.max(...Object.values(linhas))/n,
     mesmaColuna: Math.max(...Object.values(colunas))/n,
     terminacoesIguais: Math.max(...Object.values(finais))/n,
-    contem7: ord.includes(7) ? 1 : 0
+    contem7: ord.includes(7) ? 1 : 0,
+    /* Fração das dezenas que caem na sequência de Fibonacci, dividida pela
+       fração que se esperaria por acaso. 1,0 = exatamente o esperado; acima
+       disso, o jogo tem mais Fibonacci do que o acaso costuma dar.
+
+       É normalizado porque a contagem crua não é comparável entre
+       modalidades: na Lotofácil 8 dos 25 números são Fibonacci (32%) e na
+       Quina são 10 de 80 (12,5%). Sem dividir pelo esperado, todo jogo de
+       Lotofácil pareceria "cheio de Fibonacci". */
+    fibonacci: (() => {
+      const fib = fibonacciAte(c.N + c.base - 1);
+      const noUniverso = [...fib].filter(d => d >= c.base).length;
+      const esperado = noUniverso / c.N;
+      const observado = ord.filter(d => fib.has(d)).length / n;
+      return esperado > 0 ? Math.min(3, observado / esperado) : 0;
+    })()
   };
 }
 
@@ -577,6 +607,8 @@ function observacoes(dez, m){
   if(Math.max(c.mesmaLinha,c.mesmaColuna) > 0.55) obs.push("forma desenho no volante");
   if(c.espacamentoRegular > 0.82) obs.push("espaçamento quase constante");
   if(c.somaCentral > 0.92) obs.push("soma exatamente na média");
+  if(c.fibonacci > 1.6) obs.push(
+    `concentra Fibonacci (${nf(c.fibonacci,1)}× o esperado do acaso)`);
   if(!obs.length) obs.push("sem padrão humano evidente");
   return obs;
 }

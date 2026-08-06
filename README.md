@@ -14,19 +14,26 @@ dezena sair. O que ele faz é medir, comparar contra o acaso, e dizer quando um
 
 ---
 
-> ### ⚠️ O `.apk` deste repositório está desatualizado
+> ### Não há `.apk` neste repositório, e é de propósito
 >
-> `LotoLab-1.0.0-release.apk` é um build antigo. **Instalar esse arquivo não traz
-> nada do que está descrito abaixo** — nem a cartela, nem a conferência
-> automática, nem o aprendizado por modalidade.
+> Havia um `LotoLab-1.0.0-release.apk` de julho. Ele foi removido: era um build
+> antigo que não acompanhava o código, e existir um binário desencontrado ao lado
+> do fonte fazia parecer que havia **duas versões** do app. Quem baixava aquele
+> arquivo instalava a versão anterior e concluía, com razão, que nada tinha
+> mudado.
 >
-> O código-fonte está atualizado (`index.html` e `www/index.html` são idênticos e
-> sincronizados). Para ter o app novo no celular, escolha um:
+> Agora há **uma versão só**: o `index.html`. Ele é o app inteiro, e
+> `www/index.html` é cópia idêntica dele.
+>
+> (O arquivo continua recuperável no histórico do git, no commit `d0facef`, para
+> quem precisar do build publicado.)
+>
+> Para rodar no celular, escolha um:
 >
 > * **Sem compilar:** `python3 servir.py` e abra o endereço no navegador do
->   celular. É a mesma página que roda dentro do APK.
+>   celular. É a mesma página que roda dentro de um APK.
 > * **Compilando:** siga o `APK.md` — precisa de Android SDK, `npm install` e da
->   sua keystore.
+>   sua keystore. Um APK gerado assim sai como versão 1.1.0 (`versionCode 2`).
 
 ---
 
@@ -120,20 +127,23 @@ APK.md                 como reconstruir o APK do zero
 LOJA.md                textos e ficha de dados para a Play Store
 ```
 
-### ⚠️ Atenção: `index.html` da raiz vs. `www/index.html`
+### `index.html` da raiz vs. `www/index.html`
 
-Existem **dois** `index.html`, e eles não são idênticos:
+Existem **dois** `index.html`, e hoje eles são **idênticos** — mas não por
+mágica, e sim porque foram sincronizados à mão:
 
 | Caminho | Papel |
 |---|---|
 | `index.html` (raiz) | Onde o desenvolvimento acontece. **Edite este.** |
 | `www/index.html` | Cópia que o Capacitor empacota (`webDir: "www"`). |
 
-O APK publicado (`LotoLab-1.0.0-release.apk`) foi construído a partir de um
-`www/index.html` **anterior**. A pasta `www/` já foi sincronizada com a raiz,
-então o próximo build sai com tudo o que está descrito abaixo — mas o APK que
-está no repositório ainda é o antigo. Reconstrua antes de publicar (ver
-`APK.md`).
+Editar a raiz e esquecer de copiar é o erro clássico deste projeto: os testes
+continuam passando (rodam sobre a raiz) e o APK sai sem a mudança. Confira
+quando estiver em dúvida:
+
+```bash
+cmp index.html www/index.html && echo "sincronizados"
+```
 
 Antes de gerar um APK novo, sincronize:
 

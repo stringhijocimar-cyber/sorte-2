@@ -32,6 +32,23 @@ const elemento = () => {
   return el;
 };
 
+/* Math.random determinístico dentro da VM.
+
+   Os testes de convergência comparam a média de acertos contra o acaso com
+   tolerância de 3 erros-padrão, em cinco métodos. Com Math.random de verdade,
+   alguns por cento das execuções falham sozinhas — e um teste que falha por
+   acaso ensina a ignorar falha, que é o oposto do que ele existe para fazer.
+   (Aconteceu: uma execução acusou o antirepeticao em 0,486 contra 0,600; com
+   amostra dez vezes maior o mesmo método ficou em z = +1,35.)
+
+   O Proxy troca só `random` e deixa o resto de Math intacto, sem tocar no
+   Math do processo que roda o arnês. */
+function mathSemeado(semente = 20260806) {
+  let x = semente;
+  const rnd = () => (x = (x * 1103515245 + 12345) % 2147483648) / 2147483648;
+  return new Proxy(Math, { get: (alvo, prop) => (prop === "random" ? rnd : alvo[prop]) });
+}
+
 const contexto = {
   console,
   localStorage: {
@@ -53,7 +70,7 @@ const contexto = {
   window: { matchMedia: () => ({ matches: false, addEventListener() {} }) },
   fetch: () => Promise.reject(new Error("sem rede — proposital")),
   setTimeout, clearTimeout, requestAnimationFrame: (f) => setTimeout(f, 0),
-  Math, Date, JSON, Number, String, Array, Object, Map, Set, Error, isNaN,
+  Math: mathSemeado(), Date, JSON, Number, String, Array, Object, Map, Set, Error, isNaN,
   parseInt, parseFloat, Promise, Intl,
 };
 contexto.globalThis = contexto;
@@ -79,6 +96,7 @@ const EXPOSTOS = [
   "auc", "logLoss", "sigmoide", "treinarLogistica", "permutarAuc",
   "atributosDezena", "dadosAprendizado", "aprender", "vereditoAprendizado",
   "MINIMO_CONCURSOS", "NOMES_ATRIBUTOS", "blocoDaModalidade",
+  "fibonacciAte", "observacoes", "PESOS", "referencia",
   "assinaturaHistorico", "modalidadesPendentes", "analisarPendentes", "aplicarCorrecao",
   "aoMudarHistorico", "guardarResultados",
 ];
@@ -971,6 +989,86 @@ secao("12. Holm-Bonferroni entre as modalidades");
   checar("mesmo com achado, o veredito não promete vantagem",
     !/aumenta a chance|vantagem real|garantid/i.test(t));
 }
+
+/* ==================================================================
+   13. Fibonacci como característica estrutural
+   ================================================================== */
+secao("13. Fibonacci");
+
+{
+  const fib = contexto.fibonacciAte;
+  checar("a sequência é a correta até 25",
+    [...fib(25)].sort((a, b) => a - b).join(",") === "1,2,3,5,8,13,21",
+    [...fib(25)].sort((a, b) => a - b).join(","));
+  checar("o 1 entra uma vez só, não duas", fib(25).size === 7);
+  checar("até 60 inclui 34 e 55",
+    fib(60).has(34) && fib(60).has(55) && !fib(60).has(89));
+  checar("universo mínimo não quebra", fib(1).size === 1 && fib(0).size === 0);
+
+  /* Normalização: é o que torna o número comparável entre modalidades. Um jogo
+     "médio" tem de dar ~1,0 em qualquer loteria, senão a Lotofácil — onde 7 dos
+     25 números são Fibonacci — pareceria sempre concentrada. */
+  const cheio = contexto.caracteristicas([1, 2, 3, 5, 8, 13, 21], "lotofacil");
+  const semNenhum = contexto.caracteristicas([4, 6, 9, 10, 11, 12, 14], "lotofacil");
+  checar("jogo todo de Fibonacci fica bem acima de 1", cheio.fibonacci > 2.5,
+    cheio.fibonacci.toFixed(2));
+  checar("jogo sem Fibonacci nenhum dá 0", semNenhum.fibonacci === 0);
+
+  /* O teste que dá sentido à normalização: modalidades com densidades de
+     Fibonacci muito diferentes têm de produzir escalas comparáveis. */
+  const densidade = (mod) => {
+    const c = M[mod];
+    const f = [...fib(c.N + c.base - 1)].filter(d => d >= c.base).length;
+    return f / c.N;
+  };
+  checar("as densidades de Fibonacci são mesmo diferentes entre loterias",
+    Math.abs(densidade("lotofacil") - densidade("quina")) > 0.1,
+    `lotofácil ${(100*densidade("lotofacil")).toFixed(0)}% vs quina ${(100*densidade("quina")).toFixed(0)}%`);
+  {
+    /* Em cada modalidade, um jogo com exatamente a proporção esperada tem de
+       dar perto de 1,0 — é a prova de que a escala é comparável. */
+    const perto = [];
+    for (const mod of ["lotofacil", "quina", "mega-sena"]) {
+      const c = M[mod];
+      const universo = Array.from({ length: c.N }, (_, i) => i + c.base);
+      const f = fib(c.N + c.base - 1);
+      const alvo = Math.round(densidade(mod) * c.k);
+      const jogo = universo.filter(d => f.has(d)).slice(0, alvo)
+        .concat(universo.filter(d => !f.has(d)).slice(0, c.k - alvo))
+        .sort((a, b) => a - b);
+      perto.push(contexto.caracteristicas(jogo, mod).fibonacci);
+    }
+    /* A tolerância não pode ser um número mágico: ela é a granularidade da
+       própria modalidade. Na Quina o esperado é 0,56 dezena Fibonacci em 5, e
+       não existe meia dezena — o valor alcançável mais próximo de 1,0 já fica
+       em 1,78. Exigir 1,0±0,35 lá reprovaria uma métrica correta. O que se
+       exige é que o desvio caiba em UM passo de discretização. */
+    const passo = mod => 1 / (M[mod].k * densidade(mod));
+    const mods = ["lotofacil", "quina", "mega-sena"];
+    checar("proporção esperada fica dentro de um passo de 1,0 em cada modalidade",
+      perto.every((v, i) => Math.abs(v - 1) <= passo(mods[i]) + 1e-9),
+      mods.map((m2, i) => `${m2} ${perto[i].toFixed(2)} (passo ${passo(m2).toFixed(2)})`).join(" · "));
+  }
+
+  checar("a observação aparece quando o jogo concentra Fibonacci",
+    contexto.observacoes([1, 2, 3, 5, 8, 13, 21], "lotofacil")
+      .some(o => /fibonacci/i.test(o)));
+  checar("e não aparece num jogo comum",
+    !contexto.observacoes([4, 6, 9, 10, 11, 12, 14], "lotofacil")
+      .some(o => /fibonacci/i.test(o)));
+
+  checar("Fibonacci entra no escore de rateio, com peso baixo",
+    typeof contexto.PESOS.fibonacci === "number" &&
+    contexto.PESOS.fibonacci > 0 && contexto.PESOS.fibonacci < contexto.PESOS.ate31 / 5,
+    `${contexto.PESOS.fibonacci} contra ${contexto.PESOS.ate31} de datas`);
+
+  /* O ponto que mais importa: Fibonacci NÃO muda a chance. O texto do app não
+     pode sugerir o contrário em lugar nenhum. */
+  const textoFib = contexto.observacoes([1, 2, 3, 5, 8, 13, 21], "lotofacil").join(" ");
+  checar("a observação descreve a forma, não promete acerto",
+    !/chance|prov[áa]vel|sair|ganhar/i.test(textoFib), textoFib);
+}
+
 
 
 

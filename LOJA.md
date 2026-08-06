@@ -146,7 +146,8 @@ número quente.
 ## Antes de enviar
 
 * `versionCode` **precisa** subir a cada envio. Está em 2; o 1 foi gasto pelo
-  `LotoLab-1.0.0-release.apk`. Enviar um código repetido é recusado pela loja.
+  APK 1.0.0 publicado em julho (removido do repositório, mas o código de versão
+  continua gasto na loja). Enviar um código repetido é recusado pela Play Store.
 * Sincronize o `www/` e reconstrua: veja `APK.md`.
 * As capturas em `capturas/` são geradas pela bateria de interface e já mostram
   a versão nova — mas confira o tamanho exigido pela loja antes de subir.
