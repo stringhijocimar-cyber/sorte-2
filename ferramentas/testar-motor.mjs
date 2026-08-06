@@ -101,6 +101,7 @@ const EXPOSTOS = [
   "calibrarPopularidade", "minimosQuadrados", "premioDoAcerto", "pesosVigentes",
   "proximoConcurso", "diasAte", "cartaoProximo", "INTERVALO_BUSCA",
   "perfilDoJogo", "lerTipicidade", "ehPrimo", "naMoldura", "medidasDoPerfil",
+  "retrospectiva",
   "FONTES", "normalizarEspelho", "buscarNaCaixa", "normalizarRepositorio",
   "baixarHistoricoDoRepositorio", "REPO_DADOS",
   "MINIMO_CALIBRACAO", "ATRIBUTOS_POPULARIDADE",
@@ -1531,6 +1532,89 @@ secao("17. Perfil do jogo");
 
   S.resultados = guardado.r; S.modalidade = guardado.m;
 }
+
+/* ==================================================================
+   20. Retrospectiva: o jogo contra todo o histórico
+   ================================================================== */
+secao("20. Retrospectiva do jogo");
+
+{
+  const S = motor.S;
+  const guardado = { r: S.resultados, m: S.modalidade };
+  S.modalidade = "mega-sena";
+
+  S.resultados = [{ concurso: 1, data: "2025-01-01", modalidade: "mega-sena",
+    dezenas: [1,2,3,4,5,6] }];
+  checar("histórico curto é recusado com o número que falta",
+    contexto.retrospectiva([1,2,3,4,5,6], "mega-sena").tem === 1);
+
+  /* Histórico montado à mão: 20 concursos, o primeiro idêntico ao jogo.
+     Os números têm de fechar na conta feita por fora. */
+  {
+    S.resultados = [];
+    for (let i = 1; i <= 20; i++)
+      S.resultados.push({ concurso: i, data: "2025-01-01", modalidade: "mega-sena",
+        dezenas: i === 1 ? [1,2,3,4,5,6] : [10,20,30,40,50,60],
+        rateio: [{ faixa: 1, ganhadores: 1, premio: 1000000 },
+                 { faixa: 2, ganhadores: 50, premio: 40000 },
+                 { faixa: 3, ganhadores: 3000, premio: 800 }] });
+
+    const r = contexto.retrospectiva([1,2,3,4,5,6], "mega-sena");
+    const preco = M["mega-sena"].preco;
+    checar("o custo é preço × concursos", r.custo === preco * 20,
+      `${r.custo} = ${preco} × 20`);
+    checar("acertou 6 uma vez e 0 nas outras 19",
+      r.distribuicao[6] === 1 && r.distribuicao[0] === 19,
+      JSON.stringify(r.distribuicao));
+    checar("o retorno usa o rateio real da faixa", r.retorno === 1000000);
+    checar("o líquido é retorno menos custo",
+      r.liquido === 1000000 - preco * 20);
+    checar("o melhor momento é nomeado com concurso e valor",
+      r.melhor && r.melhor.concurso === 1 && r.melhor.premio === 1000000);
+    checar("nenhum concurso ficou sem rateio", r.semRateio === 0);
+  }
+
+  /* Concurso premiado SEM rateio: entra no histograma, fica fora do retorno, e
+     é contado. Estimar o prêmio ausente inflaria o número com invenção. */
+  {
+    S.resultados = S.resultados.map((x, i) =>
+      i === 0 ? { ...x, rateio: undefined } : x);
+    const r = contexto.retrospectiva([1,2,3,4,5,6], "mega-sena");
+    checar("premiado sem rateio não entra no retorno", r.retorno === 0);
+    checar("mas é contado e reportado", r.semRateio === 1 && r.premiados === 1);
+    checar("e continua no histograma de acertos", r.distribuicao[6] === 1);
+  }
+
+  /* Aposta ampliada custa C(n,k) apostas por concurso. */
+  {
+    S.resultados = S.resultados.map(x => ({ ...x,
+      rateio: [{ faixa: 1, ganhadores: 1, premio: 0 }] }));
+    const r7 = contexto.retrospectiva([1,2,3,4,5,6,7], "mega-sena");
+    checar("aposta de 7 dezenas custa 7 apostas por concurso",
+      r7.apostas === 7 && r7.custoPorConcurso === 7 * M["mega-sena"].preco,
+      `${r7.apostas} apostas`);
+  }
+
+  /* O texto não pode virar promessa: é extrato do passado. */
+  {
+    S.marcadas = { "mega-sena": [1,2,3,4,5,6] };
+    S.tela = "montar";
+    const html4 = contexto.T.montar();
+    checar("a tela mostra a retrospectiva",
+      /se você tivesse jogado isto sempre/.test(html4));
+    /* \s+ de novo, e pela segunda vez na mesma bateria: o texto do app quebra
+       linha entre "não se" e "repete". Espaço literal em asserção sobre HTML
+       formatado reprova o texto certo — é falso negativo, não defeito. */
+    checar("e avisa que o passado não se repete",
+      /passado\s+não\s+se\s+repete/.test(html4));
+    checar("e não promete desempenho futuro",
+      !/vai ganhar|vai render|melhor jogo para o próximo/i.test(html4));
+    S.marcadas = {};
+  }
+
+  S.resultados = guardado.r; S.modalidade = guardado.m;
+}
+
 
 /* ==================================================================
    18. Fontes de resultado e conversão de formatos
