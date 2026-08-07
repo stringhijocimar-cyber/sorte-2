@@ -1067,8 +1067,30 @@ T.gerar = () => {
 T.jogos = () => {
   if(!S.jogos.length) return `<div class="vazio">Nenhum jogo salvo ainda.<br>
     Gere jogos na primeira aba e toque em <strong>Salvar</strong>.</div>`;
+
+  /* Filtra pela modalidade escolhida no cabeçalho. Sem isto a tela empilhava
+     Mega-Sena, Lotofácil e Quina numa lista só — e como cada modalidade tem
+     universo e quantidade de dezenas diferentes, a lista misturada não dá para
+     ler nem para comparar. A escolha do cabeçalho vale em todas as telas; esta
+     era a única que a ignorava. */
+  const meus = S.jogos.filter(j => j.modalidade === S.modalidade);
+  const outras = S.jogos.length - meus.length;
+  const noutras = {};
+  S.jogos.forEach(j => { if(j.modalidade !== S.modalidade)
+    noutras[j.modalidade] = (noutras[j.modalidade] || 0) + 1; });
+
+  const rodape = !outras ? "" : `<div class="nota">Você tem
+    ${outras} jogo${outras===1?"":"s"} em outra${Object.keys(noutras).length===1?"":"s"}
+    modalidade${Object.keys(noutras).length===1?"":"s"}:
+    ${Object.entries(noutras).map(([k,n]) =>
+      `<strong>${esc(MODALIDADES[k].nome)}</strong> (${n})`).join(", ")}.
+    Troque no topo da tela para ver.</div>`;
+
+  if(!meus.length) return `<div class="vazio">Nenhum jogo salvo de
+    <strong>${esc(MODALIDADES[S.modalidade].nome)}</strong>.</div>` + rodape;
+
   const porLote = {};
-  S.jogos.forEach(j => (porLote[j.lote] = porLote[j.lote] || []).push(j));
+  meus.forEach(j => (porLote[j.lote] = porLote[j.lote] || []).push(j));
   return Object.entries(porLote).reverse().map(([lote, jogos])=>{
     const p = jogos[0];
     return `<h2 style="margin:14px 0 8px">${esc(MODALIDADES[p.modalidade].nome)} ·
@@ -1078,8 +1100,8 @@ T.jogos = () => {
       <button class="acao contorno mini" data-copiar="${esc(lote)}">Copiar lote</button>
       <button class="acao perigo mini" data-apagar="${esc(lote)}">Apagar lote</button>
     </div>`;
-  }).join("") + `<div class="nota">Os jogos ficam guardados só neste aparelho. Nada é
-  enviado para lugar nenhum.</div>`;
+  }).join("") + rodape + `<div class="nota">Os jogos ficam guardados só neste
+  aparelho. Nada é enviado para lugar nenhum.</div>`;
 };
 
 function ficha(j){
