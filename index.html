@@ -4154,7 +4154,35 @@ async function carregarCalibracao(){
   });
   carregarCalibracao().then(()=>{ if(CALIBRACAO && S.tela==="gerar") pintar(); });
   if("serviceWorker" in navigator){
-    navigator.serviceWorker.register("sw.js").catch(()=>{});
+    navigator.serviceWorker.register("sw.js").then(reg => {
+      /* Avisa quando uma versão nova terminou de baixar. Sem isto, a pessoa
+         só veria a atualização na PRÓXIMA abertura — e foi exatamente assim
+         que o app ficou congelado numa versão antiga sem ninguém entender por
+         quê. */
+      reg.addEventListener("updatefound", () => {
+        const novo = reg.installing;
+        if(!novo) return;
+        novo.addEventListener("statechange", () => {
+          if(novo.state === "installed" && navigator.serviceWorker.controller){
+            avisar("atualizacao", "Versão nova disponível",
+              "Toque para recarregar e usar a versão mais recente do app.",
+              `versao:${Date.now()}`);
+            pintarContaAvisos();
+          }
+        });
+      });
+      reg.update().catch(()=>{});
+    }).catch(()=>{});
+
+    /* Quando o service worker novo assume, recarrega uma única vez. O
+       controle da flag evita o laço infinito clássico: sem ela, cada troca
+       dispara um reload que dispara outra troca. */
+    let jaRecarregou = false;
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if(jaRecarregou) return;
+      jaRecarregou = true;
+      location.reload();
+    });
   }
 })();
 </script>
