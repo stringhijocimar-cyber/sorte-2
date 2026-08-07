@@ -3681,11 +3681,19 @@ function acoesNovas(){
       });
       const novos = guardarResultados(lote);
       const r = aoMudarHistorico(novos, "histórico completo");
+      /* O teto só vale para o caminho lento, que busca concurso a concurso.
+         Quando o arquivo do repositório responde, ele traz o histórico inteiro
+         numa requisição — e avisar "o teto foi atingido, rode de novo" ali é
+         mentira exatamente no momento em que tudo deu certo. */
+      const veioDoRepositorio = lote[0] && lote[0].origem === "repositorio";
       saida.innerHTML = `<div class="nota"><strong>${lote.length} concursos recebidos</strong>,
         ${novos} novo${novos===1?"":"s"}. ${r.novas} conferência${r.novas===1?"":"s"}
-        automática${r.novas===1?"":"s"}.${lote.length >= TETO
-          ? " O teto de " + TETO + " foi atingido — rode de novo para continuar de onde parou."
-          : ""}</div>`;
+        automática${r.novas===1?"":"s"}.${
+          veioDoRepositorio
+            ? " Histórico completo, direto do repositório do app."
+            : (lote.length >= TETO
+              ? " O teto de " + TETO + " foi atingido — rode de novo para continuar de onde parou."
+              : "")}</div>`;
       setTimeout(pintar, 1200);
     }catch(e){
       saida.innerHTML = `<div class="nota atencao">A busca falhou: ${esc(e.message)}.
