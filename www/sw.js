@@ -19,7 +19,7 @@
    para trás — é a única forma de expulsar um cache envenenado do aparelho de
    quem já instalou.                                                        */
 
-const VERSAO = "3";
+const VERSAO = "4";
 const CACHE = `lotolab-v${VERSAO}`;
 
 //: A casca mínima para o app abrir offline.
@@ -86,8 +86,21 @@ async function cachePrimeiro(req){
 self.addEventListener("fetch", ev => {
   if(ev.request.method !== "GET") return;
   const url = new URL(ev.request.url);
-  /* Ícones e manifesto podem vir do cache; o resto — o próprio app e os
-     dados/*.json — tem de tentar a rede antes, senão volta o congelamento. */
+
+  /* Requisição para outro domínio — os dados/*.json vindos do GitHub, por
+     exemplo — passa direto, sem o worker no meio.
+
+     Motivo: o worker interceptando uma busca entre domínios acrescenta uma
+     camada que só pode atrapalhar. Se ele erra o CORS, ou guarda uma resposta
+     opaca, ou fica com um JSON velho, o app quebra de um jeito que ninguém
+     consegue depurar de fora — e este arquivo já congelou o app inteiro uma
+     vez por excesso de zelo com cache. Deixar passar é mais previsível, e o
+     custo é nenhum: o app já guarda os resultados no aparelho por conta
+     própria, então não é o worker que dá o funcionamento offline deles. */
+  if(url.origin !== self.location.origin) return;
+
+  /* Ícones e manifesto podem vir do cache; o app tenta a rede antes, senão
+     volta o congelamento que este arquivo causou. */
   ev.respondWith(IMUTAVEIS.test(url.pathname)
     ? cachePrimeiro(ev.request)
     : redePrimeiro(ev.request));
