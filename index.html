@@ -24,6 +24,13 @@
 :root{
   --fundo:#EDF0F2; --carta:#FFFFFF; --tinta:#0F1E2E; --secundaria:#5C6B7A;
   --acaso:#0E6E62; --seu:#B26B00; --alerta:#A3324C; --linha:#D9DFE4; --trama:#E7ECEF;
+  /* Verde e amarelo do resultado do concurso. São cores PRÓPRIAS, e não o
+     --acaso e o --seu: teal já quer dizer "o acaso" e âmbar "o seu" na
+     interface inteira, e reaproveitá-los aqui faria a mesma cor significar
+     duas coisas diferentes na mesma tela. Estas duas dizem uma coisa só:
+     saiu ganhador, ou acumulou. */
+  --ganhou:#12703A; --ganhou-tinta:#0C5B2E;
+  --acumulou:#8A6A00; --acumulou-tinta:#6E5400;
   --veu:rgba(15,30,46,.045);
   --mono:ui-monospace,"SF Mono","Roboto Mono",Menlo,Consolas,monospace;
   --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
@@ -46,6 +53,8 @@
 html[data-tema="escuro"]{
   --fundo:#0B1622; --carta:#132030; --tinta:#E7EDF2; --secundaria:#8FA0AF;
   --acaso:#3FB3A3; --seu:#E9A73C; --alerta:#E2607C; --linha:#1E2E40; --trama:#16253A;
+  --ganhou:#4FC97B; --ganhou-tinta:#7BDC9F;
+  --acumulou:#E9C24C; --acumulou-tinta:#F2D57E;
   --veu:rgba(255,255,255,.04);
   --sombra:0 1px 2px rgba(0,0,0,.3),0 12px 28px -20px rgba(0,0,0,.8);
   --sombra-alta:0 2px 4px rgba(0,0,0,.35),0 20px 44px -26px rgba(0,0,0,.9);
@@ -193,6 +202,20 @@ main{padding:14px 16px calc(var(--barra) + 45px + var(--base));
   background:var(--secundaria)}
 .item.ok .marca-cor{background:var(--acaso)}
 .item.aviso .marca-cor{background:var(--seu)}
+
+/* Concurso com ganhador: verde. Acumulado: amarelo. O concurso INTEIRO muda de
+   cor, e não só o selo — numa lista de quarenta, a cor é o que se lê primeiro,
+   e ler quarenta selos um a um é o que se estava tentando evitar.
+   A cor nunca vai sozinha: o selo de texto continua ali, porque quem não
+   distingue verde de amarelo precisa da mesma informação. */
+.item.ganhou{border-color:color-mix(in srgb,var(--ganhou) 42%,var(--linha));
+  background:color-mix(in srgb,var(--ganhou) 7%,var(--carta))}
+.item.ganhou .marca-cor{background:var(--ganhou);width:4px}
+.item.ganhou .txt b{color:var(--ganhou-tinta)}
+.item.acumulou{border-color:color-mix(in srgb,var(--acumulou) 45%,var(--linha));
+  background:color-mix(in srgb,var(--acumulou) 8%,var(--carta))}
+.item.acumulou .marca-cor{background:var(--acumulou);width:4px}
+.item.acumulou .txt b{color:var(--acumulou-tinta)}
 .item .txt{flex:1;min-width:0}
 .item .txt b{display:block;font-size:.9rem}
 .item .txt span{display:block;font-size:.78rem;color:var(--secundaria)}
@@ -252,16 +275,24 @@ nav button[aria-current="page"] svg{stroke-width:2.2}
    "não sei" não pode parecer um resultado: ele é discreto e vazado, enquanto
    ter ganhador e acumular são afirmações e ficam preenchidas. */
 .ganho{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:5px}
+/* Mesma leitura nos cartões: uma faixa na borda esquerda, na cor do resultado. */
+.carta.ganhou,.nota.ganhou{border-left:4px solid var(--ganhou)}
+.carta.acumulou,.nota.acumulou{border-left:4px solid var(--acumulou)}
 .selo-ganho{font-family:var(--mono);font-size:.6rem;letter-spacing:.07em;
   text-transform:uppercase;padding:2px 8px;border-radius:20px;white-space:nowrap}
-.selo-ganho.ganhou{background:color-mix(in srgb,var(--acaso) 16%,transparent);
-  color:var(--acaso);border:1px solid color-mix(in srgb,var(--acaso) 40%,transparent)}
-.selo-ganho.acumulou{background:color-mix(in srgb,var(--seu) 16%,transparent);
-  color:var(--seu);border:1px solid color-mix(in srgb,var(--seu) 40%,transparent)}
+.selo-ganho.ganhou{background:color-mix(in srgb,var(--ganhou) 15%,transparent);
+  color:var(--ganhou-tinta);border:1px solid color-mix(in srgb,var(--ganhou) 45%,transparent)}
+.selo-ganho.acumulou{background:color-mix(in srgb,var(--acumulou) 18%,transparent);
+  color:var(--acumulou-tinta);border:1px solid color-mix(in srgb,var(--acumulou) 50%,transparent)}
 .selo-ganho.desconhecido{background:transparent;color:var(--secundaria);
   border:1px dashed var(--linha)}
 .ganho-premio{font-family:var(--mono);font-size:.72rem;color:var(--tinta)}
 .ganho-cidades{font-size:.72rem;color:var(--secundaria);flex-basis:100%}
+.ponto-sorteio{display:inline-block;width:7px;height:7px;border-radius:50%;
+  margin-right:6px;vertical-align:middle;background:var(--linha)}
+.ponto-sorteio.ganhou{background:var(--ganhou)}
+.ponto-sorteio.acumulou{background:var(--acumulou)}
+.ponto-sorteio.desconhecido{background:transparent;box-shadow:inset 0 0 0 1px var(--linha)}
 .proximo .contagem b{display:block;font-family:var(--mono);font-size:1.6rem;
   font-weight:650;line-height:1}
 .proximo .contagem span{font-size:.6rem;text-transform:uppercase;letter-spacing:.1em;
@@ -1299,6 +1330,12 @@ function tabelaSugestao(s){
     <tbody>${linhas}</tbody>
   </table></div>
 
+  ${(() => {
+    const a = aprendizadoNaSugestao(s.modalidade || S.modalidade);
+    return `<div class="nota" style="margin-top:10px">
+      <strong>O aprendizado entra aqui?</strong> ${a.texto}</div>`;
+  })()}
+
   <div class="nota atencao" style="margin-top:10px">
     <strong>Isto não aumenta a sua chance.</strong> Toda combinação tem exatamente a
     mesma probabilidade, e o próximo sorteio pode perfeitamente ser o mais atípico
@@ -1383,10 +1420,20 @@ function ficha(j){
         selo: ultima ? `concurso ${ultima.concurso}` : "não conferido"})}
       ${ultima ? legendaCartela : ""}
       ${conferencias.length > 1 ? `<div class="rolagem" style="margin-top:10px"><table>
-        <tr><th>concurso</th><th>acertos</th><th>faixa</th></tr>
-        ${conferencias.map(cf=>`<tr><td>${esc(cf.concurso)}</td><td>${cf.acertos}</td>
+        <tr><th>concurso</th><th>acertos</th><th>faixa</th><th>sorteio</th></tr>
+        ${conferencias.map(cf=>{
+          /* O estado do sorteio, e não do seu jogo: teve ganhador na faixa 1?
+             São perguntas diferentes e a tabela agora responde as duas. */
+          const doSorteio = S.resultados.find(r =>
+            r.concurso === cf.concurso && r.modalidade === j.modalidade) || {};
+          const g = ganhadoresDoConcurso(doSorteio);
+          return `<tr><td>${esc(cf.concurso)}</td><td>${cf.acertos}</td>
           <td>${faixaAtingida(j.modalidade, cf.acertos) !== null
-            ? `<span class="selo ok">prêmio</span>` : "—"}</td></tr>`).join("")}
+            ? `<span class="selo ok">prêmio</span>` : "—"}</td>
+          <td><span class="ponto-sorteio ${g.estado}" title="${esc(g.rotulo)}"></span>${
+            g.estado === "ganhou" ? "teve ganhador"
+            : g.estado === "acumulou" ? "acumulou" : "—"}</td></tr>`;
+        }).join("")}
       </table></div>` : ""}
     </div>`}
   </div>`;
@@ -1941,6 +1988,43 @@ function perfilRapido(dezenas, dist){
   return {linhas, menor};
 }
 
+/* O aprendizado desta loteria entrou na sugestão?
+
+   Esta função existe por causa de uma pergunta direta: "depois de aprender, o
+   app sugere números usando o que aprendeu?". A resposta honesta é NÃO — e o
+   app precisa dizer isso na própria tela, em vez de deixar a dúvida de pé.
+
+   O motivo não é preguiça de ligar as duas coisas: é que o modelo, medido fora
+   da amostra nas oito loterias, NÃO ACHOU NADA. AUC entre 0,494 e 0,511, onde
+   0,5 é "não distingue". Um modelo assim ainda produz uma ordem entre as
+   dezenas — e usar essa ordem mudaria quais números saem sem mudar a chance de
+   nenhum, criando a impressão de que há inteligência onde só há ruído. É
+   exatamente a mentira que este app existe para não contar.
+
+   A porta fica aberta e a condição é explícita: se algum dia o modelo de uma
+   loteria achar sinal que sobreviva à correção de Holm, `aprendeu` fica
+   verdadeiro, o app avisa, e aí a conversa muda — com número medido. */
+function aprendizadoNaSugestao(modalidade){
+  const r = S.aprendizado && S.aprendizado[modalidade];
+  if(!r || r.erro)
+    return {usa:false, estado:"não medido",
+      texto:`O aprendizado desta loteria ainda não rodou, então a sugestão não
+        teria o que usar. Ela vem só das estatísticas do histórico.`};
+  if(r.aprendeu)
+    return {usa:false, estado:"achou algo", auc:r.auc, p:r.p,
+      texto:`O modelo desta loteria encontrou um desvio que sobreviveu à correção
+        (AUC ${nf(r.auc,4)}, p ${nf(r.p,3)}). Mesmo assim a sugestão
+        <strong>não</strong> o usa: um desvio medido é motivo para investigar na
+        tela de Aprendizado, e não para virar sugestão de dezena. Veja lá antes
+        de concluir qualquer coisa.`};
+  return {usa:false, estado:"não achou nada", auc:r.auc, p:r.p,
+    texto:`O modelo desta loteria foi treinado e medido fora da amostra:
+      <strong>AUC ${nf(r.auc,4)}</strong> (0,5 é "não distingue nada", p ${nf(r.p,3)}).
+      Ele não achou sinal — e por isso a sugestão <strong>não usa</strong> o que
+      ele aprendeu. Usar a ordem de um modelo que não distingue nada mudaria os
+      números sem mudar a chance de nenhum deles.`};
+}
+
 function sugestaoDoSistema(modalidade, tamanho, opcoes){
   const o = Object.assign({candidatas: CANDIDATAS_SUGESTAO, semente: null}, opcoes||{});
   const dist = distribuicoesDoHistorico(modalidade);
@@ -1982,8 +2066,9 @@ function sugestaoDoSistema(modalidade, tamanho, opcoes){
   amostra.sort((a,b)=>a-b);
   const medianaDoAcaso = amostra[Math.floor(amostra.length/2)];
 
-  return {dezenas: melhor.dezenas, linhas: melhor.linhas, menor: melhor.menor,
-          medianaDoAcaso, n: dist.n, candidatas: o.candidatas, tam};
+  return {modalidade, dezenas: melhor.dezenas, linhas: melhor.linhas,
+          menor: melhor.menor, medianaDoAcaso, n: dist.n,
+          candidatas: o.candidatas, tam};
 }
 
 function lerTipicidade(fracao){
@@ -2510,6 +2595,21 @@ function seloGanhadores(r, opcoes){
       esc(`${c.municipio}/${c.uf}${c.ganhadores>1?` (${c.ganhadores})`:""}`)).join(" · ")}${
       r.cidades.length>4 ? ` +${r.cidades.length-4}` : ""}</span>`);
   return `<span class="ganho">${partes.join("")}</span>`;
+}
+
+/* Resumo de um lote recém-buscado: quantos deram ganhador, quantos acumularam.
+   É a resposta à pergunta que a pessoa faz ao buscar vinte concursos de uma
+   vez, e que antes exigia percorrer a lista item a item. */
+function resumoGanhadores(lista){
+  const conta = {ganhou:0, acumulou:0, desconhecido:0};
+  (lista || []).forEach(r => conta[ganhadoresDoConcurso(r).estado]++);
+  const partes = [];
+  if(conta.ganhou) partes.push(
+    `<strong style="color:var(--ganhou-tinta)">${conta.ganhou} com ganhador</strong>`);
+  if(conta.acumulou) partes.push(
+    `<strong style="color:var(--acumulou-tinta)">${conta.acumulou} acumulado${conta.acumulou>1?"s":""}</strong>`);
+  if(conta.desconhecido) partes.push(`${conta.desconhecido} sem essa informação`);
+  return {conta, texto: partes.join(" · ")};
 }
 
 /* Quantos concursos desta modalidade já trazem a informação. Serve para a tela
@@ -4097,7 +4197,7 @@ T.resultados = () => {
       ? `<div class="vazio">Nenhum resultado desta modalidade ainda.<br>
           Sem histórico, a bancada e o placar não têm o que medir.</div>`
       : `<div class="lista" style="margin-top:10px">${meus.slice(0,40).map(r=>`
-          <div class="item ${ganhadoresDoConcurso(r).estado==="ganhou"?"ok":""}">
+          <div class="item ${ganhadoresDoConcurso(r).estado}">
             <span class="marca-cor"></span>
             <span class="txt"><b>Concurso ${esc(r.concurso)}</b>
               <span>${r.dezenas.map(pad).join(" ")}</span>
@@ -4248,9 +4348,11 @@ function acoesNovas(){
       const n = guardarResultados(lote);
       const nome = (FONTES.find(f => f.id === lote[0].fonte) || {}).nome || "fonte desconhecida";
       const r = aoMudarHistorico(n, nome);
+      const resumo = resumoGanhadores(lote);
       saida.innerHTML = `<div class="nota"><strong>${lote.length} concurso${lote.length===1?"":"s"}
         recebido${lote.length===1?"":"s"}</strong>, ${n} novo${n===1?"":"s"}.
         ${r.novas} conferência${r.novas===1?"":"s"} automática${r.novas===1?"":"s"}.
+        ${resumo.texto ? `<span style="display:block;margin-top:6px">${resumo.texto}.</span>` : ""}
         <span style="display:block;margin-top:4px;font-size:.9em">Fonte: ${esc(nome)}.</span></div>`;
       setTimeout(pintar, 900);
     }catch(e){
@@ -4332,7 +4434,8 @@ function acoesNovas(){
       /* O resultado buscado ja diz, na hora, se teve ganhador. Era a pergunta
          que o usuario fazia logo depois de ver as dezenas, e que obrigava a ir
          ate a tela de Resultados para responder. */
-      alvo.innerHTML = `<div class="nota"><strong>Concurso ${esc(r.concurso)}</strong>
+      alvo.innerHTML = `<div class="nota ${ganhadoresDoConcurso(r).estado}"
+        ><strong>Concurso ${esc(r.concurso)}</strong>
         preenchido. Fonte: ${esc(nome)}. Toque em conferir.
         ${seloGanhadores(r)}</div>`;
     }catch(e){
@@ -4654,10 +4757,11 @@ function acoes(){
     const premiou = alvo.filter(j => c.faixas.includes(
       j.conferencias[j.conferencias.length-1].acertos)).length;
 
-    saida.innerHTML = `<div class="carta">
+    const doConcurso = S.resultados.find(r =>
+      r.concurso === concurso && r.modalidade === S.modalidade) || {};
+    saida.innerHTML = `<div class="carta ${ganhadoresDoConcurso(doConcurso).estado}">
       <h3>Concurso ${esc(concurso)} — ${alvo.length} jogo${alvo.length>1?"s":""} conferido${alvo.length>1?"s":""}</h3>
-      ${seloGanhadores(S.resultados.find(r =>
-        r.concurso === concurso && r.modalidade === S.modalidade) || {})}
+      ${seloGanhadores(doConcurso)}
       ${/* O resultado sai na cartela, e não em chips: é o mesmo objeto que a
              pessoa marcou, agora com o sorteio impresso. Quando há um jogo só,
              a cartela mostra as duas camadas — marcação e sorteio — e o acerto

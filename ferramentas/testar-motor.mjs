@@ -157,7 +157,8 @@ const EXPOSTOS = [
   "assinaturaHistorico", "modalidadesPendentes", "analisarPendentes", "aplicarCorrecao",
   "aoMudarHistorico", "guardarResultados",
   "sugestaoDoSistema", "tabelaSugestao", "nomeDoMetodo", "distribuicoesDoHistorico",
-  "ganhadoresDoConcurso", "seloGanhadores", "coberturaDeGanhadores",
+  "aprendizadoNaSugestao",
+  "ganhadoresDoConcurso", "seloGanhadores", "coberturaDeGanhadores", "resumoGanhadores",
 ];
 const epilogo = `\n;globalThis.__motor = {${EXPOSTOS.map((n) => `${n}: typeof ${n} !== "undefined" ? ${n} : undefined`).join(", ")}};\n`;
 vm.runInContext(fonte + epilogo, contexto, { filename: "index.html:script" });
@@ -2183,6 +2184,47 @@ secao("22. Sugestão do sistema e retirada do rateio");
   checar("a tela da sugestão renderiza as dez medidas",
     (html.match(/<tr>/g) || []).length === s1.linhas.length + 1,
     `${(html.match(/<tr>/g) || []).length} linhas de tabela`);
+  /* --- o aprendizado NÃO entra na sugestão, e a tela diz isso --- */
+  {
+    const guardaAp = S.aprendizado;
+
+    S.aprendizado = {};
+    const semMedir = contexto.aprendizadoNaSugestao("mega-sena");
+    checar("sem aprendizado rodado, a tela diz que não há o que usar",
+      semMedir.usa === false && /ainda não rodou/.test(semMedir.texto));
+
+    S.aprendizado = { "mega-sena": { auc: 0.5035, p: 0.368, aprendeu: false } };
+    const semSinal = contexto.aprendizadoNaSugestao("mega-sena");
+    checar("com o modelo sem achar nada, a sugestão NÃO usa o modelo",
+      semSinal.usa === false, semSinal.estado);
+    checar("e a tela mostra o AUC medido, para não ser 'confie em mim'",
+      /0,5035/.test(semSinal.texto) && /0,5 é/.test(semSinal.texto), "");
+
+    /* O caso que separa um app honesto de um vendedor: MESMO achando desvio,
+       a sugestão continua sem usar o modelo. Achado é motivo para investigar,
+       não para escolher dezena. */
+    S.aprendizado = { "mega-sena": { auc: 0.755, p: 0.004, aprendeu: true } };
+    const comSinal = contexto.aprendizadoNaSugestao("mega-sena");
+    checar("MESMO com sinal, a sugestão continua sem usar o modelo",
+      comSinal.usa === false, comSinal.estado);
+    checar("mas a tela conta que houve achado, em vez de esconder",
+      /0,7550/.test(comSinal.texto) && /sobreviveu à correção/.test(comSinal.texto), "");
+    checar("nenhum dos três textos promete dezena mais provável",
+      [semMedir, semSinal, comSinal].every(x =>
+        !/mais provável|mais prováveis|vai sair|tende a sair/i.test(x.texto)));
+
+    S.resultados = historicoSemeado("mega-sena", 60, 6, 400, 20260809);
+    S.aprendizado = { "mega-sena": { auc: 0.5035, p: 0.368, aprendeu: false } };
+    const comAviso = contexto.tabelaSugestao(
+      contexto.sugestaoDoSistema("mega-sena", 6, { semente: 4 }));
+    checar("a tela da sugestão responde 'o aprendizado entra aqui?'",
+      /O aprendizado entra aqui\?/.test(comAviso));
+    checar("e responde que não usa",
+      /não usa<\/strong>/.test(comAviso), "");
+
+    S.aprendizado = guardaAp;
+  }
+
   const vazio = contexto.tabelaSugestao({ erro: "faltam 5 concursos" });
   checar("erro vira aviso na tela, não tabela vazia",
     /faltam 5 concursos/.test(vazio) && !/<table/.test(vazio));
@@ -2289,6 +2331,39 @@ secao("23. Teve ganhador?");
   checar("os selos aparecem na lista",
     (tela.match(/selo-ganho/g) || []).length === 3,
     `${(tela.match(/selo-ganho/g) || []).length} selos`);
+
+  /* --- verde e amarelo: a cor do concurso inteiro, em todas as buscas --- */
+  S.resultados = [comGanhador, acumulado, semDado];
+  const lista = contexto.T.resultados();
+  checar("o concurso com ganhador sai VERDE (classe ganhou)",
+    /class="item ganhou"/.test(lista));
+  checar("o acumulado sai AMARELO (classe acumulou)",
+    /class="item acumulou"/.test(lista));
+  checar("o sem informação não recebe cor nenhuma das duas",
+    /class="item desconhecido"/.test(lista));
+  checar("as três classes aparecem, uma por concurso",
+    ["ganhou","acumulou","desconhecido"].every(c =>
+      (lista.match(new RegExp(`class="item ${c}"`, "g")) || []).length === 1));
+
+  /* A cor nunca vai sozinha: quem não distingue verde de amarelo continua
+     lendo a mesma informação em texto. */
+  checar("a cor não é a única pista — o texto continua lá",
+    /sem ganhador/i.test(lista) && /ganhadores não informados/i.test(lista));
+
+  const res = contexto.resumoGanhadores([comGanhador, acumulado, semDado, acumulado]);
+  checar("o resumo do lote conta cada estado",
+    res.conta.ganhou === 1 && res.conta.acumulou === 2 && res.conta.desconhecido === 1,
+    JSON.stringify(res.conta));
+  checar("e escreve os plurais certos",
+    /1 com ganhador/.test(res.texto) && /2 acumulados/.test(res.texto), res.texto);
+  checar("um acumulado só não vira 'acumulados'",
+    /1 acumulado</.test(contexto.resumoGanhadores([acumulado]).texto),
+    contexto.resumoGanhadores([acumulado]).texto);
+  checar("lote vazio não quebra", contexto.resumoGanhadores([]).texto === "");
+  checar("lote nulo também não", contexto.resumoGanhadores(null).texto === "");
+  checar("o resumo não cita estado que não ocorreu",
+    !/acumulad/.test(contexto.resumoGanhadores([comGanhador]).texto),
+    contexto.resumoGanhadores([comGanhador]).texto);
 
   S.resultados = guardado; S.modalidade = guardadaMod;
 }
