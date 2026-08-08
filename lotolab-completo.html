@@ -528,7 +528,7 @@ const S = {
   tela:"gerar", modalidade:"lotofacil", metodo:"rateio", quantidade:3,
   tamanho:null, dezenasFechamento:[], jFechamento:14, garantia:13,
   jogos:[], resultados:[], tema:"claro", ultimoLote:[],
-  bancadaRep:40, bancadaQtd:3,
+  bancadaRep:20, bancadaQtd:3, bancadaAlvos:10,
   /* marcadas: dezenas do volante manual, por modalidade, para trocar de
      modalidade e voltar não apagar o que a pessoa já tinha marcado. */
   marcadas:{}, avisos:[], teimosinhas:[], aprendizado:{}, jogoAberto:null,
@@ -956,9 +956,15 @@ function bancada(m, dezenasSorteadas, opcoes){
    só: cada jogo passaria a ser conferido contra um alvo muito maior, e tanto o
    esperado quanto o desvio deixariam de valer. O certo é rodar concurso a
    concurso e juntar as médias, com o erro padrão caindo pelo total de jogos. */
-function bancadaAgregada(m, alvos, opcoes){
-  const parciais = alvos.map((r,i) => bancada(m, r.dezenas,
-    Object.assign({}, opcoes, {evitar: i>0 ? alvos[i-1].dezenas : null})));
+function bancadaAgregada(m, alvos, opcoes, jaCalculados){
+  /* `jaCalculados` evita refazer o trabalho inteiro. A versão anterior rodava
+     bancada() de novo em cada concurso que a tela ACABARA de calcular —
+     dobrando o custo para produzir exatamente os mesmos números. Com histórico
+     grande isso era a diferença entre segundos e minutos de tela parada. */
+  const parciais = jaCalculados && jaCalculados.length === alvos.length
+    ? jaCalculados
+    : alvos.map((r,i) => bancada(m, r.dezenas,
+        Object.assign({}, opcoes, {evitar: i>0 ? alvos[i-1].dezenas : null})));
   const base = parciais[0];
   const linhas = base.linhas.map((_, i) => {
     const ls = parciais.map(p => p.linhas[i]);
@@ -1361,6 +1367,9 @@ T.bancada = () => {
       <label class="campo"><label>lotes por método</label>
         <select id="b-rep">${[20,40,80].map(v=>
           `<option value="${v}" ${v===S.bancadaRep?"selected":""}>${v}</option>`).join("")}</select></label>
+      <label class="campo"><label>concursos testados</label>
+        <select id="b-alvos">${[5,10,20,40].map(v=>
+          `<option value="${v}" ${v===(S.bancadaAlvos||10)?"selected":""}>${v} mais recentes</option>`).join("")}</select></label>
       <label class="campo"><label>jogos por lote</label>
         <select id="b-qtd">${[2,3,5].map(v=>
           `<option value="${v}" ${v===S.bancadaQtd?"selected":""}>${v}</option>`).join("")}</select></label>
@@ -2133,6 +2142,42 @@ function cartaoProximo(modalidade){
   </div>`;
 }
 
+
+/* Barra de progresso com percentual. Existe porque a bancada travava a tela
+   sem dar sinal de vida: o botão dizia "testando…" e não havia como saber se
+   faltavam dois segundos ou dois minutos — e com histórico grande, faltavam
+   minutos. Espera sem medida é indistinguível de travamento. */
+function barraProgresso(feitos, total, texto){
+  const pct = total > 0 ? Math.min(100, Math.round(100 * feitos / total)) : 0;
+  return `<div class="carta" style="margin-bottom:10px">
+    <div class="contador" style="margin:0 0 8px">
+      <span>${esc(texto || "processando")}</span>
+      <b>${pct}%</b></div>
+    <div class="barra-teste"><i style="width:${pct}%;transition:width .2s ease"></i></div>
+    <div class="pe" style="border:0;padding-left:0;padding-top:2px">
+      <span>${inf(feitos)} de ${inf(total)}</span>
+      <span>${feitos < total ? "não feche a tela" : "concluído"}</span></div>
+  </div>`;
+}
+
+/* Executa uma lista de tarefas uma por quadro, atualizando o progresso. É o
+   padrão que faltava no app: setTimeout entre passos devolve a linha principal
+   ao navegador, então a barra pinta e a tela continua respondendo. Rodar tudo
+   num laço só é mais rápido no papel e inutilizável na prática. */
+function emFatias(itens, passo, aoProgresso, aoTerminar){
+  const saida = [];
+  let i = 0;
+  const proximo = () => {
+    if(i >= itens.length){ if(aoTerminar) aoTerminar(saida); return; }
+    try{ saida.push(passo(itens[i], i)); }
+    catch(e){ saida.push({erro: e.message}); }
+    i++;
+    if(aoProgresso) aoProgresso(i, itens.length);
+    setTimeout(proximo, 0);
+  };
+  setTimeout(proximo, 0);
+}
+
 /* ==================== a cartela ====================
    Uma função só desenha a cartela em todos os usos: marcação manual, jogo
    salvo, e conferência. Três desenhos separados divergiriam no primeiro ajuste
@@ -2382,6 +2427,12 @@ function analisarPendentes(aoTerminar){
         `${e.message}. As outras modalidades seguem normalmente.`,
         `erroAnalise:${k}:${assinaturaHistorico(k)}`);
     }
+    /* Progresso visível quando a pessoa está olhando a tela: sem isto, várias
+       modalidades em sequência parecem travamento. */
+    const alvo = document.getElementById("ap-saida");
+    if(alvo && S.tela === "aprendizado")
+      alvo.innerHTML = barraProgresso(prontas.length, prontas.length + fila.length + 1,
+        "analisando as modalidades");
     setTimeout(proxima, 0);   // devolve a linha principal entre modalidades
   };
   setTimeout(proxima, 0);
@@ -3945,6 +3996,12 @@ function acoesNovas(){
     S.ordemEstatistica = b.dataset.ordem; pintar();
   });
 
+  const balvos = $("#b-alvos");
+  if(balvos) balvos.onchange = e => {
+    S.bancadaAlvos = +e.target.value;
+    Guardar.gravar("bancadaAlvos", S.bancadaAlvos);
+  };
+
   const auto = $("#ap-auto");
   if(auto) auto.onchange = e => {
     S.autoAnalise = e.target.checked;
@@ -4046,33 +4103,63 @@ function acoes(){
     const go = $("#b-go"), saida = $("#b-saida");
     const rotulo = go.textContent;
     go.disabled = true; go.textContent = "testando…";
-    /* Cede o quadro antes de calcular: são milhares de combinações e o botão
-       precisa ter mudado de estado na tela antes de a thread travar. */
-    setTimeout(() => {
-      try{
-        const alvos = S.resultados.filter(r => r.modalidade === S.modalidade);
-        const opcoes = {repeticoes:S.bancadaRep, quantos:S.bancadaQtd};
-        /* Cada alvo é conferido com o concurso ANTERIOR como referência do
-           "evita o concurso anterior" — nunca com ele próprio. */
-        const partes = alvos.map((r,i) =>
-          tabelaBancada(
-            bancada(S.modalidade, r.dezenas,
-              Object.assign({}, opcoes, {evitar: i>0 ? alvos[i-1].dezenas : null})),
-            `concurso ${r.concurso} — ${r.dezenas.map(pad).join(" ")}`
-              + (i>0 ? "" : " (sem concurso anterior registrado)"), true));
-        /* Recorte agregado primeiro: é onde o ruído encolhe e a leitura passa
-           a valer alguma coisa. Só existe com mais de um concurso. */
+
+    const todos = S.resultados.filter(r => r.modalidade === S.modalidade);
+    /* TETO nos concursos testados. Sem ele, com o histórico completo carregado
+       a bancada roda 5 métodos × 40 lotes × 3 jogos em CADA um dos milhares de
+       concursos — mais de um milhão de gerações, minutos de tela travada. Foi
+       exatamente o que aconteceu.
+
+       Os mais recentes, porque a bancada mede se um método se distingue do
+       acaso, e para isso a amostra recente serve tanto quanto a antiga — com a
+       vantagem de refletir o volante e os preços de hoje. */
+    const TETO_ALVOS = S.bancadaAlvos || 10;
+    const alvos = todos.slice(-TETO_ALVOS);
+    const opcoes = {repeticoes:S.bancadaRep, quantos:S.bancadaQtd};
+    /* +1 pelo recorte agregado, que roda depois dos individuais. */
+    const total = alvos.length + (alvos.length > 1 ? 1 : 0);
+
+    saida.innerHTML = barraProgresso(0, total, "testando os métodos");
+
+    /* Cada alvo é conferido com o concurso ANTERIOR como referência do
+       "evita o concurso anterior" — nunca com ele próprio. */
+    const brutos = [];
+    emFatias(alvos,
+      (r, i) => {
+        const bruto = bancada(S.modalidade, r.dezenas,
+          Object.assign({}, opcoes, {evitar: i>0 ? alvos[i-1].dezenas : null}));
+        brutos.push(bruto);
+        return tabelaBancada(bruto,
+          `concurso ${r.concurso} — ${r.dezenas.map(pad).join(" ")}`
+            + (i>0 ? "" : " (sem concurso anterior registrado)"), true);
+      },
+      (feitos) => { saida.innerHTML = barraProgresso(feitos, total, "testando os métodos"); },
+      (partes) => {
+        const finalizar = (agregado) => {
+          const aviso = todos.length > alvos.length
+            ? `<div class="nota">Testado nos <strong>${alvos.length} concursos mais
+               recentes</strong>, de ${todos.length} no app. O teto existe porque a
+               bancada gera ${inf(opcoes.repeticoes * opcoes.quantos * 5)} jogos por
+               concurso — rodar em tudo levaria minutos de tela parada, sem melhorar a
+               leitura.</div>`
+            : "";
+          saida.innerHTML = aviso + (agregado ? agregado : "") +
+            partes.filter(p => typeof p === "string").join("");
+          go.disabled = false; go.textContent = rotulo;
+        };
         if(alvos.length > 1){
-          partes.unshift(tabelaBancada(
-            bancadaAgregada(S.modalidade, alvos, opcoes),
-            `os ${alvos.length} concursos juntos`));
-        }
-        saida.innerHTML = partes.join("");
-      }catch(e){
-        saida.innerHTML = `<div class="nota atencao">${esc(e.message)}</div>`;
-      }
-      go.disabled = false; go.textContent = rotulo;
-    }, 20);
+          saida.innerHTML = barraProgresso(alvos.length, total, "juntando os concursos");
+          setTimeout(() => {
+            let agregado = "";
+            try{
+              agregado = tabelaBancada(
+                bancadaAgregada(S.modalidade, alvos, opcoes, brutos),
+                `os ${alvos.length} concursos juntos`);
+            }catch(e){ agregado = `<div class="nota atencao">${esc(e.message)}</div>`; }
+            finalizar(agregado);
+          }, 0);
+        } else finalizar("");
+      });
   };
 
   document.querySelectorAll("[data-apagar]").forEach(b => b.onclick = () => {
@@ -4305,6 +4392,7 @@ async function carregarCalibracao(){
   S.autoAnalise = Guardar.ler("autoAnalise", true);
   S.calibracao = Guardar.ler("calibracao", {});
   S.buscaAutomatica = Guardar.ler("buscaAutomatica", true);
+  S.bancadaAlvos = Guardar.ler("bancadaAlvos", 10);
   S.ultimaBusca = Guardar.ler("ultimaBusca", {});
   S.modalidade = Guardar.ler("modalidade", S.modalidade);
   document.documentElement.dataset.tema = S.tema;
