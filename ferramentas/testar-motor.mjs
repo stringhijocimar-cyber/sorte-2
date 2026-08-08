@@ -42,11 +42,58 @@ const elemento = () => {
    amostra dez vezes maior o mesmo método ficou em z = +1,35.)
 
    O Proxy troca só `random` e deixa o resto de Math intacto, sem tocar no
-   Math do processo que roda o arnês. */
+   Math do processo que roda o arnês.
+
+   O gerador é xorshift32 — o mesmo de `geradorSemeado` no app. A primeira
+   versão usava o LCG clássico `x = (x·1103515245 + 12345) mod 2^31`, e ele
+   estava quebrado aqui: em JavaScript, `x·1103515245` com x perto de 2^31 dá
+   ~2,4·10^18, muito acima dos 2^53 que um double representa exatamente, então
+   os dígitos baixos — justamente os que viram o resultado — eram lixo de
+   arredondamento. O teste de uniformidade de `sortear` mediu χ² = 316 com 59
+   graus de liberdade; com xorshift32 o mesmo teste dá χ² ≈ 53. O defeito
+   passou despercebido porque nenhum teste olhava o gerador, só o que ele
+   alimentava. Xorshift trabalha em inteiros de 32 bits com `>>> 0` e não tem
+   como estourar a precisão. */
 function mathSemeado(semente = 20260806) {
-  let x = semente;
-  const rnd = () => (x = (x * 1103515245 + 12345) % 2147483648) / 2147483648;
+  let x = semente >>> 0 || 1;
+  const rnd = () => {
+    x ^= x << 13; x >>>= 0; x ^= x >>> 17; x ^= x << 5; x >>>= 0;
+    return x / 4294967296;
+  };
   return new Proxy(Math, { get: (alvo, prop) => (prop === "random" ? rnd : alvo[prop]) });
+}
+
+/* O mesmo argumento vale para os históricos sintéticos que os testes de
+   estatística montam — só que esses são construídos aqui no arnês, fora da VM,
+   onde o Math trocado não alcança. Um deles reprovou sozinho no CI: a média de
+   pares saiu 2,795 contra 3,000 esperados, a 2,5 erros-padrão. A faixa do app é
+   de 2 erros-padrão, então cerca de 5% das execuções reprovavam por construção
+   — o defeito estava no teste, não na fórmula. */
+function embaralhadorSemeado(semente) {
+  let x = semente >>> 0 || 1;
+  const rnd = () => {
+    x ^= x << 13; x >>>= 0; x ^= x >>> 17; x ^= x << 5; x >>>= 0;
+    return x / 4294967296;
+  };
+  return (pool) => {
+    for (let k = pool.length - 1; k > 0; k--) {
+      const j = Math.floor(rnd() * (k + 1));
+      const t = pool[k]; pool[k] = pool[j]; pool[j] = t;
+    }
+    return pool;
+  };
+}
+
+/* Sorteios honestos de `quantos` concursos, reprodutíveis pela semente. */
+function historicoSemeado(modalidade, N, k, quantos, semente, base = 1) {
+  const embaralhar = embaralhadorSemeado(semente);
+  const saida = [];
+  for (let i = 1; i <= quantos; i++) {
+    const pool = Array.from({ length: N }, (_, idx) => idx + base);
+    saida.push({ concurso: i, data: "2025-01-01", modalidade,
+      dezenas: embaralhar(pool).slice(0, k).sort((a, b) => a - b) });
+  }
+  return saida;
 }
 
 const contexto = {
@@ -133,6 +180,39 @@ function checar(titulo, condicao, detalhe = "") {
   else { falhou++; linhas.push(`  FALHA ${titulo}${detalhe ? " — " + detalhe : ""}`); }
 }
 function secao(t) { linhas.push(`\n${t}`); }
+
+/* ==================================================================
+   0. O gerador do próprio arnês
+   ==================================================================
+   Dezenas de testes deste arquivo dizem "com sorteios honestos, tal medida
+   converge para tal valor". Todos eles são medidos com o Math.random trocado
+   por mathSemeado — e nenhum olhava para ele. O LCG que estava ali devolvia
+   números enviesados havia meses (perdia dígitos por estourar 2^53), e a
+   suíte inteira apoiava-se nisso sem saber. Um instrumento que ninguém afere
+   não é evidência. */
+secao("0. O gerador do próprio arnês");
+{
+  const rnd = mathSemeado(20260806).random;
+  const N = 200000, caixas = 60, conta = new Array(caixas).fill(0);
+  let foraDaFaixa = 0;
+  for (let i = 0; i < N; i++) {
+    const v = rnd();
+    if (!(v >= 0 && v < 1)) foraDaFaixa++;
+    else conta[Math.floor(v * caixas)]++;
+  }
+  checar("o gerador do arnês fica em [0,1)", foraDaFaixa === 0);
+  const esperado = N / caixas;
+  const qui = conta.reduce((s, v) => s + (v - esperado) ** 2 / esperado, 0);
+  /* 59 graus de liberdade: acima de ~110 é viés, não azar. O LCG anterior
+     dava χ² na casa das centenas neste mesmo teste. */
+  checar("e distribui uniformemente", qui < 110, `χ² = ${qui.toFixed(1)} com 59 g.l.`);
+  const a = mathSemeado(7), b = mathSemeado(7), c = mathSemeado(8);
+  const dez = (g) => Array.from({ length: 10 }, () => g.random());
+  const ga = dez(a), gb = dez(b), gc = dez(c);
+  checar("a mesma semente dá a mesma sequência", ga.join() === gb.join());
+  checar("sementes diferentes dão sequências diferentes", ga.join() !== gc.join());
+  checar("não trava num valor só", new Set(dez(mathSemeado(1))).size === 10);
+}
 
 /* ==================================================================
    1. Gerar 5 jogos em cada uma das 8 modalidades, nos 3 métodos livres
@@ -384,6 +464,110 @@ for (let i = 0; i < 300; i++) {
   if (j.length !== 15 || new Set(j).size !== 15) { mil = false; break; }
 }
 checar("300 gerações seguidas sem defeito", mil);
+
+/* ------------------------------------------------------------------
+   8b. As otimizações que fizeram a bancada caber no tempo de tela
+   ------------------------------------------------------------------
+   `sortear` passou a embaralhar só as dezenas de que precisa, e `universo`
+   passou a devolver a cópia de um array guardado. As duas mudanças são
+   invisíveis quando funcionam e desastrosas quando não: um sorteio enviesado
+   não aparece na tela, e um universo compartilhado corrompido aparece três
+   telas depois. Estes testes existem para que "só arrumei o desempenho" não
+   passe sem prova. */
+secao("8b. Sorteio e universo — desempenho não pode custar correção");
+{
+  const antes = contexto.universo("mega-sena");
+  antes.length = 3; antes[0] = 999;                    /* quem chama estraga */
+  const depois = contexto.universo("mega-sena");
+  checar("universo devolve cópia: estragar uma não estraga a próxima",
+    depois.length === 60 && depois[0] === 1 && depois[59] === 60,
+    `${depois.length} dezenas, de ${depois[0]} a ${depois.at(-1)}`);
+  const a = contexto.universo("lotomania"), b = contexto.universo("lotomania");
+  checar("e duas chamadas não devolvem o MESMO array", a !== b && a.length === b.length);
+}
+{
+  /* Uniformidade do Fisher–Yates parcial. Com 60 dezenas, 6 por sorteio e
+     30.000 sorteios, cada dezena sai 3.000 vezes em média (dp ≈ 52). Uma
+     dezena fora de ±5 desvios denunciaria o viés que um embaralhamento parcial
+     mal escrito produz — tipicamente nas ÚLTIMAS posições da urna, que é
+     justamente o que o teste vigia ao olhar todas as 60. */
+  const VEZES = 30000, K = 6, N = 60;
+  const conta = new Array(61).fill(0);
+  let duplicadas = 0, foraDaFaixa = 0, desordenadas = 0;
+  for (let i = 0; i < VEZES; i++) {
+    const j = contexto.sortear("mega-sena", K);
+    if (new Set(j).size !== K) duplicadas++;
+    for (let q = 1; q < j.length; q++) if (j[q] <= j[q-1]) desordenadas++;
+    for (const d of j) { if (d < 1 || d > 60) foraDaFaixa++; else conta[d]++; }
+  }
+  checar("sortear nunca repete dezena no mesmo jogo", duplicadas === 0);
+  checar("sortear nunca sai da faixa da modalidade", foraDaFaixa === 0);
+  checar("sortear devolve sempre ordenado", desordenadas === 0);
+  const esperado = VEZES * K / N;
+  const dp = Math.sqrt(VEZES * (K / N) * (1 - K / N));
+  const usadas = conta.slice(1);
+  const pior = usadas.reduce((p, v) =>
+    Math.abs(v - esperado) > Math.abs(p - esperado) ? v : p, esperado);
+  checar("nenhuma dezena é favorecida pelo embaralhamento parcial",
+    Math.abs(pior - esperado) <= 5 * dp,
+    `pior dezena a ${(Math.abs(pior - esperado) / dp).toFixed(2)} desvios de ${esperado}`);
+  /* Qui-quadrado com 59 graus de liberdade: acima de ~110 seria viés real. */
+  const qui = usadas.reduce((s, v) => s + (v - esperado) ** 2 / esperado, 0);
+  checar("qui-quadrado das frequências fica em faixa aceitável",
+    qui < 110, `χ² = ${qui.toFixed(1)} com 59 g.l.`);
+  checar("a Lotomania continua começando no 0",
+    Array.from({ length: 400 }, () => contexto.sortear("lotomania", 50))
+      .some(j => j.includes(0)));
+}
+{
+  /* caracteristicas() usa rascunhos reaproveitados entre chamadas. Se algum
+     contador ficar sujo, a segunda chamada devolve o resultado da primeira
+     somado ao dela — e o defeito só aparece quando duas modalidades de
+     tamanhos diferentes se alternam, que é exatamente o que a bancada faz. */
+  const jogoMega = [1, 2, 3, 4, 5, 6];
+  const primeira = contexto.caracteristicas(jogoMega, "mega-sena");
+  contexto.caracteristicas([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15], "lotofacil");
+  contexto.caracteristicas([0,1,2,3,4], "lotomania");
+  const repetida = contexto.caracteristicas(jogoMega, "mega-sena");
+  checar("caracteristicas não vaza estado entre chamadas",
+    Object.keys(primeira).every(k => Object.is(primeira[k], repetida[k])),
+    Object.keys(primeira).filter(k => !Object.is(primeira[k], repetida[k])).join(",") || "todas iguais");
+  checar("e a ordem de entrada não muda o resultado",
+    Object.keys(primeira).every(k =>
+      Object.is(primeira[k], contexto.caracteristicas([6,3,1,5,2,4], "mega-sena")[k])));
+}
+{
+  /* Referência dourada: a saída de caracteristicas() ANTES da otimização de
+     desempenho, gravada em ferramentas/douradas.json por gerar-douradas.mjs.
+
+     A comparação é exata (Object.is), e não "por aproximação". Uma diferença
+     de 1e-13 não quebra nada visivelmente e muda, em silêncio, a ordem em que
+     os jogos aparecem — foi por isso que a variância voltou a ser calculada em
+     duas passadas, embora uma passada fosse mais rápida. Se este teste
+     reprovar, a pergunta certa não é "como faço passar", e sim "eu queria
+     mesmo mudar esses números?". */
+  const douradas = JSON.parse(readFileSync(join(RAIZ, "ferramentas/douradas.json"), "utf8"));
+  let comparados = 0, diferentes = [];
+  for (const [id, casos] of Object.entries(douradas)) {
+    for (const { jogo, c } of casos) {
+      const agora = contexto.caracteristicas(jogo, id);
+      for (const k of Object.keys(c)) {
+        comparados++;
+        if (!Object.is(c[k], agora[k])) diferentes.push(`${id}.${k}: ${c[k]} -> ${agora[k]}`);
+      }
+      for (const k of Object.keys(agora)) {
+        if (!(k in c)) diferentes.push(`${id}.${k}: característica nova, não estava na referência`);
+      }
+    }
+  }
+  checar("caracteristicas bate dígito por dígito com a referência dourada",
+    diferentes.length === 0,
+    diferentes.length ? diferentes.slice(0, 3).join(" · ")
+      : `${comparados} valores em ${Object.values(douradas).reduce((s, v) => s + v.length, 0)} jogos`);
+  checar("a referência cobre as 8 modalidades",
+    Object.keys(douradas).length === Object.keys(M).length,
+    `${Object.keys(douradas).length} de ${Object.keys(M).length}`);
+}
 
 
 /* ==================================================================
@@ -1126,20 +1310,31 @@ secao("14. Estatísticas do histórico");
   S.resultados = [
     { concurso: 1, data: "2025-01-01", modalidade: "megasena-inexistente", dezenas: [] },
   ];
-  S.resultados = [];
-  for (let i = 1; i <= 200; i++) {
-    const pool = Array.from({ length: 60 }, (_, k) => k + 1);
-    for (let k = 59; k > 0; k--) { const j = Math.floor(Math.random() * (k + 1));
-      const t = pool[k]; pool[k] = pool[j]; pool[j] = t; }
-    S.resultados.push({ concurso: i, data: "2025-01-01", modalidade: "mega-sena",
-      dezenas: pool.slice(0, 6).sort((a, b) => a - b) });
-  }
+  S.resultados = historicoSemeado("mega-sena", 60, 6, 200, 20260808);
   const par = contexto.contagemPorConcurso("mega-sena", x => x % 2 === 0);
   /* Mega-Sena: 30 pares em 60, k=6 -> esperado 3,0 pares por concurso. */
   checar("o esperado de pares vem da hipergeométrica, não do observado",
     Math.abs(par.esperado - 3.0) < 1e-12, `${par.esperado}`);
   checar("com 200 sorteios honestos, os pares ficam dentro da faixa",
     par.dentro, `média ${par.media.toFixed(3)} vs ${par.esperado}`);
+  {
+    /* Uma semente só não diz se a faixa está calibrada — diz se aquela semente
+       deu sorte. Com 40 históricos independentes, uma faixa de 2 erros-padrão
+       tem de acolher cerca de 95% deles; se acolhesse todos, estaria larga
+       demais para acusar qualquer coisa. */
+    const guardaPar = S.resultados;
+    let dentro = 0;
+    for (let s = 0; s < 40; s++) {
+      S.resultados = historicoSemeado("mega-sena", 60, 6, 200, 900 + s * 7919);
+      if (contexto.contagemPorConcurso("mega-sena", x => x % 2 === 0).dentro) dentro++;
+    }
+    checar("a faixa de 2 erros-padrão acolhe a grande maioria dos históricos honestos",
+      dentro >= 34, `${dentro} de 40 dentro da faixa`);
+    checar("e não é larga a ponto de nunca acusar nada",
+      2 * Math.sqrt(6 * 0.5 * 0.5 * 54 / 59 / 200) < 0.2,
+      `faixa de ±${(2 * Math.sqrt(6 * 0.5 * 0.5 * 54 / 59 / 200)).toFixed(3)} em torno de 3`);
+    S.resultados = guardaPar;
+  }
   checar("a distribuição soma o número de concursos",
     Object.values(par.dist).reduce((a, b) => a + b, 0) === par.n);
 
@@ -1211,14 +1406,7 @@ secao("14. Estatísticas do histórico");
   const S = motor.S;
   const guardado = S.resultados, guardadaMod = S.modalidade;
   S.modalidade = "lotofacil";
-  S.resultados = [];
-  for (let i = 1; i <= 60; i++) {
-    const pool = Array.from({ length: 25 }, (_, k) => k + 1);
-    for (let k = 24; k > 0; k--) { const j = Math.floor(Math.random() * (k + 1));
-      const t = pool[k]; pool[k] = pool[j]; pool[j] = t; }
-    S.resultados.push({ concurso: i, data: "2025-01-01", modalidade: "lotofacil",
-      dezenas: pool.slice(0, 15).sort((a, b) => a - b) });
-  }
+  S.resultados = historicoSemeado("lotofacil", 25, 15, 60, 20260808);
   S.tipoEstatistica = "dezenas";
   const texto = contexto.T.estatisticas();
   checar("a tela de dezenas nega explicitamente a falácia do apostador",

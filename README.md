@@ -318,7 +318,7 @@ identificador.
 ### Testes
 
 ```bash
-node ferramentas/testar-motor.mjs                          # lógica — 172 testes
+node ferramentas/testar-motor.mjs                          # lógica — 370 testes
 node --experimental-websocket ferramentas/testar-interface.mjs   # interface — 42 testes
 ```
 
@@ -332,6 +332,26 @@ LOTOLAB_CHROME=/caminho/para/chromium node ferramentas/testar-interface.mjs
 `testar-motor.mjs` não reimplementa nada: extrai o `<script>` do `index.html` e
 o executa numa VM com um DOM mínimo. O que é testado é exatamente o código que
 roda no aparelho.
+
+### Quanto tempo a bancada leva
+
+Medido com os 2.823 concursos da Mega-Sena carregados, no ajuste padrão
+(10 concursos, 20 lotes de 3 jogos). Um aparelho é bem mais lento que a máquina
+onde isto foi medido — o número serve para comparar versões, não para prometer
+tempo de tela:
+
+| Versão | Tempo |
+|---|---|
+| Antes do teto (todos os 2.823 concursos, lotes de 40) | ~16 minutos |
+| Com teto de 10 concursos e lotes de 20 | 6,8 s |
+| `caracteristicas()` sem alocar a cada jogo | 4,6 s |
+| `sortear()` com Fisher–Yates parcial | **1,9 s** |
+
+O ganho grande não veio de calcular menos, e sim de parar de desperdiçar:
+`sortear` embaralhava as 60 dezenas inteiras para ficar com 6, e trocava cada
+par alocando um array. A bancada faz isso dezenas de milhares de vezes por
+rodada. Os valores na tela não mudaram — há um teste que compara as
+características de 176 jogos, em todas as modalidades, dígito por dígito.
 
 O teste de interface precisa de um Chrome/Chromium e de um servidor local
 servindo `www/` (a porta 5060 **não** funciona: o Chrome bloqueia por ser

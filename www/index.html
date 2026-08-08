@@ -559,17 +559,49 @@ function combinacoes(n,k){
   for(let i=1;i<=k;i++) r = r*(n-k+i)/i;
   return Math.round(r);
 }
+const UNIVERSOS = {};
 function universo(m){
   const c = MODALIDADES[m];
-  return Array.from({length:c.N}, (_,i)=> i + c.base);
+  if(!UNIVERSOS[m]) UNIVERSOS[m] = Array.from({length:c.N}, (_,i)=> i + c.base);
+  /* Cópia, sempre: quem chama pode ordenar, filtrar ou remover dezenas, e um
+     universo compartilhado silenciosamente corrompido é um defeito que só
+     aparece três telas depois. */
+  return UNIVERSOS[m].slice();
 }
 function embaralhar(a, rnd=Math.random){
   const x = a.slice();
-  for(let i=x.length-1;i>0;i--){ const j = Math.floor(rnd()*(i+1)); [x[i],x[j]]=[x[j],x[i]]; }
+  for(let i=x.length-1;i>0;i--){
+    const j = Math.floor(rnd()*(i+1));
+    /* Troca sem `[x[i],x[j]]=[x[j],x[i]]`: a forma bonita aloca um array por
+       troca, e isto roda dezenas de milhares de vezes por rodada da bancada. */
+    const t = x[i]; x[i] = x[j]; x[j] = t;
+  }
   return x;
 }
+
+/* Rascunho reaproveitado entre chamadas de sortear(). Seguro porque sortear()
+   é síncrona e não chama nada que possa reentrar nela. */
+const _urna = [];
 function sortear(m, quantos){
-  return embaralhar(universo(m)).slice(0, quantos).sort((a,b)=>a-b);
+  const c = MODALIDADES[m], N = c.N;
+  const k = Math.min(quantos, N);
+  _urna.length = N;
+  for(let i=0;i<N;i++) _urna[i] = i + c.base;
+  /* Fisher–Yates PARCIAL: só as `k` primeiras posições precisam ficar prontas.
+     Embaralhar as 60 dezenas da Mega inteiras para ficar com 6 desperdiça 54
+     trocas, e a bancada sorteia dezenas de milhares de jogos por rodada.
+
+     O subconjunto continua uniforme: a cada passo i, a posição i recebe um
+     elemento escolhido com probabilidade igual entre os que ainda não saíram —
+     que é exatamente a definição do embaralhamento completo, interrompida
+     quando as dezenas necessárias já foram tiradas. */
+  const saida = new Array(k);
+  for(let i=0;i<k;i++){
+    const j = i + Math.floor(Math.random()*(N-i));
+    const t = _urna[i]; _urna[i] = _urna[j]; _urna[j] = t;
+    saida[i] = _urna[i];
+  }
+  return saida.sort((a,b)=>a-b);
 }
 function tamanhoPadrao(m){ return S.tamanho || MODALIDADES[m].min; }
 
@@ -601,34 +633,85 @@ function fibonacciAte(n){
 const GRADE = {"mega-sena":10, "lotofacil":5, "quina":10, "lotomania":10,
                "dupla-sena":10, "dia-de-sorte":7, "timemania":10, "mais-milionaria":10};
 
-function caracteristicas(dez, m){
-  const c = MODALIDADES[m], n = dez.length, cols = GRADE[m] || 10;
-  const ord = dez.slice().sort((a,b)=>a-b);
-  const linhas = {}, colunas = {}, finais = {};
-  let consec = 0;
-  ord.forEach((d,i)=>{
-    const p = d - c.base;
-    linhas[Math.floor(p/cols)] = (linhas[Math.floor(p/cols)]||0)+1;
-    colunas[p%cols] = (colunas[p%cols]||0)+1;
-    finais[d%10] = (finais[d%10]||0)+1;
-    if(i>0 && ord[i]-ord[i-1]===1) consec++;
+/* O que só depende da modalidade fica calculado uma vez. O conjunto de
+   Fibonacci, a fração esperada dele no universo e o número de linhas do volante
+   não mudam entre um jogo e outro — e caracteristicas() é chamada dezenas de
+   milhares de vezes por rodada da bancada, onde reconstruir isso a cada jogo
+   custa tempo de tela parada. */
+const CONSTANTES_MOD = {};
+function constantesDaModalidade(m){
+  if(CONSTANTES_MOD[m]) return CONSTANTES_MOD[m];
+  const c = MODALIDADES[m], cols = GRADE[m] || 10;
+  const fib = fibonacciAte(c.N + c.base - 1);
+  let noUniverso = 0;
+  fib.forEach(d => { if(d >= c.base) noUniverso++; });
+  return (CONSTANTES_MOD[m] = {
+    c, cols, fib,
+    fracaoFibonacci: noUniverso / c.N,
+    /* +1 de folga: a última linha do volante pode ficar incompleta. */
+    qtdLinhas: Math.ceil(c.N / cols) + 1,
   });
-  const difs = ord.slice(1).map((d,i)=> d-ord[i]);
-  const media = difs.reduce((a,b)=>a+b,0)/(difs.length||1);
-  const desvio = Math.sqrt(difs.reduce((a,b)=>a+(b-media)**2,0)/(difs.length||1));
-  const soma = ord.reduce((a,b)=>a+b,0);
+}
+
+/* Rascunhos reaproveitados entre chamadas. São seguros porque esta função é
+   síncrona e não chama nada que possa reentrar nela — o contador é zerado no
+   início de cada uso. Sem isso, três arrays nascem e morrem a cada jogo
+   avaliado, e a bancada avalia dezenas de milhares deles. */
+const _linhas = new Int32Array(64), _colunas = new Int32Array(16), _finais = new Int32Array(10);
+
+function caracteristicas(dez, m){
+  const K = constantesDaModalidade(m), c = K.c, cols = K.cols, n = dez.length;
+  const ord = dez.slice().sort((a,b)=>a-b);
+
+  _linhas.fill(0, 0, K.qtdLinhas); _colunas.fill(0, 0, cols); _finais.fill(0);
+  /* Máximos começam em -Infinity, e não em 0, para que um jogo vazio devolva o
+     mesmo que a versão anterior devolvia — o valor nunca aparece na tela, mas
+     mudar em silêncio é como um "só arrumei o desempenho" vira um defeito. */
+  let maxLinha = -Infinity, maxColuna = -Infinity, maxFinal = -Infinity;
+  let consec = 0, soma = 0, ate31 = 0, ate12 = 0, temSete = 0, emFib = 0;
+  let somaDifs = 0;
+
+  for(let i=0;i<n;i++){
+    const d = ord[i], p = d - c.base;
+    const li = (p / cols) | 0, co = p % cols, fi = d % 10;
+    if(++_linhas[li] > maxLinha) maxLinha = _linhas[li];
+    if(++_colunas[co] > maxColuna) maxColuna = _colunas[co];
+    if(++_finais[fi] > maxFinal) maxFinal = _finais[fi];
+    soma += d;
+    if(d <= 31) ate31++;
+    if(d <= 12) ate12++;
+    if(d === 7) temSete = 1;
+    if(K.fib.has(d)) emFib++;
+    if(i > 0){
+      const dif = d - ord[i-1];
+      if(dif === 1) consec++;
+      somaDifs += dif;
+    }
+  }
+
+  const qtdDifs = n - 1;
+  const media = somaDifs / (qtdDifs || 1);
+  /* Segunda passada em vez da forma E[x²]−E[x]². A forma de uma passada só
+     custaria menos, mas devolve valores que diferem no 13º dígito, e uma
+     mudança de desempenho que altera números na tela deixa de ser só
+     desempenho. Aqui não há array intermediário, que era o custo real. */
+  let somaQuad = 0;
+  for(let i=1;i<n;i++){ const e = (ord[i]-ord[i-1]) - media; somaQuad += e*e; }
+  const desvio = Math.sqrt(somaQuad / (qtdDifs || 1));
   const somaMedia = n*(c.N + 2*c.base - 1)/2;
   const somaDP = Math.sqrt(n*(c.N+1)*(c.N-n)/12) || 1;
+  const esperadoFib = K.fracaoFibonacci;
+
   return {
-    ate31: ord.filter(d=>d<=31).length/n,
-    ate12: ord.filter(d=>d<=12).length/n,
+    ate31: ate31/n,
+    ate12: ate12/n,
     consecutivos: consec/Math.max(n-1,1),
     somaCentral: Math.exp(-0.5*((soma-somaMedia)/somaDP)**2),
     espacamentoRegular: Math.max(0, Math.min(1, 1 - desvio/(media||1))),
-    mesmaLinha: Math.max(...Object.values(linhas))/n,
-    mesmaColuna: Math.max(...Object.values(colunas))/n,
-    terminacoesIguais: Math.max(...Object.values(finais))/n,
-    contem7: ord.includes(7) ? 1 : 0,
+    mesmaLinha: maxLinha/n,
+    mesmaColuna: maxColuna/n,
+    terminacoesIguais: maxFinal/n,
+    contem7: temSete,
     /* Fração das dezenas que caem na sequência de Fibonacci, dividida pela
        fração que se esperaria por acaso. 1,0 = exatamente o esperado; acima
        disso, o jogo tem mais Fibonacci do que o acaso costuma dar.
@@ -637,13 +720,7 @@ function caracteristicas(dez, m){
        modalidades: na Lotofácil 8 dos 25 números são Fibonacci (32%) e na
        Quina são 10 de 80 (12,5%). Sem dividir pelo esperado, todo jogo de
        Lotofácil pareceria "cheio de Fibonacci". */
-    fibonacci: (() => {
-      const fib = fibonacciAte(c.N + c.base - 1);
-      const noUniverso = [...fib].filter(d => d >= c.base).length;
-      const esperado = noUniverso / c.N;
-      const observado = ord.filter(d => fib.has(d)).length / n;
-      return esperado > 0 ? Math.min(3, observado / esperado) : 0;
-    })()
+    fibonacci: esperadoFib > 0 ? Math.min(3, (emFib/n) / esperadoFib) : 0
   };
 }
 
