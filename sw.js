@@ -19,7 +19,10 @@
    para trás — é a única forma de expulsar um cache envenenado do aparelho de
    quem já instalou.                                                        */
 
-const VERSAO = "4";
+/* 5: trevo novo nos ícones. Sem subir esta versão, quem já tem o app instalado
+   continuaria vendo o ícone antigo para sempre — os PNGs são servidos pelo
+   cache primeiro, e cache primeiro nunca vai conferir se mudou. */
+const VERSAO = "5";
 const CACHE = `lotolab-v${VERSAO}`;
 
 //: A casca mínima para o app abrir offline.

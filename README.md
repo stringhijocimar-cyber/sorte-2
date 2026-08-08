@@ -109,11 +109,12 @@ mostra a falha em vez de inventar um resultado.
 index.html             ← EDITE AQUI. O app inteiro: interface, lógica, estilos
 manifest.webmanifest   identidade para instalação no Android
 sw.js                  service worker — faz funcionar sem internet
-icone.svg              ícone vetorial (trevo de quatro folhas)
-icone-192.png          ícone Android
-icone-512.png          ícone Android
-icone-maskable.png     ícone adaptativo (o Android recorta as bordas) — fonte
-                       dos ícones gerados em android/app/src/main/res/
+icone.svg              ← A FONTE DA MARCA. Todo o resto é gerado daqui
+icone-192.png          gerado — ícone do navegador
+icone-512.png          gerado — ícone do navegador e base dos ícones legados
+icone-maskable.png     gerado — ícone adaptativo do manifesto (purpose maskable)
+icone-frente.png       gerado — camada da frente do ícone adaptativo do Android,
+                       fundo transparente (o monocromático usa o canal alfa)
 servir.py              servidor local para testar no computador e no celular
 package.json           dependências e scripts do Capacitor
 package-lock.json      versões travadas (reprodutibilidade)
@@ -126,6 +127,38 @@ capturas/              capturas de tela, geradas por ferramentas/testar-interfac
 APK.md                 como reconstruir o APK do zero
 LOJA.md                textos e ficha de dados para a Play Store
 ```
+
+### Trocar o ícone do app
+
+`icone.svg` é a única arte desenhada à mão. Tudo o mais — os PNGs do navegador
+e os quinze arquivos do Android — sai dele:
+
+```bash
+python3 ferramentas/gerar-pngs-do-icone.py   # icone.svg  -> PNGs
+python3 ferramentas/gerar-icones.py          # PNGs       -> android/.../res/
+python3 ferramentas/conferir-icones.py       # confere o que quebra no aparelho
+cp icone-192.png icone-512.png icone-maskable.png icone.svg www/
+```
+
+A rasterização é feita pelo Chromium headless, o mesmo motor que desenha o
+ícone dentro do app — o PNG sai igual ao que aparece no cabeçalho.
+
+**Ao trocar o ícone, suba `VERSAO` em `sw.js`.** Os PNGs são servidos pelo
+cache primeiro, e cache primeiro nunca confere se mudou: sem trocar a versão,
+quem já instalou continuaria vendo o ícone antigo para sempre.
+
+Isso já aconteceu de outra forma: em agosto o trevo novo entrou no `icone.svg`,
+mas nada ligava o SVG aos PNGs, então o ícone do celular continuou o antigo. A
+ligação existe agora, e `conferir-icones.py` roda na integração contínua.
+
+O que ele confere não é semelhança de imagem — é o que quebra de verdade:
+
+| Conferência | O que evita |
+|---|---|
+| Camada da frente com transparência | o ícone monocromático do Android 13 virar um quadrado chapado |
+| Desenho dentro do círculo central de 72dp | o recorte do fabricante comer as pontas das folhas |
+| Ícones legados opacos e sem buraco no meio | furo na tela em Android 7 e anteriores |
+| Todas as cinco densidades presentes | ícone borrado justo em quem tem a melhor tela |
 
 ### `index.html` da raiz vs. `www/index.html`
 
