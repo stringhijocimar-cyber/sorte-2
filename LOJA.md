@@ -76,7 +76,8 @@ suficiente, é oscilação em torno de zero.
 SEUS DADOS FICAM COM VOCÊ
 
 Sem cadastro, sem login, sem anúncio, sem rastreador. O app não envia nada
-para lugar nenhum e não pede nenhuma permissão do Android — nem internet.
+para lugar nenhum. A única permissão que pede é internet, e só para BAIXAR os
+resultados dos concursos — nada sai do aparelho.
 Tudo é guardado no seu aparelho, e funciona inteiro em modo avião.
 
 Os resultados dos concursos são digitados por você a partir da publicação
@@ -116,7 +117,8 @@ Federal.
 | Criptografia em trânsito | Não se aplica — não há trânsito |
 | Exclusão de dados | O usuário desinstala o app; nada fica em servidor |
 
-Isto é verificável: o APK declara **zero permissões**, inclusive sem
+Isto é verificável: o APK declara **uma única permissão**, INTERNET, usada só
+para baixar resultados públicos. Sem
 `INTERNET`. Não há como enviar dado nenhum.
 
 ## Novidades desta versão (1.1.0 — versionCode 2)
