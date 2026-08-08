@@ -72,3 +72,11 @@ html = html.replace(/if\("serviceWorker" in navigator\)\{[\s\S]*?\n  \}/,
 writeFileSync(join(RAIZ, "lotolab-completo.html"), html, "utf8");
 console.log(`lotolab-completo.html: ${(html.length/1048576).toFixed(2)} MB, ` +
   `${total} concursos embutidos`);
+
+/* O .zip existe por um motivo bobo e decisivo: o GitHub serve .html como
+   text/plain, e o navegador EXIBE o código em vez de baixar. O usuário tentou e
+   viu código na tela. Um .zip baixa sempre, e o Android descompacta sozinho.
+
+   Gerado por ferramentas/empacotar.sh, que roda depois deste script — mantido
+   fora daqui porque Node não tem compactação zip na biblioteca padrão e não
+   vale uma dependência só para isso. */
