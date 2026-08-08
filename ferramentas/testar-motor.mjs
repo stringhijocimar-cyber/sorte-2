@@ -99,6 +99,7 @@ const EXPOSTOS = [
   "fibonacciAte", "observacoes", "PESOS", "referencia",
   "porDezena", "contagemPorConcurso", "repeticoesAnterior", "somaDasDezenas",
   "calibrarPopularidade", "minimosQuadrados", "premioDoAcerto", "pesosVigentes",
+  "preverGanhadores",
   "proximoConcurso", "diasAte", "cartaoProximo", "INTERVALO_BUSCA",
   "perfilDoJogo", "lerTipicidade", "ehPrimo", "naMoldura", "medidasDoPerfil",
   "retrospectiva",
@@ -1361,6 +1362,77 @@ secao("15. Calibração pelos ganhadores");
 
   S.resultados = guardado.r; S.calibracao = guardado.c; S.modalidade = guardado.m;
 }
+
+/* ==================================================================
+   21. Previsão de ganhadores (comportamento humano, não sorteio)
+   ================================================================== */
+secao("21. Com quantas pessoas você dividiria");
+
+{
+  const S = motor.S;
+  const g0 = { r: S.resultados, c: S.calibracao, m: S.modalidade };
+  S.modalidade = "mega-sena";
+
+  checar("sem calibração, não há previsão",
+    (S.calibracao = {}, contexto.preverGanhadores([1,2,3,4,5,6], "mega-sena") === null));
+
+  /* Público simulado que marca datas: quanto mais dezenas ≤ 31, mais gente
+     acerta junto. O modelo tem de reproduzir isso em cima de combinações que
+     nunca viu. */
+  let s7 = 4242;
+  const rnd = () => (s7 = (s7 * 1103515245 + 12345) % 2147483648) / 2147483648;
+  S.resultados = [];
+  for (let i = 1; i <= 200; i++) {
+    const pool = Array.from({ length: 60 }, (_, k) => k + 1);
+    for (let k = 59; k > 0; k--) { const j = Math.floor(rnd() * (k + 1));
+      const t2 = pool[k]; pool[k] = pool[j]; pool[j] = t2; }
+    const dez = pool.slice(0, 6).sort((a, b) => a - b);
+    const ate31 = dez.filter(d => d <= 31).length;
+    S.resultados.push({ concurso: i, data: "2025-01-01", modalidade: "mega-sena",
+      dezenas: dez,
+      rateio: [{ faixa: 1, ganhadores: Math.round(Math.exp(0.9 * ate31) * (0.6 + rnd() * 0.8)),
+                 premio: 5e7 }] });
+  }
+  S.calibracao = { "mega-sena": contexto.calibrarPopularidade("mega-sena") };
+
+  const aniversario = contexto.preverGanhadores([3, 7, 12, 19, 25, 31], "mega-sena");
+  const espalhado  = contexto.preverGanhadores([4, 17, 33, 41, 52, 58], "mega-sena");
+
+  checar("prevê MAIS ganhadores para jogo de datas",
+    aniversario.ganhadores > espalhado.ganhadores,
+    `datas ${aniversario.ganhadores.toFixed(1)} vs espalhado ${espalhado.ganhadores.toFixed(1)}`);
+  checar("a diferença é grande, não marginal",
+    aniversario.ganhadores > espalhado.ganhadores * 3,
+    `${(aniversario.ganhadores / Math.max(espalhado.ganhadores, 0.01)).toFixed(1)}x`);
+  checar("nunca prevê ganhador negativo",
+    [aniversario, espalhado].every(x => x.ganhadores >= 0));
+  checar("a mediana histórica é reportada como referência",
+    typeof aniversario.mediana === "number" && aniversario.mediana >= 0,
+    `mediana ${aniversario.mediana}`);
+  checar("o jogo espalhado fica abaixo do típico e o de datas acima",
+    espalhado.razao < 1 && aniversario.razao > 1,
+    `${espalhado.razao.toFixed(2)} vs ${aniversario.razao.toFixed(2)}`);
+
+  /* Calibração inútil não deve virar previsão exibida. */
+  S.calibracao["mega-sena"].util = false;
+  S.marcadas = { "mega-sena": [4, 17, 33, 41, 52, 58] };
+  S.tela = "montar";
+  checar("calibração declarada inútil não exibe a previsão",
+    !/com quantas pessoas você dividiria/i.test(contexto.T.montar()));
+
+  S.calibracao["mega-sena"].util = true;
+  const html5 = contexto.T.montar();
+  checar("com calibração útil, a previsão aparece",
+    /com quantas pessoas você dividiria/i.test(html5));
+  checar("a tela repete que a chance de acertar NÃO muda",
+    /não\s+muda\s+sua\s+chance/i.test(html5));
+  checar("e explica por que esta previsão é diferente de prever dezena",
+    /comportamento\s+humano/i.test(html5));
+
+  S.marcadas = {};
+  S.resultados = g0.r; S.calibracao = g0.c; S.modalidade = g0.m;
+}
+
 
 /* ==================================================================
    16. Próximo concurso e busca
