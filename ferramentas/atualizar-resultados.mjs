@@ -37,9 +37,24 @@ const MODALIDADES = {
 };
 
 const TUDO = process.argv.includes("--tudo");
+/* --completar: revisita concursos que o app JÁ tem mas que entraram sem o
+   rateio, e preenche só isso. É o que faz a tela conseguir dizer "teve
+   ganhador" em vez de "não informado" — e a diferença entre as duas frases é a
+   diferença entre informar e enganar. Vai do mais recente para o mais antigo,
+   porque é o recente que as pessoas consultam. */
+const COMPLETAR = process.argv.includes("--completar");
 //: Teto por execução. Sem ele, um backfill de Lotofácil faria três mil
 //: requisições numa tacada e o serviço cortaria no meio.
 const TETO = TUDO ? 400 : 25;
+//: Orçamento próprio do backfill de rateio, por modalidade e por execução.
+const TETO_COMPLETAR = Number(
+  (process.argv.find((a) => a.startsWith("--completar-teto=")) || "").split("=")[1] || 120);
+
+//: Um concurso "sabe" dos ganhadores quando traz a faixa 1 com número.
+const temGanhadores = (c) => {
+  const f1 = (c.rateio || []).find((f) => f.faixa === 1);
+  return !!f1 && Number.isFinite(f1.ganhadores);
+};
 
 const dataBr = (s) => {
   const m = String(s || "").match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
@@ -151,15 +166,45 @@ for (const [modalidade, cfg] of Object.entries(MODALIDADES)) {
     }
   }
 
-  if (novos.length) {
+  /* Backfill do rateio nos concursos que já estavam no arquivo sem ele. */
+  let completados = 0;
+  if (COMPLETAR) {
+    const semRateio = dados.concursos
+      .filter((c) => !temGanhadores(c))
+      .sort((a, b) => b.concurso - a.concurso)
+      .slice(0, TETO_COMPLETAR);
+    for (const alvo of semRateio) {
+      try {
+        const r = converter(await buscar(cfg.slug, alvo.concurso), modalidade);
+        if (!temGanhadores(r)) continue;
+        /* Mescla: o que já existia manda, o rateio e as cidades entram. Trocar
+           o objeto inteiro apagaria campos que só o registro antigo tem. */
+        if (r.rateio) alvo.rateio = r.rateio;
+        if (r.cidades && r.cidades.length) alvo.cidades = r.cidades;
+        completados++;
+      } catch (e) {
+        console.error(`${modalidade} #${alvo.concurso} (rateio): ${e.message}`);
+        break;
+      }
+    }
+    if (completados) {
+      console.log(`${modalidade}: rateio preenchido em ${completados} concursos`);
+    }
+  }
+
+  if (novos.length || completados) {
     dados.concursos = dados.concursos
       .filter((c) => !novos.some((n) => n.concurso === c.concurso))
       .concat(novos);
     gravar(modalidade, dados);
     mudou += novos.length;
-    console.log(`${modalidade}: +${novos.length} (total ${dados.concursos.length})`);
+    const comGanhadores = dados.concursos.filter(temGanhadores).length;
+    console.log(`${modalidade}: +${novos.length} novos (total ${dados.concursos.length}, ` +
+      `${comGanhadores} com ganhadores)`);
   } else {
-    console.log(`${modalidade}: em dia (${dados.concursos.length})`);
+    const comGanhadores = dados.concursos.filter(temGanhadores).length;
+    console.log(`${modalidade}: em dia (${dados.concursos.length}, ` +
+      `${comGanhadores} com ganhadores)`);
   }
 }
 

@@ -157,6 +157,7 @@ const EXPOSTOS = [
   "assinaturaHistorico", "modalidadesPendentes", "analisarPendentes", "aplicarCorrecao",
   "aoMudarHistorico", "guardarResultados",
   "sugestaoDoSistema", "tabelaSugestao", "nomeDoMetodo", "distribuicoesDoHistorico",
+  "ganhadoresDoConcurso", "seloGanhadores", "coberturaDeGanhadores",
 ];
 const epilogo = `\n;globalThis.__motor = {${EXPOSTOS.map((n) => `${n}: typeof ${n} !== "undefined" ? ${n} : undefined`).join(", ")}};\n`;
 vm.runInContext(fonte + epilogo, contexto, { filename: "index.html:script" });
@@ -2198,6 +2199,98 @@ secao("22. Sugestão do sistema e retirada do rateio");
     `${(lf.menor * 100).toFixed(1)}% vs ${(lf.medianaDoAcaso * 100).toFixed(1)}%`);
 
   S.resultados = guardado; S.modalidade = guardadaMod; S.tamanho = guardadoTam;
+}
+
+/* ==================================================================
+   23. Teve ganhador? — três estados, e o do meio é "não sei"
+   ==================================================================
+   A diferença entre "não teve ganhador" e "o app não sabe" é a mais fácil de
+   apagar numa tela e uma das mais caras: quem lê "acumulou" acredita que o
+   concurso acumulou. Só 26 dos 21.421 concursos importados trazem rateio, então
+   o estado "não sei" é o mais comum — e precisa aparecer como tal. */
+secao("23. Teve ganhador?");
+{
+  const S = motor.S;
+  const guardado = S.resultados, guardadaMod = S.modalidade;
+
+  const comGanhador = { concurso: 10, modalidade: "mega-sena", dezenas: [1,2,3,4,5,6],
+    rateio: [{ faixa: 1, ganhadores: 3, premio: 1000 },
+             { faixa: 2, ganhadores: 90, premio: 20 }],
+    cidades: [{ municipio: "BELO HORIZONTE", uf: "MG", ganhadores: 2 },
+              { municipio: "RECIFE", uf: "PE", ganhadores: 1 }] };
+  const acumulado = { concurso: 11, modalidade: "mega-sena", dezenas: [1,2,3,4,5,7],
+    rateio: [{ faixa: 1, ganhadores: 0, premio: 0 },
+             { faixa: 2, ganhadores: 55, premio: 30 }] };
+  const semDado = { concurso: 12, modalidade: "mega-sena", dezenas: [1,2,3,4,5,8] };
+  const semFaixa1 = { concurso: 13, modalidade: "mega-sena", dezenas: [1,2,3,4,5,9],
+    rateio: [{ faixa: 2, ganhadores: 40, premio: 25 }] };
+
+  checar("concurso com ganhador é reconhecido",
+    contexto.ganhadoresDoConcurso(comGanhador).estado === "ganhou");
+  checar("concurso sem ganhador na faixa 1 é 'acumulou'",
+    contexto.ganhadoresDoConcurso(acumulado).estado === "acumulou");
+  checar("concurso SEM rateio é 'desconhecido', e não 'acumulou'",
+    contexto.ganhadoresDoConcurso(semDado).estado === "desconhecido",
+    contexto.ganhadoresDoConcurso(semDado).rotulo);
+  checar("rateio sem a faixa 1 também é 'desconhecido'",
+    contexto.ganhadoresDoConcurso(semFaixa1).estado === "desconhecido");
+  checar("objeto vazio não quebra",
+    contexto.ganhadoresDoConcurso({}).estado === "desconhecido");
+  checar("nem null",
+    contexto.ganhadoresDoConcurso(null).estado === "desconhecido");
+
+  /* zero ganhadores é um DADO; ausência de dado não é zero. É a mesma regra
+     que `premioDaFaixa` já seguia para o valor do prêmio. */
+  checar("zero ganhadores conta como informação, não como falta dela",
+    contexto.ganhadoresDoConcurso(acumulado).ganhadores === 0 &&
+    contexto.ganhadoresDoConcurso(semDado).ganhadores === undefined);
+
+  const selo1 = contexto.seloGanhadores(comGanhador);
+  checar("o selo diz quantos ganhadores", /3 ganhadores/.test(selo1), "");
+  checar("e o prêmio de cada um", /R\$/.test(selo1));
+  checar("e as cidades, quando a Caixa informou",
+    /BELO HORIZONTE\/MG \(2\)/.test(selo1) && /RECIFE\/PE/.test(selo1));
+  checar("um ganhador só não vira 'ganhadores'",
+    /\b1 ganhador</.test(contexto.seloGanhadores(
+      { rateio: [{ faixa: 1, ganhadores: 1, premio: 5 }] })));
+
+  const selo2 = contexto.seloGanhadores(acumulado);
+  checar("o selo do acumulado diz que NÃO houve ganhador",
+    /sem ganhador/i.test(selo2) && /acumulou/i.test(selo2), "");
+  checar("e não inventa prêmio para quem não existiu", !/R\$/.test(selo2));
+
+  const selo3 = contexto.seloGanhadores(semDado);
+  checar("o selo do desconhecido diz 'não informado', e nunca 'acumulou'",
+    /não informado/i.test(selo3) && !/acumulou/i.test(selo3), "");
+  checar("e nunca afirma que houve ganhador", !/ganhador\b(?!es não)/i.test(
+    selo3.replace(/ganhadores não informados/gi, "")));
+  checar("os três estados saem com classes diferentes na tela",
+    new Set([selo1, selo2, selo3].map(h =>
+      (h.match(/selo-ganho (\w+)/) || [])[1])).size === 3);
+
+  /* A cobertura: a tela precisa dizer o tamanho do buraco. */
+  S.modalidade = "mega-sena";
+  S.resultados = [comGanhador, acumulado, semDado, semFaixa1];
+  const cob = contexto.coberturaDeGanhadores("mega-sena");
+  checar("a cobertura conta quantos concursos têm a informação",
+    cob.total === 4 && cob.com === 2, `${cob.com} de ${cob.total}`);
+  checar("e a fração bate", Math.abs(cob.fracao - 0.5) < 1e-12);
+  S.resultados = [];
+  checar("sem histórico, a cobertura não divide por zero",
+    contexto.coberturaDeGanhadores("mega-sena").fracao === 0);
+
+  /* A tela de resultados: o aviso sobre o buraco, e a promessa de não mentir. */
+  S.resultados = [comGanhador, acumulado, semDado];
+  const tela = contexto.T.resultados();
+  checar("a tela declara quantos concursos têm ganhador conhecido",
+    /Ganhadores conhecidos em/.test(tela));
+  checar("e explica que 'não informado' não quer dizer 'sem ganhador'",
+    /não\s+sabe,\s+e\s+não\s+que\s+não\s+houve\s+ganhador/.test(tela), "");
+  checar("os selos aparecem na lista",
+    (tela.match(/selo-ganho/g) || []).length === 3,
+    `${(tela.match(/selo-ganho/g) || []).length} selos`);
+
+  S.resultados = guardado; S.modalidade = guardadaMod;
 }
 
 /* ---------- saída ---------- */

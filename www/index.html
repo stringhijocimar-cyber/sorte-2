@@ -247,6 +247,21 @@ nav button[aria-current="page"] svg{stroke-width:2.2}
   letter-spacing:.1em;text-transform:uppercase;padding:2px 8px;border-radius:20px;
   border:1px solid color-mix(in srgb,var(--carta) 45%,transparent);margin-top:8px}
 .proximo .contagem{position:absolute;right:16px;top:15px;text-align:right}
+
+/* Selo de ganhadores. Três estados com três pesos visuais diferentes, porque
+   "não sei" não pode parecer um resultado: ele é discreto e vazado, enquanto
+   ter ganhador e acumular são afirmações e ficam preenchidas. */
+.ganho{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:5px}
+.selo-ganho{font-family:var(--mono);font-size:.6rem;letter-spacing:.07em;
+  text-transform:uppercase;padding:2px 8px;border-radius:20px;white-space:nowrap}
+.selo-ganho.ganhou{background:color-mix(in srgb,var(--acaso) 16%,transparent);
+  color:var(--acaso);border:1px solid color-mix(in srgb,var(--acaso) 40%,transparent)}
+.selo-ganho.acumulou{background:color-mix(in srgb,var(--seu) 16%,transparent);
+  color:var(--seu);border:1px solid color-mix(in srgb,var(--seu) 40%,transparent)}
+.selo-ganho.desconhecido{background:transparent;color:var(--secundaria);
+  border:1px dashed var(--linha)}
+.ganho-premio{font-family:var(--mono);font-size:.72rem;color:var(--tinta)}
+.ganho-cidades{font-size:.72rem;color:var(--secundaria);flex-basis:100%}
 .proximo .contagem b{display:block;font-family:var(--mono);font-size:1.6rem;
   font-weight:650;line-height:1}
 .proximo .contagem span{font-size:.6rem;text-transform:uppercase;letter-spacing:.1em;
@@ -2459,6 +2474,53 @@ function linhasEColunas(modalidade){
 /* Cartão do próximo concurso. Devolve string vazia quando não há informação —
    um cartão dizendo "não sei quando é o próximo sorteio" ocuparia o lugar mais
    nobre da tela para não informar nada. */
+/* ================= teve ganhador? =================
+
+   Três estados, e não dois. A diferença entre "não teve ganhador" e "não sei"
+   é a coisa mais fácil de apagar numa interface e uma das mais caras: quem lê
+   "acumulou" acredita que o concurso acumulou. Enquanto o app não tiver o
+   rateio daquele concurso, ele precisa dizer que não sabe.
+
+   O dado vem do rateio publicado pela Caixa, faixa 1 (a faixa máxima da
+   modalidade). Concursos importados por colagem, ou trazidos antes de o app
+   passar a guardar rateio, ficam em "não informado" — e é o certo. */
+function ganhadoresDoConcurso(r){
+  const faixa1 = (r && r.rateio || []).find(f => f.faixa === 1);
+  if(!faixa1 || !Number.isFinite(faixa1.ganhadores))
+    return {estado:"desconhecido", rotulo:"ganhadores não informados",
+            cor:"var(--secundaria)",
+            ajuda:"este concurso entrou sem o rateio; traga-o de novo pela busca para saber"};
+  if(faixa1.ganhadores > 0)
+    return {estado:"ganhou", ganhadores:faixa1.ganhadores, premio:faixa1.premio,
+            rotulo:`${inf(faixa1.ganhadores)} ganhador${faixa1.ganhadores>1?"es":""}`,
+            cor:"var(--acaso)"};
+  return {estado:"acumulou", ganhadores:0, rotulo:"sem ganhador — acumulou",
+          cor:"var(--seu)"};
+}
+
+/* O selo, do tamanho de ser lido numa lista. */
+function seloGanhadores(r, opcoes){
+  const o = Object.assign({premio:true, cidades:true}, opcoes||{});
+  const g = ganhadoresDoConcurso(r);
+  const partes = [`<span class="selo-ganho ${g.estado}" title="${esc(g.ajuda||"")}">${esc(g.rotulo)}</span>`];
+  if(o.premio && g.estado === "ganhou" && Number.isFinite(g.premio) && g.premio > 0)
+    partes.push(`<span class="ganho-premio">${brl(g.premio)} cada</span>`);
+  if(o.cidades && g.estado === "ganhou" && r.cidades && r.cidades.length)
+    partes.push(`<span class="ganho-cidades">${r.cidades.slice(0,4).map(c =>
+      esc(`${c.municipio}/${c.uf}${c.ganhadores>1?` (${c.ganhadores})`:""}`)).join(" · ")}${
+      r.cidades.length>4 ? ` +${r.cidades.length-4}` : ""}</span>`);
+  return `<span class="ganho">${partes.join("")}</span>`;
+}
+
+/* Quantos concursos desta modalidade já trazem a informação. Serve para a tela
+   dizer o tamanho do buraco em vez de deixar o usuário descobrir sozinho. */
+function coberturaDeGanhadores(modalidade){
+  const hist = S.resultados.filter(r => r.modalidade === modalidade);
+  const com = hist.filter(r => ganhadoresDoConcurso(r).estado !== "desconhecido");
+  return {total: hist.length, com: com.length,
+          fracao: hist.length ? com.length / hist.length : 0};
+}
+
 function cartaoProximo(modalidade){
   const p = proximoConcurso(modalidade);
   if(!p) return "";
@@ -4017,26 +4079,29 @@ T.resultados = () => {
   </div>
   <div class="carta">
     <h2>${esc(c.nome)} — ${meus.length} concurso${meus.length===1?"":"s"} no app</h2>
+    ${!meus.length ? "" : (()=>{
+      /* O tamanho do buraco, dito de frente. Sem isto, quem vê muitos "não
+         informado" conclui que o app está quebrado, quando o que falta é o
+         rateio daqueles concursos. */
+      const cob = coberturaDeGanhadores(S.modalidade);
+      if(cob.com === cob.total)
+        return `<div class="nota">Todos os ${inf(cob.total)} concursos trazem a
+          informação de ganhadores.</div>`;
+      return `<div class="nota">Ganhadores conhecidos em <strong>${inf(cob.com)} de
+        ${inf(cob.total)}</strong> concursos (${nf(cob.fracao*100,0)}%). Os demais
+        entraram sem o rateio — <em>ganhadores não informados</em> quer dizer que o
+        app não sabe, e não que não houve ganhador. Buscar o histórico de novo
+        preenche o que faltar.</div>`;
+    })()}
     ${!meus.length
       ? `<div class="vazio">Nenhum resultado desta modalidade ainda.<br>
           Sem histórico, a bancada e o placar não têm o que medir.</div>`
       : `<div class="lista" style="margin-top:10px">${meus.slice(0,40).map(r=>`
-          <div class="item ${r.rateio?"ok":""}">
+          <div class="item ${ganhadoresDoConcurso(r).estado==="ganhou"?"ok":""}">
             <span class="marca-cor"></span>
             <span class="txt"><b>Concurso ${esc(r.concurso)}</b>
               <span>${r.dezenas.map(pad).join(" ")}</span>
-              ${!r.rateio ? "" : (()=>{
-                const f1 = r.rateio.find(x => x.faixa === 1);
-                if(!f1) return "";
-                return `<span style="margin-top:4px">${
-                  f1.ganhadores > 0
-                    ? `<strong style="color:var(--acaso)">${inf(f1.ganhadores)} ganhador${f1.ganhadores>1?"es":""}</strong> · ${brl(f1.premio)} cada`
-                    : "acumulou"}</span>`;
-              })()}
-              ${!r.cidades || !r.cidades.length ? "" :
-                `<span style="margin-top:2px">${r.cidades.slice(0,4).map(g =>
-                  esc(`${g.municipio}/${g.uf}${g.ganhadores>1?` (${g.ganhadores})`:""}`)).join(" · ")}${
-                  r.cidades.length>4 ? ` e mais ${r.cidades.length-4}` : ""}</span>`}
+              ${seloGanhadores(r)}
             </span>
             <span class="quando">${esc(r.data)}<br>
               <span class="pilula ${r.origem==="caixa"?"oficial":"manual"}"
@@ -4264,8 +4329,12 @@ function acoesNovas(){
          manual usaria só as dezenas e jogaria fora o resto. */
       guardarResultados([r]);
       const nome = (FONTES.find(f => f.id === r.fonte) || {}).nome || "fonte desconhecida";
+      /* O resultado buscado ja diz, na hora, se teve ganhador. Era a pergunta
+         que o usuario fazia logo depois de ver as dezenas, e que obrigava a ir
+         ate a tela de Resultados para responder. */
       alvo.innerHTML = `<div class="nota"><strong>Concurso ${esc(r.concurso)}</strong>
-        preenchido. Fonte: ${esc(nome)}. Toque em conferir.</div>`;
+        preenchido. Fonte: ${esc(nome)}. Toque em conferir.
+        ${seloGanhadores(r)}</div>`;
     }catch(e){
       alvo.innerHTML = `<div class="nota atencao"><strong>Nenhuma fonte respondeu.</strong>
         <span style="display:block;margin-top:6px;font-family:var(--mono);font-size:.76rem"
@@ -4569,8 +4638,15 @@ function acoes(){
       j.conferencias.push({concurso, data, dezenas, acertos});
       soma += acertos; somaEsperado += esperadoAcertos(j.modalidade, j.dezenas.length);
     });
+    /* Se este concurso ja tinha sido trazido pela busca, ele carrega rateio e
+       cidades. Substituir sem olhar apagaria essa informacao e transformaria um
+       "3 ganhadores em Belo Horizonte" num "nao informado" — perda silenciosa
+       causada por conferir a mao um resultado que o app ja conhecia. */
+    const anterior = S.resultados.find(r =>
+      r.concurso === concurso && r.modalidade === S.modalidade);
     S.resultados = S.resultados.filter(r => !(r.concurso===concurso && r.modalidade===S.modalidade));
-    S.resultados.push({concurso, data, dezenas, modalidade:S.modalidade});
+    S.resultados.push(Object.assign({}, anterior || {},
+      {concurso, data, dezenas, modalidade:S.modalidade}));
     Guardar.gravar("jogos", S.jogos); Guardar.gravar("resultados", S.resultados);
 
     const media = soma/alvo.length, esperado = somaEsperado/alvo.length;
@@ -4580,6 +4656,8 @@ function acoes(){
 
     saida.innerHTML = `<div class="carta">
       <h3>Concurso ${esc(concurso)} — ${alvo.length} jogo${alvo.length>1?"s":""} conferido${alvo.length>1?"s":""}</h3>
+      ${seloGanhadores(S.resultados.find(r =>
+        r.concurso === concurso && r.modalidade === S.modalidade) || {})}
       ${/* O resultado sai na cartela, e não em chips: é o mesmo objeto que a
              pessoa marcou, agora com o sorteio impresso. Quando há um jogo só,
              a cartela mostra as duas camadas — marcação e sorteio — e o acerto
