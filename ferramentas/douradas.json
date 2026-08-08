@@ -1,0 +1,5334 @@
+{
+ "mega-sena": [
+  {
+   "jogo": [
+    9,
+    10,
+    16,
+    23,
+    30,
+    43,
+    44,
+    45,
+    48
+   ],
+   "c": {
+    "ate31": 0.5555555555555556,
+    "ate12": 0.2222222222222222,
+    "consecutivos": 0.375,
+    "somaCentral": 0.9909869683070452,
+    "espacamentoRegular": 0.18956509593440474,
+    "mesmaLinha": 0.4444444444444444,
+    "mesmaColuna": 0.2222222222222222,
+    "terminacoesIguais": 0.2222222222222222,
+    "contem7": 0,
+    "fibonacci": 0
+   }
+  },
+  {
+   "jogo": [
+    11,
+    13,
+    19,
+    21,
+    32,
+    35,
+    42,
+    45
+   ],
+   "c": {
+    "ate31": 0.5,
+    "ate12": 0.125,
+    "consecutivos": 0,
+    "somaCentral": 0.8522834961204138,
+    "espacamentoRegular": 0.3637262455063548,
+    "mesmaLinha": 0.375,
+    "mesmaColuna": 0.25,
+    "terminacoesIguais": 0.25,
+    "contem7": 0,
+    "fibonacci": 1.6666666666666667
+   }
+  },
+  {
+   "jogo": [
+    3,
+    25,
+    30,
+    31,
+    37,
+    38,
+    43,
+    58
+   ],
+   "c": {
+    "ate31": 0.5,
+    "ate12": 0.125,
+    "consecutivos": 0.2857142857142857,
+    "somaCentral": 0.9009804201641117,
+    "espacamentoRegular": 0.08114336229139807,
+    "mesmaLinha": 0.375,
+    "mesmaColuna": 0.25,
+    "terminacoesIguais": 0.25,
+    "contem7": 0,
+    "fibonacci": 0.8333333333333334
+   }
+  },
+  {
+   "jogo": [
+    1,
+    7,
+    10,
+    12,
+    17,
+    26,
+    58,
+    59
+   ],
+   "c": {
+    "ate31": 0.75,
+    "ate12": 0.5,
+    "consecutivos": 0.14285714285714285,
+    "somaCentral": 0.5018417913179533,
+    "espacamentoRegular": 0,
+    "mesmaLinha": 0.375,
+    "mesmaColuna": 0.25,
+    "terminacoesIguais": 0.25,
+    "contem7": 1,
+    "fibonacci": 0.8333333333333334
+   }
+  },
+  {
+   "jogo": [
+    8,
+    12,
+    15,
+    16,
+    20,
+    52,
+    56
+   ],
+   "c": {
+    "ate31": 0.7142857142857143,
+    "ate12": 0.2857142857142857,
+    "consecutivos": 0.16666666666666666,
+    "somaCentral": 0.7293783203003307,
+    "espacamentoRegular": 0,
+    "mesmaLinha": 0.5714285714285714,
+    "mesmaColuna": 0.2857142857142857,
+    "terminacoesIguais": 0.2857142857142857,
+    "contem7": 0,
+    "fibonacci": 0.9523809523809523
+   }
+  },
+  {
+   "jogo": [
+    10,
+    13,
+    21,
+    23,
+    33,
+    41,
+    54,
+    58
+   ],
+   "c": {
+    "ate31": 0.5,
+    "ate12": 0.125,
+    "consecutivos": 0,
+    "somaCentral": 0.9810302788498069,
+    "espacamentoRegular": 0.4575326430711859,
+    "mesmaLinha": 0.25,
+    "mesmaColuna": 0.375,
+    "terminacoesIguais": 0.375,
+    "contem7": 0,
+    "fibonacci": 1.6666666666666667
+   }
+  },
+  {
+   "jogo": [
+    5,
+    8,
+    11,
+    16,
+    27,
+    30,
+    48,
+    52,
+    55
+   ],
+   "c": {
+    "ate31": 0.6666666666666666,
+    "ate12": 0.3333333333333333,
+    "consecutivos": 0,
+    "somaCentral": 0.897191439836186,
+    "espacamentoRegular": 0.1812204203816512,
+    "mesmaLinha": 0.2222222222222222,
+    "mesmaColuna": 0.2222222222222222,
+    "terminacoesIguais": 0.2222222222222222,
+    "contem7": 0,
+    "fibonacci": 2.2222222222222223
+   }
+  },
+  {
+   "jogo": [
+    2,
+    14,
+    18,
+    38,
+    41,
+    51,
+    53
+   ],
+   "c": {
+    "ate31": 0.42857142857142855,
+    "ate12": 0.14285714285714285,
+    "consecutivos": 0,
+    "somaCentral": 0.9967575107587323,
+    "espacamentoRegular": 0.25671014035196604,
+    "mesmaLinha": 0.2857142857142857,
+    "mesmaColuna": 0.2857142857142857,
+    "terminacoesIguais": 0.2857142857142857,
+    "contem7": 0,
+    "fibonacci": 0.9523809523809523
+   }
+  },
+  {
+   "jogo": [
+    1,
+    4,
+    15,
+    17,
+    24,
+    26,
+    33,
+    51,
+    54
+   ],
+   "c": {
+    "ate31": 0.6666666666666666,
+    "ate12": 0.2222222222222222,
+    "consecutivos": 0,
+    "somaCentral": 0.5915125822569027,
+    "espacamentoRegular": 0.21227827376799613,
+    "mesmaLinha": 0.2222222222222222,
+    "mesmaColuna": 0.3333333333333333,
+    "terminacoesIguais": 0.3333333333333333,
+    "contem7": 0,
+    "fibonacci": 0.7407407407407407
+   }
+  },
+  {
+   "jogo": [
+    2,
+    19,
+    41,
+    43,
+    47,
+    51
+   ],
+   "c": {
+    "ate31": 0.3333333333333333,
+    "ate12": 0.16666666666666666,
+    "consecutivos": 0,
+    "somaCentral": 0.8856504711352614,
+    "espacamentoRegular": 0.17252510478721272,
+    "mesmaLinha": 0.5,
+    "mesmaColuna": 0.3333333333333333,
+    "terminacoesIguais": 0.3333333333333333,
+    "contem7": 0,
+    "fibonacci": 1.1111111111111112
+   }
+  },
+  {
+   "jogo": [
+    3,
+    7,
+    17,
+    24,
+    39,
+    48,
+    49,
+    59
+   ],
+   "c": {
+    "ate31": 0.5,
+    "ate12": 0.25,
+    "consecutivos": 0.14285714285714285,
+    "somaCentral": 0.999054671568778,
+    "espacamentoRegular": 0.4738957191908487,
+    "mesmaLinha": 0.25,
+    "mesmaColuna": 0.375,
+    "terminacoesIguais": 0.375,
+    "contem7": 1,
+    "fibonacci": 0.8333333333333334
+   }
+  },
+  {
+   "jogo": [
+    21,
+    27,
+    37,
+    41,
+    45,
+    52,
+    53,
+    55,
+    56
+   ],
+   "c": {
+    "ate31": 0.2222222222222222,
+    "ate12": 0,
+    "consecutivos": 0.25,
+    "somaCentral": 0.06639387744238642,
+    "espacamentoRegular": 0.32448054756932065,
+    "mesmaLinha": 0.4444444444444444,
+    "mesmaColuna": 0.2222222222222222,
+    "terminacoesIguais": 0.2222222222222222,
+    "contem7": 0,
+    "fibonacci": 1.4814814814814814
+   }
+  },
+  {
+   "jogo": [
+    6,
+    12,
+    31,
+    35,
+    48,
+    49,
+    58
+   ],
+   "c": {
+    "ate31": 0.42857142857142855,
+    "ate12": 0.2857142857142857,
+    "consecutivos": 0.16666666666666666,
+    "somaCentral": 0.8416455876738763,
+    "espacamentoRegular": 0.31197908384621853,
+    "mesmaLinha": 0.2857142857142857,
+    "mesmaColuna": 0.2857142857142857,
+    "terminacoesIguais": 0.2857142857142857,
+    "contem7": 0,
+    "fibonacci": 0
+   }
+  },
+  {
+   "jogo": [
+    7,
+    11,
+    14,
+    18,
+    29,
+    42,
+    49,
+    59
+   ],
+   "c": {
+    "ate31": 0.625,
+    "ate12": 0.25,
+    "consecutivos": 0,
+    "somaCentral": 0.9481904750161773,
+    "espacamentoRegular": 0.5074519817359348,
+    "mesmaLinha": 0.375,
+    "mesmaColuna": 0.375,
+    "terminacoesIguais": 0.375,
+    "contem7": 1,
+    "fibonacci": 0
+   }
+  },
+  {
+   "jogo": [
+    11,
+    20,
+    34,
+    40,
+    41,
+    47,
+    51
+   ],
+   "c": {
+    "ate31": 0.2857142857142857,
+    "ate12": 0.14285714285714285,
+    "consecutivos": 0.16666666666666666,
+    "somaCentral": 0.7814292003683463,
+    "espacamentoRegular": 0.38967221921331485,
+    "mesmaLinha": 0.2857142857142857,
+    "mesmaColuna": 0.42857142857142855,
+    "terminacoesIguais": 0.42857142857142855,
+    "contem7": 0,
+    "fibonacci": 0.9523809523809523
+   }
+  },
+  {
+   "jogo": [
+    1,
+    2,
+    18,
+    20,
+    22,
+    36
+   ],
+   "c": {
+    "ate31": 0.8333333333333334,
+    "ate12": 0.3333333333333333,
+    "consecutivos": 0.2,
+    "somaCentral": 0.11741078589911928,
+    "espacamentoRegular": 0.06104704427685803,
+    "mesmaLinha": 0.3333333333333333,
+    "mesmaColuna": 0.3333333333333333,
+    "terminacoesIguais": 0.3333333333333333,
+    "contem7": 0,
+    "fibonacci": 2.2222222222222223
+   }
+  },
+  {
+   "jogo": [
+    3,
+    8,
+    17,
+    24,
+    41,
+    42,
+    43,
+    49
+   ],
+   "c": {
+    "ate31": 0.5,
+    "ate12": 0.25,
+    "consecutivos": 0.2857142857142857,
+    "somaCentral": 0.933950086768814,
+    "espacamentoRegular": 0.22895009343616524,
+    "mesmaLinha": 0.5,
+    "mesmaColuna": 0.25,
+    "terminacoesIguais": 0.25,
+    "contem7": 0,
+    "fibonacci": 1.6666666666666667
+   }
+  },
+  {
+   "jogo": [
+    13,
+    14,
+    19,
+    40,
+    42,
+    54,
+    58
+   ],
+   "c": {
+    "ate31": 0.42857142857142855,
+    "ate12": 0,
+    "consecutivos": 0.16666666666666666,
+    "somaCentral": 0.8301219429308823,
+    "espacamentoRegular": 0.06746065518412059,
+    "mesmaLinha": 0.42857142857142855,
+    "mesmaColuna": 0.2857142857142857,
+    "terminacoesIguais": 0.2857142857142857,
+    "contem7": 0,
+    "fibonacci": 0.9523809523809523
+   }
+  },
+  {
+   "jogo": [
+    7,
+    9,
+    24,
+    37,
+    43,
+    46,
+    52
+   ],
+   "c": {
+    "ate31": 0.42857142857142855,
+    "ate12": 0.2857142857142857,
+    "consecutivos": 0,
+    "somaCentral": 0.994645643947897,
+    "espacamentoRegular": 0.3524976762518459,
+    "mesmaLinha": 0.2857142857142857,
+    "mesmaColuna": 0.2857142857142857,
+    "terminacoesIguais": 0.2857142857142857,
+    "contem7": 1,
+    "fibonacci": 0
+   }
+  },
+  {
+   "jogo": [
+    3,
+    19,
+    22,
+    41,
+    49,
+    50,
+    55,
+    56,
+    60
+   ],
+   "c": {
+    "ate31": 0.3333333333333333,
+    "ate12": 0.1111111111111111,
+    "consecutivos": 0.25,
+    "somaCentral": 0.24940564902757972,
+    "espacamentoRegular": 0.10285840873364238,
+    "mesmaLinha": 0.3333333333333333,
+    "mesmaColuna": 0.2222222222222222,
+    "terminacoesIguais": 0.2222222222222222,
+    "contem7": 0,
+    "fibonacci": 1.4814814814814814
+   }
+  },
+  {
+   "jogo": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+   ],
+   "c": {
+    "ate31": 1,
+    "ate12": 1,
+    "consecutivos": 1,
+    "somaCentral": 0.0003466436972051837,
+    "espacamentoRegular": 1,
+    "mesmaLinha": 1,
+    "mesmaColuna": 0.16666666666666666,
+    "terminacoesIguais": 0.16666666666666666,
+    "contem7": 0,
+    "fibonacci": 3
+   }
+  },
+  {
+   "jogo": [
+    55,
+    56,
+    57,
+    58,
+    59,
+    60
+   ],
+   "c": {
+    "ate31": 0,
+    "ate12": 0,
+    "consecutivos": 1,
+    "somaCentral": 0.0003466436972051837,
+    "espacamentoRegular": 1,
+    "mesmaLinha": 1,
+    "mesmaColuna": 0.16666666666666666,
+    "terminacoesIguais": 0.16666666666666666,
+    "contem7": 0,
+    "fibonacci": 1.1111111111111112
+   }
+  }
+ ],
+ "lotofacil": [
+  {
+   "jogo": [
+    1,
+    2,
+    3,
+    6,
+    7,
+    10,
+    13,
+    14,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    25
+   ],
+   "c": {
+    "ate31": 1,
+    "ate12": 0.375,
+    "consecutivos": 0.6666666666666666,
+    "somaCentral": 0.9439403459411809,
+    "espacamentoRegular": 0.4503789184052951,
+    "mesmaLinha": 0.3125,
+    "mesmaColuna": 0.25,
+    "terminacoesIguais": 0.125,
+    "contem7": 1,
+    "fibonacci": 1.1160714285714284
+   }
+  },
+  {
+   "jogo": [
+    4,
+    8,
+    9,
+    11,
+    12,
+    14,
+    15,
+    16,
+    17,
+    18,
+    20,
+    21,
+    23,
+    24,
+    25
+   ],
+   "c": {
+    "ate31": 1,
+    "ate12": 0.3333333333333333,
+    "consecutivos": 0.6428571428571429,
+    "somaCentral": 0.06628138742576588,
+    "espacamentoRegular": 0.45083035263472404,
+    "mesmaLinha": 0.26666666666666666,
+    "mesmaColuna": 0.26666666666666666,
+    "terminacoesIguais": 0.2,
+    "contem7": 0,
+    "fibonacci": 0.47619047619047616
+   }
+  },
+  {
+   "jogo": [
+    1,
+    2,
+    3,
+    4,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    15,
+    16,
+    21,
+    23,
+    25
+   ],
+   "c": {
+    "ate31": 1,
+    "ate12": 0.6470588235294118,
+    "consecutivos": 0.6875,
+    "somaCentral": 0.12510274622621936,
+    "espacamentoRegular": 0.33333333333333337,
+    "mesmaLinha": 0.29411764705882354,
+    "mesmaColuna": 0.29411764705882354,
+    "terminacoesIguais": 0.17647058823529413,
+    "contem7": 1,
+    "fibonacci": 1.2605042016806722
+   }
+  },
+  {
+   "jogo": [
+    1,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    12,
+    13,
+    17,
+    19,
+    20,
+    21,
+    22,
+    23
+   ],
+   "c": {
+    "ate31": 1,
+    "ate12": 0.5625,
+    "consecutivos": 0.7333333333333333,
+    "somaCentral": 0.5949780474073959,
+    "espacamentoRegular": 0.39697731084447274,
+    "mesmaLinha": 0.25,
+    "mesmaColuna": 0.25,
+    "terminacoesIguais": 0.1875,
+    "contem7": 1,
+    "fibonacci": 1.3392857142857142
+   }
+  },
+  {
+   "jogo": [
+    2,
+    3,
+    5,
+    6,
+    7,
+    9,
+    11,
+    12,
+    13,
+    14,
+    15,
+    17,
+    18,
+    19,
+    20,
+    22,
+    23,
+    25
+   ],
+   "c": {
+    "ate31": 1,
+    "ate12": 0.4444444444444444,
+    "consecutivos": 0.6470588235294118,
+    "somaCentral": 0.9141655566471131,
+    "espacamentoRegular": 0.6467809389288712,
+    "mesmaLinha": 0.2777777777777778,
+    "mesmaColuna": 0.2777777777777778,
+    "terminacoesIguais": 0.16666666666666666,
+    "contem7": 1,
+    "fibonacci": 0.7936507936507935
+   }
+  },
+  {
+   "jogo": [
+    1,
+    2,
+    3,
+    5,
+    6,
+    9,
+    10,
+    11,
+    12,
+    13,
+    15,
+    16,
+    17,
+    20,
+    22,
+    23,
+    25
+   ],
+   "c": {
+    "ate31": 1,
+    "ate12": 0.5294117647058824,
+    "consecutivos": 0.625,
+    "somaCentral": 0.8143893241854228,
+    "espacamentoRegular": 0.5285954792089682,
+    "mesmaLinha": 0.23529411764705882,
+    "mesmaColuna": 0.29411764705882354,
+    "terminacoesIguais": 0.17647058823529413,
+    "contem7": 0,
+    "fibonacci": 1.050420168067227
+   }
+  },
+  {
+   "jogo": [
+    1,
+    2,
+    3,
+    5,
+    7,
+    9,
+    10,
+    12,
+    13,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    24,
+    25
+   ],
+   "c": {
+    "ate31": 1,
+    "ate12": 0.4444444444444444,
+    "consecutivos": 0.6470588235294118,
+    "somaCentral": 0.9836515932942931,
+    "espacamentoRegular": 0.5750817072006013,
+    "mesmaLinha": 0.2777777777777778,
+    "mesmaColuna": 0.2777777777777778,
+    "terminacoesIguais": 0.16666666666666666,
+    "contem7": 1,
+    "fibonacci": 1.1904761904761902
+   }
+  },
+  {
+   "jogo": [
+    2,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    17,
+    18,
+    20,
+    22,
+    23,
+    24
+   ],
+   "c": {
+    "ate31": 1,
+    "ate12": 0.5555555555555556,
+    "consecutivos": 0.7647058823529411,
+    "somaCentral": 0.86212789577845,
+    "espacamentoRegular": 0.5593018311439701,
+    "mesmaLinha": 0.2777777777777778,
+    "mesmaColuna": 0.2777777777777778,
+    "terminacoesIguais": 0.16666666666666666,
+    "contem7": 1,
+    "fibonacci": 0.7936507936507935
+   }
+  },
+  {
+   "jogo": [
+    1,
+    3,
+    4,
+    5,
+    7,
+    8,
+    9,
+    10,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    19,
+    21,
+    22,
+    23
+   ],
+   "c": {
+    "ate31": 1,
+    "ate12": 0.5,
+    "consecutivos": 0.7058823529411765,
+    "somaCentral": 0.6622660523014627,
+    "espacamentoRegular": 0.6479106048902348,
+    "mesmaLinha": 0.2222222222222222,
+    "mesmaColuna": 0.2222222222222222,
+    "terminacoesIguais": 0.16666666666666666,
+    "contem7": 1,
+    "fibonacci": 1.1904761904761902
+   }
+  },
+  {
+   "jogo": [
+    1,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    11,
+    14,
+    15,
+    16,
+    17,
+    20,
+    22,
+    24
+   ],
+   "c": {
+    "ate31": 1,
+    "ate12": 0.5625,
+    "consecutivos": 0.6,
+    "somaCentral": 0.33846542510674227,
+    "espacamentoRegular": 0.5317247993796084,
+    "mesmaLinha": 0.25,
+    "mesmaColuna": 0.25,
+    "terminacoesIguais": 0.1875,
+    "contem7": 1,
+    "fibonacci": 0.8928571428571428
+   }
+  },
+  {
+   "jogo": [
+    1,
+    2,
+    3,
+    6,
+    7,
+    10,
+    11,
+    12,
+    14,
+    15,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24
+   ],
+   "c": {
+    "ate31": 1,
+    "ate12": 0.5,
+    "consecutivos": 0.7333333333333333,
+    "somaCentral": 0.9936102454525756,
+    "espacamentoRegular": 0.37596956111272506,
+    "mesmaLinha": 0.25,
+    "mesmaColuna": 0.25,
+    "terminacoesIguais": 0.1875,
+    "contem7": 1,
+    "fibonacci": 0.8928571428571428
+   }
+  },
+  {
+   "jogo": [
+    1,
+    2,
+    4,
+    7,
+    8,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    17,
+    19,
+    20,
+    23,
+    24,
+    25
+   ],
+   "c": {
+    "ate31": 1,
+    "ate12": 0.47058823529411764,
+    "consecutivos": 0.625,
+    "somaCentral": 0.9732159088414347,
+    "espacamentoRegular": 0.5285954792089682,
+    "mesmaLinha": 0.29411764705882354,
+    "mesmaColuna": 0.23529411764705882,
+    "terminacoesIguais": 0.17647058823529413,
+    "contem7": 1,
+    "fibonacci": 0.8403361344537814
+   }
+  },
+  {
+   "jogo": [
+    1,
+    5,
+    8,
+    9,
+    10,
+    11,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    25
+   ],
+   "c": {
+    "ate31": 1,
+    "ate12": 0.35294117647058826,
+    "consecutivos": 0.75,
+    "somaCentral": 0.15757548294446813,
+    "espacamentoRegular": 0.3763904355376765,
+    "mesmaLinha": 0.29411764705882354,
+    "mesmaColuna": 0.29411764705882354,
+    "terminacoesIguais": 0.17647058823529413,
+    "contem7": 0,
+    "fibonacci": 0.8403361344537814
+   }
+  },
+  {
+   "jogo": [
+    1,
+    5,
+    7,
+    8,
+    10,
+    11,
+    12,
+    15,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    24,
+    25
+   ],
+   "c": {
+    "ate31": 1,
+    "ate12": 0.4375,
+    "consecutivos": 0.6,
+    "somaCentral": 0.3109045799477088,
+    "espacamentoRegular": 0.4503789184052951,
+    "mesmaLinha": 0.25,
+    "mesmaColuna": 0.3125,
+    "terminacoesIguais": 0.1875,
+    "contem7": 1,
+    "fibonacci": 0.8928571428571428
+   }
+  },
+  {
+   "jogo": [
+    1,
+    4,
+    5,
+    8,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    20,
+    21,
+    23,
+    24,
+    25
+   ],
+   "c": {
+    "ate31": 1,
+    "ate12": 0.3888888888888889,
+    "consecutivos": 0.7058823529411765,
+    "somaCentral": 0.3795137431893542,
+    "espacamentoRegular": 0.5105274948137197,
+    "mesmaLinha": 0.2777777777777778,
+    "mesmaColuna": 0.2777777777777778,
+    "terminacoesIguais": 0.16666666666666666,
+    "contem7": 0,
+    "fibonacci": 0.992063492063492
+   }
+  },
+  {
+   "jogo": [
+    2,
+    3,
+    6,
+    7,
+    8,
+    10,
+    11,
+    14,
+    15,
+    16,
+    17,
+    20,
+    21,
+    22,
+    24
+   ],
+   "c": {
+    "ate31": 1,
+    "ate12": 0.4666666666666667,
+    "consecutivos": 0.6428571428571429,
+    "somaCentral": 0.9984627212868363,
+    "espacamentoRegular": 0.4777670321329064,
+    "mesmaLinha": 0.26666666666666666,
+    "mesmaColuna": 0.26666666666666666,
+    "terminacoesIguais": 0.13333333333333333,
+    "contem7": 1,
+    "fibonacci": 0.9523809523809523
+   }
+  },
+  {
+   "jogo": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    8,
+    9,
+    11,
+    12,
+    13,
+    15,
+    20,
+    21,
+    22,
+    24
+   ],
+   "c": {
+    "ate31": 1,
+    "ate12": 0.625,
+    "consecutivos": 0.6666666666666666,
+    "somaCentral": 0.1937811903941262,
+    "espacamentoRegular": 0.33207428279403406,
+    "mesmaLinha": 0.3125,
+    "mesmaColuna": 0.25,
+    "terminacoesIguais": 0.1875,
+    "contem7": 0,
+    "fibonacci": 1.5624999999999998
+   }
+  },
+  {
+   "jogo": [
+    2,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    12,
+    13,
+    16,
+    17,
+    18,
+    19,
+    21,
+    22,
+    23,
+    24
+   ],
+   "c": {
+    "ate31": 1,
+    "ate12": 0.47058823529411764,
+    "consecutivos": 0.75,
+    "somaCentral": 0.8143893241854228,
+    "espacamentoRegular": 0.49383960337908894,
+    "mesmaLinha": 0.29411764705882354,
+    "mesmaColuna": 0.29411764705882354,
+    "terminacoesIguais": 0.17647058823529413,
+    "contem7": 1,
+    "fibonacci": 1.050420168067227
+   }
+  },
+  {
+   "jogo": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    7,
+    9,
+    10,
+    11,
+    12,
+    13,
+    15,
+    19,
+    24,
+    25
+   ],
+   "c": {
+    "ate31": 1,
+    "ate12": 0.6666666666666666,
+    "consecutivos": 0.6428571428571429,
+    "somaCentral": 0.15188746645291876,
+    "espacamentoRegular": 0.2879996878902057,
+    "mesmaLinha": 0.3333333333333333,
+    "mesmaColuna": 0.26666666666666666,
+    "terminacoesIguais": 0.2,
+    "contem7": 1,
+    "fibonacci": 1.1904761904761902
+   }
+  },
+  {
+   "jogo": [
+    2,
+    4,
+    5,
+    6,
+    9,
+    11,
+    12,
+    16,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25
+   ],
+   "c": {
+    "ate31": 1,
+    "ate12": 0.4666666666666667,
+    "consecutivos": 0.6428571428571429,
+    "somaCentral": 0.4122382392477029,
+    "espacamentoRegular": 0.40863171701150247,
+    "mesmaLinha": 0.3333333333333333,
+    "mesmaColuna": 0.26666666666666666,
+    "terminacoesIguais": 0.2,
+    "contem7": 0,
+    "fibonacci": 0.7142857142857143
+   }
+  },
+  {
+   "jogo": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15
+   ],
+   "c": {
+    "ate31": 1,
+    "ate12": 0.8,
+    "consecutivos": 1,
+    "somaCentral": 0.00017445457701490867,
+    "espacamentoRegular": 1,
+    "mesmaLinha": 0.3333333333333333,
+    "mesmaColuna": 0.2,
+    "terminacoesIguais": 0.13333333333333333,
+    "contem7": 1,
+    "fibonacci": 1.4285714285714286
+   }
+  },
+  {
+   "jogo": [
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25
+   ],
+   "c": {
+    "ate31": 1,
+    "ate12": 0.13333333333333333,
+    "consecutivos": 1,
+    "somaCentral": 0.00017445457701490867,
+    "espacamentoRegular": 1,
+    "mesmaLinha": 0.3333333333333333,
+    "mesmaColuna": 0.2,
+    "terminacoesIguais": 0.13333333333333333,
+    "contem7": 0,
+    "fibonacci": 0.47619047619047616
+   }
+  }
+ ],
+ "quina": [
+  {
+   "jogo": [
+    5,
+    41,
+    60,
+    64,
+    67,
+    74
+   ],
+   "c": {
+    "ate31": 0.16666666666666666,
+    "ate12": 0.16666666666666666,
+    "consecutivos": 0,
+    "somaCentral": 0.46234768556817607,
+    "espacamentoRegular": 0.09562430366245256,
+    "mesmaLinha": 0.3333333333333333,
+    "mesmaColuna": 0.3333333333333333,
+    "terminacoesIguais": 0.3333333333333333,
+    "contem7": 0,
+    "fibonacci": 1.4814814814814814
+   }
+  },
+  {
+   "jogo": [
+    12,
+    22,
+    27,
+    32,
+    34,
+    46,
+    52,
+    66
+   ],
+   "c": {
+    "ate31": 0.375,
+    "ate12": 0.125,
+    "consecutivos": 0,
+    "somaCentral": 0.869317988264006,
+    "espacamentoRegular": 0.47818508134794924,
+    "mesmaLinha": 0.25,
+    "mesmaColuna": 0.5,
+    "terminacoesIguais": 0.5,
+    "contem7": 0,
+    "fibonacci": 1.1111111111111112
+   }
+  },
+  {
+   "jogo": [
+    7,
+    18,
+    33,
+    74,
+    75,
+    78
+   ],
+   "c": {
+    "ate31": 0.3333333333333333,
+    "ate12": 0.16666666666666666,
+    "consecutivos": 0.2,
+    "somaCentral": 0.7450571930948944,
+    "espacamentoRegular": 0,
+    "mesmaLinha": 0.5,
+    "mesmaColuna": 0.3333333333333333,
+    "terminacoesIguais": 0.3333333333333333,
+    "contem7": 1,
+    "fibonacci": 0
+   }
+  },
+  {
+   "jogo": [
+    12,
+    16,
+    36,
+    39,
+    43,
+    61
+   ],
+   "c": {
+    "ate31": 0.3333333333333333,
+    "ate12": 0.16666666666666666,
+    "consecutivos": 0,
+    "somaCentral": 0.8055611076677214,
+    "espacamentoRegular": 0.2298790912606855,
+    "mesmaLinha": 0.3333333333333333,
+    "mesmaColuna": 0.3333333333333333,
+    "terminacoesIguais": 0.3333333333333333,
+    "contem7": 0,
+    "fibonacci": 0
+   }
+  },
+  {
+   "jogo": [
+    10,
+    16,
+    29,
+    32,
+    34,
+    39,
+    44,
+    56
+   ],
+   "c": {
+    "ate31": 0.375,
+    "ate12": 0.125,
+    "consecutivos": 0,
+    "somaCentral": 0.5905216553024162,
+    "espacamentoRegular": 0.39754754519343394,
+    "mesmaLinha": 0.375,
+    "mesmaColuna": 0.25,
+    "terminacoesIguais": 0.25,
+    "contem7": 0,
+    "fibonacci": 1.1111111111111112
+   }
+  },
+  {
+   "jogo": [
+    6,
+    12,
+    18,
+    22,
+    38,
+    73,
+    80
+   ],
+   "c": {
+    "ate31": 0.5714285714285714,
+    "ate12": 0.2857142857142857,
+    "consecutivos": 0,
+    "somaCentral": 0.8415267241058921,
+    "espacamentoRegular": 0.12089427203834646,
+    "mesmaLinha": 0.2857142857142857,
+    "mesmaColuna": 0.2857142857142857,
+    "terminacoesIguais": 0.2857142857142857,
+    "contem7": 0,
+    "fibonacci": 0
+   }
+  },
+  {
+   "jogo": [
+    51,
+    52,
+    63,
+    65,
+    75
+   ],
+   "c": {
+    "ate31": 0,
+    "ate12": 0,
+    "consecutivos": 0.25,
+    "somaCentral": 0.12051271656014938,
+    "espacamentoRegular": 0.2453845718218819,
+    "mesmaLinha": 0.4,
+    "mesmaColuna": 0.4,
+    "terminacoesIguais": 0.4,
+    "contem7": 0,
+    "fibonacci": 0
+   }
+  },
+  {
+   "jogo": [
+    18,
+    35,
+    58,
+    73,
+    79
+   ],
+   "c": {
+    "ate31": 0.2,
+    "ate12": 0,
+    "consecutivos": 0,
+    "somaCentral": 0.4852881961392192,
+    "espacamentoRegular": 0.6001209535196568,
+    "mesmaLinha": 0.4,
+    "mesmaColuna": 0.4,
+    "terminacoesIguais": 0.4,
+    "contem7": 0,
+    "fibonacci": 0
+   }
+  },
+  {
+   "jogo": [
+    10,
+    14,
+    17,
+    20,
+    21,
+    24,
+    61,
+    67
+   ],
+   "c": {
+    "ate31": 0.75,
+    "ate12": 0.125,
+    "consecutivos": 0.14285714285714285,
+    "somaCentral": 0.35286608145884896,
+    "espacamentoRegular": 0,
+    "mesmaLinha": 0.375,
+    "mesmaColuna": 0.25,
+    "terminacoesIguais": 0.25,
+    "contem7": 0,
+    "fibonacci": 1.1111111111111112
+   }
+  },
+  {
+   "jogo": [
+    11,
+    21,
+    43,
+    46,
+    50,
+    69,
+    78
+   ],
+   "c": {
+    "ate31": 0.2857142857142857,
+    "ate12": 0.14285714285714285,
+    "consecutivos": 0,
+    "somaCentral": 0.8415267241058921,
+    "espacamentoRegular": 0.3637868213150114,
+    "mesmaLinha": 0.42857142857142855,
+    "mesmaColuna": 0.2857142857142857,
+    "terminacoesIguais": 0.2857142857142857,
+    "contem7": 0,
+    "fibonacci": 1.2698412698412698
+   }
+  },
+  {
+   "jogo": [
+    5,
+    35,
+    37,
+    54,
+    66,
+    74,
+    76
+   ],
+   "c": {
+    "ate31": 0.14285714285714285,
+    "ate12": 0.14285714285714285,
+    "consecutivos": 0,
+    "somaCentral": 0.5573782831866865,
+    "espacamentoRegular": 0.18006875617871076,
+    "mesmaLinha": 0.2857142857142857,
+    "mesmaColuna": 0.2857142857142857,
+    "terminacoesIguais": 0.2857142857142857,
+    "contem7": 0,
+    "fibonacci": 1.2698412698412698
+   }
+  },
+  {
+   "jogo": [
+    4,
+    16,
+    23,
+    28,
+    30,
+    41,
+    78
+   ],
+   "c": {
+    "ate31": 0.7142857142857143,
+    "ate12": 0.14285714285714285,
+    "consecutivos": 0,
+    "somaCentral": 0.5573782831866865,
+    "espacamentoRegular": 0.06414650307130909,
+    "mesmaLinha": 0.42857142857142855,
+    "mesmaColuna": 0.2857142857142857,
+    "terminacoesIguais": 0.2857142857142857,
+    "contem7": 0,
+    "fibonacci": 0
+   }
+  },
+  {
+   "jogo": [
+    32,
+    42,
+    46,
+    56,
+    69,
+    72
+   ],
+   "c": {
+    "ate31": 0,
+    "ate12": 0,
+    "consecutivos": 0,
+    "somaCentral": 0.4010856646584209,
+    "espacamentoRegular": 0.5191153984582164,
+    "mesmaLinha": 0.3333333333333333,
+    "mesmaColuna": 0.5,
+    "terminacoesIguais": 0.5,
+    "contem7": 0,
+    "fibonacci": 0
+   }
+  },
+  {
+   "jogo": [
+    19,
+    22,
+    24,
+    25,
+    30,
+    38,
+    41,
+    53
+   ],
+   "c": {
+    "ate31": 0.625,
+    "ate12": 0,
+    "consecutivos": 0.14285714285714285,
+    "somaCentral": 0.513417119032592,
+    "espacamentoRegular": 0.25826351688714744,
+    "mesmaLinha": 0.5,
+    "mesmaColuna": 0.125,
+    "terminacoesIguais": 0.125,
+    "contem7": 0,
+    "fibonacci": 0
+   }
+  },
+  {
+   "jogo": [
+    37,
+    42,
+    47,
+    65,
+    71,
+    78,
+    80
+   ],
+   "c": {
+    "ate31": 0,
+    "ate12": 0,
+    "consecutivos": 0,
+    "somaCentral": 0.06714416585880856,
+    "espacamentoRegular": 0.2911743881800851,
+    "mesmaLinha": 0.42857142857142855,
+    "mesmaColuna": 0.2857142857142857,
+    "terminacoesIguais": 0.2857142857142857,
+    "contem7": 0,
+    "fibonacci": 0
+   }
+  },
+  {
+   "jogo": [
+    6,
+    8,
+    22,
+    30,
+    42,
+    69,
+    72,
+    77
+   ],
+   "c": {
+    "ate31": 0.5,
+    "ate12": 0.25,
+    "consecutivos": 0,
+    "somaCentral": 0.9994857289905092,
+    "espacamentoRegular": 0.2087565123837667,
+    "mesmaLinha": 0.25,
+    "mesmaColuna": 0.375,
+    "terminacoesIguais": 0.375,
+    "contem7": 0,
+    "fibonacci": 1.1111111111111112
+   }
+  },
+  {
+   "jogo": [
+    13,
+    14,
+    19,
+    34,
+    41,
+    53
+   ],
+   "c": {
+    "ate31": 0.5,
+    "ate12": 0,
+    "consecutivos": 0.2,
+    "somaCentral": 0.4519000308514892,
+    "espacamentoRegular": 0.3775050201005634,
+    "mesmaLinha": 0.5,
+    "mesmaColuna": 0.3333333333333333,
+    "terminacoesIguais": 0.3333333333333333,
+    "contem7": 0,
+    "fibonacci": 2.962962962962963
+   }
+  },
+  {
+   "jogo": [
+    4,
+    13,
+    20,
+    33,
+    38,
+    56,
+    65,
+    74
+   ],
+   "c": {
+    "ate31": 0.375,
+    "ate12": 0.125,
+    "consecutivos": 0,
+    "somaCentral": 0.9448652417657962,
+    "espacamentoRegular": 0.603587516413954,
+    "mesmaLinha": 0.25,
+    "mesmaColuna": 0.25,
+    "terminacoesIguais": 0.25,
+    "contem7": 0,
+    "fibonacci": 1.1111111111111112
+   }
+  },
+  {
+   "jogo": [
+    4,
+    5,
+    13,
+    14,
+    16,
+    48,
+    55
+   ],
+   "c": {
+    "ate31": 0.7142857142857143,
+    "ate12": 0.2857142857142857,
+    "consecutivos": 0.3333333333333333,
+    "somaCentral": 0.09130040477009767,
+    "espacamentoRegular": 0,
+    "mesmaLinha": 0.42857142857142855,
+    "mesmaColuna": 0.2857142857142857,
+    "terminacoesIguais": 0.2857142857142857,
+    "contem7": 0,
+    "fibonacci": 3
+   }
+  },
+  {
+   "jogo": [
+    23,
+    28,
+    30,
+    47,
+    74,
+    75
+   ],
+   "c": {
+    "ate31": 0.5,
+    "ate12": 0,
+    "consecutivos": 0.2,
+    "somaCentral": 0.8245978003960214,
+    "espacamentoRegular": 0.03156320676814062,
+    "mesmaLinha": 0.5,
+    "mesmaColuna": 0.16666666666666666,
+    "terminacoesIguais": 0.16666666666666666,
+    "contem7": 0,
+    "fibonacci": 0
+   }
+  },
+  {
+   "jogo": [
+    1,
+    2,
+    3,
+    4,
+    5
+   ],
+   "c": {
+    "ate31": 1,
+    "ate12": 1,
+    "consecutivos": 1,
+    "somaCentral": 0.000963975725734178,
+    "espacamentoRegular": 1,
+    "mesmaLinha": 1,
+    "mesmaColuna": 0.2,
+    "terminacoesIguais": 0.2,
+    "contem7": 0,
+    "fibonacci": 3
+   }
+  },
+  {
+   "jogo": [
+    76,
+    77,
+    78,
+    79,
+    80
+   ],
+   "c": {
+    "ate31": 0,
+    "ate12": 0,
+    "consecutivos": 1,
+    "somaCentral": 0.000963975725734178,
+    "espacamentoRegular": 1,
+    "mesmaLinha": 1,
+    "mesmaColuna": 0.2,
+    "terminacoesIguais": 0.2,
+    "contem7": 0,
+    "fibonacci": 0
+   }
+  }
+ ],
+ "lotomania": [
+  {
+   "jogo": [
+    0,
+    4,
+    5,
+    6,
+    9,
+    10,
+    12,
+    15,
+    16,
+    17,
+    18,
+    20,
+    23,
+    24,
+    26,
+    27,
+    29,
+    31,
+    33,
+    34,
+    36,
+    39,
+    40,
+    41,
+    44,
+    45,
+    47,
+    50,
+    51,
+    52,
+    56,
+    57,
+    58,
+    60,
+    62,
+    66,
+    67,
+    68,
+    69,
+    70,
+    71,
+    75,
+    76,
+    79,
+    82,
+    84,
+    85,
+    88,
+    91,
+    92
+   ],
+   "c": {
+    "ate31": 0.36,
+    "ate12": 0.14,
+    "consecutivos": 0.4897959183673469,
+    "somaCentral": 0.33339882212698113,
+    "espacamentoRegular": 0.46595136971572837,
+    "mesmaLinha": 0.12,
+    "mesmaColuna": 0.14,
+    "terminacoesIguais": 0.14,
+    "contem7": 0,
+    "fibonacci": 0.39999999999999997
+   }
+  },
+  {
+   "jogo": [
+    1,
+    2,
+    4,
+    5,
+    14,
+    16,
+    17,
+    21,
+    26,
+    27,
+    28,
+    30,
+    33,
+    34,
+    35,
+    38,
+    39,
+    40,
+    42,
+    43,
+    44,
+    47,
+    48,
+    49,
+    50,
+    51,
+    55,
+    57,
+    58,
+    59,
+    63,
+    69,
+    70,
+    71,
+    76,
+    77,
+    79,
+    80,
+    81,
+    82,
+    83,
+    86,
+    87,
+    89,
+    90,
+    92,
+    95,
+    97,
+    98,
+    99
+   ],
+   "c": {
+    "ate31": 0.24,
+    "ate12": 0.08,
+    "consecutivos": 0.5714285714285714,
+    "somaCentral": 0.37923470164932727,
+    "espacamentoRegular": 0.19187796435823146,
+    "mesmaLinha": 0.14,
+    "mesmaColuna": 0.14,
+    "terminacoesIguais": 0.14,
+    "contem7": 0,
+    "fibonacci": 1.4000000000000001
+   }
+  },
+  {
+   "jogo": [
+    0,
+    2,
+    3,
+    4,
+    6,
+    7,
+    8,
+    10,
+    11,
+    13,
+    14,
+    18,
+    23,
+    26,
+    28,
+    31,
+    32,
+    36,
+    37,
+    38,
+    42,
+    47,
+    48,
+    49,
+    54,
+    56,
+    57,
+    59,
+    60,
+    63,
+    64,
+    65,
+    67,
+    68,
+    69,
+    70,
+    72,
+    73,
+    74,
+    75,
+    77,
+    78,
+    80,
+    82,
+    84,
+    87,
+    91,
+    93,
+    95,
+    96
+   ],
+   "c": {
+    "ate31": 0.32,
+    "ate12": 0.18,
+    "consecutivos": 0.46938775510204084,
+    "somaCentral": 0.974454718289876,
+    "espacamentoRegular": 0.3902912238890879,
+    "mesmaLinha": 0.14,
+    "mesmaColuna": 0.14,
+    "terminacoesIguais": 0.14,
+    "contem7": 1,
+    "fibonacci": 0.7999999999999999
+   }
+  },
+  {
+   "jogo": [
+    0,
+    3,
+    7,
+    9,
+    10,
+    13,
+    14,
+    16,
+    21,
+    22,
+    26,
+    28,
+    29,
+    31,
+    33,
+    34,
+    35,
+    36,
+    38,
+    47,
+    49,
+    51,
+    52,
+    54,
+    55,
+    56,
+    57,
+    59,
+    60,
+    61,
+    63,
+    64,
+    65,
+    66,
+    67,
+    68,
+    72,
+    73,
+    77,
+    78,
+    81,
+    82,
+    83,
+    87,
+    90,
+    91,
+    93,
+    94,
+    95,
+    97
+   ],
+   "c": {
+    "ate31": 0.28,
+    "ate12": 0.1,
+    "consecutivos": 0.5102040816326531,
+    "somaCentral": 0.7223227857524159,
+    "espacamentoRegular": 0.25359116041657914,
+    "mesmaLinha": 0.16,
+    "mesmaColuna": 0.14,
+    "terminacoesIguais": 0.14,
+    "contem7": 1,
+    "fibonacci": 1
+   }
+  },
+  {
+   "jogo": [
+    6,
+    8,
+    9,
+    10,
+    12,
+    14,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    24,
+    26,
+    27,
+    32,
+    34,
+    35,
+    37,
+    40,
+    44,
+    45,
+    46,
+    50,
+    51,
+    54,
+    56,
+    58,
+    59,
+    60,
+    62,
+    63,
+    64,
+    66,
+    67,
+    68,
+    70,
+    72,
+    75,
+    77,
+    84,
+    86,
+    88,
+    89,
+    90,
+    91,
+    92,
+    93,
+    95,
+    97
+   ],
+   "c": {
+    "ate31": 0.3,
+    "ate12": 0.1,
+    "consecutivos": 0.46938775510204084,
+    "somaCentral": 0.8959441256450815,
+    "espacamentoRegular": 0.36567605759728283,
+    "mesmaLinha": 0.14,
+    "mesmaColuna": 0.14,
+    "terminacoesIguais": 0.14,
+    "contem7": 0,
+    "fibonacci": 0.7999999999999999
+   }
+  },
+  {
+   "jogo": [
+    0,
+    2,
+    3,
+    4,
+    6,
+    7,
+    10,
+    13,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    22,
+    23,
+    27,
+    28,
+    31,
+    32,
+    33,
+    34,
+    35,
+    37,
+    38,
+    39,
+    45,
+    46,
+    48,
+    49,
+    50,
+    51,
+    52,
+    54,
+    55,
+    56,
+    58,
+    60,
+    61,
+    65,
+    66,
+    72,
+    79,
+    82,
+    88,
+    89,
+    90,
+    94,
+    96,
+    99
+   ],
+   "c": {
+    "ate31": 0.38,
+    "ate12": 0.14,
+    "consecutivos": 0.5510204081632653,
+    "somaCentral": 0.06309505556085902,
+    "espacamentoRegular": 0.23525279875766858,
+    "mesmaLinha": 0.16,
+    "mesmaColuna": 0.12,
+    "terminacoesIguais": 0.12,
+    "contem7": 1,
+    "fibonacci": 1.2
+   }
+  },
+  {
+   "jogo": [
+    0,
+    2,
+    8,
+    9,
+    11,
+    13,
+    17,
+    19,
+    20,
+    22,
+    23,
+    24,
+    25,
+    27,
+    28,
+    30,
+    31,
+    32,
+    33,
+    37,
+    39,
+    40,
+    42,
+    43,
+    48,
+    50,
+    51,
+    54,
+    56,
+    58,
+    59,
+    61,
+    63,
+    64,
+    67,
+    69,
+    73,
+    74,
+    75,
+    77,
+    79,
+    80,
+    86,
+    87,
+    91,
+    93,
+    94,
+    96,
+    97,
+    98
+   ],
+   "c": {
+    "ate31": 0.34,
+    "ate12": 0.1,
+    "consecutivos": 0.42857142857142855,
+    "somaCentral": 1,
+    "espacamentoRegular": 0.36112343500006006,
+    "mesmaLinha": 0.14,
+    "mesmaColuna": 0.14,
+    "terminacoesIguais": 0.14,
+    "contem7": 0,
+    "fibonacci": 0.6
+   }
+  },
+  {
+   "jogo": [
+    1,
+    3,
+    4,
+    5,
+    6,
+    8,
+    10,
+    11,
+    12,
+    15,
+    18,
+    19,
+    21,
+    22,
+    23,
+    27,
+    32,
+    33,
+    34,
+    37,
+    39,
+    40,
+    42,
+    43,
+    45,
+    46,
+    52,
+    58,
+    60,
+    61,
+    62,
+    64,
+    67,
+    70,
+    73,
+    75,
+    76,
+    78,
+    80,
+    81,
+    85,
+    86,
+    87,
+    88,
+    89,
+    92,
+    96,
+    97,
+    98,
+    99
+   ],
+   "c": {
+    "ate31": 0.32,
+    "ate12": 0.18,
+    "consecutivos": 0.4897959183673469,
+    "somaCentral": 0.9994061170124122,
+    "espacamentoRegular": 0.3453463292920229,
+    "mesmaLinha": 0.14,
+    "mesmaColuna": 0.14,
+    "terminacoesIguais": 0.14,
+    "contem7": 0,
+    "fibonacci": 1.4000000000000001
+   }
+  },
+  {
+   "jogo": [
+    2,
+    4,
+    6,
+    7,
+    8,
+    11,
+    13,
+    16,
+    19,
+    20,
+    22,
+    23,
+    24,
+    28,
+    29,
+    32,
+    33,
+    36,
+    37,
+    38,
+    43,
+    45,
+    48,
+    50,
+    51,
+    52,
+    53,
+    54,
+    57,
+    58,
+    59,
+    62,
+    63,
+    64,
+    69,
+    72,
+    74,
+    75,
+    76,
+    78,
+    79,
+    82,
+    83,
+    85,
+    86,
+    90,
+    93,
+    95,
+    98,
+    99
+   ],
+   "c": {
+    "ate31": 0.3,
+    "ate12": 0.12,
+    "consecutivos": 0.46938775510204084,
+    "somaCentral": 0.98406496148797,
+    "espacamentoRegular": 0.4364680260323116,
+    "mesmaLinha": 0.16,
+    "mesmaColuna": 0.16,
+    "terminacoesIguais": 0.16,
+    "contem7": 1,
+    "fibonacci": 0.6
+   }
+  },
+  {
+   "jogo": [
+    1,
+    2,
+    3,
+    4,
+    6,
+    8,
+    11,
+    12,
+    13,
+    15,
+    16,
+    17,
+    19,
+    21,
+    23,
+    24,
+    26,
+    29,
+    30,
+    31,
+    35,
+    36,
+    37,
+    38,
+    42,
+    47,
+    52,
+    53,
+    54,
+    55,
+    56,
+    57,
+    59,
+    60,
+    61,
+    63,
+    65,
+    66,
+    69,
+    71,
+    73,
+    78,
+    79,
+    80,
+    81,
+    90,
+    92,
+    96,
+    97,
+    98
+   ],
+   "c": {
+    "ate31": 0.4,
+    "ate12": 0.16,
+    "consecutivos": 0.5306122448979592,
+    "somaCentral": 0.3035220586910001,
+    "espacamentoRegular": 0.2194848152268991,
+    "mesmaLinha": 0.14,
+    "mesmaColuna": 0.14,
+    "terminacoesIguais": 0.14,
+    "contem7": 0,
+    "fibonacci": 1.4000000000000001
+   }
+  },
+  {
+   "jogo": [
+    5,
+    6,
+    9,
+    10,
+    13,
+    14,
+    19,
+    24,
+    27,
+    29,
+    30,
+    32,
+    33,
+    34,
+    36,
+    39,
+    41,
+    42,
+    44,
+    47,
+    50,
+    52,
+    53,
+    54,
+    56,
+    57,
+    58,
+    60,
+    61,
+    67,
+    68,
+    69,
+    70,
+    71,
+    73,
+    79,
+    80,
+    81,
+    82,
+    83,
+    84,
+    88,
+    90,
+    91,
+    92,
+    93,
+    94,
+    95,
+    96,
+    99
+   ],
+   "c": {
+    "ate31": 0.22,
+    "ate12": 0.08,
+    "consecutivos": 0.5510204081632653,
+    "somaCentral": 0.10964635470394213,
+    "espacamentoRegular": 0.30272469752451336,
+    "mesmaLinha": 0.16,
+    "mesmaColuna": 0.14,
+    "terminacoesIguais": 0.14,
+    "contem7": 0,
+    "fibonacci": 0.6
+   }
+  },
+  {
+   "jogo": [
+    1,
+    7,
+    9,
+    10,
+    11,
+    15,
+    16,
+    17,
+    24,
+    27,
+    28,
+    33,
+    35,
+    36,
+    37,
+    38,
+    39,
+    40,
+    43,
+    44,
+    45,
+    47,
+    49,
+    50,
+    51,
+    55,
+    57,
+    58,
+    61,
+    62,
+    63,
+    64,
+    65,
+    66,
+    67,
+    74,
+    75,
+    77,
+    78,
+    79,
+    80,
+    83,
+    84,
+    87,
+    89,
+    91,
+    92,
+    93,
+    94,
+    97
+   ],
+   "c": {
+    "ate31": 0.22,
+    "ate12": 0.1,
+    "consecutivos": 0.5918367346938775,
+    "somaCentral": 0.5113662022788662,
+    "espacamentoRegular": 0.20819628379250488,
+    "mesmaLinha": 0.14,
+    "mesmaColuna": 0.2,
+    "terminacoesIguais": 0.2,
+    "contem7": 1,
+    "fibonacci": 0.6
+   }
+  },
+  {
+   "jogo": [
+    3,
+    12,
+    13,
+    15,
+    16,
+    19,
+    25,
+    26,
+    27,
+    28,
+    29,
+    30,
+    37,
+    38,
+    39,
+    40,
+    42,
+    43,
+    44,
+    45,
+    47,
+    48,
+    49,
+    51,
+    53,
+    54,
+    55,
+    56,
+    58,
+    60,
+    61,
+    67,
+    69,
+    70,
+    73,
+    74,
+    75,
+    77,
+    79,
+    81,
+    82,
+    83,
+    84,
+    85,
+    87,
+    91,
+    92,
+    93,
+    97,
+    99
+   ],
+   "c": {
+    "ate31": 0.24,
+    "ate12": 0.04,
+    "consecutivos": 0.5714285714285714,
+    "somaCentral": 0.2374011481666363,
+    "espacamentoRegular": 0.1252480510326246,
+    "mesmaLinha": 0.16,
+    "mesmaColuna": 0.14,
+    "terminacoesIguais": 0.14,
+    "contem7": 0,
+    "fibonacci": 0.6
+   }
+  },
+  {
+   "jogo": [
+    2,
+    3,
+    4,
+    5,
+    10,
+    15,
+    16,
+    18,
+    21,
+    22,
+    28,
+    29,
+    36,
+    37,
+    38,
+    42,
+    43,
+    45,
+    46,
+    48,
+    49,
+    50,
+    52,
+    54,
+    55,
+    58,
+    59,
+    60,
+    61,
+    63,
+    66,
+    67,
+    73,
+    76,
+    77,
+    79,
+    80,
+    81,
+    82,
+    83,
+    86,
+    88,
+    91,
+    92,
+    93,
+    95,
+    96,
+    97,
+    98,
+    99
+   ],
+   "c": {
+    "ate31": 0.24,
+    "ate12": 0.1,
+    "consecutivos": 0.5714285714285714,
+    "somaCentral": 0.1300318007062862,
+    "espacamentoRegular": 0.23294535102110192,
+    "mesmaLinha": 0.16,
+    "mesmaColuna": 0.14,
+    "terminacoesIguais": 0.14,
+    "contem7": 0,
+    "fibonacci": 1
+   }
+  },
+  {
+   "jogo": [
+    0,
+    2,
+    3,
+    5,
+    8,
+    12,
+    13,
+    15,
+    16,
+    22,
+    23,
+    24,
+    25,
+    26,
+    31,
+    32,
+    33,
+    35,
+    37,
+    39,
+    41,
+    44,
+    45,
+    46,
+    50,
+    55,
+    56,
+    57,
+    58,
+    60,
+    67,
+    68,
+    69,
+    70,
+    75,
+    76,
+    77,
+    78,
+    80,
+    82,
+    84,
+    85,
+    86,
+    89,
+    90,
+    91,
+    92,
+    94,
+    96,
+    97
+   ],
+   "c": {
+    "ate31": 0.3,
+    "ate12": 0.12,
+    "consecutivos": 0.5306122448979592,
+    "somaCentral": 0.8456351080903679,
+    "espacamentoRegular": 0.2606011926993358,
+    "mesmaLinha": 0.12,
+    "mesmaColuna": 0.16,
+    "terminacoesIguais": 0.16,
+    "contem7": 0,
+    "fibonacci": 1.4000000000000001
+   }
+  },
+  {
+   "jogo": [
+    0,
+    1,
+    3,
+    6,
+    7,
+    8,
+    11,
+    12,
+    14,
+    16,
+    18,
+    19,
+    21,
+    23,
+    26,
+    28,
+    30,
+    34,
+    37,
+    42,
+    45,
+    46,
+    47,
+    49,
+    50,
+    53,
+    58,
+    61,
+    63,
+    64,
+    65,
+    66,
+    69,
+    72,
+    77,
+    78,
+    79,
+    80,
+    81,
+    82,
+    83,
+    87,
+    89,
+    90,
+    92,
+    93,
+    95,
+    96,
+    97,
+    98
+   ],
+   "c": {
+    "ate31": 0.34,
+    "ate12": 0.16,
+    "consecutivos": 0.4489795918367347,
+    "somaCentral": 0.8388305708754796,
+    "espacamentoRegular": 0.41971154252600285,
+    "mesmaLinha": 0.14,
+    "mesmaColuna": 0.12,
+    "terminacoesIguais": 0.12,
+    "contem7": 1,
+    "fibonacci": 1.2
+   }
+  },
+  {
+   "jogo": [
+    4,
+    5,
+    6,
+    7,
+    9,
+    11,
+    12,
+    15,
+    18,
+    20,
+    21,
+    22,
+    23,
+    25,
+    27,
+    28,
+    29,
+    31,
+    37,
+    38,
+    41,
+    42,
+    45,
+    46,
+    47,
+    48,
+    54,
+    56,
+    61,
+    63,
+    64,
+    66,
+    67,
+    68,
+    70,
+    72,
+    73,
+    76,
+    81,
+    82,
+    83,
+    88,
+    89,
+    91,
+    92,
+    93,
+    95,
+    96,
+    98,
+    99
+   ],
+   "c": {
+    "ate31": 0.36,
+    "ate12": 0.14,
+    "consecutivos": 0.5102040816326531,
+    "somaCentral": 0.9206117984077145,
+    "espacamentoRegular": 0.30558221042228884,
+    "mesmaLinha": 0.16,
+    "mesmaColuna": 0.14,
+    "terminacoesIguais": 0.14,
+    "contem7": 1,
+    "fibonacci": 0.6
+   }
+  },
+  {
+   "jogo": [
+    0,
+    1,
+    5,
+    6,
+    7,
+    9,
+    11,
+    12,
+    13,
+    18,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25,
+    27,
+    30,
+    33,
+    36,
+    41,
+    43,
+    47,
+    49,
+    50,
+    52,
+    53,
+    54,
+    57,
+    58,
+    59,
+    60,
+    61,
+    62,
+    63,
+    67,
+    70,
+    71,
+    73,
+    74,
+    78,
+    79,
+    80,
+    84,
+    86,
+    87,
+    94,
+    95,
+    96,
+    97
+   ],
+   "c": {
+    "ate31": 0.36,
+    "ate12": 0.16,
+    "consecutivos": 0.5510204081632653,
+    "somaCentral": 0.817810401317882,
+    "espacamentoRegular": 0.29669864326554485,
+    "mesmaLinha": 0.14,
+    "mesmaColuna": 0.14,
+    "terminacoesIguais": 0.14,
+    "contem7": 1,
+    "fibonacci": 0.7999999999999999
+   }
+  },
+  {
+   "jogo": [
+    0,
+    1,
+    2,
+    4,
+    5,
+    6,
+    10,
+    14,
+    17,
+    21,
+    30,
+    31,
+    33,
+    34,
+    35,
+    37,
+    40,
+    41,
+    42,
+    45,
+    46,
+    47,
+    52,
+    53,
+    54,
+    57,
+    58,
+    59,
+    60,
+    61,
+    62,
+    63,
+    65,
+    66,
+    68,
+    69,
+    74,
+    77,
+    78,
+    83,
+    87,
+    88,
+    90,
+    91,
+    93,
+    94,
+    96,
+    97,
+    98,
+    99
+   ],
+   "c": {
+    "ate31": 0.24,
+    "ate12": 0.14,
+    "consecutivos": 0.5714285714285714,
+    "somaCentral": 0.5525540842167685,
+    "espacamentoRegular": 0.20953545266610696,
+    "mesmaLinha": 0.16,
+    "mesmaColuna": 0.14,
+    "terminacoesIguais": 0.14,
+    "contem7": 0,
+    "fibonacci": 1
+   }
+  },
+  {
+   "jogo": [
+    1,
+    5,
+    7,
+    8,
+    9,
+    11,
+    16,
+    17,
+    18,
+    22,
+    24,
+    25,
+    26,
+    27,
+    28,
+    31,
+    33,
+    35,
+    38,
+    39,
+    40,
+    41,
+    43,
+    45,
+    46,
+    50,
+    52,
+    53,
+    56,
+    58,
+    62,
+    63,
+    64,
+    67,
+    71,
+    72,
+    73,
+    75,
+    76,
+    79,
+    81,
+    85,
+    86,
+    87,
+    90,
+    92,
+    93,
+    94,
+    95,
+    99
+   ],
+   "c": {
+    "ate31": 0.32,
+    "ate12": 0.12,
+    "consecutivos": 0.46938775510204084,
+    "somaCentral": 0.974454718289876,
+    "espacamentoRegular": 0.41971154252600285,
+    "mesmaLinha": 0.12,
+    "mesmaColuna": 0.14,
+    "terminacoesIguais": 0.14,
+    "contem7": 1,
+    "fibonacci": 0.6
+   }
+  },
+  {
+   "jogo": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25,
+    26,
+    27,
+    28,
+    29,
+    30,
+    31,
+    32,
+    33,
+    34,
+    35,
+    36,
+    37,
+    38,
+    39,
+    40,
+    41,
+    42,
+    43,
+    44,
+    45,
+    46,
+    47,
+    48,
+    49
+   ],
+   "c": {
+    "ate31": 0.64,
+    "ate12": 0.26,
+    "consecutivos": 1,
+    "somaCentral": 7.50248057814776e-17,
+    "espacamentoRegular": 1,
+    "mesmaLinha": 0.2,
+    "mesmaColuna": 0.1,
+    "terminacoesIguais": 0.1,
+    "contem7": 1,
+    "fibonacci": 1.5999999999999999
+   }
+  },
+  {
+   "jogo": [
+    50,
+    51,
+    52,
+    53,
+    54,
+    55,
+    56,
+    57,
+    58,
+    59,
+    60,
+    61,
+    62,
+    63,
+    64,
+    65,
+    66,
+    67,
+    68,
+    69,
+    70,
+    71,
+    72,
+    73,
+    74,
+    75,
+    76,
+    77,
+    78,
+    79,
+    80,
+    81,
+    82,
+    83,
+    84,
+    85,
+    86,
+    87,
+    88,
+    89,
+    90,
+    91,
+    92,
+    93,
+    94,
+    95,
+    96,
+    97,
+    98,
+    99
+   ],
+   "c": {
+    "ate31": 0,
+    "ate12": 0,
+    "consecutivos": 1,
+    "somaCentral": 7.50248057814776e-17,
+    "espacamentoRegular": 1,
+    "mesmaLinha": 0.2,
+    "mesmaColuna": 0.1,
+    "terminacoesIguais": 0.1,
+    "contem7": 0,
+    "fibonacci": 0.39999999999999997
+   }
+  }
+ ],
+ "dupla-sena": [
+  {
+   "jogo": [
+    7,
+    14,
+    15,
+    17,
+    18,
+    27,
+    32,
+    41
+   ],
+   "c": {
+    "ate31": 0.75,
+    "ate12": 0.125,
+    "consecutivos": 0.2857142857142857,
+    "somaCentral": 0.682971245214526,
+    "espacamentoRegular": 0.31779920560334096,
+    "mesmaLinha": 0.5,
+    "mesmaColuna": 0.375,
+    "terminacoesIguais": 0.375,
+    "contem7": 1,
+    "fibonacci": 0
+   }
+  },
+  {
+   "jogo": [
+    3,
+    16,
+    20,
+    21,
+    25,
+    34,
+    37,
+    38
+   ],
+   "c": {
+    "ate31": 0.625,
+    "ate12": 0.125,
+    "consecutivos": 0.2857142857142857,
+    "somaCentral": 0.9655918924668894,
+    "espacamentoRegular": 0.17885097924571924,
+    "mesmaLinha": 0.375,
+    "mesmaColuna": 0.125,
+    "terminacoesIguais": 0.125,
+    "contem7": 0,
+    "fibonacci": 2.34375
+   }
+  },
+  {
+   "jogo": [
+    6,
+    17,
+    32,
+    34,
+    35,
+    50
+   ],
+   "c": {
+    "ate31": 0.3333333333333333,
+    "ate12": 0.16666666666666666,
+    "consecutivos": 0.2,
+    "somaCentral": 0.8215815603781089,
+    "espacamentoRegular": 0.30171402292103566,
+    "mesmaLinha": 0.5,
+    "mesmaColuna": 0.16666666666666666,
+    "terminacoesIguais": 0.16666666666666666,
+    "contem7": 0,
+    "fibonacci": 1.0416666666666665
+   }
+  },
+  {
+   "jogo": [
+    11,
+    19,
+    21,
+    26,
+    29,
+    31,
+    37,
+    39
+   ],
+   "c": {
+    "ate31": 0.75,
+    "ate12": 0.125,
+    "consecutivos": 0,
+    "somaCentral": 0.9720370630509364,
+    "espacamentoRegular": 0.4490268349806603,
+    "mesmaLinha": 0.375,
+    "mesmaColuna": 0.375,
+    "terminacoesIguais": 0.375,
+    "contem7": 0,
+    "fibonacci": 0.78125
+   }
+  },
+  {
+   "jogo": [
+    7,
+    25,
+    26,
+    28,
+    30,
+    34,
+    37
+   ],
+   "c": {
+    "ate31": 0.7142857142857143,
+    "ate12": 0.14285714285714285,
+    "consecutivos": 0.16666666666666666,
+    "somaCentral": 0.9721557967362849,
+    "espacamentoRegular": 0,
+    "mesmaLinha": 0.5714285714285714,
+    "mesmaColuna": 0.2857142857142857,
+    "terminacoesIguais": 0.2857142857142857,
+    "contem7": 1,
+    "fibonacci": 0.8928571428571428
+   }
+  },
+  {
+   "jogo": [
+    6,
+    12,
+    16,
+    20,
+    22,
+    23,
+    25,
+    43,
+    45
+   ],
+   "c": {
+    "ate31": 0.7777777777777778,
+    "ate12": 0.2222222222222222,
+    "consecutivos": 0.125,
+    "somaCentral": 0.9069747372979149,
+    "espacamentoRegular": 0,
+    "mesmaLinha": 0.3333333333333333,
+    "mesmaColuna": 0.2222222222222222,
+    "terminacoesIguais": 0.2222222222222222,
+    "contem7": 0,
+    "fibonacci": 0
+   }
+  },
+  {
+   "jogo": [
+    17,
+    21,
+    22,
+    29,
+    32,
+    34,
+    36,
+    39,
+    40
+   ],
+   "c": {
+    "ate31": 0.4444444444444444,
+    "ate12": 0,
+    "consecutivos": 0.25,
+    "somaCentral": 0.5927660224646515,
+    "espacamentoRegular": 0.36248355223412265,
+    "mesmaLinha": 0.5555555555555556,
+    "mesmaColuna": 0.2222222222222222,
+    "terminacoesIguais": 0.2222222222222222,
+    "contem7": 0,
+    "fibonacci": 1.3888888888888888
+   }
+  },
+  {
+   "jogo": [
+    5,
+    10,
+    11,
+    24,
+    35,
+    42,
+    44,
+    47,
+    48
+   ],
+   "c": {
+    "ate31": 0.4444444444444444,
+    "ate12": 0.3333333333333333,
+    "consecutivos": 0.25,
+    "somaCentral": 0.6539287393973494,
+    "espacamentoRegular": 0.2001216966548912,
+    "mesmaLinha": 0.4444444444444444,
+    "mesmaColuna": 0.2222222222222222,
+    "terminacoesIguais": 0.2222222222222222,
+    "contem7": 0,
+    "fibonacci": 0.6944444444444444
+   }
+  },
+  {
+   "jogo": [
+    1,
+    12,
+    23,
+    28,
+    32,
+    42,
+    43
+   ],
+   "c": {
+    "ate31": 0.5714285714285714,
+    "ate12": 0.2857142857142857,
+    "consecutivos": 0.16666666666666666,
+    "somaCentral": 0.9975601436995096,
+    "espacamentoRegular": 0.4467166648275118,
+    "mesmaLinha": 0.2857142857142857,
+    "mesmaColuna": 0.42857142857142855,
+    "terminacoesIguais": 0.42857142857142855,
+    "contem7": 0,
+    "fibonacci": 0.8928571428571428
+   }
+  },
+  {
+   "jogo": [
+    4,
+    13,
+    17,
+    25,
+    26,
+    29,
+    30,
+    34,
+    42
+   ],
+   "c": {
+    "ate31": 0.7777777777777778,
+    "ate12": 0.1111111111111111,
+    "consecutivos": 0.25,
+    "somaCentral": 0.9716359212830323,
+    "espacamentoRegular": 0.37061785562624217,
+    "mesmaLinha": 0.4444444444444444,
+    "mesmaColuna": 0.2222222222222222,
+    "terminacoesIguais": 0.2222222222222222,
+    "contem7": 0,
+    "fibonacci": 1.3888888888888888
+   }
+  },
+  {
+   "jogo": [
+    3,
+    7,
+    10,
+    16,
+    19,
+    33,
+    37,
+    39,
+    48
+   ],
+   "c": {
+    "ate31": 0.5555555555555556,
+    "ate12": 0.3333333333333333,
+    "consecutivos": 0,
+    "somaCentral": 0.9069747372979149,
+    "espacamentoRegular": 0.32927163232059686,
+    "mesmaLinha": 0.3333333333333333,
+    "mesmaColuna": 0.2222222222222222,
+    "terminacoesIguais": 0.2222222222222222,
+    "contem7": 1,
+    "fibonacci": 0.6944444444444444
+   }
+  },
+  {
+   "jogo": [
+    5,
+    8,
+    18,
+    20,
+    21,
+    24,
+    29,
+    45
+   ],
+   "c": {
+    "ate31": 0.875,
+    "ate12": 0.25,
+    "consecutivos": 0.14285714285714285,
+    "somaCentral": 0.6671356337677987,
+    "espacamentoRegular": 0.12392922660323846,
+    "mesmaLinha": 0.375,
+    "mesmaColuna": 0.25,
+    "terminacoesIguais": 0.25,
+    "contem7": 0,
+    "fibonacci": 2.34375
+   }
+  },
+  {
+   "jogo": [
+    1,
+    2,
+    7,
+    9,
+    14,
+    17,
+    19,
+    22
+   ],
+   "c": {
+    "ate31": 1,
+    "ate12": 0.5,
+    "consecutivos": 0.14285714285714285,
+    "somaCentral": 0.011436579009867484,
+    "espacamentoRegular": 0.5285954792089682,
+    "mesmaLinha": 0.5,
+    "mesmaColuna": 0.25,
+    "terminacoesIguais": 0.25,
+    "contem7": 1,
+    "fibonacci": 1.5625
+   }
+  },
+  {
+   "jogo": [
+    8,
+    11,
+    18,
+    21,
+    24,
+    36,
+    44
+   ],
+   "c": {
+    "ate31": 0.7142857142857143,
+    "ate12": 0.2857142857142857,
+    "consecutivos": 0,
+    "somaCentral": 0.8990559542855296,
+    "espacamentoRegular": 0.4389163923132179,
+    "mesmaLinha": 0.2857142857142857,
+    "mesmaColuna": 0.2857142857142857,
+    "terminacoesIguais": 0.2857142857142857,
+    "contem7": 0,
+    "fibonacci": 1.7857142857142856
+   }
+  },
+  {
+   "jogo": [
+    15,
+    17,
+    20,
+    24,
+    26,
+    27,
+    28,
+    32,
+    41
+   ],
+   "c": {
+    "ate31": 0.7777777777777778,
+    "ate12": 0,
+    "consecutivos": 0.25,
+    "somaCentral": 0.9999202964970733,
+    "espacamentoRegular": 0.25024658886084894,
+    "mesmaLinha": 0.4444444444444444,
+    "mesmaColuna": 0.2222222222222222,
+    "terminacoesIguais": 0.2222222222222222,
+    "contem7": 0,
+    "fibonacci": 0
+   }
+  },
+  {
+   "jogo": [
+    16,
+    20,
+    23,
+    27,
+    42,
+    44,
+    48
+   ],
+   "c": {
+    "ate31": 0.5714285714285714,
+    "ate12": 0,
+    "consecutivos": 0,
+    "somaCentral": 0.5101000841431315,
+    "espacamentoRegular": 0.1779408476271308,
+    "mesmaLinha": 0.42857142857142855,
+    "mesmaColuna": 0.14285714285714285,
+    "terminacoesIguais": 0.14285714285714285,
+    "contem7": 0,
+    "fibonacci": 0
+   }
+  },
+  {
+   "jogo": [
+    6,
+    10,
+    14,
+    22,
+    33,
+    43
+   ],
+   "c": {
+    "ate31": 0.6666666666666666,
+    "ate12": 0.3333333333333333,
+    "consecutivos": 0,
+    "somaCentral": 0.7569027517590649,
+    "espacamentoRegular": 0.6027854471162415,
+    "mesmaLinha": 0.3333333333333333,
+    "mesmaColuna": 0.3333333333333333,
+    "terminacoesIguais": 0.3333333333333333,
+    "contem7": 0,
+    "fibonacci": 0
+   }
+  },
+  {
+   "jogo": [
+    2,
+    3,
+    4,
+    33,
+    39,
+    43,
+    50
+   ],
+   "c": {
+    "ate31": 0.42857142857142855,
+    "ate12": 0.42857142857142855,
+    "consecutivos": 0.3333333333333333,
+    "somaCentral": 0.9921164456837153,
+    "espacamentoRegular": 0,
+    "mesmaLinha": 0.42857142857142855,
+    "mesmaColuna": 0.42857142857142855,
+    "terminacoesIguais": 0.42857142857142855,
+    "contem7": 0,
+    "fibonacci": 1.7857142857142856
+   }
+  },
+  {
+   "jogo": [
+    13,
+    16,
+    21,
+    30,
+    34,
+    35,
+    40,
+    43,
+    46
+   ],
+   "c": {
+    "ate31": 0.4444444444444444,
+    "ate12": 0,
+    "consecutivos": 0.125,
+    "somaCentral": 0.4723853785008409,
+    "espacamentoRegular": 0.46560023974095766,
+    "mesmaLinha": 0.3333333333333333,
+    "mesmaColuna": 0.2222222222222222,
+    "terminacoesIguais": 0.2222222222222222,
+    "contem7": 0,
+    "fibonacci": 2.083333333333333
+   }
+  },
+  {
+   "jogo": [
+    4,
+    5,
+    7,
+    11,
+    12,
+    15,
+    35,
+    41
+   ],
+   "c": {
+    "ate31": 0.75,
+    "ate12": 0.625,
+    "consecutivos": 0.2857142857142857,
+    "somaCentral": 0.14699349472137455,
+    "espacamentoRegular": 0,
+    "mesmaLinha": 0.375,
+    "mesmaColuna": 0.375,
+    "terminacoesIguais": 0.375,
+    "contem7": 1,
+    "fibonacci": 0.78125
+   }
+  },
+  {
+   "jogo": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+   ],
+   "c": {
+    "ate31": 1,
+    "ate12": 1,
+    "consecutivos": 1,
+    "somaCentral": 0.00042445444080052206,
+    "espacamentoRegular": 1,
+    "mesmaLinha": 1,
+    "mesmaColuna": 0.16666666666666666,
+    "terminacoesIguais": 0.16666666666666666,
+    "contem7": 0,
+    "fibonacci": 3
+   }
+  },
+  {
+   "jogo": [
+    45,
+    46,
+    47,
+    48,
+    49,
+    50
+   ],
+   "c": {
+    "ate31": 0,
+    "ate12": 0,
+    "consecutivos": 1,
+    "somaCentral": 0.00042445444080052206,
+    "espacamentoRegular": 1,
+    "mesmaLinha": 1,
+    "mesmaColuna": 0.16666666666666666,
+    "terminacoesIguais": 0.16666666666666666,
+    "contem7": 0,
+    "fibonacci": 0
+   }
+  }
+ ],
+ "dia-de-sorte": [
+  {
+   "jogo": [
+    8,
+    10,
+    15,
+    16,
+    21,
+    26,
+    27,
+    29
+   ],
+   "c": {
+    "ate31": 1,
+    "ate12": 0.25,
+    "consecutivos": 0.2857142857142857,
+    "somaCentral": 0.5560169376817728,
+    "espacamentoRegular": 0.40906315971472107,
+    "mesmaLinha": 0.375,
+    "mesmaColuna": 0.375,
+    "terminacoesIguais": 0.25,
+    "contem7": 0,
+    "fibonacci": 1.1071428571428572
+   }
+  },
+  {
+   "jogo": [
+    3,
+    10,
+    17,
+    20,
+    21,
+    23,
+    28
+   ],
+   "c": {
+    "ate31": 1,
+    "ate12": 0.2857142857142857,
+    "consecutivos": 0.16666666666666666,
+    "somaCentral": 0.8943955581739179,
+    "espacamentoRegular": 0.43857324609527215,
+    "mesmaLinha": 0.42857142857142855,
+    "mesmaColuna": 0.42857142857142855,
+    "terminacoesIguais": 0.2857142857142857,
+    "contem7": 0,
+    "fibonacci": 1.2653061224489797
+   }
+  },
+  {
+   "jogo": [
+    3,
+    8,
+    9,
+    10,
+    15,
+    21,
+    22,
+    24,
+    25,
+    29
+   ],
+   "c": {
+    "ate31": 1,
+    "ate12": 0.4,
+    "consecutivos": 0.4444444444444444,
+    "somaCentral": 0.9683682338782931,
+    "espacamentoRegular": 0.31845980205117874,
+    "mesmaLinha": 0.3,
+    "mesmaColuna": 0.4,
+    "terminacoesIguais": 0.2,
+    "contem7": 0,
+    "fibonacci": 1.3285714285714285
+   }
+  },
+  {
+   "jogo": [
+    3,
+    5,
+    13,
+    19,
+    25,
+    26,
+    31
+   ],
+   "c": {
+    "ate31": 1,
+    "ate12": 0.2857142857142857,
+    "consecutivos": 0.16666666666666666,
+    "somaCentral": 0.8943955581739179,
+    "espacamentoRegular": 0.47999215076567725,
+    "mesmaLinha": 0.2857142857142857,
+    "mesmaColuna": 0.42857142857142855,
+    "terminacoesIguais": 0.2857142857142857,
+    "contem7": 0,
+    "fibonacci": 1.8979591836734693
+   }
+  },
+  {
+   "jogo": [
+    2,
+    3,
+    4,
+    5,
+    8,
+    19,
+    23,
+    26,
+    27
+   ],
+   "c": {
+    "ate31": 1,
+    "ate12": 0.5555555555555556,
+    "consecutivos": 0.5,
+    "somaCentral": 0.5014051063673532,
+    "espacamentoRegular": 0,
+    "mesmaLinha": 0.4444444444444444,
+    "mesmaColuna": 0.3333333333333333,
+    "terminacoesIguais": 0.2222222222222222,
+    "contem7": 0,
+    "fibonacci": 1.9682539682539681
+   }
+  },
+  {
+   "jogo": [
+    3,
+    5,
+    16,
+    17,
+    22,
+    24,
+    29
+   ],
+   "c": {
+    "ate31": 1,
+    "ate12": 0.2857142857142857,
+    "consecutivos": 0.16666666666666666,
+    "somaCentral": 0.9823013510997377,
+    "espacamentoRegular": 0.2269326445291623,
+    "mesmaLinha": 0.2857142857142857,
+    "mesmaColuna": 0.42857142857142855,
+    "terminacoesIguais": 0.14285714285714285,
+    "contem7": 0,
+    "fibonacci": 1.2653061224489797
+   }
+  },
+  {
+   "jogo": [
+    1,
+    4,
+    9,
+    11,
+    13,
+    16,
+    17,
+    20,
+    26,
+    27
+   ],
+   "c": {
+    "ate31": 1,
+    "ate12": 0.4,
+    "consecutivos": 0.2222222222222222,
+    "somaCentral": 0.7956694616416928,
+    "espacamentoRegular": 0.44797307329202596,
+    "mesmaLinha": 0.3,
+    "mesmaColuna": 0.3,
+    "terminacoesIguais": 0.2,
+    "contem7": 0,
+    "fibonacci": 0.8857142857142858
+   }
+  },
+  {
+   "jogo": [
+    5,
+    6,
+    8,
+    10,
+    15,
+    16,
+    18,
+    21,
+    30
+   ],
+   "c": {
+    "ate31": 1,
+    "ate12": 0.4444444444444444,
+    "consecutivos": 0.25,
+    "somaCentral": 0.8081010375400977,
+    "espacamentoRegular": 0.19303035992671935,
+    "mesmaLinha": 0.4444444444444444,
+    "mesmaColuna": 0.2222222222222222,
+    "terminacoesIguais": 0.2222222222222222,
+    "contem7": 0,
+    "fibonacci": 1.476190476190476
+   }
+  },
+  {
+   "jogo": [
+    4,
+    5,
+    6,
+    16,
+    19,
+    20,
+    24,
+    26
+   ],
+   "c": {
+    "ate31": 1,
+    "ate12": 0.375,
+    "consecutivos": 0.42857142857142855,
+    "somaCentral": 0.9368637752000993,
+    "espacamentoRegular": 0.04653741075440743,
+    "mesmaLinha": 0.375,
+    "mesmaColuna": 0.375,
+    "terminacoesIguais": 0.375,
+    "contem7": 0,
+    "fibonacci": 0.5535714285714286
+   }
+  },
+  {
+   "jogo": [
+    3,
+    4,
+    9,
+    20,
+    23,
+    24,
+    26
+   ],
+   "c": {
+    "ate31": 1,
+    "ate12": 0.42857142857142855,
+    "consecutivos": 0.3333333333333333,
+    "somaCentral": 0.9900056360824381,
+    "espacamentoRegular": 0.09110674085361437,
+    "mesmaLinha": 0.42857142857142855,
+    "mesmaColuna": 0.2857142857142857,
+    "terminacoesIguais": 0.2857142857142857,
+    "contem7": 0,
+    "fibonacci": 0.6326530612244898
+   }
+  },
+  {
+   "jogo": [
+    2,
+    5,
+    11,
+    13,
+    14,
+    28,
+    31
+   ],
+   "c": {
+    "ate31": 1,
+    "ate12": 0.42857142857142855,
+    "consecutivos": 0.16666666666666666,
+    "somaCentral": 0.9310627797040227,
+    "espacamentoRegular": 0.09486863804091805,
+    "mesmaLinha": 0.42857142857142855,
+    "mesmaColuna": 0.2857142857142857,
+    "terminacoesIguais": 0.2857142857142857,
+    "contem7": 0,
+    "fibonacci": 1.8979591836734693
+   }
+  },
+  {
+   "jogo": [
+    1,
+    5,
+    6,
+    7,
+    8,
+    9,
+    12,
+    20,
+    21
+   ],
+   "c": {
+    "ate31": 1,
+    "ate12": 0.7777777777777778,
+    "consecutivos": 0.625,
+    "somaCentral": 0.057006879050478486,
+    "espacamentoRegular": 0.061916848035314054,
+    "mesmaLinha": 0.4444444444444444,
+    "mesmaColuna": 0.2222222222222222,
+    "terminacoesIguais": 0.2222222222222222,
+    "contem7": 1,
+    "fibonacci": 1.9682539682539681
+   }
+  },
+  {
+   "jogo": [
+    7,
+    21,
+    22,
+    28,
+    29,
+    30,
+    31
+   ],
+   "c": {
+    "ate31": 1,
+    "ate12": 0.14285714285714285,
+    "consecutivos": 0.6666666666666666,
+    "somaCentral": 0.03019738342231853,
+    "espacamentoRegular": 0,
+    "mesmaLinha": 0.42857142857142855,
+    "mesmaColuna": 0.42857142857142855,
+    "terminacoesIguais": 0.2857142857142857,
+    "contem7": 1,
+    "fibonacci": 0.6326530612244898
+   }
+  },
+  {
+   "jogo": [
+    8,
+    10,
+    19,
+    20,
+    22,
+    24,
+    25
+   ],
+   "c": {
+    "ate31": 1,
+    "ate12": 0.2857142857142857,
+    "consecutivos": 0.3333333333333333,
+    "somaCentral": 0.751477293075286,
+    "espacamentoRegular": 0.013937963868222991,
+    "mesmaLinha": 0.42857142857142855,
+    "mesmaColuna": 0.2857142857142857,
+    "terminacoesIguais": 0.2857142857142857,
+    "contem7": 0,
+    "fibonacci": 0.6326530612244898
+   }
+  },
+  {
+   "jogo": [
+    2,
+    3,
+    5,
+    7,
+    9,
+    11,
+    12,
+    15,
+    28
+   ],
+   "c": {
+    "ate31": 1,
+    "ate12": 0.7777777777777778,
+    "consecutivos": 0.25,
+    "somaCentral": 0.07725790327996877,
+    "espacamentoRegular": 0,
+    "mesmaLinha": 0.4444444444444444,
+    "mesmaColuna": 0.2222222222222222,
+    "terminacoesIguais": 0.2222222222222222,
+    "contem7": 1,
+    "fibonacci": 1.476190476190476
+   }
+  },
+  {
+   "jogo": [
+    3,
+    7,
+    8,
+    17,
+    20,
+    21,
+    31
+   ],
+   "c": {
+    "ate31": 1,
+    "ate12": 0.42857142857142855,
+    "consecutivos": 0.3333333333333333,
+    "somaCentral": 0.9724838739201341,
+    "espacamentoRegular": 0.23069074183792804,
+    "mesmaLinha": 0.42857142857142855,
+    "mesmaColuna": 0.42857142857142855,
+    "terminacoesIguais": 0.2857142857142857,
+    "contem7": 1,
+    "fibonacci": 1.8979591836734693
+   }
+  },
+  {
+   "jogo": [
+    1,
+    3,
+    10,
+    14,
+    18,
+    21,
+    26,
+    28
+   ],
+   "c": {
+    "ate31": 1,
+    "ate12": 0.375,
+    "consecutivos": 0,
+    "somaCentral": 0.9512940482599541,
+    "espacamentoRegular": 0.5744768409971831,
+    "mesmaLinha": 0.25,
+    "mesmaColuna": 0.375,
+    "terminacoesIguais": 0.25,
+    "contem7": 0,
+    "fibonacci": 1.6607142857142858
+   }
+  },
+  {
+   "jogo": [
+    1,
+    3,
+    6,
+    8,
+    18,
+    21,
+    25,
+    29,
+    30,
+    31
+   ],
+   "c": {
+    "ate31": 1,
+    "ate12": 0.4,
+    "consecutivos": 0.2222222222222222,
+    "somaCentral": 0.879350749407306,
+    "espacamentoRegular": 0.22540333075851682,
+    "mesmaLinha": 0.3,
+    "mesmaColuna": 0.3,
+    "terminacoesIguais": 0.3,
+    "contem7": 0,
+    "fibonacci": 1.7714285714285716
+   }
+  },
+  {
+   "jogo": [
+    3,
+    4,
+    12,
+    13,
+    18,
+    26,
+    28
+   ],
+   "c": {
+    "ate31": 1,
+    "ate12": 0.42857142857142855,
+    "consecutivos": 0.3333333333333333,
+    "somaCentral": 0.9310627797040227,
+    "espacamentoRegular": 0.2744657141113179,
+    "mesmaLinha": 0.2857142857142857,
+    "mesmaColuna": 0.2857142857142857,
+    "terminacoesIguais": 0.2857142857142857,
+    "contem7": 0,
+    "fibonacci": 1.2653061224489797
+   }
+  },
+  {
+   "jogo": [
+    2,
+    11,
+    16,
+    19,
+    22,
+    27,
+    28
+   ],
+   "c": {
+    "ate31": 1,
+    "ate12": 0.2857142857142857,
+    "consecutivos": 0.16666666666666666,
+    "somaCentral": 0.8281043786018458,
+    "espacamentoRegular": 0.4243604020347781,
+    "mesmaLinha": 0.42857142857142855,
+    "mesmaColuna": 0.2857142857142857,
+    "terminacoesIguais": 0.2857142857142857,
+    "contem7": 0,
+    "fibonacci": 0.6326530612244898
+   }
+  },
+  {
+   "jogo": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+   ],
+   "c": {
+    "ate31": 1,
+    "ate12": 1,
+    "consecutivos": 1,
+    "somaCentral": 0.000380128957869464,
+    "espacamentoRegular": 1,
+    "mesmaLinha": 1,
+    "mesmaColuna": 0.14285714285714285,
+    "terminacoesIguais": 0.14285714285714285,
+    "contem7": 1,
+    "fibonacci": 2.5306122448979593
+   }
+  },
+  {
+   "jogo": [
+    25,
+    26,
+    27,
+    28,
+    29,
+    30,
+    31
+   ],
+   "c": {
+    "ate31": 1,
+    "ate12": 0,
+    "consecutivos": 1,
+    "somaCentral": 0.000380128957869464,
+    "espacamentoRegular": 1,
+    "mesmaLinha": 0.5714285714285714,
+    "mesmaColuna": 0.14285714285714285,
+    "terminacoesIguais": 0.14285714285714285,
+    "contem7": 0,
+    "fibonacci": 0
+   }
+  }
+ ],
+ "timemania": [
+  {
+   "jogo": [
+    3,
+    7,
+    17,
+    40,
+    45,
+    62,
+    68,
+    76,
+    78,
+    80
+   ],
+   "c": {
+    "ate31": 0.3,
+    "ate12": 0.2,
+    "consecutivos": 0,
+    "somaCentral": 0.5865841438294898,
+    "espacamentoRegular": 0.21281130074328625,
+    "mesmaLinha": 0.3,
+    "mesmaColuna": 0.2,
+    "terminacoesIguais": 0.2,
+    "contem7": 1,
+    "fibonacci": 0.888888888888889
+   }
+  },
+  {
+   "jogo": [
+    5,
+    8,
+    11,
+    14,
+    15,
+    23,
+    53,
+    75,
+    77,
+    79
+   ],
+   "c": {
+    "ate31": 0.6,
+    "ate12": 0.3,
+    "consecutivos": 0.1111111111111111,
+    "somaCentral": 0.8071177470053893,
+    "espacamentoRegular": 0,
+    "mesmaLinha": 0.3,
+    "mesmaColuna": 0.3,
+    "terminacoesIguais": 0.3,
+    "contem7": 0,
+    "fibonacci": 1.777777777777778
+   }
+  },
+  {
+   "jogo": [
+    16,
+    19,
+    30,
+    34,
+    48,
+    61,
+    66,
+    70,
+    74,
+    77
+   ],
+   "c": {
+    "ate31": 0.3,
+    "ate12": 0,
+    "consecutivos": 0,
+    "somaCentral": 0.42437284567695,
+    "espacamentoRegular": 0.37103848874587286,
+    "mesmaLinha": 0.3,
+    "mesmaColuna": 0.2,
+    "terminacoesIguais": 0.2,
+    "contem7": 0,
+    "fibonacci": 0.888888888888889
+   }
+  },
+  {
+   "jogo": [
+    11,
+    23,
+    26,
+    30,
+    52,
+    53,
+    60,
+    70,
+    72,
+    79
+   ],
+   "c": {
+    "ate31": 0.4,
+    "ate12": 0.1,
+    "consecutivos": 0.1111111111111111,
+    "somaCentral": 0.5865841438294898,
+    "espacamentoRegular": 0.18385665144049368,
+    "mesmaLinha": 0.3,
+    "mesmaColuna": 0.3,
+    "terminacoesIguais": 0.3,
+    "contem7": 0,
+    "fibonacci": 0
+   }
+  },
+  {
+   "jogo": [
+    1,
+    8,
+    24,
+    44,
+    50,
+    51,
+    60,
+    69,
+    74,
+    78
+   ],
+   "c": {
+    "ate31": 0.3,
+    "ate12": 0.2,
+    "consecutivos": 0.1111111111111111,
+    "somaCentral": 0.7344954863621009,
+    "espacamentoRegular": 0.3408531147818432,
+    "mesmaLinha": 0.2,
+    "mesmaColuna": 0.3,
+    "terminacoesIguais": 0.3,
+    "contem7": 0,
+    "fibonacci": 1.777777777777778
+   }
+  },
+  {
+   "jogo": [
+    15,
+    16,
+    19,
+    24,
+    41,
+    46,
+    61,
+    66,
+    69,
+    80
+   ],
+   "c": {
+    "ate31": 0.4,
+    "ate12": 0,
+    "consecutivos": 0.1111111111111111,
+    "somaCentral": 0.897304698560745,
+    "espacamentoRegular": 0.25642794008648784,
+    "mesmaLinha": 0.3,
+    "mesmaColuna": 0.3,
+    "terminacoesIguais": 0.3,
+    "contem7": 0,
+    "fibonacci": 0
+   }
+  },
+  {
+   "jogo": [
+    6,
+    12,
+    31,
+    38,
+    50,
+    55,
+    62,
+    64,
+    78,
+    79
+   ],
+   "c": {
+    "ate31": 0.3,
+    "ate12": 0.2,
+    "consecutivos": 0.1111111111111111,
+    "somaCentral": 0.5954019718977739,
+    "espacamentoRegular": 0.3211226469389661,
+    "mesmaLinha": 0.2,
+    "mesmaColuna": 0.2,
+    "terminacoesIguais": 0.2,
+    "contem7": 0,
+    "fibonacci": 0.888888888888889
+   }
+  },
+  {
+   "jogo": [
+    18,
+    19,
+    20,
+    31,
+    39,
+    52,
+    55,
+    58,
+    70,
+    74
+   ],
+   "c": {
+    "ate31": 0.4,
+    "ate12": 0,
+    "consecutivos": 0.2222222222222222,
+    "somaCentral": 0.9033067143741897,
+    "espacamentoRegular": 0.2702565449391948,
+    "mesmaLinha": 0.3,
+    "mesmaColuna": 0.2,
+    "terminacoesIguais": 0.2,
+    "contem7": 0,
+    "fibonacci": 0.888888888888889
+   }
+  },
+  {
+   "jogo": [
+    3,
+    16,
+    42,
+    43,
+    47,
+    53,
+    58,
+    63,
+    76,
+    80
+   ],
+   "c": {
+    "ate31": 0.2,
+    "ate12": 0.1,
+    "consecutivos": 0.1111111111111111,
+    "somaCentral": 0.5426900506070389,
+    "espacamentoRegular": 0.15155932617864543,
+    "mesmaLinha": 0.3,
+    "mesmaColuna": 0.4,
+    "terminacoesIguais": 0.4,
+    "contem7": 0,
+    "fibonacci": 0.888888888888889
+   }
+  },
+  {
+   "jogo": [
+    6,
+    17,
+    19,
+    36,
+    51,
+    54,
+    63,
+    64,
+    65,
+    69
+   ],
+   "c": {
+    "ate31": 0.3,
+    "ate12": 0.1,
+    "consecutivos": 0.2222222222222222,
+    "somaCentral": 0.851332609790022,
+    "espacamentoRegular": 0.16700687216495702,
+    "mesmaLinha": 0.4,
+    "mesmaColuna": 0.2,
+    "terminacoesIguais": 0.2,
+    "contem7": 0,
+    "fibonacci": 0
+   }
+  },
+  {
+   "jogo": [
+    5,
+    7,
+    14,
+    18,
+    28,
+    39,
+    58,
+    60,
+    64,
+    65
+   ],
+   "c": {
+    "ate31": 0.5,
+    "ate12": 0.2,
+    "consecutivos": 0.1111111111111111,
+    "somaCentral": 0.7915544459159116,
+    "espacamentoRegular": 0.17537887487646797,
+    "mesmaLinha": 0.2,
+    "mesmaColuna": 0.3,
+    "terminacoesIguais": 0.3,
+    "contem7": 1,
+    "fibonacci": 0.888888888888889
+   }
+  },
+  {
+   "jogo": [
+    16,
+    23,
+    29,
+    30,
+    37,
+    41,
+    50,
+    61,
+    66,
+    67
+   ],
+   "c": {
+    "ate31": 0.4,
+    "ate12": 0,
+    "consecutivos": 0.2222222222222222,
+    "somaCentral": 0.9764716866522433,
+    "espacamentoRegular": 0.44195100114675656,
+    "mesmaLinha": 0.3,
+    "mesmaColuna": 0.2,
+    "terminacoesIguais": 0.2,
+    "contem7": 0,
+    "fibonacci": 0
+   }
+  },
+  {
+   "jogo": [
+    3,
+    8,
+    10,
+    15,
+    21,
+    35,
+    38,
+    66,
+    71,
+    72
+   ],
+   "c": {
+    "ate31": 0.5,
+    "ate12": 0.3,
+    "consecutivos": 0.1111111111111111,
+    "somaCentral": 0.6306827091929673,
+    "espacamentoRegular": 0,
+    "mesmaLinha": 0.3,
+    "mesmaColuna": 0.2,
+    "terminacoesIguais": 0.2,
+    "contem7": 0,
+    "fibonacci": 2.6666666666666665
+   }
+  },
+  {
+   "jogo": [
+    21,
+    23,
+    25,
+    27,
+    28,
+    31,
+    43,
+    51,
+    67,
+    75
+   ],
+   "c": {
+    "ate31": 0.6,
+    "ate12": 0,
+    "consecutivos": 0.1111111111111111,
+    "somaCentral": 0.97947286906499,
+    "espacamentoRegular": 0.16481686786817173,
+    "mesmaLinha": 0.5,
+    "mesmaColuna": 0.3,
+    "terminacoesIguais": 0.3,
+    "contem7": 0,
+    "fibonacci": 0.888888888888889
+   }
+  },
+  {
+   "jogo": [
+    2,
+    3,
+    4,
+    26,
+    45,
+    51,
+    52,
+    59,
+    69,
+    75
+   ],
+   "c": {
+    "ate31": 0.4,
+    "ate12": 0.3,
+    "consecutivos": 0.3333333333333333,
+    "somaCentral": 0.962519399016411,
+    "espacamentoRegular": 0.10255674771730405,
+    "mesmaLinha": 0.3,
+    "mesmaColuna": 0.2,
+    "terminacoesIguais": 0.2,
+    "contem7": 0,
+    "fibonacci": 1.777777777777778
+   }
+  },
+  {
+   "jogo": [
+    10,
+    12,
+    16,
+    23,
+    55,
+    58,
+    62,
+    70,
+    74,
+    80
+   ],
+   "c": {
+    "ate31": 0.4,
+    "ate12": 0.2,
+    "consecutivos": 0,
+    "somaCentral": 0.7260721999712735,
+    "espacamentoRegular": 0,
+    "mesmaLinha": 0.2,
+    "mesmaColuna": 0.3,
+    "terminacoesIguais": 0.3,
+    "contem7": 0,
+    "fibonacci": 0.888888888888889
+   }
+  },
+  {
+   "jogo": [
+    1,
+    11,
+    13,
+    18,
+    23,
+    30,
+    45,
+    54,
+    66,
+    74
+   ],
+   "c": {
+    "ate31": 0.6,
+    "ate12": 0.2,
+    "consecutivos": 0,
+    "somaCentral": 0.5954019718977739,
+    "espacamentoRegular": 0.5407382297468435,
+    "mesmaLinha": 0.3,
+    "mesmaColuna": 0.2,
+    "terminacoesIguais": 0.2,
+    "contem7": 0,
+    "fibonacci": 1.777777777777778
+   }
+  },
+  {
+   "jogo": [
+    2,
+    9,
+    31,
+    35,
+    36,
+    38,
+    39,
+    56,
+    57,
+    70
+   ],
+   "c": {
+    "ate31": 0.3,
+    "ate12": 0.2,
+    "consecutivos": 0.3333333333333333,
+    "somaCentral": 0.897304698560745,
+    "espacamentoRegular": 0.013280223693161508,
+    "mesmaLinha": 0.5,
+    "mesmaColuna": 0.2,
+    "terminacoesIguais": 0.2,
+    "contem7": 0,
+    "fibonacci": 0.888888888888889
+   }
+  },
+  {
+   "jogo": [
+    1,
+    23,
+    24,
+    27,
+    32,
+    33,
+    40,
+    50,
+    55,
+    66
+   ],
+   "c": {
+    "ate31": 0.4,
+    "ate12": 0.1,
+    "consecutivos": 0.2222222222222222,
+    "somaCentral": 0.7344954863621009,
+    "espacamentoRegular": 0.14204040039392707,
+    "mesmaLinha": 0.3,
+    "mesmaColuna": 0.2,
+    "terminacoesIguais": 0.2,
+    "contem7": 0,
+    "fibonacci": 1.777777777777778
+   }
+  },
+  {
+   "jogo": [
+    9,
+    14,
+    45,
+    47,
+    50,
+    51,
+    56,
+    64,
+    68,
+    77
+   ],
+   "c": {
+    "ate31": 0.2,
+    "ate12": 0.1,
+    "consecutivos": 0.1111111111111111,
+    "somaCentral": 0.5426900506070389,
+    "espacamentoRegular": 0,
+    "mesmaLinha": 0.3,
+    "mesmaColuna": 0.2,
+    "terminacoesIguais": 0.2,
+    "contem7": 0,
+    "fibonacci": 0
+   }
+  },
+  {
+   "jogo": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10
+   ],
+   "c": {
+    "ate31": 1,
+    "ate12": 1,
+    "consecutivos": 1,
+    "somaCentral": 0.0000023456149234375133,
+    "espacamentoRegular": 1,
+    "mesmaLinha": 1,
+    "mesmaColuna": 0.1,
+    "terminacoesIguais": 0.1,
+    "contem7": 1,
+    "fibonacci": 3
+   }
+  },
+  {
+   "jogo": [
+    71,
+    72,
+    73,
+    74,
+    75,
+    76,
+    77,
+    78,
+    79,
+    80
+   ],
+   "c": {
+    "ate31": 0,
+    "ate12": 0,
+    "consecutivos": 1,
+    "somaCentral": 0.0000023456149234375133,
+    "espacamentoRegular": 1,
+    "mesmaLinha": 1,
+    "mesmaColuna": 0.1,
+    "terminacoesIguais": 0.1,
+    "contem7": 0,
+    "fibonacci": 0
+   }
+  }
+ ],
+ "mais-milionaria": [
+  {
+   "jogo": [
+    9,
+    10,
+    32,
+    38,
+    42,
+    50
+   ],
+   "c": {
+    "ate31": 0.3333333333333333,
+    "ate12": 0.3333333333333333,
+    "consecutivos": 0.2,
+    "somaCentral": 0.7051278718671535,
+    "espacamentoRegular": 0.11251680982145096,
+    "mesmaLinha": 0.3333333333333333,
+    "mesmaColuna": 0.3333333333333333,
+    "terminacoesIguais": 0.3333333333333333,
+    "contem7": 0,
+    "fibonacci": 0
+   }
+  },
+  {
+   "jogo": [
+    1,
+    10,
+    12,
+    14,
+    16,
+    24,
+    28,
+    34,
+    43
+   ],
+   "c": {
+    "ate31": 0.7777777777777778,
+    "ate12": 0.3333333333333333,
+    "consecutivos": 0,
+    "somaCentral": 0.4870673928670514,
+    "espacamentoRegular": 0.438579708449924,
+    "mesmaLinha": 0.3333333333333333,
+    "mesmaColuna": 0.3333333333333333,
+    "terminacoesIguais": 0.3333333333333333,
+    "contem7": 0,
+    "fibonacci": 1.3888888888888888
+   }
+  },
+  {
+   "jogo": [
+    3,
+    6,
+    23,
+    27,
+    29,
+    44,
+    49
+   ],
+   "c": {
+    "ate31": 0.7142857142857143,
+    "ate12": 0.2857142857142857,
+    "consecutivos": 0,
+    "somaCentral": 0.9975601436995096,
+    "espacamentoRegular": 0.2185999671473292,
+    "mesmaLinha": 0.42857142857142855,
+    "mesmaColuna": 0.2857142857142857,
+    "terminacoesIguais": 0.2857142857142857,
+    "contem7": 0,
+    "fibonacci": 0.8928571428571428
+   }
+  },
+  {
+   "jogo": [
+    2,
+    4,
+    25,
+    41,
+    43,
+    44
+   ],
+   "c": {
+    "ate31": 0.5,
+    "ate12": 0.3333333333333333,
+    "consecutivos": 0.2,
+    "somaCentral": 0.9840852192523117,
+    "espacamentoRegular": 0,
+    "mesmaLinha": 0.5,
+    "mesmaColuna": 0.3333333333333333,
+    "terminacoesIguais": 0.3333333333333333,
+    "contem7": 0,
+    "fibonacci": 1.0416666666666665
+   }
+  },
+  {
+   "jogo": [
+    7,
+    12,
+    20,
+    28,
+    32,
+    49
+   ],
+   "c": {
+    "ate31": 0.6666666666666666,
+    "ate12": 0.3333333333333333,
+    "consecutivos": 0,
+    "somaCentral": 0.9889210091483742,
+    "espacamentoRegular": 0.4539359551819183,
+    "mesmaLinha": 0.3333333333333333,
+    "mesmaColuna": 0.3333333333333333,
+    "terminacoesIguais": 0.3333333333333333,
+    "contem7": 1,
+    "fibonacci": 0
+   }
+  },
+  {
+   "jogo": [
+    2,
+    12,
+    16,
+    22,
+    26,
+    32
+   ],
+   "c": {
+    "ate31": 0.8333333333333334,
+    "ate12": 0.3333333333333333,
+    "consecutivos": 0,
+    "somaCentral": 0.4386843940720047,
+    "espacamentoRegular": 0.6348516283298893,
+    "mesmaLinha": 0.3333333333333333,
+    "mesmaColuna": 0.6666666666666666,
+    "terminacoesIguais": 0.6666666666666666,
+    "contem7": 0,
+    "fibonacci": 1.0416666666666665
+   }
+  },
+  {
+   "jogo": [
+    1,
+    9,
+    27,
+    29,
+    31,
+    32
+   ],
+   "c": {
+    "ate31": 0.8333333333333334,
+    "ate12": 0.3333333333333333,
+    "consecutivos": 0.2,
+    "somaCentral": 0.7736122561370189,
+    "espacamentoRegular": 0,
+    "mesmaLinha": 0.3333333333333333,
+    "mesmaColuna": 0.3333333333333333,
+    "terminacoesIguais": 0.3333333333333333,
+    "contem7": 0,
+    "fibonacci": 1.0416666666666665
+   }
+  },
+  {
+   "jogo": [
+    17,
+    22,
+    23,
+    25,
+    33,
+    34,
+    35,
+    46
+   ],
+   "c": {
+    "ate31": 0.5,
+    "ate12": 0,
+    "consecutivos": 0.42857142857142855,
+    "somaCentral": 0.7142768877571629,
+    "espacamentoRegular": 0.10212299542816994,
+    "mesmaLinha": 0.375,
+    "mesmaColuna": 0.25,
+    "terminacoesIguais": 0.25,
+    "contem7": 0,
+    "fibonacci": 0.78125
+   }
+  },
+  {
+   "jogo": [
+    1,
+    10,
+    18,
+    20,
+    25,
+    28,
+    30,
+    45
+   ],
+   "c": {
+    "ate31": 0.875,
+    "ate12": 0.25,
+    "consecutivos": 0,
+    "somaCentral": 0.77472116548353,
+    "espacamentoRegular": 0.30023616734815206,
+    "mesmaLinha": 0.375,
+    "mesmaColuna": 0.375,
+    "terminacoesIguais": 0.375,
+    "contem7": 0,
+    "fibonacci": 0.78125
+   }
+  },
+  {
+   "jogo": [
+    12,
+    14,
+    22,
+    23,
+    32,
+    35,
+    37,
+    38,
+    49
+   ],
+   "c": {
+    "ate31": 0.4444444444444444,
+    "ate12": 0.1111111111111111,
+    "consecutivos": 0.25,
+    "somaCentral": 0.71407968405737,
+    "espacamentoRegular": 0.1842492825520773,
+    "mesmaLinha": 0.4444444444444444,
+    "mesmaColuna": 0.3333333333333333,
+    "terminacoesIguais": 0.3333333333333333,
+    "contem7": 0,
+    "fibonacci": 0
+   }
+  },
+  {
+   "jogo": [
+    1,
+    2,
+    7,
+    15,
+    19,
+    20,
+    26,
+    30
+   ],
+   "c": {
+    "ate31": 1,
+    "ate12": 0.375,
+    "consecutivos": 0.2857142857142857,
+    "somaCentral": 0.08453511783334167,
+    "espacamentoRegular": 0.4312957757768744,
+    "mesmaLinha": 0.375,
+    "mesmaColuna": 0.25,
+    "terminacoesIguais": 0.25,
+    "contem7": 1,
+    "fibonacci": 1.5625
+   }
+  },
+  {
+   "jogo": [
+    4,
+    5,
+    11,
+    17,
+    24,
+    30,
+    33,
+    50
+   ],
+   "c": {
+    "ate31": 0.75,
+    "ate12": 0.375,
+    "consecutivos": 0.14285714285714285,
+    "somaCentral": 0.7296968898722789,
+    "espacamentoRegular": 0.28690350144101184,
+    "mesmaLinha": 0.25,
+    "mesmaColuna": 0.25,
+    "terminacoesIguais": 0.25,
+    "contem7": 0,
+    "fibonacci": 0.78125
+   }
+  },
+  {
+   "jogo": [
+    12,
+    28,
+    33,
+    43,
+    47,
+    48
+   ],
+   "c": {
+    "ate31": 0.3333333333333333,
+    "ate12": 0.16666666666666666,
+    "consecutivos": 0.2,
+    "somaCentral": 0.22332911703239897,
+    "espacamentoRegular": 0.26822556264891717,
+    "mesmaLinha": 0.5,
+    "mesmaColuna": 0.3333333333333333,
+    "terminacoesIguais": 0.3333333333333333,
+    "contem7": 0,
+    "fibonacci": 0
+   }
+  },
+  {
+   "jogo": [
+    3,
+    15,
+    22,
+    24,
+    27,
+    34,
+    49
+   ],
+   "c": {
+    "ate31": 0.7142857142857143,
+    "ate12": 0.14285714285714285,
+    "consecutivos": 0,
+    "somaCentral": 0.9921164456837153,
+    "espacamentoRegular": 0.39911847995281513,
+    "mesmaLinha": 0.42857142857142855,
+    "mesmaColuna": 0.2857142857142857,
+    "terminacoesIguais": 0.2857142857142857,
+    "contem7": 0,
+    "fibonacci": 1.7857142857142856
+   }
+  },
+  {
+   "jogo": [
+    5,
+    20,
+    28,
+    29,
+    30,
+    35,
+    36,
+    49,
+    50
+   ],
+   "c": {
+    "ate31": 0.5555555555555556,
+    "ate12": 0.1111111111111111,
+    "consecutivos": 0.5,
+    "somaCentral": 0.4152950113395668,
+    "espacamentoRegular": 0.03877649982745923,
+    "mesmaLinha": 0.3333333333333333,
+    "mesmaColuna": 0.3333333333333333,
+    "terminacoesIguais": 0.3333333333333333,
+    "contem7": 0,
+    "fibonacci": 0.6944444444444444
+   }
+  },
+  {
+   "jogo": [
+    3,
+    8,
+    30,
+    36,
+    38,
+    46,
+    47
+   ],
+   "c": {
+    "ate31": 0.42857142857142855,
+    "ate12": 0.2857142857142857,
+    "consecutivos": 0.16666666666666666,
+    "somaCentral": 0.7116701784242119,
+    "espacamentoRegular": 0.049793410892414736,
+    "mesmaLinha": 0.2857142857142857,
+    "mesmaColuna": 0.2857142857142857,
+    "terminacoesIguais": 0.2857142857142857,
+    "contem7": 0,
+    "fibonacci": 1.7857142857142856
+   }
+  },
+  {
+   "jogo": [
+    1,
+    10,
+    11,
+    15,
+    19,
+    23,
+    42,
+    45,
+    48
+   ],
+   "c": {
+    "ate31": 0.6666666666666666,
+    "ate12": 0.3333333333333333,
+    "consecutivos": 0.125,
+    "somaCentral": 0.9262620259981452,
+    "espacamentoRegular": 0.0816492827699048,
+    "mesmaLinha": 0.3333333333333333,
+    "mesmaColuna": 0.2222222222222222,
+    "terminacoesIguais": 0.2222222222222222,
+    "contem7": 0,
+    "fibonacci": 0.6944444444444444
+   }
+  },
+  {
+   "jogo": [
+    21,
+    22,
+    23,
+    24,
+    32,
+    47,
+    50
+   ],
+   "c": {
+    "ate31": 0.5714285714285714,
+    "ate12": 0,
+    "consecutivos": 0.5,
+    "somaCentral": 0.5267136167971936,
+    "espacamentoRegular": 0,
+    "mesmaLinha": 0.5714285714285714,
+    "mesmaColuna": 0.2857142857142857,
+    "terminacoesIguais": 0.2857142857142857,
+    "contem7": 0,
+    "fibonacci": 0.8928571428571428
+   }
+  },
+  {
+   "jogo": [
+    12,
+    15,
+    27,
+    34,
+    36,
+    39,
+    43,
+    47,
+    50
+   ],
+   "c": {
+    "ate31": 0.3333333333333333,
+    "ate12": 0.1111111111111111,
+    "consecutivos": 0,
+    "somaCentral": 0.1786401850477649,
+    "espacamentoRegular": 0.35325233013449964,
+    "mesmaLinha": 0.3333333333333333,
+    "mesmaColuna": 0.2222222222222222,
+    "terminacoesIguais": 0.2222222222222222,
+    "contem7": 0,
+    "fibonacci": 0.6944444444444444
+   }
+  },
+  {
+   "jogo": [
+    1,
+    16,
+    19,
+    21,
+    25,
+    27,
+    33,
+    37,
+    44
+   ],
+   "c": {
+    "ate31": 0.6666666666666666,
+    "ate12": 0.1111111111111111,
+    "consecutivos": 0,
+    "somaCentral": 0.9866198913988505,
+    "espacamentoRegular": 0.25617741433862906,
+    "mesmaLinha": 0.3333333333333333,
+    "mesmaColuna": 0.2222222222222222,
+    "terminacoesIguais": 0.2222222222222222,
+    "contem7": 0,
+    "fibonacci": 1.3888888888888888
+   }
+  },
+  {
+   "jogo": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+   ],
+   "c": {
+    "ate31": 1,
+    "ate12": 1,
+    "consecutivos": 1,
+    "somaCentral": 0.00042445444080052206,
+    "espacamentoRegular": 1,
+    "mesmaLinha": 1,
+    "mesmaColuna": 0.16666666666666666,
+    "terminacoesIguais": 0.16666666666666666,
+    "contem7": 0,
+    "fibonacci": 3
+   }
+  },
+  {
+   "jogo": [
+    45,
+    46,
+    47,
+    48,
+    49,
+    50
+   ],
+   "c": {
+    "ate31": 0,
+    "ate12": 0,
+    "consecutivos": 1,
+    "somaCentral": 0.00042445444080052206,
+    "espacamentoRegular": 1,
+    "mesmaLinha": 1,
+    "mesmaColuna": 0.16666666666666666,
+    "terminacoesIguais": 0.16666666666666666,
+    "contem7": 0,
+    "fibonacci": 0
+   }
+  }
+ ]
+}
