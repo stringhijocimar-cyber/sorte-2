@@ -250,6 +250,45 @@ nav button[aria-current="page"] svg{stroke-width:2.2}
 .proximo .contagem span{font-size:.6rem;text-transform:uppercase;letter-spacing:.1em;
   opacity:.72}
 
+
+/* ---------- fluidez ------------------------------------------------------
+   O app trocava de tela instantaneamente, e instantâneo sem transição lê como
+   corte seco: a pessoa perde a noção de que a tela mudou e de onde veio. Um
+   movimento curto orienta; um longo irrita. 160ms é o intervalo em que o olho
+   registra a mudança sem esperar por ela.
+
+   Tudo aqui é desligado por prefers-reduced-motion, no fim do arquivo.       */
+@media (prefers-reduced-motion:no-preference){
+  main{animation:entraTela .16s ease-out both}
+  @keyframes entraTela{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  /* A trilha e o segmentado deslizam o realce em vez de pular. */
+  .trilha button,.segmento button,nav button{transition:background .16s ease,
+    color .16s ease,border-color .16s ease,transform .1s ease}
+  .trilha button:active,.segmento button:active{transform:scale(.96)}
+  .acao{transition:transform .1s ease,opacity .16s ease,box-shadow .16s ease,
+    background .16s ease}
+  .acao:active{transform:scale(.985) translateY(1px)}
+  .item,.cartela,.proximo{transition:box-shadow .18s ease,transform .18s ease}
+  .ficha:active{transform:scale(.995)}
+}
+
+/* Rolagem com inércia no iOS e sem "pulo" ao trocar de tela. */
+main{-webkit-overflow-scrolling:touch}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+
+/* A cartela ganha a textura do papel de lotérica: uma trama muito fraca, que
+   só aparece de perto — de longe lê como papel, não como padrão. */
+.cartela .miolo{
+  background-image:
+    repeating-linear-gradient(0deg,transparent 0 3px,rgba(0,0,0,.012) 3px 4px),
+    repeating-linear-gradient(90deg,transparent 0 3px,rgba(0,0,0,.012) 3px 4px)}
+/* Picote na borda de cima, como cartela destacada do bloco. */
+.cartela .tarja{position:relative}
+.cartela .tarja::after{content:"";position:absolute;left:0;right:0;bottom:-1px;
+  height:2px;background-image:radial-gradient(circle at 3px 50%,
+    var(--papel) 1.6px,transparent 1.7px);background-size:7px 2px}
+
 /* ---------- blocos ---------- */
 .carta{background:var(--carta);border:1px solid var(--linha);border-radius:var(--r);
   padding:15px;box-shadow:var(--sombra);margin-bottom:12px}
@@ -391,17 +430,24 @@ td{padding:6px 7px;border-bottom:1px solid var(--trama)}
   <div class="cabeca">
     <div class="marca">
       <svg viewBox="0 0 64 64" aria-hidden="true">
-        <path d="M32 33q4 10.5-2.4 18.6" stroke="var(--acaso)" stroke-width="3.6"
-          stroke-linecap="round" fill="none"/>
-        <g transform="translate(32 27)" stroke="var(--carta)" stroke-width="1.6">
-          <path transform="rotate(-45)" fill="#3FB3A3"
-            d="M0 0V-13.5a9 9 0 0 1 13.5 0h0a9 9 0 0 1 0 13.5Z"/>
-          <path transform="rotate(45)" fill="var(--seu)"
-            d="M0 0V-13.5a9 9 0 0 1 13.5 0h0a9 9 0 0 1 0 13.5Z"/>
-          <path transform="rotate(135)" fill="var(--acaso)"
-            d="M0 0V-13.5a9 9 0 0 1 13.5 0h0a9 9 0 0 1 0 13.5Z"/>
-          <path transform="rotate(225)" fill="#0B5D53"
-            d="M0 0V-13.5a9 9 0 0 1 13.5 0h0a9 9 0 0 1 0 13.5Z"/>
+        <defs>
+          <linearGradient id="lf1" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#1FA090"/><stop offset="1" stop-color="#0E6E62"/></linearGradient>
+          <linearGradient id="lf2" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#3FB3A3"/><stop offset="1" stop-color="#12796C"/></linearGradient>
+          <linearGradient id="lf3" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#0E6E62"/><stop offset="1" stop-color="#0A5249"/></linearGradient>
+          <linearGradient id="lf4" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#E9A73C"/><stop offset="1" stop-color="#B26B00"/></linearGradient>
+        </defs>
+        <path d="M32 34q3.6 9.8-2.2 18.4" fill="none" stroke="#0A5249"
+          stroke-width="3.4" stroke-linecap="round"/>
+        <g transform="translate(32 28)">
+          <g transform="rotate(-45)"><path d="M0 0V-14a9.9 9.9 0 0 1 14 0h0a9.9 9.9 0 0 1 0 14Z" fill="url(#lf1)"/></g>
+          <g transform="rotate(45)"><path d="M0 0V-14a9.9 9.9 0 0 1 14 0h0a9.9 9.9 0 0 1 0 14Z" fill="url(#lf4)"/></g>
+          <g transform="rotate(135)"><path d="M0 0V-14a9.9 9.9 0 0 1 14 0h0a9.9 9.9 0 0 1 0 14Z" fill="url(#lf2)"/></g>
+          <g transform="rotate(225)"><path d="M0 0V-14a9.9 9.9 0 0 1 14 0h0a9.9 9.9 0 0 1 0 14Z" fill="url(#lf3)"/></g>
+          <circle r="2.6" fill="#FBF8F1" opacity=".92"/>
         </g>
       </svg>
       <span style="color:var(--tinta)">loto</span><span>lab</span>
@@ -4183,7 +4229,12 @@ async function carregarCalibracao(){
       folha.querySelector("[data-fechar]").click();
   });
   carregarCalibracao().then(()=>{ if(CALIBRACAO && S.tela==="gerar") pintar(); });
-  if("serviceWorker" in navigator){
+  /* O try/catch e a checagem de objeto não são zelo excessivo: um navegador em
+     que "serviceWorker" existe na chave mas vem indefinido — modo privativo,
+     WebView restrita — fazia esta linha lançar, e a exceção abortava o RESTO
+     do iniciar(), deixando o app pela metade sem nenhum sintoma claro. O
+     service worker é acessório; nada abaixo dele pode depender de ele existir. */
+  if("serviceWorker" in navigator && navigator.serviceWorker) try{
     navigator.serviceWorker.register("sw.js").then(reg => {
       /* Avisa quando uma versão nova terminou de baixar. Sem isto, a pessoa
          só veria a atualização na PRÓXIMA abertura — e foi exatamente assim
@@ -4213,7 +4264,7 @@ async function carregarCalibracao(){
       jaRecarregou = true;
       location.reload();
     });
-  }
+  }catch(e){ /* sem service worker: o app funciona igual, só não guarda casca */ }
 })();
 </script>
 </body>
