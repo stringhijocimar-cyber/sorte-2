@@ -58,19 +58,14 @@ jobs:
       - name: Commitar o que mudou
         run: |
           if [ -z "$(git status --porcelain dados/)" ]; then
-            echo "nada mudou"
-            exit 0
+            echo "nada mudou"; exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add dados/
-          git commit -m "Resultados atualizados automaticamente
-
-          $(node -e '
-            const {readdirSync,readFileSync}=require("fs");
-            for(const f of readdirSync("dados").filter(x=>x.endsWith(".json"))){
-              const d=JSON.parse(readFileSync("dados/"+f,"utf8"));
-              const u=d.concursos[d.concursos.length-1];
-              console.log(`  ${d.modalidade}: ${d.total} concursos, último ${u?u.concurso:"-"}`);
-            }')"
+          # Mensagem simples de propósito: a versão anterior montava o corpo do
+          # commit com $(node -e '...') dentro de heredoc, e o aninhamento de
+          # aspas quebrava o passo — que era o único a falhar num job que fazia
+          # todo o resto certo.
+          git commit -m "Resultados atualizados automaticamente"
           git push
