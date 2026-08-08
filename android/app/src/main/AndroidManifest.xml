@@ -2,7 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- INTERNET, e só ela.
+    <!-- Rede.
 
          Este bloco removia a permissão de rede com tools:node="remove". Era
          correto quando foi escrito: o app funcionava inteiramente offline, os
@@ -21,17 +21,31 @@
          é HTTPS. -->
     <uses-permission android:name="android.permission.INTERNET" />
 
-    <!-- O androidx.core injeta esta permissão de assinatura no manifesto de
-         quem o usa, para dar suporte a ContextCompat.registerReceiver. Nada
-         neste app nem no Capacitor registra BroadcastReceiver — conferido no
-         código-fonte das dependências. Removida para que o APK declare
-         literalmente zero permissões. -->
-    <permission
-        android:name="${applicationId}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
-        tools:node="remove" />
-    <uses-permission
-        android:name="${applicationId}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
-        tools:node="remove" />
+    <!-- Avisos no celular.
+
+         POST_NOTIFICATIONS é exigida a partir do Android 13; sem ela o sistema
+         descarta a notificação em silêncio e o app parece simplesmente não
+         avisar. RECEIVE_BOOT_COMPLETED faz o lembrete do próximo sorteio
+         sobreviver a reiniciar o aparelho: sem ela, quem desliga o celular à
+         noite perde o aviso da manhã seguinte. As três vêm do plugin de
+         notificações locais e estão declaradas aqui para ficarem visíveis a
+         quem lê este arquivo, em vez de aparecerem por mágica na fusão. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+
+    <!-- Esta permissão de assinatura, injetada pelo androidx.core, JÁ FOI
+         removida daqui. A justificativa era que nada no app registrava
+         BroadcastReceiver — e isso era verdade até o plugin de notificações
+         locais entrar, com três receivers (alarme, dispensa e restauração
+         após reinício). Mantê-la removida deixaria os avisos agendados sem
+         funcionar, e o defeito seria invisível: o app instala, abre e roda
+         normalmente; só o aviso nunca chega.
+
+         É o mesmo erro que já custou caro aqui: INTERNET estava removida com
+         a mesma justificativa, correta quando o app era offline e errada
+         assim que ele passou a buscar resultados. Um APK que não declara o
+         que usa não é enxuto, é quebrado. -->
 
     <application
         android:allowBackup="false"

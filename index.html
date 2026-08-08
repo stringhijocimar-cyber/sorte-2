@@ -616,7 +616,7 @@ const S = {
      modalidade e voltar não apagar o que a pessoa já tinha marcado. */
   marcadas:{}, avisos:[], teimosinhas:[], aprendizado:{}, jogoAberto:null,
   autoAnalise:true, tipoEstatistica:"dezenas", ordemEstatistica:"vezes",
-  calibracao:{}, buscaAutomatica:true, ultimaBusca:{}
+  calibracao:{}, buscaAutomatica:true, ultimaBusca:{}, avisarSorteio:true
 };
 
 /* Persistência tolerante: se o navegador bloquear, o app segue funcionando
@@ -2754,22 +2754,182 @@ function avisar(tipo, titulo, texto, chave){
   return true;
 }
 
-/* Notificação do sistema, quando a pessoa autorizou. O app funciona igual sem
-   ela — o sino no cabeçalho é a via garantida, porque não depende de permissão
-   nem de o app estar aberto no momento certo. */
-function notificarSistema(titulo, texto){
-  try{
-    if(typeof Notification === "undefined" || Notification.permission !== "granted") return;
-    new Notification(titulo, {body:texto, icon:"icone.svg", tag:"lotolab"});
-  }catch(e){ /* alguns navegadores exigem service worker; o sino cobre */ }
+/* ==================== avisos no celular ====================
+
+   Três camadas, da mais capaz para a mais garantida:
+
+   1. LocalNotifications do Capacitor — notificação Android de verdade. É a
+      única que toca com o app FECHADO, porque quem dispara é o AlarmManager do
+      sistema, e não JavaScript. Só existe dentro do APK.
+   2. Notification do navegador — funciona na aba aberta, no computador.
+   3. O sino no cabeçalho — sempre funciona, não depende de permissão nem de
+      plugin, e é por isso que ele nunca deixou de existir.
+
+   O que este app NÃO faz, e é bom dizer: não existe servidor empurrando aviso
+   para o seu celular. Isso exigiria o serviço de push do Google e uma máquina
+   nossa no ar — mais uma dependência de terceiro e uma conta a pagar, para um
+   app que roda inteiro no aparelho. O que existe é o próprio aparelho tocando
+   um alarme na hora marcada, o que cobre "o sorteio de hoje já saiu" sem
+   depender de ninguém. */
+
+const Avisos = {
+  plugin(){
+    try{
+      const c = (typeof Capacitor !== "undefined") ? Capacitor : null;
+      const p = c && c.Plugins && c.Plugins.LocalNotifications;
+      /* isNativePlatform separa o APK do navegador: no navegador o objeto pode
+         existir e não fazer nada, e um aviso que não aparece é pior que
+         nenhum, porque a pessoa para de conferir. */
+      return (p && c.isNativePlatform && c.isNativePlatform()) ? p : null;
+    }catch(e){ return null; }
+  },
+
+  disponivel(){
+    if(this.plugin()) return "nativo";
+    if(typeof Notification !== "undefined") return "navegador";
+    return "indisponivel";
+  },
+
+  async permissao(){
+    const p = this.plugin();
+    if(p){
+      try{
+        const atual = await p.checkPermissions();
+        if(atual.display === "granted") return "granted";
+        const pedido = await p.requestPermissions();
+        return pedido.display;
+      }catch(e){ return "indisponível"; }
+    }
+    try{
+      if(typeof Notification === "undefined") return "indisponível";
+      if(Notification.permission !== "default") return Notification.permission;
+      return await Notification.requestPermission();
+    }catch(e){ return "indisponível"; }
+  },
+
+  /* Id numérico estável a partir de um texto. O Android identifica notificação
+     por número inteiro; sem um id estável, reagendar o lembrete do mesmo
+     concurso empilharia avisos repetidos em vez de substituir o anterior. */
+  id(chave){
+    let h = 2166136261;
+    for(let i=0;i<chave.length;i++){ h ^= chave.charCodeAt(i); h = Math.imul(h, 16777619); }
+    return Math.abs(h % 2000000000) + 1;
+  },
+
+  async agora(titulo, texto, chave){
+    const p = this.plugin();
+    if(p){
+      try{
+        await p.schedule({notifications:[{
+          /* Sem channelId: o canal padrão é criado pelo próprio plugin. Um
+             canal nosso exigiria createChannel antes do primeiro agendamento,
+             e se essa chamada falhasse o Android 8+ descartaria a notificação
+             em silêncio — defeito invisível, que é o pior tipo. */
+          id: this.id(chave || titulo), title: titulo, body: texto,
+          smallIcon: "ic_stat_icone"
+        }]});
+        return true;
+      }catch(e){ /* cai para o navegador */ }
+    }
+    try{
+      if(typeof Notification === "undefined" || Notification.permission !== "granted") return false;
+      new Notification(titulo, {body:texto, icon:"icone-192.png", tag: chave || "lotolab"});
+      return true;
+    }catch(e){ return false; }
+  },
+
+  /* Agenda para uma data futura. É o que faz o aviso chegar com o app fechado. */
+  async agendar(quando, titulo, texto, chave){
+    const p = this.plugin();
+    if(!p) return false;
+    if(!(quando instanceof Date) || !Number.isFinite(quando.getTime())) return false;
+    if(quando.getTime() <= Date.now()) return false;
+    try{
+      await p.schedule({notifications:[{
+        id: this.id(chave), title: titulo, body: texto,
+        /* allowWhileIdle atravessa o modo soneca do Android. Sem exigir alarme
+           exato: o aviso é "o sorteio já saiu", e alguns minutos a mais não
+           mudam nada — enquanto SCHEDULE_EXACT_ALARM é permissão restrita e
+           pediria uma justificativa que este app não tem. */
+        schedule: {at: quando, allowWhileIdle: true},
+        smallIcon: "ic_stat_icone"
+      }]});
+      return true;
+    }catch(e){ return false; }
+  },
+
+  async cancelar(chaves){
+    const p = this.plugin();
+    if(!p || !chaves.length) return false;
+    try{
+      await p.cancel({notifications: chaves.map(c => ({id: this.id(c)}))});
+      return true;
+    }catch(e){ return false; }
+  },
+
+  async pendentes(){
+    const p = this.plugin();
+    if(!p) return [];
+    try{ return (await p.getPending()).notifications || []; }
+    catch(e){ return []; }
+  },
+};
+
+function notificarSistema(titulo, texto, chave){
+  /* Sem await: quem chama está no meio de conferir jogos, e travar essa conta
+     esperando o Android responder deixaria a tela parada por nada. */
+  Avisos.agora(titulo, texto, chave);
 }
 
 async function pedirPermissaoDeAviso(){
-  try{
-    if(typeof Notification === "undefined") return "indisponível";
-    if(Notification.permission !== "default") return Notification.permission;
-    return await Notification.requestPermission();
-  }catch(e){ return "indisponível"; }
+  return await Avisos.permissao();
+}
+
+/* ---- lembrete do próximo sorteio ----
+
+   O caso que motivou tudo: o celular precisa avisar que saiu concurso novo
+   mesmo com o app fechado. Sem servidor, o jeito honesto é o alarme do próprio
+   aparelho — o app já sabe a data do próximo sorteio de cada modalidade,
+   porque a Caixa a publica junto com o resultado.
+
+   Uma hora depois do sorteio, e não na hora: o resultado da Caixa demora a
+   sair, e avisar às 20h para a pessoa abrir e não achar nada é pior que não
+   avisar. */
+const HORA_DO_SORTEIO = 20;        /* 20h, horário de Brasília */
+const ATRASO_DO_AVISO = 90;        /* minutos depois do sorteio */
+
+function momentoDoAviso(dataISO){
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(String(dataISO || ""))) return null;
+  const [a, m, d] = dataISO.split("-").map(Number);
+  const quando = new Date(a, m - 1, d, HORA_DO_SORTEIO, 0, 0, 0);
+  quando.setMinutes(quando.getMinutes() + ATRASO_DO_AVISO);
+  return quando;
+}
+
+/* Reagenda os lembretes das modalidades que a pessoa acompanha. Chamado depois
+   de cada busca: a data do próximo concurso muda a cada sorteio, e um lembrete
+   marcado para a data velha nunca mais tocaria. */
+async function reagendarLembretes(){
+  if(S.avisarSorteio === false) return {agendados:0, motivo:"desligado"};
+  if(!Avisos.plugin()) return {agendados:0, motivo:"sem plugin nativo"};
+
+  const modalidades = [...new Set(S.jogos.map(j => j.modalidade))];
+  let agendados = 0;
+  for(const mod of modalidades){
+    const ultimo = ultimoResultado(mod);
+    if(!ultimo || !ultimo.dataProximo) continue;
+    const quando = momentoDoAviso(ultimo.dataProximo);
+    if(!quando) continue;
+    const numero = ultimo.concursoProximo || (Number(ultimo.concurso) + 1);
+    const chave = `sorteio:${mod}:${numero}`;
+    const quantos = S.jogos.filter(j => j.modalidade === mod).length;
+    const ok = await Avisos.agendar(quando,
+      `${MODALIDADES[mod].nome} — concurso ${numero}`,
+      `O sorteio já saiu. Abra para conferir ${quantos === 1 ? "seu jogo" : `seus ${quantos} jogos`}.`,
+      chave);
+    if(ok) agendados++;
+  }
+  return {agendados, modalidades: modalidades.length};
 }
 
 /* Faixa de prêmio atingida, ou null. Lotomania premia 0 acerto, e é por isso
@@ -2792,6 +2952,7 @@ function concursosDoJogo(j){
 
 function conferenciaAutomatica(){
   let novas = 0, premios = 0;
+  let melhor = null;
   const todos = S.jogos.concat(S.teimosinhas || []);
   todos.forEach(j => {
     j.conferencias = j.conferencias || [];
@@ -2804,6 +2965,10 @@ function conferenciaAutomatica(){
       const faixa = faixaAtingida(j.modalidade, acertos);
       if(faixa !== null){
         premios++;
+        /* Guarda o melhor achado da rodada para a notificação poder dizer
+           QUANTO foi. Melhor = mais acertos; empate fica com o primeiro. */
+        if(!melhor || acertos > melhor.acertos)
+          melhor = {acertos, modalidade:j.modalidade, concurso:r.concurso, jogo:j.id};
         const nome = MODALIDADES[j.modalidade].nome;
         avisar("premio", `${nome}: ${faixa} acerto${faixa===1?"":"s"}`,
           `Concurso ${r.concurso} — o jogo ${j.dezenas.map(pad).join(" ")} está numa faixa de prêmio. Confira no volante oficial antes de comemorar.`,
@@ -2815,7 +2980,7 @@ function conferenciaAutomatica(){
     Guardar.gravar("jogos", S.jogos);
     Guardar.gravar("teimosinhas", S.teimosinhas);
   }
-  return {novas, premios};
+  return {novas, premios, melhor};
 }
 
 /* Chamado sempre que o histórico muda: confere, avisa quantos concursos
@@ -2832,9 +2997,21 @@ function aoMudarHistorico(quantosConcursos, origem){
               `hist:${origem}:${S.resultados.length}:${Date.now()}`))
       notificarSistema(titulo, texto);
   }
-  if(r.premios) notificarSistema("Faixa de prêmio atingida",
-    "Abra o LotoLab para ver qual jogo e qual concurso.");
+  /* O aviso do prêmio vem depois e separado do aviso de concurso novo, e diz
+     de quanto foi: "seu jogo foi premiado" sem número manda a pessoa abrir o
+     app para descobrir que acertou 11 na Lotofácil. */
+  if(r.premios){
+    const detalhe = r.melhor
+      ? `${r.melhor.acertos} acertos na ${MODALIDADES[r.melhor.modalidade].nome}, concurso ${r.melhor.concurso}.`
+      : "Abra o LotoLab para ver qual jogo e qual concurso.";
+    notificarSistema(
+      r.premios === 1 ? "Seu jogo foi premiado" : `${r.premios} jogos premiados`,
+      detalhe, `premio:${Date.now()}`);
+  }
   if(S.autoAnalise !== false) analisarPendentes();
+  /* Reagenda o alarme do próximo sorteio: a data mudou agora que entrou
+     concurso novo, e o lembrete antigo apontava para uma data que já passou. */
+  reagendarLembretes();
   return r;
 }
 
@@ -4159,6 +4336,19 @@ T.resultados = () => {
           Uma vez a cada 12 horas, ao abrir o app, só nas modalidades que você já
           acompanha. Falha em silêncio quando não há sinal.</span></span>
     </label>
+    <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;
+      border:1px solid var(--linha);border-radius:12px;margin-bottom:10px;cursor:pointer">
+      <input type="checkbox" id="r-avisar" ${S.avisarSorteio!==false?"checked":""}
+        style="width:20px;height:20px;flex:none;accent-color:var(--acaso)">
+      <span style="flex:1;font-size:.86rem"><b>Avisar no celular quando sair sorteio</b>
+        <span style="display:block;font-size:.76rem;color:var(--secundaria)">
+          Um alarme do próprio aparelho, marcado para 90 minutos depois de cada
+          sorteio das loterias em que você tem jogo — toca com o app fechado.
+          Quando o resultado entra, o app também avisa se algum jogo seu foi
+          premiado, e de quanto.</span></span>
+    </label>
+    <div id="r-avisos-estado"></div>
+
     <div class="nota atencao"><strong>A busca online tenta ${FONTES.length} fontes em
       sequência</strong> — a da Caixa primeiro, depois um espelho e um proxy de CORS. Ela
       existe porque o serviço oficial não autoriza chamadas de outra origem: no navegador
@@ -4410,6 +4600,65 @@ function acoesNovas(){
     S.buscaAutomatica = e.target.checked;
     Guardar.gravar("buscaAutomatica", S.buscaAutomatica);
   };
+
+  const ravisar = $("#r-avisar");
+  const estadoAvisos = $("#r-avisos-estado");
+  const contarLembretes = async () => {
+    if(!estadoAvisos) return;
+    if(S.avisarSorteio === false){
+      estadoAvisos.innerHTML = `<div class="nota">Avisos desligados. O sino no
+        cabeçalho continua registrando tudo.</div>`;
+      return;
+    }
+    const via = Avisos.disponivel();
+    if(via === "indisponivel"){
+      estadoAvisos.innerHTML = `<div class="nota atencao">Este navegador não tem
+        notificação. Dentro do app instalado no celular funciona; aqui, o sino
+        do cabeçalho é a via.</div>`;
+      return;
+    }
+    if(via === "navegador"){
+      estadoAvisos.innerHTML = `<div class="nota">Fora do app instalado, o aviso
+        só aparece com esta aba aberta. <strong>No APK</strong> o alarme é do
+        próprio Android e toca com o app fechado.</div>`;
+      return;
+    }
+    const pend = await Avisos.pendentes();
+    const meus = pend.filter(n => n.title && /concurso/i.test(n.title));
+    estadoAvisos.innerHTML = meus.length
+      ? `<div class="nota"><strong>${meus.length} lembrete${meus.length>1?"s":""}
+          agendado${meus.length>1?"s":""}</strong>: ${esc(meus.map(n=>n.title).join(" · "))}.</div>`
+      : `<div class="nota">Nenhum lembrete agendado ainda. Ele é marcado quando o
+          app traz um resultado com a data do próximo sorteio, nas loterias em
+          que você tem jogo salvo.</div>`;
+  };
+
+  if(ravisar) ravisar.onchange = async e => {
+    S.avisarSorteio = e.target.checked;
+    Guardar.gravar("avisarSorteio", S.avisarSorteio);
+    if(S.avisarSorteio){
+      const p = await pedirPermissaoDeAviso();
+      if(p !== "granted"){
+        estadoAvisos.innerHTML = `<div class="nota atencao">O sistema não
+          autorizou (${esc(String(p))}). Sem autorização o Android descarta o
+          aviso em silêncio — libere em Ajustes › Notificações.</div>`;
+        return;
+      }
+      await reagendarLembretes();
+    } else {
+      /* Desligar cancela o que já estava marcado. Deixar alarmes para trás
+         faria o app avisar depois de a pessoa ter pedido para parar. */
+      const mods = [...new Set(S.jogos.map(j => j.modalidade))];
+      const chaves = [];
+      mods.forEach(m => {
+        const u = ultimoResultado(m);
+        if(u) chaves.push(`sorteio:${m}:${u.concursoProximo || (Number(u.concurso)+1)}`);
+      });
+      await Avisos.cancelar(chaves);
+    }
+    contarLembretes();
+  };
+  contarLembretes();
 
   /* --- buscar resultado direto na tela de conferir --- */
   const preencher = async (qual) => {
@@ -4920,6 +5169,7 @@ async function carregarCalibracao(){
   S.autoAnalise = Guardar.ler("autoAnalise", true);
   S.calibracao = Guardar.ler("calibracao", {});
   S.buscaAutomatica = Guardar.ler("buscaAutomatica", true);
+  S.avisarSorteio = Guardar.ler("avisarSorteio", true);
   S.bancadaAlvos = Guardar.ler("bancadaAlvos", 10);
   S.ultimaBusca = Guardar.ler("ultimaBusca", {});
   S.modalidade = Guardar.ler("modalidade", S.modalidade);

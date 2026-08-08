@@ -159,6 +159,7 @@ const EXPOSTOS = [
   "sugestaoDoSistema", "tabelaSugestao", "nomeDoMetodo", "distribuicoesDoHistorico",
   "aprendizadoNaSugestao",
   "ganhadoresDoConcurso", "seloGanhadores", "coberturaDeGanhadores", "resumoGanhadores",
+  "Avisos", "momentoDoAviso", "reagendarLembretes", "notificarSistema", "conferenciaAutomatica",
 ];
 const epilogo = `\n;globalThis.__motor = {${EXPOSTOS.map((n) => `${n}: typeof ${n} !== "undefined" ? ${n} : undefined`).join(", ")}};\n`;
 vm.runInContext(fonte + epilogo, contexto, { filename: "index.html:script" });
@@ -2366,6 +2367,101 @@ secao("23. Teve ganhador?");
     contexto.resumoGanhadores([comGanhador]).texto);
 
   S.resultados = guardado; S.modalidade = guardadaMod;
+}
+
+/* ==================================================================
+   24. Avisos no celular
+   ==================================================================
+   O pedido: o celular avisar sobre concurso novo e sobre jogo conferido. O que
+   torna isso possível com o app FECHADO é o alarme do próprio Android, e não
+   JavaScript — nenhum código deste arquivo roda com o app fechado. Estes testes
+   cobrem a lógica que decide QUANDO e SE agendar; o disparo em si é do sistema.
+
+   O caso mais importante aqui não é o aviso chegar: é ele NÃO chegar quando não
+   deve. Um app que avisa demais é desinstalado, e um que avisa o que a pessoa
+   desligou é pior que um que não avisa. */
+secao("24. Avisos no celular");
+{
+  const S = motor.S;
+  const guardado = S.resultados, guardaJogos = S.jogos, guardaAvisar = S.avisarSorteio;
+
+  /* --- o horário do lembrete --- */
+  const q = contexto.momentoDoAviso("2026-08-12");
+  checar("o lembrete cai no dia do sorteio", q.getFullYear() === 2026 &&
+    q.getMonth() === 7 && q.getDate() === 12, q.toString().slice(0, 21));
+  checar("e 90 minutos DEPOIS do sorteio, não na hora",
+    q.getHours() === 21 && q.getMinutes() === 30,
+    `${q.getHours()}h${String(q.getMinutes()).padStart(2,"0")}`);
+  checar("data inválida não vira alarme", contexto.momentoDoAviso("12/08/2026") === null);
+  checar("data vazia também não", contexto.momentoDoAviso("") === null);
+  checar("nem undefined", contexto.momentoDoAviso(undefined) === null);
+
+  /* --- id estável: reagendar substitui, não empilha --- */
+  const a = contexto.Avisos.id("sorteio:mega-sena:2824");
+  const b = contexto.Avisos.id("sorteio:mega-sena:2824");
+  const c = contexto.Avisos.id("sorteio:mega-sena:2825");
+  checar("a mesma chave dá sempre o mesmo id", a === b, String(a));
+  checar("chaves diferentes dão ids diferentes", a !== c);
+  checar("o id é inteiro positivo (o Android exige)",
+    Number.isInteger(a) && a > 0 && a < 2147483647, String(a));
+  const ids = new Set();
+  for(let i = 0; i < 3000; i++) ids.add(contexto.Avisos.id(`sorteio:mega-sena:${i}`));
+  checar("3000 chaves seguidas não colidem", ids.size === 3000, `${ids.size} ids`);
+
+  /* --- fora do APK, nada é agendado, e o app diz isso em vez de fingir --- */
+  checar("sem plugin nativo, não há plugin", contexto.Avisos.plugin() === null);
+  checar("e o app declara a via disponível",
+    ["nativo","navegador","indisponivel"].includes(contexto.Avisos.disponivel()),
+    contexto.Avisos.disponivel());
+
+  S.jogos = [{id:"j1", modalidade:"mega-sena", dezenas:[1,2,3,4,5,6],
+    data:"2026-08-01", conferencias:[]}];
+  S.resultados = [{concurso:2823, data:"2026-08-05", modalidade:"mega-sena",
+    dezenas:[4,11,23,38,45,52], dataProximo:"2026-08-08", concursoProximo:2824}];
+  S.avisarSorteio = true;
+  const semPlugin = await contexto.reagendarLembretes();
+  checar("fora do APK nenhum lembrete é agendado",
+    semPlugin.agendados === 0, semPlugin.motivo || "");
+
+  /* --- desligado é desligado, mesmo com tudo pronto para agendar --- */
+  S.avisarSorteio = false;
+  const desligado = await contexto.reagendarLembretes();
+  checar("com o aviso desligado, nem tenta agendar",
+    desligado.agendados === 0 && desligado.motivo === "desligado", desligado.motivo);
+  S.avisarSorteio = true;
+
+  /* --- a conferência automática informa QUANTO foi, e não só que houve --- */
+  S.jogos = [{id:"j1", modalidade:"lotofacil",
+    dezenas:[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15], data:"2026-08-01", conferencias:[]}];
+  S.teimosinhas = [];
+  S.resultados = [{concurso:900, data:"2026-08-05", modalidade:"lotofacil",
+    dezenas:[1,2,3,4,5,6,7,8,9,10,11,12,13,16,17]}];
+  const conf = contexto.conferenciaAutomatica();
+  checar("a conferência automática acha o prêmio", conf.premios === 1, `${conf.premios}`);
+  checar("e diz qual foi o melhor achado, para a notificação ter conteúdo",
+    conf.melhor && conf.melhor.acertos === 13 && conf.melhor.concurso === 900,
+    conf.melhor ? `${conf.melhor.acertos} acertos no ${conf.melhor.concurso}` : "sem melhor");
+  checar("sem prêmio nenhum, não há 'melhor' para anunciar",
+    (() => {
+      S.jogos = [{id:"j2", modalidade:"mega-sena", dezenas:[1,2,3,4,5,6],
+        data:"2026-08-01", conferencias:[]}];
+      S.resultados = [{concurso:1, data:"2026-08-05", modalidade:"mega-sena",
+        dezenas:[10,20,30,40,50,60]}];
+      const r = contexto.conferenciaAutomatica();
+      return r.premios === 0 && !r.melhor;
+    })());
+
+  /* --- a tela --- */
+  S.jogos = []; S.resultados = [];
+  const tela = contexto.T.resultados();
+  checar("a tela oferece o aviso no celular", /Avisar no celular quando sair sorteio/.test(tela));
+  checar("e explica que toca com o app fechado", /com o app fechado/.test(tela));
+  checar("e diz que o aviso do prêmio informa de quanto",
+    /premiado, e de quanto/.test(tela));
+  checar("a tela não promete aviso que o app não sabe entregar",
+    !/push|servidor (nos )?avisa|avisamos você/i.test(tela));
+
+  S.resultados = guardado; S.jogos = guardaJogos; S.avisarSorteio = guardaAvisar;
 }
 
 /* ---------- saída ---------- */
