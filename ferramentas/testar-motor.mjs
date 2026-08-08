@@ -156,6 +156,7 @@ const EXPOSTOS = [
   "sequencias", "ciclos", "linhasEColunas", "historicoDe", "TIPOS_ESTATISTICA",
   "assinaturaHistorico", "modalidadesPendentes", "analisarPendentes", "aplicarCorrecao",
   "aoMudarHistorico", "guardarResultados",
+  "sugestaoDoSistema", "tabelaSugestao", "nomeDoMetodo", "distribuicoesDoHistorico",
 ];
 const epilogo = `\n;globalThis.__motor = {${EXPOSTOS.map((n) => `${n}: typeof ${n} !== "undefined" ? ${n} : undefined`).join(", ")}};\n`;
 vm.runInContext(fonte + epilogo, contexto, { filename: "index.html:script" });
@@ -706,11 +707,23 @@ checar("evitar OUTRO concurso nao zera os acertos", outro.media > 0,
        correto e a media sobre alvos sorteados, nao um alvo escolhido. --- */
 const alvoHumano = [1, 2, 3, 4, 5, 6];
 const rHumano = contexto.bancada("mega-sena", alvoHumano, { repeticoes: 25, quantos: 3 });
-const ratHumano = rHumano.linhas.find(l => l.id === "rateio");
-const uniHumano = rHumano.linhas.find(l => l.id === "uniforme");
+/* O metodo "rateio" saiu da lista oferecida, mas a funcao continua no arquivo
+   como reserva — e a armadilha que ela ilustra continua real, entao o teste
+   continua medindo direto na funcao em vez de pela bancada. */
+const mediaContra = (gerar) => {
+  const alvo = new Set(alvoHumano);
+  let soma = 0, n = 0;
+  for (let i = 0; i < 25; i++)
+    for (const j of gerar("mega-sena", 3, 6)) {
+      soma += j.filter((d) => alvo.has(d)).length; n++;
+    }
+  return soma / n;
+};
+const ratHumano = mediaContra(contexto.gerarRateio);
+const uniHumano = mediaContra(contexto.gerarUniforme);
 checar("com sorteio de cara humana, o rateio acerta menos — efeito estrutural",
-  ratHumano.media < uniHumano.media,
-  `rateio=${ratHumano.media.toFixed(3)} uniforme=${uniHumano.media.toFixed(3)}`);
+  ratHumano < uniHumano,
+  `rateio=${ratHumano.toFixed(3)} uniforme=${uniHumano.toFixed(3)}`);
 
 /* Sobre alvos uniformes — que e como os sorteios reais saem — todo metodo
    converge para a media do acaso. Esta e a afirmacao que o app faz, e e a
@@ -2041,6 +2054,151 @@ secao("19. Conferir: texto e busca");
 
 
 
+
+/* ==================================================================
+   22. Sugestão do sistema, e a retirada do "otimizado para rateio"
+   ==================================================================
+   O dono do app tirou "Otimizado para rateio" por não acreditar nele, e a
+   medida deu razão: `calibrarPopularidade` precisa de 30 concursos com
+   ganhadores publicados e o histórico tem 26 somando as oito modalidades —
+   nunca rodou. No lugar entrou uma sugestão que não pesa comportamento
+   humano nenhum: só compara o jogo com a distribuição observada de cada
+   estatística. */
+secao("22. Sugestão do sistema e retirada do rateio");
+{
+  const S = motor.S;
+  const guardado = S.resultados, guardadaMod = S.modalidade, guardadoTam = S.tamanho;
+
+  checar("o rateio não é mais oferecido como estratégia",
+    !motor.METODOS.some((m) => m.id === "rateio"),
+    motor.METODOS.map((m) => m.id).join(", "));
+  checar("nem o contraste, que era o mesmo mecanismo com outro nome",
+    !motor.METODOS.some((m) => m.id === "contraste"));
+  checar("e nenhuma descrição na tela ainda vende rateio esperado",
+    !motor.METODOS.some((m) => /rateio/i.test(m.desc)),
+    motor.METODOS.map((m) => m.nome).join(" · "));
+
+  /* "Evita o concurso anterior" passou a fazer só o que o nome diz. O teste
+     mede o efeito, e não a implementação: contra um concurso anterior
+     conhecido, ele tem de repetir menos dezenas que o sorteio uniforme. */
+  {
+    const anterior = [1, 2, 3, 4, 5, 6];
+    const conta = (jogos) => jogos.reduce(
+      (soma, j) => soma + j.filter((d) => anterior.includes(d)).length, 0);
+    const anti = conta(contexto.gerarAntirepeticao("mega-sena", 20, 6, anterior));
+    const uni = conta(contexto.gerarUniforme("mega-sena", 20, 6));
+    checar("evitar o anterior repete menos que o uniforme",
+      anti < uni, `anti=${anti} uniforme=${uni} dezenas repetidas em 20 jogos`);
+  }
+  /* Sem `|| true`: um teste que passa de qualquer jeito é pior que nenhum.
+     O método corrente tem de ser um dos que a lista realmente oferece. */
+  checar("e o método corrente é um dos que a lista oferece",
+    motor.METODOS.some((m) => m.id === S.metodo), S.metodo);
+
+  /* Jogo salvo com um método retirado não pode derrubar a tela de ninguém. */
+  checar("um jogo salvo no método retirado ainda tem nome",
+    /rateio/i.test(motor.nomeDoMetodo("rateio")), motor.nomeDoMetodo("rateio"));
+  checar("e um id nunca visto também não quebra",
+    typeof motor.nomeDoMetodo("inventado-em-2031") === "string",
+    motor.nomeDoMetodo("inventado-em-2031"));
+  checar("método vigente continua com o nome da lista",
+    motor.nomeDoMetodo("uniforme") === "Sorteio uniforme");
+
+  /* Sem concurso anterior, "evita o anterior" caía no rateio — o método
+     retirado entrando pela porta dos fundos. Agora cai no uniforme. */
+  S.resultados = [];
+  S.modalidade = "mega-sena";
+  const semAnterior = contexto.gerarAntirepeticao("mega-sena", 3, 6, null);
+  checar("sem concurso anterior, o antirepeticao gera assim mesmo",
+    semAnterior.length === 3 && semAnterior.every((j) => j.length === 6));
+
+  /* --- a sugestão --- */
+  S.modalidade = "mega-sena";
+  S.tamanho = null;
+  S.resultados = historicoSemeado("mega-sena", 60, 6, 400, 20260809);
+
+  const curto = { ...motor.S };
+  S.resultados = historicoSemeado("mega-sena", 60, 6, 10, 1);
+  const recusa = contexto.sugestaoDoSistema("mega-sena", 6);
+  checar("com histórico curto, a sugestão recusa em vez de inventar",
+    !!recusa.erro && /faltam 10/.test(recusa.erro), recusa.erro);
+  void curto;
+
+  S.resultados = historicoSemeado("mega-sena", 60, 6, 400, 20260809);
+  const s1 = contexto.sugestaoDoSistema("mega-sena", 6, { semente: 777 });
+  checar("a sugestão devolve um jogo válido",
+    s1.dezenas.length === 6 && new Set(s1.dezenas).size === 6 &&
+    s1.dezenas.every((d) => d >= 1 && d <= 60), s1.dezenas.join(" "));
+  checar("ordenado", s1.dezenas.every((d, i) => i === 0 || d > s1.dezenas[i - 1]));
+  checar("usa TODAS as medidas do perfil, mais as repetidas do anterior",
+    s1.linhas.length === contexto.medidasDoPerfil("mega-sena").length + 1,
+    `${s1.linhas.length} medidas`);
+
+  /* O ponto do método: nenhuma medida num extremo. Comparado com o que uma
+     candidata qualquer entrega, e não com um número escolhido a dedo. */
+  checar("a medida mais rara da sugestão é mais comum que a de um jogo qualquer",
+    s1.menor > s1.medianaDoAcaso,
+    `sugestão ${(s1.menor * 100).toFixed(1)}% vs acaso ${(s1.medianaDoAcaso * 100).toFixed(1)}%`);
+  checar("e nenhuma das medidas ficou abaixo desse mínimo",
+    s1.linhas.every((l) => l.fracao >= s1.menor - 1e-12));
+  checar("toda linha diz em quantos concursos aquilo apareceu",
+    s1.linhas.every((l) => Number.isInteger(l.concursos) && l.concursos >= 0 &&
+      l.fracao >= 0 && l.fracao <= 1));
+
+  const s2 = contexto.sugestaoDoSistema("mega-sena", 6, { semente: 777 });
+  checar("a mesma semente dá exatamente a mesma sugestão",
+    s2.dezenas.join(",") === s1.dezenas.join(","), s2.dezenas.join(" "));
+  const s3 = contexto.sugestaoDoSistema("mega-sena", 6, { semente: 778 });
+  checar("semente diferente dá outra sugestão",
+    s3.dezenas.join(",") !== s1.dezenas.join(","));
+
+  /* Mais candidatas não pode piorar o mínimo: é uma busca por máximo. */
+  const poucas = contexto.sugestaoDoSistema("mega-sena", 6, { semente: 5, candidatas: 20 });
+  const muitas = contexto.sugestaoDoSistema("mega-sena", 6, { semente: 5, candidatas: 400 });
+  checar("mais candidatas não pioram a escolha",
+    muitas.menor >= poucas.menor,
+    `20 -> ${(poucas.menor * 100).toFixed(1)}% · 400 -> ${(muitas.menor * 100).toFixed(1)}%`);
+
+  /* Respeita o tamanho pedido, inclusive fora do mínimo da modalidade. */
+  const grande = contexto.sugestaoDoSistema("mega-sena", 8, { semente: 3 });
+  checar("respeita o tamanho pedido", grande.dezenas.length === 8);
+
+  /* A tela: o aviso que não pode faltar, e a ausência do que não pode existir. */
+  const html = contexto.tabelaSugestao(s1);
+  /* A primeira versão deste teste aceitava, como alternativa, a frase
+     "aumenta a sua chance" — que é exatamente a mentira que ele existe para
+     impedir. Agora exige a negação, e reprova a afirmação. */
+  checar("a tela diz que isto NÃO aumenta a chance",
+    /Isto\s+não\s+aumenta\s+a\s+sua\s+chance/.test(html));
+  checar("e em nenhum lugar afirma o contrário",
+    !/(?<!não\s)aumenta(m)?\s+(a\s+sua|as\s+suas|sua)\s+chances?/i
+      .test(html.replace(/Isto não aumenta a sua chance/g, "")));
+  checar("a tela explica por que uma configuração é comum",
+    /mais\s+combinações<\/em>\s+com\s+ela/.test(html));
+  checar("a tela mostra a referência do acaso, não só o número da sugestão",
+    /sem critério/.test(html));
+  checar("a tela não promete previsão",
+    !/prevê|previsão d[oa] próximo|vai sair/i.test(html.replace(/Não é previsão/g, "")));
+  checar("a tela da sugestão renderiza as dez medidas",
+    (html.match(/<tr>/g) || []).length === s1.linhas.length + 1,
+    `${(html.match(/<tr>/g) || []).length} linhas de tabela`);
+  const vazio = contexto.tabelaSugestao({ erro: "faltam 5 concursos" });
+  checar("erro vira aviso na tela, não tabela vazia",
+    /faltam 5 concursos/.test(vazio) && !/<table/.test(vazio));
+
+  /* Lotofácil: o universo e a quantidade mudam, a sugestão tem de acompanhar. */
+  S.resultados = historicoSemeado("lotofacil", 25, 15, 300, 4242);
+  S.modalidade = "lotofacil";
+  const lf = contexto.sugestaoDoSistema("lotofacil", 15, { semente: 9 });
+  checar("funciona na Lotofácil também",
+    lf.dezenas.length === 15 && lf.dezenas.every((d) => d >= 1 && d <= 25),
+    lf.dezenas.join(" "));
+  checar("e na Lotofácil a medida mais rara também bate o acaso",
+    lf.menor > lf.medianaDoAcaso,
+    `${(lf.menor * 100).toFixed(1)}% vs ${(lf.medianaDoAcaso * 100).toFixed(1)}%`);
+
+  S.resultados = guardado; S.modalidade = guardadaMod; S.tamanho = guardadoTam;
+}
 
 /* ---------- saída ---------- */
 console.log(linhas.join("\n"));

@@ -419,6 +419,20 @@ td{padding:6px 7px;border-bottom:1px solid var(--trama)}
 .barra-teste i{position:absolute;top:0;bottom:0;left:0;background:var(--acaso);border-radius:5px}
 .barra-teste.fora i{background:var(--alerta)}
 
+/* Barra da tabela de medidas da sugestão. Mais baixa que a barra-teste porque
+   aparece dez vezes seguidas dentro de uma tabela, e altura de barra de
+   progresso ali viraria uma escada. */
+.barra-med{height:6px;border-radius:3px;background:var(--trama);overflow:hidden;
+  position:relative}
+.barra-med i{position:absolute;top:0;bottom:0;left:0;background:var(--acaso);
+  border-radius:3px}
+.fraco{color:var(--secundaria);font-size:.72rem}
+.topo-sugestao{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+/* Botão de ação em segundo plano: mesma forma, peso visual menor — a sugestão
+   é uma oferta, não o caminho principal da tela. */
+.acao.secundaria{background:transparent;color:var(--tinta);
+  box-shadow:inset 0 0 0 1.5px var(--grade)}
+
 @media (prefers-reduced-motion:no-preference){
   .ficha{animation:entra .22s ease-out both}
   @keyframes entra{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
@@ -506,21 +520,49 @@ const MODALIDADES = {
 const METODOS = [
   {id:"uniforme", nome:"Sorteio uniforme",
    desc:"Cada combinação com a mesma chance. É a referência — e é tão boa quanto qualquer outra."},
-  {id:"rateio", nome:"Otimizado para rateio",
-   desc:"Evita padrões que muita gente marca (datas, sequências, desenhos). Mesma chance de acertar, menos gente para dividir se acertar."},
+  /* "Otimizado para rateio" foi retirado a pedido do dono do app, e a medida
+     dá razão a ele: o método pesava padrões humanos com números SUPOSTOS, não
+     medidos. A calibração existe (`calibrarPopularidade`) e precisa de 30
+     concursos com ganhadores publicados por modalidade; o histórico deste app
+     tem 26 no total, somando as oito. Ela nunca rodou uma vez sequer. Um
+     método que se apresenta como "otimizado" apoiado em peso que ninguém
+     conferiu é exatamente o tipo de promessa que este app existe para não
+     fazer. A função `gerarRateio` continua no arquivo porque outras partes a
+     usam como reserva, mas deixou de ser oferecida como estratégia. */
   {id:"cobertura", nome:"Cobertura espalhada",
    desc:"Distribui os jogos pelo volante para que se repitam pouco entre si. Não muda a chance de cada jogo."},
   {id:"antirepeticao", nome:"Evita o concurso anterior",
    desc:"Muita gente repete as dezenas que acabaram de sair. Evitá-las não muda sua chance — muda com quantas pessoas você dividiria."},
-  {id:"contraste", nome:"Contraste por restrição",
-   desc:"Em vez de peso suave, descarta a candidata que não fica abaixo da referência em datas, sequências, soma e desenho. Mesma chance; rateio esperado menor."},
+  /* "Contraste por restrição" saiu junto com o rateio, e pelo mesmo motivo: era
+     o mesmo mecanismo — fugir do que o público marca — trocando peso suave por
+     restrição dura, apoiado nos mesmos pesos que nunca foram conferidos com
+     ganhadores reais. Manter um e tirar o outro seria devolver pela porta dos
+     fundos o que saiu pela frente. */
   {id:"fechamento", nome:"Fechamento com garantia verificada",
    desc:"A partir das dezenas que você marcar, monta jogos com piso de acertos comprovado por enumeração. Disponível na Lotofácil."}
 ];
 
+/* Nome de exibição de um método, inclusive de métodos que não existem mais.
+
+   Jogos ficam salvos no aparelho com o id do método que os montou. Quando
+   "Otimizado para rateio" saiu da lista, todo jogo salvo por ele continuou lá —
+   e um `METODOS.find(...).nome` devolveria `undefined.nome` e derrubaria a
+   tela de quem tinha esses jogos. Retirar uma opção não pode apagar o passado
+   de quem já usou o app. */
+const METODOS_APOSENTADOS = {
+  rateio: "Otimizado para rateio (retirado)",
+  contraste: "Contraste por restrição",
+  sugestao: "Sugestão do sistema",
+};
+function nomeDoMetodo(id){
+  const m = METODOS.find(x => x.id === id);
+  if(m) return m.nome;
+  return METODOS_APOSENTADOS[id] || String(id || "método desconhecido");
+}
+
 /* ============================ estado ============================ */
 const S = {
-  tela:"gerar", modalidade:"lotofacil", metodo:"rateio", quantidade:3,
+  tela:"gerar", modalidade:"lotofacil", metodo:"uniforme", quantidade:3,
   tamanho:null, dezenasFechamento:[], jFechamento:14, garantia:13,
   jogos:[], resultados:[], tema:"claro", ultimoLote:[],
   bancadaRep:20, bancadaQtd:3, bancadaAlvos:10,
@@ -825,10 +867,17 @@ function ultimoResultado(m){
 }
 
 function gerarAntirepeticao(m, quantos, tam, dezenasEvitadas){
-  /* Repetir as dezenas do concurso que acabou de sair é um dos hábitos mais
-     comuns de quem aposta. Evitá-las não mexe na chance de acerto — mexe em
-     quantas pessoas dividiriam o prêmio. Sem concurso registrado não há o que
-     evitar, e o método é honesto quanto a isso: vira o rateio comum.
+  /* Repetir as dezenas do concurso que acabou de sair é um hábito comum de
+     quem aposta. Evitá-las não mexe na chance de acerto — a urna não tem
+     memória, e o sorteio de amanhã pode repetir cinco dezenas de hoje.
+
+     Este método faz UMA coisa, e é a que o nome diz: entre candidatas
+     sorteadas uniformemente, fica com as que menos repetem o último resultado.
+     Ele já misturava a isso o escore de popularidade — o modelo que saiu do
+     app junto com o "otimizado para rateio" —, e o resultado era um método que
+     prometia uma coisa e fazia duas, uma delas apoiada em pesos que ninguém
+     nunca conferiu. Agora o desempate entre candidatas com o mesmo número de
+     repetidas é a ordem em que foram sorteadas, ou seja, o acaso.
 
      `dezenasEvitadas` existe para a bancada poder informar QUAL concurso é o
      anterior ao que está sendo conferido. Sem esse parâmetro a bancada usaria
@@ -836,15 +885,21 @@ function gerarAntirepeticao(m, quantos, tam, dezenasEvitadas){
      sorteio que ele foi mandado evitar — o que produziria um déficit de
      acertos garantido, e falso. */
   const base = dezenasEvitadas || (ultimoResultado(m) || {}).dezenas;
-  if(!base) return gerarRateio(m, quantos, tam);
+  /* Sem concurso anterior não há o que evitar, e a reserva é o sorteio
+     uniforme. Já foi o rateio; deixou de ser quando o rateio saiu das
+     estratégias oferecidas — cair num método retirado seria oferecê-lo pela
+     porta dos fundos. */
+  if(!base) return gerarUniforme(m, quantos, tam);
   const evitar = new Set(base);
   const candidatas = Math.min(1400, 220*quantos);
   const lista = [];
   for(let i=0;i<candidatas;i++){
     const j = sortear(m, tam);
-    const repetidas = j.filter(d=>evitar.has(d)).length;
-    lista.push({j, e: escorePopularidade(j, m) + repetidas*0.35});
+    lista.push({j, e: j.filter(d=>evitar.has(d)).length});
   }
+  /* `sort` é estável em JavaScript desde o ES2019: candidatas com o mesmo
+     número de repetidas mantêm a ordem em que saíram da urna, que é aleatória.
+     É de propósito — não há critério honesto para preferir uma à outra. */
   lista.sort((a,b)=> a.e - b.e);
   const saida = [], vistos = new Set();
   for(const c of lista){
@@ -1135,6 +1190,19 @@ T.gerar = () => {
     </div>
   </div>
 
+  <div class="carta" id="sugestao-carta">
+    <div class="topo-sugestao">
+      <div>
+        <b style="font-size:1.02rem">Sugestão do sistema</b>
+        <span style="display:block;font-size:.8rem;color:var(--secundaria);margin-top:2px">
+          Um jogo montado com <strong>todas</strong> as estatísticas do
+          histórico, sem estratégia nenhuma por trás.</span>
+      </div>
+    </div>
+    <button class="acao secundaria" id="s-go" style="margin-top:10px">Sugerir um jogo</button>
+    <div id="s-saida"></div>
+  </div>
+
   <h2 style="margin:16px 0 8px">como montar</h2>
   ${METODOS.map(mt=>{
     const indisp = mt.id==="fechamento" && S.modalidade!=="lotofacil";
@@ -1163,37 +1231,70 @@ T.gerar = () => {
 
   <div id="g-saida"></div>
 
-  ${S.metodo==="rateio" ? `<div class="nota">
-    <strong>Pesos em uso:</strong> ${(() => {
-      const cal = S.calibracao && S.calibracao[S.modalidade];
-      if(cal && !cal.erro && cal.util){
-        const top = cal.coeficientes.slice().sort((a,b)=>b.coeficiente-a.coeficiente)[0];
-        return `<strong style="color:var(--acaso)">medidos neste aparelho</strong>, com
-          ${inf(cal.n)} concursos desta modalidade em que a Caixa publicou ganhadores
-          (R² ${nf(cal.r2,3)}). O que mais atrai ganhadores aqui:
-          <strong>${esc(top.nome)}</strong>. Cada concurso novo com rateio refina isso.`;
-      }
-      if(cal && !cal.erro && !cal.util)
-        return `hipóteses declaradas. A calibração rodou com ${inf(cal.n)} concursos
-          mas explicou pouco (R² ${nf(cal.r2,3)}), então <strong>não</strong> substituiu
-          as hipóteses — calibrar com R² baixo é praticamente não calibrar.`;
-      if(cal && cal.erro)
-        return `hipóteses declaradas. Faltam ${esc(cal.erro.replace(/^faltam /,""))}
-          para medir com os ganhadores reais. Traga histórico com rateio em
-          <strong>Conferir › Resultados</strong>.`;
-      return CALIBRACAO
-        ? `calibrados com ${inf(CALIBRACAO.n_concursos)} concursos reais (R² ${nf(CALIBRACAO.r2,3)}).`
-        : `hipóteses declaradas, ainda não medidas. Elas passam a ser medidas sozinhas
-           assim que houver ${MINIMO_CALIBRACAO} concursos com ganhadores publicados.`;
-    })()}
-  </div>` : ""}
-
   <div class="nota atencao"><strong>O que nenhum método faz.</strong> Nenhuma opção acima
-  aumenta a chance de acertar — ela é fixa e igual para toda combinação válida. O que a
-  opção de rateio muda é <em>com quantas pessoas você dividiria</em> o prêmio se acertasse.
-  A de cobertura muda o quanto seus jogos se repetem entre si. O fechamento garante um
-  piso <em>caso</em> um número mínimo das suas dezenas saia.</div>`;
+  aumenta a chance de acertar — ela é fixa e igual para toda combinação válida. A de
+  cobertura muda o quanto seus jogos se repetem entre si; a de evitar o concurso anterior
+  muda quantas dezenas do último sorteio você repete; o fechamento garante um piso
+  <em>caso</em> um número mínimo das suas dezenas saia.</div>`;
 };
+
+/* A sugestão desenhada: o jogo, cada medida contra o histórico, e o aviso que
+   não pode faltar. A barra de cada linha mostra em que fatia dos concursos
+   aquela configuração apareceu — é a mesma informação da tabela, para quem lê
+   a forma antes de ler o número. */
+function tabelaSugestao(s){
+  if(s.erro) return `<div class="nota atencao">${esc(s.erro)}</div>`;
+
+  const linhas = s.linhas.map(l => {
+    const pct = l.fracao * 100;
+    return `<tr>
+      <td>${esc(l.nome)}${l.detalhe?`<span class="fraco"> ${esc(l.detalhe)}</span>`:""}</td>
+      <td style="text-align:right"><b>${esc(String(l.valor))}</b></td>
+      <td style="min-width:96px">
+        <div class="barra-med"><i style="width:${Math.min(100, pct*2).toFixed(1)}%"></i></div>
+      </td>
+      <td style="text-align:right;white-space:nowrap">${nf(pct,1)}%</td>
+    </tr>`;
+  }).join("");
+
+  const vezes = s.medianaDoAcaso > 0 ? s.menor / s.medianaDoAcaso : 0;
+
+  return `
+  <div class="ficha" style="margin-top:12px">
+    <div class="topo"><span class="id">sugestão do sistema</span>
+      <span class="selo">${s.dezenas.length} dezenas</span></div>
+    <div class="dezenas">${s.dezenas.map(d=>`<span class="dz marcada">${pad(d)}</span>`).join("")}</div>
+  </div>
+
+  <div class="carta" style="margin-top:10px">
+    <div class="contador"><span>a medida mais rara deste jogo</span>
+      <b>${nf(s.menor*100,1)}%</b></div>
+    <div class="nota" style="margin-top:6px">
+      Nenhuma das ${s.linhas.length} medidas cai numa configuração incomum: a mais rara
+      ainda apareceu em <strong>${nf(s.menor*100,1)}%</strong> dos ${inf(s.n)} concursos.
+      Um jogo sorteado sem critério costuma ter a medida mais rara em
+      ${nf(s.medianaDoAcaso*100,1)}% — ${nf(vezes,1)}× menos.
+      Escolhido entre ${inf(s.candidatas)} candidatas sorteadas uniformemente.
+    </div>
+  </div>
+
+  <div class="rolagem" style="margin-top:10px"><table>
+    <thead><tr><th>medida</th><th style="text-align:right">no jogo</th>
+      <th>frequência no histórico</th><th style="text-align:right">%</th></tr></thead>
+    <tbody>${linhas}</tbody>
+  </table></div>
+
+  <div class="nota atencao" style="margin-top:10px">
+    <strong>Isto não aumenta a sua chance.</strong> Toda combinação tem exatamente a
+    mesma probabilidade, e o próximo sorteio pode perfeitamente ser o mais atípico
+    possível — já foi, várias vezes. O que este jogo tem é <em>parecença</em> com o
+    retrato médio dos sorteios que já saíram, que foi o que se pediu. Não é previsão,
+    e uma configuração comum é comum porque existem <em>mais combinações</em> com ela,
+    não porque o sorteio a prefira.
+  </div>
+
+  <button class="acao" id="s-salvar" style="margin-top:8px">Salvar este jogo</button>`;
+}
 
 T.jogos = () => {
   if(!S.jogos.length) return `<div class="vazio">Nenhum jogo salvo ainda.<br>
@@ -1465,7 +1566,7 @@ function tabelaBancada(r, titulo, umConcursoSo){
   return `<h2 style="margin:18px 0 8px">${esc(titulo)}</h2>
   <div class="rolagem"><table>
     <thead><tr><th>método</th><th>acertos</th><th>desvios</th>
-      <th>rateio esperado</th><th>sobreposição</th><th>custo</th></tr></thead>
+      <th>padrão humano</th><th>sobreposição</th><th>custo</th></tr></thead>
     <tbody>${r.linhas.map(l=>`<tr>
       <td>${esc(l.nome)}</td>
       <td>${nf(l.media,3)}</td>
@@ -1480,10 +1581,17 @@ function tabelaBancada(r, titulo, umConcursoSo){
   </div>
   <div class="nota">
     <strong>O que dá para escolher:</strong> as colunas em destaque são as que
-    dependem do método, e não da sorte — <em>rateio esperado</em> (menor = menos
-    gente dividindo, se acertar) e <em>sobreposição</em> (menor = seus jogos se
-    repetem menos entre si). A coluna de acertos está aí para você verificar que
-    ela <em>não</em> depende do método.
+    dependem do método, e não da sorte — <em>sobreposição</em> (menor = seus jogos
+    se repetem menos entre si) e <em>padrão humano</em>, que mede o quanto o jogo
+    parece marcado por gente (datas, sequências, desenho no volante). A coluna de
+    acertos está aí para você verificar que ela <em>não</em> depende do método.
+  </div>
+  <div class="nota atencao">
+    <strong>Sobre a coluna "padrão humano".</strong> Ela descreve a forma do jogo, e
+    é só isso. Já houve aqui um método que prometia transformar essa medida em prêmio
+    maior; foi retirado, porque os pesos por trás dela nunca puderam ser conferidos
+    com ganhadores reais — a calibração precisa de ${MINIMO_CALIBRACAO} concursos com
+    rateio publicado por modalidade, e o histórico deste app não chega lá.
   </div>`;
 }
 
@@ -1499,10 +1607,14 @@ T.entender = () => `<div class="prosa">
 
   <h3 style="margin-top:20px">Três coisas que a matemática faz de verdade</h3>
   <ul>
-    <li><strong>Rateio.</strong> O prêmio é dividido entre os acertadores. Muita gente marca
-    datas de nascimento, sequências e desenhos no volante. Escolher combinações fora desses
-    padrões não muda sua chance de acertar, mas aumenta o quanto sobraria para você se
-    acertasse.</li>
+    <li><strong>Rateio.</strong> O prêmio é dividido entre os acertadores, e muita gente
+    marca datas, sequências e desenhos no volante — isso é fato conhecido. O que este app
+    <em>não</em> tem é como medir o tamanho disso nas loterias brasileiras: a conta precisa
+    de concursos com ganhadores publicados, e o histórico disponível traz pouquíssimos.
+    Por isso houve aqui um método "otimizado para rateio" e ele foi <strong>retirado</strong>:
+    prometia um ganho com pesos que nunca puderam ser conferidos. Se um dia entrar histórico
+    com rateio suficiente, a conta passa a rodar sozinha e o app volta a falar disso — com
+    número medido, não com suposição.</li>
     <li><strong>Fechamento.</strong> Combinatória de cobertura: garante um piso de acertos
     <em>caso</em> um número mínimo das suas dezenas seja sorteado. O app verifica cada
     garantia testando todos os cenários — e recusa a mostrar piso que não conseguiu provar.</li>
@@ -1706,6 +1818,159 @@ function perfilDoJogo(dezenas, modalidade){
 
 /* A leitura de uma fração. Comum não é bom nem ruim para acertar; é ruim para
    o quanto sobra. É esta função que inverte o veredito do app de referência. */
+/* ==================== sugestão do sistema ====================
+
+   Um jogo montado com TODAS as estatísticas que o app mede, e sem estratégia
+   nenhuma por trás.
+
+   O que ela faz, exatamente: sorteia candidatas uniformemente e escolhe aquela
+   cuja medida MAIS RARA ainda é comum no histórico. Nenhuma das dez medidas
+   fica num extremo — nem soma alta demais, nem pares de menos, nem sequência
+   longa, nem desenho no volante.
+
+   O que ela NÃO faz, e o app repete isto na tela: aumentar a chance. Toda
+   combinação de seis dezenas tem exatamente a mesma probabilidade, e a
+   sorteada semana que vem pode perfeitamente ser a mais atípica possível — já
+   foi, várias vezes. Um jogo "típico" não é mais provável; ele apenas se
+   parece com o retrato médio dos sorteios que já saíram, que foi o que se
+   pediu.
+
+   Por que o critério é o MÍNIMO e não a média: com média, uma medida
+   raríssima passa escondida atrás de nove comuns, e é justamente a rara que
+   define o caráter do jogo. Maximizar o mínimo obriga TODAS a se comportarem.
+
+   Por que a comparação é com o histórico e não com a fórmula: a teoria diz
+   quanto deveria dar; o histórico diz quanto deu. Onde os dois discordam,
+   quem responde à pergunta "com todas as estatísticas que você tem" é o
+   histórico. */
+
+const CANDIDATAS_SUGESTAO = 600;
+
+/* Distribuição observada de cada medida, calculada UMA vez sobre o histórico.
+   Sem isto, cada candidata varreria os 3.272 concursos da Lotofácil dez vezes
+   — 20 milhões de comparações para montar um jogo. */
+function distribuicoesDoHistorico(modalidade){
+  const hist = historicoDe(modalidade);
+  const c = MODALIDADES[modalidade];
+  if(hist.length < 20) return null;
+
+  const dpSoma = Math.sqrt(c.k * (c.N + 1) * (c.N - c.k) / 12) || 1;
+  const larguraSoma = Math.max(1, Math.round(dpSoma / 5));
+  const medidas = medidasDoPerfil(modalidade);
+
+  const tabelas = medidas.map(m => {
+    const contagem = new Map();
+    let soma = 0;
+    for(const r of hist){
+      const v = m.valor(r.dezenas);
+      const chave = String(v);
+      contagem.set(chave, (contagem.get(chave) || 0) + 1);
+      if(m.faixa) soma += Number(v);
+    }
+    /* A soma quase nunca se repete exatamente; a comparação é por faixa, e
+       para isso guarda-se a lista ordenada e a busca binária faz o resto. */
+    const ordenados = m.faixa
+      ? hist.map(r => Number(m.valor(r.dezenas))).sort((a,b)=>a-b) : null;
+    return {medida:m, contagem, ordenados, media: soma/hist.length};
+  });
+
+  /* Repetidas do concurso anterior: distribuição entre concursos consecutivos. */
+  const repeticoes = new Map();
+  let paresConsecutivos = 0;
+  for(let i = 1; i < hist.length; i++){
+    const antes = new Set(hist[i-1].dezenas);
+    const q = hist[i].dezenas.filter(d => antes.has(d)).length;
+    repeticoes.set(q, (repeticoes.get(q) || 0) + 1);
+    paresConsecutivos++;
+  }
+
+  return {hist, n: hist.length, tabelas, larguraSoma,
+          repeticoes, paresConsecutivos, ultimo: hist[hist.length - 1]};
+}
+
+/* Quantos concursos do histórico caem em [alvo-largura, alvo+largura]. */
+function quantosNaFaixa(ordenados, alvo, largura){
+  const limite = (x) => {           /* primeiro índice com valor >= x */
+    let lo = 0, hi = ordenados.length;
+    while(lo < hi){ const meio = (lo + hi) >> 1;
+      if(ordenados[meio] < x) lo = meio + 1; else hi = meio; }
+    return lo;
+  };
+  return limite(alvo + largura + 1) - limite(alvo - largura);
+}
+
+/* Perfil de uma candidata contra as distribuições já montadas. Devolve as
+   linhas e a fração da medida mais rara. */
+function perfilRapido(dezenas, dist){
+  const linhas = [];
+  let menor = 1;
+  for(const t of dist.tabelas){
+    const valor = t.medida.valor(dezenas);
+    const iguais = t.medida.faixa
+      ? quantosNaFaixa(t.ordenados, Number(valor), dist.larguraSoma)
+      : (t.contagem.get(String(valor)) || 0);
+    const fracao = iguais / dist.n;
+    if(fracao < menor) menor = fracao;
+    linhas.push({id:t.medida.id, nome:t.medida.nome, valor,
+      concursos:iguais, fracao,
+      detalhe: t.medida.faixa ? `± ${dist.larguraSoma}` : ""});
+  }
+  if(dist.ultimo && dist.paresConsecutivos){
+    const q = dezenas.filter(d => dist.ultimo.dezenas.includes(d)).length;
+    const iguais = dist.repeticoes.get(q) || 0;
+    const fracao = iguais / dist.paresConsecutivos;
+    if(fracao < menor) menor = fracao;
+    linhas.push({id:"repetidas", nome:"Repetidas do último concurso", valor:q,
+      concursos:iguais, fracao, detalhe:`concurso ${dist.ultimo.concurso}`});
+  }
+  return {linhas, menor};
+}
+
+function sugestaoDoSistema(modalidade, tamanho, opcoes){
+  const o = Object.assign({candidatas: CANDIDATAS_SUGESTAO, semente: null}, opcoes||{});
+  const dist = distribuicoesDoHistorico(modalidade);
+  if(!dist){
+    const hist = historicoDe(modalidade);
+    return {erro:`faltam ${20 - hist.length} concursos desta modalidade para a ` +
+      `sugestão sair das estatísticas em vez de sair do nada`, tem:hist.length};
+  }
+  const tam = tamanho || tamanhoPadrao(modalidade);
+
+  /* Semente opcional: a mesma sugestão pode ser reproduzida e conferida. Sem
+     semente, cada toque no botão oferece um jogo diferente — o que é honesto,
+     porque não existe UM jogo certo. */
+  const rnd = o.semente == null ? Math.random : geradorSemeado(o.semente);
+  const sortearComRnd = () => {
+    const urna = [];
+    for(let i=0;i<MODALIDADES[modalidade].N;i++) urna.push(i + MODALIDADES[modalidade].base);
+    const saida = [];
+    for(let i=0;i<tam;i++){
+      const j = i + Math.floor(rnd() * (urna.length - i));
+      const t = urna[i]; urna[i] = urna[j]; urna[j] = t;
+      saida.push(urna[i]);
+    }
+    return saida.sort((a,b)=>a-b);
+  };
+
+  let melhor = null;
+  for(let i=0;i<o.candidatas;i++){
+    const cand = sortearComRnd();
+    const p = perfilRapido(cand, dist);
+    if(!melhor || p.menor > melhor.menor) melhor = {dezenas:cand, ...p};
+  }
+
+  /* Referência honesta: o que uma candidata QUALQUER costuma dar. Sem isso, o
+     número "a medida mais rara aparece em 21% dos concursos" não significa
+     nada — não dá para saber se é bom, ruim ou o normal. */
+  const amostra = [];
+  for(let i=0;i<120;i++) amostra.push(perfilRapido(sortearComRnd(), dist).menor);
+  amostra.sort((a,b)=>a-b);
+  const medianaDoAcaso = amostra[Math.floor(amostra.length/2)];
+
+  return {dezenas: melhor.dezenas, linhas: melhor.linhas, menor: melhor.menor,
+          medianaDoAcaso, n: dist.n, candidatas: o.candidatas, tam};
+}
+
 function lerTipicidade(fracao){
   if(fracao >= 0.20) return {rotulo:"muito comum", cor:"var(--alerta)",
     leitura:"muita gente marca assim — mais gente para dividir"};
@@ -4112,6 +4377,29 @@ function acoes(){
     el.onkeydown = ev => { if(ev.key==="Enter"||ev.key===" "){ ev.preventDefault(); escolher(); } };
   });
 
+  const sgo = $("#s-go");
+  if(sgo) sgo.onclick = () => {
+    const saida = $("#s-saida");
+    sgo.disabled = true; sgo.textContent = "lendo o histórico…";
+    /* setTimeout para o botão chegar a mudar de texto antes do cálculo: são
+       algumas centenas de milissegundos de trabalho síncrono. */
+    setTimeout(() => {
+      let s;
+      try{ s = sugestaoDoSistema(S.modalidade, tamanhoPadrao(S.modalidade)); }
+      catch(e){ s = {erro: e.message}; }
+      saida.innerHTML = tabelaSugestao(s);
+      if(!s.erro && $("#s-salvar")) $("#s-salvar").onclick = () => {
+        const jogo = {id: `${Date.now().toString(36)}-s`, dezenas: s.dezenas,
+          modalidade: S.modalidade, metodo: "sugestao", data: hoje(),
+          lote: `S${Date.now().toString(36)}`, conferencias: []};
+        S.jogos = S.jogos.concat([jogo]);
+        Guardar.gravar("jogos", S.jogos);
+        S.tela = "jogos"; pintar();
+      };
+      sgo.disabled = false; sgo.textContent = "Sugerir outro jogo";
+    }, 20);
+  };
+
   const go = $("#g-go");
   if(go) go.onclick = () => {
     const saida = $("#g-saida");
@@ -4148,11 +4436,9 @@ function acoes(){
 
         saida.innerHTML = extra + S.ultimoLote.map(j=>`
           <div class="ficha">
-            <div class="topo"><span class="id">${esc(METODOS.find(m=>m.id===j.metodo).nome)}</span>
+            <div class="topo"><span class="id">${esc(nomeDoMetodo(j.metodo))}</span>
               <span class="selo">${j.dezenas.length} dezenas</span></div>
             <div class="dezenas">${j.dezenas.map(d=>`<span class="dz marcada">${pad(d)}</span>`).join("")}</div>
-            ${S.metodo==="rateio" ? `<div style="margin-top:8px;font-size:.78rem;color:var(--secundaria)">
-              ${esc(observacoes(j.dezenas, S.modalidade).join(" · "))}</div>` : ""}
           </div>`).join("") + `
           <button class="acao" id="g-salvar" style="margin-top:6px">Salvar ${S.ultimoLote.length} jogo${S.ultimoLote.length>1?"s":""}</button>`;
 
