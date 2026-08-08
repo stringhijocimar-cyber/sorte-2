@@ -88,7 +88,8 @@ assinatura, e não há como recuperar.
 ## Verificar o resultado
 
 ```bash
-# deve imprimir apenas "package: app.lotolab.jogos" — nenhuma permissão
+# deve listar UMA permissão: android.permission.INTERNET, usada só para
+# baixar resultados públicos. Qualquer outra é regressão.
 $ANDROID_HOME/build-tools/35.0.0/aapt dump permissions \
   android/app/build/outputs/apk/release/app-release.apk
 
