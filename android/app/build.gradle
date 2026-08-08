@@ -9,8 +9,8 @@ android {
         targetSdkVersion rootProject.ext.targetSdkVersion
         // versionCode tem de subir a cada envio: a Play Store recusa um código
         // já usado, e o 1 foi gasto pelo LotoLab-1.0.0-release.apk.
-        versionCode 2
-        versionName "1.1.0"
+        versionCode 3
+        versionName "1.2.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         resourceConfigurations += ['pt-rBR', 'en']
         aaptOptions {

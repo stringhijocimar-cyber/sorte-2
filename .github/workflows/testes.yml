@@ -54,6 +54,16 @@ jobs:
           diff <(semTempos /tmp/execucao-1.txt) <(semTempos /tmp/execucao-2.txt) \
             || { echo "::error::duas execuções deram resultados diferentes"; exit 1; }
 
+      - name: Instalar Pillow (conferência dos ícones)
+        run: pip install --quiet pillow
+
+      - name: Conferir os ícones
+        # Não compara com uma renderização nova — o Chromium não garante saída
+        # idêntica entre versões. Confere o que quebra de verdade no aparelho:
+        # camada da frente transparente (senão o ícone monocromático do Android
+        # 13 vira um quadrado chapado) e desenho dentro do recorte garantido.
+        run: python3 ferramentas/conferir-icones.py
+
       - name: A referência dourada foi gerada pela ferramenta, e não à mão
         # Regravar douradas.json é uma decisão consciente de mudar números na
         # tela. Este passo não impede a mudança — só garante que o arquivo

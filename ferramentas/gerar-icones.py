@@ -1,28 +1,38 @@
 #!/usr/bin/env python3
 """
-Gera os recursos de ícone do Android a partir de icone-maskable.png.
+Gera os recursos de ícone do Android a partir dos PNGs do trevo.
 
-Estratégia deliberada:
+Rode antes: `python3 ferramentas/gerar-pngs-do-icone.py`, que produz os PNGs
+a partir de `icone.svg` — a fonte da marca.
 
-  - camada de fundo  = cor sólida #0F1E2E (a mesma tinta naval do app)
-  - camada da frente = a arte de icone-maskable.png, sem redimensionar o
-    conteúdo, apenas reamostrada para a densidade
+Duas artes entram aqui, e a diferença entre elas importa:
+
+  icone-512.png    trevo grande sobre fundo naval, opaco. Vira os ícones
+                   legados (Android 7 e anteriores), que o sistema NÃO recorta:
+                   se a arte fosse pequena, o ícone ficaria perdido no meio.
+  icone-frente.png trevo menor, fundo transparente. Vira a camada da frente do
+                   ícone adaptativo e a splash. Precisa ser transparente por
+                   dois motivos: quem pinta o fundo é `ic_launcher_background`,
+                   e o ícone monocromático do Android 13 usa o canal alfa desta
+                   imagem — uma arte opaca viraria um quadrado chapado no tema
+                   do usuário.
 
 O Android recorta o ícone adaptativo em círculo, quadrado arredondado ou
-"squircle", conforme o fabricante. Como o fundo é a mesma cor do disco da
-arte, qualquer recorte produz o mesmo resultado visual. O conteúdo (os três
-discos, a faixa do acaso, a barra âmbar) ocupa o terço central da arte, bem
-dentro dos 72dp centrais que o Android garante visíveis.
+"squircle", conforme o fabricante, e só garante o círculo central. Por isso o
+trevo da camada da frente ocupa 60% do lado: nenhuma ponta de folha se perde,
+em recorte nenhum.
 
-Os ícones legados (aparelhos anteriores ao Android 8) são compostos aqui:
-quadrado arredondado para ic_launcher, círculo para ic_launcher_round.
+Os ícones legados são compostos aqui: quadrado arredondado para ic_launcher,
+círculo para ic_launcher_round.
 """
+import sys
 from pathlib import Path
 
 from PIL import Image, ImageDraw
 
 RAIZ = Path(__file__).resolve().parent.parent
-ARTE = RAIZ / "icone-maskable.png"
+ARTE_CHEIA = RAIZ / "icone-512.png"     # opaca, para os ícones legados
+ARTE_FRENTE = RAIZ / "icone-frente.png"  # transparente, para o adaptativo
 RES = RAIZ / "android/app/src/main/res"
 NAVAL = (15, 30, 46, 255)  # #0F1E2E
 
@@ -59,19 +69,25 @@ def recortar(imagem, forma):
 
 
 def main():
-    arte = Image.open(ARTE).convert("RGBA")
+    faltando = [p.name for p in (ARTE_CHEIA, ARTE_FRENTE) if not p.exists()]
+    if faltando:
+        sys.exit("faltam " + ", ".join(faltando)
+                 + " — rode antes: python3 ferramentas/gerar-pngs-do-icone.py")
+
+    cheia = Image.open(ARTE_CHEIA).convert("RGBA")
+    frente_arte = Image.open(ARTE_FRENTE).convert("RGBA")
 
     for densidade, (legado, frente) in DENSIDADES.items():
         pasta = RES / f"mipmap-{densidade}"
         pasta.mkdir(parents=True, exist_ok=True)
 
-        cheio = achatar(arte, legado)
+        cheio = achatar(cheia, legado)
         recortar(cheio, "arredondado").save(pasta / "ic_launcher.png")
         recortar(cheio, "circulo").save(pasta / "ic_launcher_round.png")
 
         # A camada da frente do ícone adaptativo mantém a transparência:
         # quem preenche o entorno é a camada de fundo.
-        arte.resize((frente, frente), Image.LANCZOS).save(
+        frente_arte.resize((frente, frente), Image.LANCZOS).save(
             pasta / "ic_launcher_foreground.png"
         )
         print(f"mipmap-{densidade}: legado {legado}px, frente {frente}px")
@@ -83,7 +99,8 @@ def main():
                                (324, "xxhdpi"), (432, "xxxhdpi")):
         pasta = RES / f"drawable-{densidade}"
         pasta.mkdir(parents=True, exist_ok=True)
-        arte.resize((tamanho, tamanho), Image.LANCZOS).save(pasta / "splash_icone.png")
+        frente_arte.resize((tamanho, tamanho), Image.LANCZOS).save(
+            pasta / "splash_icone.png")
     print("splash_icone gerado em cinco densidades")
 
 
