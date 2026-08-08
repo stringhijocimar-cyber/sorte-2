@@ -1629,6 +1629,49 @@ function lerTipicidade(fracao){
     leitura:"quase ninguém marca assim — menos gente para dividir"};
 }
 
+
+/* Quantas pessoas dividiriam o prêmio com você.
+
+   Esta é a única previsão honesta que este app faz, e vale explicar por que ela
+   é diferente de tudo que recusamos até aqui.
+
+   Prever qual dezena sai é impossível: a urna não tem memória. Prever quanta
+   gente marca uma combinação é outra coisa — é prever COMPORTAMENTO HUMANO, que
+   tem padrão forte e estável. Data de nascimento, sequência, desenho no
+   volante: as pessoas repetem isso concurso após concurso, e os ganhadores
+   publicados registram esse hábito.
+
+   O que sai daqui: a estimativa de ganhadores da faixa principal SE a sua
+   combinação for sorteada. E daí o prêmio esperado, que é o valor do rateio
+   dividido por quantos dividiriam.
+
+   Isto NÃO aumenta sua chance de acertar — ela continua 1 em 50.063.860 na
+   Mega-Sena, para qualquer combinação. Aumenta quanto sobra para você quando
+   acerta, que é a única alavanca real numa loteria honesta. */
+function preverGanhadores(dezenas, modalidade){
+  const cal = S.calibracao && S.calibracao[modalidade];
+  if(!cal || cal.erro || !cal.modelo) return null;
+  const m = cal.modelo;
+  const carac = caracteristicas(dezenas, modalidade);
+  const x = ATRIBUTOS_POPULARIDADE.map(k => carac[k] || 0);
+  let z = m.b;
+  for(let j = 0; j < m.w.length; j++)
+    z += m.w[j] * ((x[j] - m.media[j]) / m.escala[j]);
+  /* O modelo previu log(1 + ganhadores); desfazendo o log volta à contagem.
+     Nunca abaixo de zero: ganhador negativo não existe. */
+  const ganhadores = Math.max(0, Math.exp(z) - 1);
+
+  /* Mediana histórica, como referência do que é "normal" nesta modalidade. */
+  const hist = historicoDe(modalidade)
+    .map(r => (r.rateio || []).find(f => f.faixa === 1))
+    .filter(Boolean).map(f => f.ganhadores).sort((a,b)=>a-b);
+  const mediana = hist.length ? hist[Math.floor(hist.length/2)] : null;
+
+  return {ganhadores, mediana, r2: cal.r2, n: cal.n, util: cal.util,
+          /* Razão entre o seu e o típico: abaixo de 1 é bom para o seu bolso. */
+          razao: (mediana !== null && mediana > 0) ? ganhadores / mediana : null};
+}
+
 /* ==================== busca de histórico e busca diária ====================
    Não pude testar a chamada real: a rede onde este código foi escrito bloqueia
    o domínio da Caixa. O que está testado é o processamento da resposta, contra
@@ -1845,6 +1888,10 @@ function calibrarPopularidade(modalidade){
   const ganhadores = hist.map((r,i) => Math.exp(y[i]) - 1);
   return {
     modalidade, pesos, r2: m.r2, n: hist.length,
+    /* O modelo em si, e não só os pesos: com ele dá para PREVER quantos
+       ganhadores uma combinação teria. Função não sobrevive ao localStorage,
+       então guardamos os números e remontamos a previsão em preverGanhadores(). */
+    modelo: {w: m.w, b: m.b, media: m.media, escala: m.escala},
     coeficientes: ATRIBUTOS_POPULARIDADE.map((k, j) =>
       ({nome:k, coeficiente:m.coeficientes[j]})),
     ganhadoresMedio: ganhadores.reduce((a,b)=>a+b,0)/ganhadores.length,
@@ -3272,6 +3319,54 @@ T.montar = () => {
       <button class="acao contorno mini" id="m-completar">completar ao acaso</button>
       <button class="acao contorno mini" id="m-limpar" ${dez.length?"":"disabled"}>limpar</button>
     </div>
+    ${dez.length < c.k ? "" : (() => {
+      const g = preverGanhadores(dez, S.modalidade);
+      if(!g || !g.util) return "";
+      const p = proximoConcurso(S.modalidade);
+      const premio = p && p.estimativa ? p.estimativa : null;
+      const esperado = premio !== null ? premio / (1 + g.ganhadores) : null;
+      const esperadoTipico = (premio !== null && g.mediana !== null)
+        ? premio / (1 + g.mediana) : null;
+      const melhor = g.razao !== null && g.razao < 1;
+      return `<div class="carta">
+        <h2>com quantas pessoas você dividiria</h2>
+        <div class="kpis">
+          <div class="kpi"><div class="rot">ganhadores estimados</div>
+            <div class="val">${nf(g.ganhadores, 1)}</div>
+            <div class="sub">se esta combinação sair</div></div>
+          <div class="kpi"><div class="rot">típico nesta loteria</div>
+            <div class="val">${g.mediana === null ? "—" : inf(g.mediana)}</div>
+            <div class="sub">mediana do histórico</div></div>
+          ${esperado === null ? "" : `
+          <div class="kpi"><div class="rot">seu prêmio esperado</div>
+            <div class="val" style="font-size:1.05rem;color:${
+              melhor?"var(--acaso)":"var(--tinta)"}">${brl(esperado)}</div>
+            <div class="sub">de ${brl(premio)} estimados</div></div>
+          <div class="kpi"><div class="rot">com jogo típico</div>
+            <div class="val" style="font-size:1.05rem">${brl(esperadoTipico)}</div>
+            <div class="sub">diferença: ${brl(esperado - esperadoTipico)}</div></div>`}
+        </div>
+        <div class="nota ${melhor?"":"atencao"}">
+          ${melhor
+            ? `Este jogo é <strong>menos disputado que o típico</strong> — cerca de
+               ${nf(100*(1-g.razao),0)}% menos gente marcaria algo assim. É a única
+               vantagem matematicamente real numa loteria honesta.`
+            : `Este jogo é <strong>mais disputado que o típico</strong>: cerca de
+               ${nf(100*(g.razao-1),0)}% mais gente marcaria algo assim, então
+               sobraria menos para você.`}
+        </div>
+        <div class="nota atencao"><strong>Isto não muda sua chance de acertar.</strong>
+          Ela é 1 em ${inf(combinacoes(c.N, c.k))} para qualquer combinação, sempre.
+          O que muda é quanto sobra <em>se</em> você acertar.
+
+          <span style="display:block;margin-top:6px">E por que esta previsão é
+          honesta enquanto prever dezena não é: aqui não se prevê o sorteio, e sim
+          <strong>comportamento humano</strong> — as pessoas repetem data de
+          nascimento e desenho no volante concurso após concurso, e os ganhadores
+          publicados registram isso. Modelo ajustado com ${inf(g.n)} concursos,
+          R² ${nf(g.r2, 3)}.</span></div>
+      </div>`;
+    })()}
     ${dez.length < c.k ? "" : (() => {
       const r = retrospectiva(dez, S.modalidade);
       if(r.erro) return "";
