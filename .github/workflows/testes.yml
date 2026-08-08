@@ -1,0 +1,68 @@
+# Roda a bateria de testes a cada push e a cada pull request.
+#
+# Por que existe: até agora os testes só rodavam dentro de "Compilar APK", que
+# é manual. O resultado foi que um teste instável só apareceu na hora de gerar
+# a v10 — a compilação falhou, e a única pista era um log de release. Testar no
+# push transforma isso num aviso de trinta segundos, no lugar certo.
+#
+# Não compila o APK: compilar leva minutos e depende do Android SDK. Aqui só
+# roda o que é rápido e pega quase tudo.
+
+name: Testes
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+# Um push novo cancela a execução anterior do mesmo galho: o interessante é o
+# resultado do último commit, não a fila inteira.
+concurrency:
+  group: testes-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  motor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Conferir que www/ está sincronizado com a raiz
+        # O erro clássico deste projeto: editar index.html e esquecer de copiar
+        # para www/. Os testes passam (rodam sobre a raiz) e o APK sai sem a
+        # mudança — o usuário instala e conclui, com razão, que nada mudou.
+        run: cmp index.html www/index.html
+
+      - name: Testes do motor
+        run: node ferramentas/testar-motor.mjs
+
+      - name: Os testes são reprodutíveis
+        # Toda medida estatística desta suíte roda com gerador semeado. Se duas
+        # execuções seguidas discordarem, algum teste voltou a depender do
+        # acaso — e um teste que falha por acaso ensina a ignorar falha.
+        #
+        # Os tempos medidos são apagados antes de comparar: "166 ms" contra
+        # "205 ms" é a máquina respirando, não o motor mudando de resposta.
+        run: |
+          semTempos() { sed -E 's/[0-9]+([.,][0-9]+)? ms/<tempo>/g' "$1"; }
+          node ferramentas/testar-motor.mjs > /tmp/execucao-1.txt
+          node ferramentas/testar-motor.mjs > /tmp/execucao-2.txt
+          diff <(semTempos /tmp/execucao-1.txt) <(semTempos /tmp/execucao-2.txt) \
+            || { echo "::error::duas execuções deram resultados diferentes"; exit 1; }
+
+      - name: A referência dourada foi gerada pela ferramenta, e não à mão
+        # Regravar douradas.json é uma decisão consciente de mudar números na
+        # tela. Este passo não impede a mudança — só garante que o arquivo
+        # continue sendo o que a ferramenta produz a partir do código atual.
+        run: |
+          node ferramentas/gerar-douradas.mjs > /tmp/douradas-agora.json
+          if ! cmp -s /tmp/douradas-agora.json ferramentas/douradas.json; then
+            echo "::error::caracteristicas() mudou. Se foi de propósito, regrave com:"
+            echo "::error::  node ferramentas/gerar-douradas.mjs > ferramentas/douradas.json"
+            diff <(head -c 4000 ferramentas/douradas.json) <(head -c 4000 /tmp/douradas-agora.json) || true
+            exit 1
+          fi
