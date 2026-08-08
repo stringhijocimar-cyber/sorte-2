@@ -19,9 +19,16 @@ on:
   workflow_dispatch:
     inputs:
       tudo:
-        description: "Backfill completo (mais lento, várias execuções)"
+        description: "Backfill completo dos concursos que faltam (mais lento)"
         type: boolean
         default: false
+      completar:
+        description: "Preencher ganhadores nos concursos que entraram sem rateio"
+        type: boolean
+        default: false
+      completar_teto:
+        description: "Quantos concursos completar por modalidade nesta execução"
+        default: "120"
 
 # Precisa escrever no repositório para commitar os JSONs.
 permissions:
@@ -43,12 +50,20 @@ jobs:
           node-version: "20"
 
       - name: Buscar resultados
+        # --completar entra também na execução diária, com orçamento pequeno:
+        # o histórico foi semeado sem rateio, e sem isto a tela diria
+        # "ganhadores não informados" para sempre. Vinte por modalidade por dia
+        # fecham o buraco sozinhas, sem castigar o serviço da Caixa.
         run: |
-          if [ "${{ inputs.tudo }}" = "true" ]; then
-            node ferramentas/atualizar-resultados.mjs --tudo
-          else
-            node ferramentas/atualizar-resultados.mjs
+          args=""
+          [ "${{ inputs.tudo }}" = "true" ] && args="$args --tudo"
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            args="$args --completar --completar-teto=20"
+          elif [ "${{ inputs.completar }}" = "true" ]; then
+            args="$args --completar --completar-teto=${{ inputs.completar_teto }}"
           fi
+          echo "rodando com:$args"
+          node ferramentas/atualizar-resultados.mjs $args
 
       - name: Conferir o motor antes de publicar
         # Se o app estiver quebrado, publicar dado novo não ajuda ninguém —
