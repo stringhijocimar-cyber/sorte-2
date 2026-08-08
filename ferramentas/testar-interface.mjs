@@ -216,11 +216,20 @@ await dormir(500);
 
 /* ---------- persistência de verdade: recarregar a página ---------- */
 secao("E. Persistência — recarregar o app");
+/* Dois jogos, de duas modalidades. "Meus jogos" filtra pela modalidade do
+   cabeçalho — de propósito, porque universo e quantidade de dezenas diferentes
+   numa lista só não dá para ler nem comparar. A versão anterior deste teste
+   gravava um jogo de Mega-Sena, deixava o app na Lotofácil e exigia que ele
+   aparecesse: cobrava do app o oposto do que o app promete. Passava por
+   acidente, quando algum passo anterior tinha deixado a Mega-Sena escolhida. */
 await js(`
-  localStorage.setItem('lotolab:jogos', JSON.stringify([{
-    id:'p1', modalidade:'mega-sena', dezenas:[4,11,23,35,42,57],
-    data:'2026-02-01', metodo:'uniforme'
-  }]));
+  localStorage.setItem('lotolab:modalidade', JSON.stringify('mega-sena'));
+  localStorage.setItem('lotolab:jogos', JSON.stringify([
+    { id:'p1', modalidade:'mega-sena', dezenas:[4,11,23,35,42,57],
+      data:'2026-02-01', metodo:'uniforme' },
+    { id:'p2', modalidade:'lotofacil', dezenas:[2,3,5,6,7,8,9,10,11,12,13,14,18,19,25],
+      data:'2026-02-01', metodo:'uniforme' }
+  ]));
 `);
 await cmd("Page.reload");
 await dormir(2200);
@@ -228,11 +237,16 @@ await irPara("jogos");
 const sobreviveu = await js(`
   const j = JSON.parse(localStorage.getItem('lotolab:jogos')||'[]');
   const texto = document.body.innerText;
-  return { guardados: j.length, naTela: /04|4/.test(texto) && /57/.test(texto) };
+  return { guardados: j.length,
+           naTela: /57/.test(texto) && /35/.test(texto),
+           daOutraModalidade: /\b18\b/.test(texto) && /\b25\b/.test(texto) };
 `);
-checar("jogo continua guardado após recarregar", sobreviveu.guardados === 1,
-  `${sobreviveu.guardados} jogo`);
+checar("jogo continua guardado após recarregar", sobreviveu.guardados === 2,
+  `${sobreviveu.guardados} jogos`);
 checar("jogo aparece na aba Meus jogos", sobreviveu.naTela === true);
+checar("e o jogo de outra modalidade NÃO aparece junto",
+  sobreviveu.daOutraModalidade === false,
+  "a lista é por modalidade, de propósito");
 await capturar("persistencia-meus-jogos");
 
 /* ---------- conferência pela interface ---------- */

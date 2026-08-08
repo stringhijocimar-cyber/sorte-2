@@ -33,7 +33,7 @@ dezena sair. O que ele faz é medir, comparar contra o acaso, e dizer quando um
 > * **Sem compilar:** `python3 servir.py` e abra o endereço no navegador do
 >   celular. É a mesma página que roda dentro de um APK.
 > * **Compilando:** siga o `APK.md` — precisa de Android SDK, `npm install` e da
->   sua keystore. Um APK gerado assim sai como versão 1.1.0 (`versionCode 2`).
+>   sua keystore. Um APK gerado assim sai como versão 1.2.0 (`versionCode 3`).
 
 ---
 
@@ -44,7 +44,7 @@ A modalidade é escolhida uma vez no cabeçalho e vale em todas as telas.
 
 | Seção | Telas |
 |---|---|
-| **Gerar** | *Automático* — seis métodos de montagem · *Manual* — marcação na cartela, com custo, validade e características do jogo |
+| **Gerar** | *Automático* — a sugestão do sistema e quatro métodos de montagem · *Manual* — marcação na cartela, com custo, validade e características do jogo |
 | **Jogos** | *Meus jogos* — tudo o que foi salvo, com a cartela conferida · *Teimosinha* — repete o jogo por N concursos, com custo total e conferência de cada um |
 | **Conferir** | *Conferir* — informa um resultado e confere os jogos · *Resultados* — histórico por modalidade, importado por colagem ou pelo serviço da Caixa |
 | **Análise** | *Placar* — resultado acumulado contra o acaso · *Bancada* — todos os métodos contra o mesmo sorteio · *Aprendizado* — um modelo por modalidade, medido fora da amostra |
@@ -188,13 +188,33 @@ npx cap sync android
 Não há build automatizado que faça isso — é uma cópia manual, de propósito,
 para que a pasta empacotada seja sempre explícita.
 
+## Dois métodos retirados, e por quê
+
+**"Otimizado para rateio"** e **"Contraste por restrição"** saíram da lista a
+pedido do dono do app, que não acreditava no primeiro. A medida deu razão a ele.
+
+Os dois pesavam padrões humanos — datas, sequências, desenho no volante — com
+números **supostos**, declarados na constante `PESOS`. O app tem a máquina para
+medir esses pesos de verdade (`calibrarPopularidade`, regressão sobre os
+ganhadores publicados), e ela exige 30 concursos com rateio por modalidade.
+O histórico deste repositório traz **26 no total, somando as oito
+modalidades**. A calibração nunca rodou uma vez sequer.
+
+O fenômeno de fundo é real e conhecido: gente marca data de nascimento, e quem
+foge disso divide com menos gente. O que não existia era o número. Um método
+que se anuncia "otimizado" apoiado em peso que ninguém conferiu é exatamente a
+promessa que este app existe para não fazer.
+
+As funções `gerarRateio` e `gerarContraste` continuam no arquivo — outras
+partes as usam como reserva, e `nomeDoMetodo()` garante que jogos salvos por
+elas continuem abrindo. Se um dia entrar histórico com rateio suficiente, a
+calibração roda sozinha e a conversa recomeça com número medido.
+
 ## Arquivo opcional: `pesos.json`
 
-Pesos calibrados do modo "otimizado para rateio", gerados a partir dos
-ganhadores publicados pela Caixa. **Não está neste repositório** e o app
-funciona sem ele: usa as hipóteses declaradas na constante `PESOS` do
-`index.html` e **avisa isso na tela**. A ausência do arquivo gera um 404 no
-console, que é esperado e tratado.
+Pesos calibrados, gerados a partir dos ganhadores publicados pela Caixa.
+**Não está neste repositório** e o app funciona sem ele. A ausência do arquivo
+gera um 404 no console, que é esperado e tratado.
 
 O comando abaixo pertence à plataforma LotoLab, um projeto **separado** que
 não faz parte deste repositório:
@@ -231,7 +251,7 @@ e **todos os segredos de assinatura** (`*.jks`, `chave.properties`,
 
 | Aba | Função |
 |---|---|
-| **Gerar** | Monta a quantidade de jogos que você escolher, por quatro métodos |
+| **Gerar** | A sugestão do sistema, e a montagem por método |
 | **Meus jogos** | Guarda os lotes, permite copiar e apagar |
 | **Conferir** | Você digita o resultado oficial; ele marca os acertos de cada jogo |
 | **Placar** | Desempenho acumulado dos seus jogos contra o que o acaso produziria |
@@ -240,19 +260,40 @@ e **todos os segredos de assinatura** (`*.jks`, `chave.properties`,
 Modalidades: Mega-Sena, Lotofácil, Quina, Lotomania, Dupla Sena, Dia de Sorte,
 Timemania e +Milionária.
 
-### Os quatro métodos
+### A sugestão do sistema
+
+Um jogo montado com **todas** as estatísticas do histórico e **sem estratégia
+nenhuma** por trás. Sorteia candidatas uniformemente e fica com aquela cuja
+medida mais rara ainda é comum: nenhuma das dez medidas — pares/ímpares, soma,
+moldura, múltiplos de 3, primos, Fibonacci, menor e maior dezena, consecutivos
+e repetidas do último concurso — cai num extremo.
+
+O critério é o **mínimo**, não a média: numa média, uma medida raríssima passa
+escondida atrás de nove comuns, e é justamente a rara que define o caráter do
+jogo. E a comparação é com a **distribuição observada**, não com a fórmula — a
+teoria diz quanto deveria dar, o histórico diz quanto deu.
+
+A tela mostra, ao lado do resultado, o que uma candidata qualquer entrega. Sem
+essa referência, "a medida mais rara aparece em 9% dos concursos" não significa
+nada. Medido na Mega-Sena com 2.823 concursos: 9,5% contra 3,4% de um jogo
+sorteado sem critério.
+
+**Isto não aumenta a chance de acertar**, e a tela diz isso com todas as
+letras. Toda combinação tem a mesma probabilidade; o próximo sorteio pode ser o
+mais atípico possível. O que a sugestão entrega é parecença com o retrato médio
+dos sorteios que já saíram — que é exatamente o que foi pedido, e nada além.
+
+### Os métodos
 
 **Sorteio uniforme** — cada combinação com a mesma chance. É a referência.
-
-**Otimizado para rateio** — evita padrões que muita gente marca: concentração
-em 1–31 (datas de nascimento), sequências, desenhos no volante, espaçamento
-regular, soma na média. Mesma chance de acertar; menos gente para dividir se
-acertar. É o único método com efeito mensurável, e o efeito é sobre o valor
-recebido.
 
 **Cobertura espalhada** — jogos que se repetem pouco entre si: 0,11 dezena de
 sobreposição média, contra 1,00 do sorteio uniforme. Não muda a chance de
 nenhum jogo isolado.
+
+**Evita o concurso anterior** — entre candidatas uniformes, fica com as que
+menos repetem o último resultado. Faz só isso: o desempate entre candidatas com
+o mesmo número de repetidas é a ordem em que saíram da urna, ou seja, o acaso.
 
 **Fechamento com garantia verificada** — na Lotofácil. Com 18 dezenas
 marcadas: 21 jogos garantem 13 acertos se 14 das suas saírem, contra 816 do
@@ -351,7 +392,7 @@ identificador.
 ### Testes
 
 ```bash
-node ferramentas/testar-motor.mjs                          # lógica — 370 testes
+node ferramentas/testar-motor.mjs                          # lógica — 397 testes
 node --experimental-websocket ferramentas/testar-interface.mjs   # interface — 42 testes
 ```
 
