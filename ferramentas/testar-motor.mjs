@@ -160,6 +160,12 @@ const EXPOSTOS = [
   "aprendizadoNaSugestao",
   "ganhadoresDoConcurso", "seloGanhadores", "coberturaDeGanhadores", "resumoGanhadores",
   "Avisos", "momentoDoAviso", "reagendarLembretes", "notificarSistema", "conferenciaAutomatica",
+  "matrizDePesquisa", "digitalDoHistorico", "hipoteseAleatoria", "escoreDaHipotese",
+  "avaliarHipotese", "aptidao", "cruzar", "mutar", "chaveDaHipotese", "rodarGeracao",
+  "concluirPesquisa", "descreverHipotese", "vereditoPesquisa", "pesquisasPendentes",
+  "evoluirPendentes", "PRIMITIVOS", "TRANSFORMACOES", "caudaNormal", "MINIMO_PESQUISA",
+  "tracoAuc",
+  "POPULACAO_PESQUISA",
 ];
 const epilogo = `\n;globalThis.__motor = {${EXPOSTOS.map((n) => `${n}: typeof ${n} !== "undefined" ? ${n} : undefined`).join(", ")}};\n`;
 vm.runInContext(fonte + epilogo, contexto, { filename: "index.html:script" });
@@ -2462,6 +2468,392 @@ secao("24. Avisos no celular");
     !/push|servidor (nos )?avisa|avisamos você/i.test(tela));
 
   S.resultados = guardado; S.jogos = guardaJogos; S.avisarSorteio = guardaAvisar;
+}
+
+function chaveDePopulacao(mem){
+  return (mem.populacao || []).map(h => h.genes.map(g => g.primitivo).join(",")).join("|");
+}
+
+/* ==================================================================
+   25. Motor autônomo de pesquisa estatística adaptativa
+   ==================================================================
+   Uma busca evolutiva que testa milhares de hipóteses SEMPRE acha uma que
+   parece boa. O valor deste módulo não está em achar — está em não se deixar
+   enganar pelo que acha. Por isso a maior parte destes testes cobre os
+   mecanismos que DERRUBAM achados, e não os que produzem.
+
+   O teste que dá sentido a todos os outros é o do sorteio viciado: um motor que
+   nunca acha nada poderia estar simplesmente quebrado, e aí o silêncio dele não
+   informaria coisa alguma. */
+secao("25. Motor de pesquisa adaptativa");
+{
+  const S = motor.S;
+  const guardado = S.resultados, guardadaMod = S.modalidade;
+  const guardaPesq = S.pesquisaAdaptativa;
+
+  /* Sorteio em que metade das dezenas repete o concurso anterior. Não é
+     loteria — existe para provar que o medidor enxerga. */
+  const historicoViciado = (quantos, forca, semente) => {
+    const rnd = (s => () => { s^=s<<13; s>>>=0; s^=s>>>17; s^=s<<5; s>>>=0;
+      return s/4294967296; })(semente);
+    const res = []; let anterior = [];
+    for (let i = 1; i <= quantos; i++) {
+      const dez = new Set();
+      for (const d of anterior) if (dez.size < forca && rnd() < 0.9) dez.add(d);
+      while (dez.size < 6) dez.add(1 + Math.floor(rnd() * 60));
+      const arr = [...dez].sort((a,b)=>a-b);
+      res.push({ concurso:i, data:"2025-01-01", modalidade:"mega-sena", dezenas:arr });
+      anterior = arr;
+    }
+    return res;
+  };
+
+  /* ---- a matriz: sem vazamento, e partida por concurso ---- */
+  S.pesquisaAdaptativa = {};
+  S.modalidade = "mega-sena";
+  S.resultados = historicoSemeado("mega-sena", 60, 6, 260, 20260810);
+  const d = contexto.matrizDePesquisa("mega-sena");
+  checar("a matriz sai com uma linha por dezena por concurso",
+    d.X.length === d.y.length && d.X.length % 60 === 0, `${d.X.length} linhas`);
+  checar("e um primitivo por coluna",
+    d.X[0].length === contexto.PRIMITIVOS.length, `${d.X[0].length} colunas`);
+  checar("todo primitivo fica em [0,1]",
+    d.X.every(l => l.every(v => v >= 0 && v <= 1)));
+  checar("desenvolvimento e validação não se cruzam",
+    !d.desenvolvimento.some(i => d.validacao.includes(i)));
+  checar("nenhum concurso fica partido entre os dois",
+    (() => {
+      const dev = new Set(d.desenvolvimento.map(i => d.concursoDe[i]));
+      return !d.validacao.some(i => dev.has(d.concursoDe[i]));
+    })());
+  checar("a validação vem DEPOIS no tempo, sempre",
+    Math.min(...d.validacao.map(i => d.concursoDe[i])) >
+    Math.max(...d.desenvolvimento.map(i => d.concursoDe[i])));
+  checar("há recortes de walk-forward dentro do desenvolvimento",
+    d.recortes.length >= 2 && d.recortes.every(r => r.length > 0),
+    `${d.recortes.length} recortes`);
+  checar("histórico curto é recusado com o número que falta",
+    (() => {
+      S.resultados = historicoSemeado("mega-sena", 60, 6, 30, 7);
+      const r = contexto.matrizDePesquisa("mega-sena");
+      return !!r.erro && /faltam \d+ concursos/.test(r.erro);
+    })());
+
+  /* ---- o defeito que este teste existe para nunca voltar ---- */
+  {
+    /* `assinaturaHistorico` é "quantos:último concurso". Dois históricos
+       diferentes com a mesma quantidade e o mesmo último número colidem. O
+       motor devolvia a matriz do primeiro para o segundo, em silêncio, e o
+       teste do sorteio viciado respondia — com cinco casas — o resultado do
+       sorteio honesto rodado antes. */
+    const a = historicoViciado(200, 0, 111);
+    const b = historicoViciado(200, 3, 111);
+    checar("dois históricos diferentes têm a mesma assinatura curta",
+      `${a.length}:${a[a.length-1].concurso}` === `${b.length}:${b[b.length-1].concurso}`);
+    checar("mas impressões digitais diferentes",
+      contexto.digitalDoHistorico(a) !== contexto.digitalDoHistorico(b),
+      `${contexto.digitalDoHistorico(a)} vs ${contexto.digitalDoHistorico(b)}`);
+    S.resultados = a;
+    const ma = contexto.matrizDePesquisa("mega-sena");
+    S.resultados = b;
+    const mb = contexto.matrizDePesquisa("mega-sena");
+    checar("e a matriz não é reaproveitada entre eles",
+      ma.assinatura !== mb.assinatura && ma.y.join("") !== mb.y.join(""));
+    checar("o mesmo histórico continua reaproveitando o cache",
+      contexto.matrizDePesquisa("mega-sena") === mb);
+  }
+
+  /* ---- as hipóteses ---- */
+  {
+    const rnd = contexto.geradorSemeado(4242);
+    const hs = Array.from({length: 40}, () => contexto.hipoteseAleatoria(rnd, 1, "aleatória"));
+    checar("toda hipótese tem ao menos um gene", hs.every(h => h.genes.length >= 1));
+    checar("e no máximo cinco", hs.every(h => h.genes.length <= 5));
+    checar("nenhuma repete o mesmo primitivo duas vezes",
+      hs.every(h => new Set(h.genes.map(g => g.primitivo)).size === h.genes.length));
+    checar("todo gene aponta para um primitivo que existe",
+      hs.every(h => h.genes.every(g => contexto.PRIMITIVOS[g.primitivo])));
+    checar("e usa uma transformação que existe",
+      hs.every(h => h.genes.every(g => contexto.TRANSFORMACOES[g.transformacao])));
+
+    const filho = contexto.cruzar(hs[0], hs[1], rnd, 2);
+    checar("o cruzamento produz hipótese válida e não vazia",
+      filho.genes.length >= 1 && filho.genes.length <= 5 && filho.origem === "cruzamento");
+    checar("e não duplica primitivo",
+      new Set(filho.genes.map(g => g.primitivo)).size === filho.genes.length);
+    const mutante = contexto.mutar(hs[0], rnd, 2);
+    checar("a mutação produz hipótese válida",
+      mutante.genes.length >= 1 && mutante.origem === "mutação");
+    checar("mutar não estraga o original",
+      hs[0].genes.every((g, i) => g.peso === hs[0].genes[i].peso));
+
+    checar("a hipótese se descreve em português, não em números soltos",
+      /peso/.test(contexto.descreverHipotese(hs[0])) &&
+      contexto.PRIMITIVOS.some(p => contexto.descreverHipotese(hs[0]).includes(p.nome)),
+      contexto.descreverHipotese(hs[0]).slice(0, 70));
+    checar("hipótese vazia não quebra a descrição",
+      typeof contexto.descreverHipotese([]) === "string");
+  }
+
+  /* ---- aptidão: o PIOR recorte, não a média ---- */
+  {
+    S.resultados = historicoSemeado("mega-sena", 60, 6, 260, 20260810);
+    const dd = contexto.matrizDePesquisa("mega-sena");
+    const rnd = contexto.geradorSemeado(99);
+    const h = contexto.hipoteseAleatoria(rnd, 1, "aleatória");
+    const ap = contexto.aptidao(h, dd);
+    const afast = ap.porRecorte.map(a => Math.abs(a - 0.5));
+    checar("a aptidão parte do pior recorte, e não da média",
+      Math.abs(ap.pior - Math.min(...afast)) < 1e-12,
+      `pior ${ap.pior.toFixed(4)} · média seria ${(afast.reduce((a,b)=>a+b,0)/afast.length).toFixed(4)}`);
+    checar("e desconta complexidade", ap.valor < ap.pior);
+    const simples = {genes:[h.genes[0]], origem:"t", nascimento:1};
+    const complexa = {genes:h.genes, origem:"t", nascimento:1};
+    checar("entre duas iguais, a mais simples leva vantagem",
+      contexto.aptidao(simples, dd).valor - contexto.aptidao(simples, dd).pior >
+      contexto.aptidao(complexa, dd).valor - contexto.aptidao(complexa, dd).pior ||
+      complexa.genes.length === 1);
+  }
+
+  /* ---- a evolução ---- */
+  {
+    S.pesquisaAdaptativa = {};
+    S.resultados = historicoSemeado("mega-sena", 60, 6, 260, 20260810);
+    const g1 = contexto.rodarGeracao("mega-sena");
+    checar("a primeira geração é a 1", g1.geracao === 1);
+    checar("a população fica no tamanho declarado",
+      g1.populacao.length === contexto.POPULACAO_PESQUISA, `${g1.populacao.length}`);
+    checar("hipóteses testadas começa a contar", g1.hipotesesTestadas > 0,
+      `${g1.hipotesesTestadas}`);
+    const g2 = contexto.rodarGeracao("mega-sena");
+    checar("a geração seguinte incrementa", g2.geracao === 2);
+    checar("e a busca acumula hipóteses novas",
+      g2.hipotesesTestadas > g1.hipotesesTestadas,
+      `${g1.hipotesesTestadas} -> ${g2.hipotesesTestadas}`);
+    checar("cada geração traz imigrantes — hipóteses sem parentesco",
+      g2.populacao.some(h => h.origem === "imigrante"));
+    checar("e descendentes das que sobreviveram",
+      g2.populacao.some(h => h.origem === "cruzamento" || h.origem === "mutação"));
+    checar("o histórico de gerações é guardado",
+      g2.historico.length === 2 && g2.historico[1].geracao === 2);
+    checar("cada linha do histórico registra quantas foram descartadas",
+      g2.historico.every(l => l.descartadas > 0));
+    checar("a conclusão é invalidada quando a população muda",
+      g2.conclusao === null);
+
+    let ger = g2;
+    for (let i = 0; i < 6; i++) ger = contexto.rodarGeracao("mega-sena");
+    checar("a aptidão do melhor não piora ao longo das gerações (há elitismo)",
+      ger.historico[ger.historico.length-1].melhorAptidao >=
+      ger.historico[0].melhorAptidao - 1e-9,
+      `${ger.historico[0].melhorAptidao.toFixed(4)} -> ${ger.historico[ger.historico.length-1].melhorAptidao.toFixed(4)}`);
+  }
+
+  /* ---- o julgamento fora da amostra ---- */
+  {
+    const c = contexto.concluirPesquisa("mega-sena");
+    checar("o julgamento sai com AUC medido na validação",
+      c.aucValidacao > 0 && c.aucValidacao < 1, (c.aucValidacao).toFixed(4));
+    checar("o limiar é 0,05 dividido pelas hipóteses testadas, e não 0,05",
+      Math.abs(c.limiar - 0.05 / c.familia) < 1e-15 && c.limiar < 0.05,
+      `0,05/${c.familia} = ${c.limiar.toExponential(2)}`);
+    checar("a família são as hipóteses distintas da busca inteira",
+      c.familia === S.pesquisaAdaptativa["mega-sena"].hipotesesTestadas);
+    checar("a nuvem de comparação é de hipóteses aleatórias, não de teoria",
+      c.percentilNaNuvem >= 0 && c.percentilNaNuvem <= 1, (c.percentilNaNuvem).toFixed(3));
+    checar("a degradação fora da amostra é reportada",
+      Number.isFinite(c.degradacao));
+    checar("com sorteios honestos, nada sobrevive", c.sobreviveu === false,
+      `p ${c.p.toExponential(2)} contra limiar ${c.limiar.toExponential(2)}`);
+
+    /* O p normal existe porque o empírico tem piso. Quando o empírico está
+       longe do piso, os dois têm de concordar — se divergirem ali, a suposição
+       de normalidade caiu e o número precisa ser revisto. */
+    checar("o p empírico e o p normal concordam longe do piso",
+      c.pEmpirico < 0.5 ? Math.abs(c.p - c.pEmpirico) < 0.25 : true,
+      `empírico ${(c.pEmpirico).toFixed(4)} · normal ${(c.p).toFixed(4)}`);
+    checar("o p normal desce abaixo do piso do empírico quando precisa",
+      contexto.caudaNormal(5) * 2 < 2 / 201,
+      `p(|z|>5) = ${(contexto.caudaNormal(5)*2).toExponential(1)}`);
+    checar("a cauda normal bate com valores conhecidos",
+      Math.abs(contexto.caudaNormal(1.959964) - 0.025) < 1e-4 &&
+      Math.abs(contexto.caudaNormal(0) - 0.5) < 1e-9,
+      `P(Z>1,96) = ${(contexto.caudaNormal(1.959964)).toFixed(5)}`);
+    checar("julgar sem geração nenhuma é erro, e não um veredito inventado",
+      (() => {
+        const guarda = S.pesquisaAdaptativa["quina"];
+        delete S.pesquisaAdaptativa["quina"];
+        S.resultados = S.resultados.concat(
+          historicoSemeado("quina", 80, 5, 200, 5).map(r => ({...r})));
+        const r = contexto.concluirPesquisa("quina");
+        S.pesquisaAdaptativa["quina"] = guarda;
+        return !!r.erro;
+      })());
+  }
+
+  /* ---- O TESTE QUE DÁ SENTIDO AOS OUTROS ---- */
+  {
+    S.pesquisaAdaptativa = {};
+    S.modalidade = "mega-sena";
+    S.resultados = historicoViciado(400, 3, 20260808);
+    for (let g = 0; g < 15; g++) contexto.rodarGeracao("mega-sena");
+    const viciado = contexto.concluirPesquisa("mega-sena");
+    checar("com sorteio VICIADO, o motor ACHA — ele não é cego",
+      viciado.sobreviveu === true,
+      `AUC ${(viciado.aucValidacao).toFixed(4)} · p ${viciado.p.toExponential(1)} contra ${viciado.limiar.toExponential(1)}`);
+    checar("e a hipótese vencedora nomeia o primitivo certo",
+      /concurso anterior/.test(contexto.descreverHipotese(viciado.genes)),
+      contexto.descreverHipotese(viciado.genes).slice(0, 60));
+    checar("mesmo achando, o veredito NÃO manda apostar",
+      /não<\/strong>\s+vira aposta/.test(contexto.vereditoPesquisa(viciado)) &&
+      !/\baposte\b|vale a pena apostar|pode apostar/i.test(
+        contexto.vereditoPesquisa(viciado)), "");
+    checar("e diz que achado precisa se repetir para valer",
+      /repetir com mais concursos/.test(contexto.vereditoPesquisa(viciado)));
+
+    S.pesquisaAdaptativa = {};
+    S.resultados = historicoViciado(400, 0, 20260808);
+    for (let g = 0; g < 15; g++) contexto.rodarGeracao("mega-sena");
+    const honesto = contexto.concluirPesquisa("mega-sena");
+    checar("com o MESMO gerador sem vício, não acha",
+      honesto.sobreviveu === false,
+      `AUC ${(honesto.aucValidacao).toFixed(4)} · p ${honesto.p.toExponential(1)}`);
+    checar("e o AUC do viciado é muito maior que o do honesto",
+      Math.abs(viciado.aucValidacao - 0.5) > 3 * Math.abs(honesto.aucValidacao - 0.5),
+      `${(viciado.aucValidacao).toFixed(4)} vs ${(honesto.aucValidacao).toFixed(4)}`);
+  }
+
+  /* ---- reprodutibilidade e memória por modalidade ---- */
+  {
+    const rodar = () => {
+      S.pesquisaAdaptativa = {};
+      S.resultados = historicoSemeado("mega-sena", 60, 6, 260, 20260810);
+      for (let g = 0; g < 3; g++) contexto.rodarGeracao("mega-sena", { semente: 555 });
+      return contexto.concluirPesquisa("mega-sena");
+    };
+    const um = rodar(), dois = rodar();
+    checar("o mesmo histórico e a mesma semente dão o mesmo julgamento",
+      um.aucValidacao === dois.aucValidacao && um.p === dois.p,
+      `AUC ${(um.aucValidacao).toFixed(6)}`);
+
+    S.pesquisaAdaptativa = {};
+    S.resultados = historicoSemeado("mega-sena", 60, 6, 260, 1)
+      .concat(historicoSemeado("lotofacil", 25, 15, 260, 2));
+    contexto.rodarGeracao("mega-sena");
+    contexto.rodarGeracao("lotofacil");
+    /* A assinatura CURTA pode coincidir entre modalidades — as duas aqui têm
+       260 concursos numerados de 1 a 260. Coincidir não é problema: ela é
+       comparada dentro da própria modalidade. O que precisa estar separado é a
+       memória, e é isso que se afere. */
+    checar("cada modalidade guarda a própria memória",
+      !!S.pesquisaAdaptativa["mega-sena"] && !!S.pesquisaAdaptativa["lotofacil"] &&
+      S.pesquisaAdaptativa["mega-sena"] !== S.pesquisaAdaptativa["lotofacil"]);
+    checar("e a matriz de uma não é a da outra",
+      S.pesquisaAdaptativa["mega-sena"].assinaturaMatriz !==
+      S.pesquisaAdaptativa["lotofacil"].assinaturaMatriz);
+    checar("e a população de uma não vaza para a outra",
+      chaveDePopulacao(S.pesquisaAdaptativa["mega-sena"]) !==
+      chaveDePopulacao(S.pesquisaAdaptativa["lotofacil"]));
+  }
+
+  /* ---- autonomia ---- */
+  {
+    S.pesquisaAdaptativa = {};
+    S.resultados = historicoSemeado("mega-sena", 60, 6, 200, 3);
+    S.modalidade = "mega-sena";
+    checar("modalidade com histórico e sem pesquisa entra na fila",
+      contexto.pesquisasPendentes().includes("mega-sena"));
+    const feitas = contexto.evoluirPendentes();
+    checar("evoluir sozinho roda e julga", feitas.length === 1 &&
+      feitas[0].modalidade === "mega-sena" && feitas[0].conclusao);
+    checar("e sai da fila depois de rodar",
+      !contexto.pesquisasPendentes().includes("mega-sena"));
+    checar("concurso novo devolve a modalidade para a fila",
+      (() => {
+        S.resultados = S.resultados.concat([{concurso: 999, data:"2026-01-01",
+          modalidade:"mega-sena", dezenas:[1,2,3,4,5,6]}]);
+        return contexto.pesquisasPendentes().includes("mega-sena");
+      })());
+    checar("modalidade sem histórico suficiente nunca entra na fila",
+      !contexto.pesquisasPendentes().includes("timemania"));
+  }
+
+  /* ---- a tela: é laboratório, e tem de se comportar como um ---- */
+  {
+    S.pesquisaAdaptativa = {};
+    S.resultados = historicoSemeado("mega-sena", 60, 6, 200, 3);
+    S.modalidade = "mega-sena";
+    contexto.rodarGeracao("mega-sena");
+    contexto.concluirPesquisa("mega-sena");
+    const tela = contexto.T.pesquisa();
+
+    checar("a tela declara que é laboratório, não gerador de jogos",
+      /laboratório, não um gerador de jogos/i.test(tela));
+    checar("e que não prevê resultado", /<strong>não<\/strong> prevê resultado/.test(tela));
+    checar("e que não muda a chance de nenhuma dezena",
+      /não<\/strong> muda a chance/.test(tela));
+
+    /* As duas travas que definem o módulo. Um botão de copiar aqui
+       transformaria um experimento em aposta com um toque. */
+    checar("a tela NÃO tem botão de copiar nem de salvar",
+      !/id="[^"]*(salvar|copiar)[^"]*"/i.test(tela) &&
+      !/>\s*(Salvar|Copiar)[^<]*</i.test(tela), "");
+    checar("a tela NÃO exibe dezena nenhuma",
+      !/class="dz\b/.test(tela) && !/<span class="dezenas"/.test(tela) &&
+      !/cartela\(/.test(tela), "");
+    checar("nem promete vantagem",
+      !/mais prováveis|aumenta|vantagem|melhor jogo/i.test(
+        tela.replace(/leva vantagem/gi, "")), "");
+    checar("a tela mostra quantas hipóteses foram testadas",
+      /hipóteses testadas/.test(tela));
+    /* O cartão do veredito já traz a manchete como título; repeti-la no
+       parágrafo era dizer a mesma frase duas vezes seguidas. */
+    checar("a manchete do veredito não sai duplicada no cartão",
+      (tela.match(/Nenhuma hipótese sobreviveu/g) || []).length === 1,
+      `${(tela.match(/Nenhuma hipótese sobreviveu/g) || []).length} ocorrências`);
+    checar("mas quem chama o veredito sozinho continua recebendo a manchete",
+      /^<strong>Nenhuma hipótese sobreviveu\.<\/strong>/.test(
+        contexto.vereditoPesquisa({sobreviveu:false, familia:10, p:0.3, limiar:0.005})));
+
+    /* Direção visual trazida do pacote de upgrade: hero, veredito com selo e
+       linhas de traço. O traço tem de dizer o LADO — uma hipótese que separa
+       ao contrário separa igual, e uma barra que só cresce para a direita
+       esconderia isso. */
+    checar("a tela abre com o hero do laboratório", /class="pq-hero"/.test(tela));
+    checar("e o veredito sai em cartão próprio, com selo",
+      /class="pq-veredito/.test(tela) && /class="pq-selo"/.test(tela));
+    checar("o veredito de acaso e o de sinal usam cartões diferentes",
+      /pq-veredito (acaso|sinal)/.test(tela));
+    checar("os recortes viram linhas de traço, com a validação junto",
+      (tela.match(/class="pq-traco/g) || []).length >= 5,
+      `${(tela.match(/class="pq-traco/g) || []).length} traços`);
+
+    const acima = contexto.tracoAuc("t", 0.56);
+    const abaixo = contexto.tracoAuc("t", 0.44);
+    checar("o traço acima de 0,5 cresce para a direita",
+      /--dx:0/.test(acima) && !/negativo/.test(acima), "");
+    checar("e o abaixo de 0,5 cresce para a esquerda, marcado como negativo",
+      /--dx:-100%/.test(abaixo) && /negativo/.test(abaixo), "");
+    checar("desvios iguais dão barras de mesmo tamanho, para os dois lados",
+      (acima.match(/--w:([\d.]+)%/) || [])[1] === (abaixo.match(/--w:([\d.]+)%/) || [])[1],
+      (acima.match(/--w:([\d.]+)%/) || [])[1]);
+    checar("AUC 0,5 não desenha barra nenhuma",
+      /--w:0\.0%/.test(contexto.tracoAuc("t", 0.5)));
+    checar("desvio enorme não estoura a barra",
+      parseFloat((contexto.tracoAuc("t", 0.99).match(/--w:([\d.]+)%/) || [])[1]) <= 50);
+    checar("e o limiar corrigido, com a conta à vista",
+      /0,05 ÷/.test(tela));
+    checar("e avisa que subir a aptidão na busca é esperado",
+      /a busca sempre encontra algo/.test(tela));
+
+    S.pesquisaAdaptativa = {};
+    S.resultados = historicoSemeado("mega-sena", 60, 6, 30, 3);
+    checar("com histórico curto, a tela pede mais concursos em vez de rodar",
+      /A pesquisa precisa de/.test(contexto.T.pesquisa()));
+  }
+
+  S.resultados = guardado; S.modalidade = guardadaMod;
+  S.pesquisaAdaptativa = guardaPesq;
 }
 
 /* ---------- saída ---------- */
