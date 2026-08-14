@@ -486,7 +486,7 @@ identificador.
 ### Testes
 
 ```bash
-node ferramentas/testar-motor.mjs                          # lógica — 530 testes
+node ferramentas/testar-motor.mjs                          # lógica — 541 testes
 node --experimental-websocket ferramentas/testar-interface.mjs   # interface — 42 testes
 ```
 

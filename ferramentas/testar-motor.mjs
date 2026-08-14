@@ -164,6 +164,7 @@ const EXPOSTOS = [
   "avaliarHipotese", "aptidao", "cruzar", "mutar", "chaveDaHipotese", "rodarGeracao",
   "concluirPesquisa", "descreverHipotese", "vereditoPesquisa", "pesquisasPendentes",
   "evoluirPendentes", "PRIMITIVOS", "TRANSFORMACOES", "caudaNormal", "MINIMO_PESQUISA",
+  "tracoAuc",
   "POPULACAO_PESQUISA",
 ];
 const epilogo = `\n;globalThis.__motor = {${EXPOSTOS.map((n) => `${n}: typeof ${n} !== "undefined" ? ${n} : undefined`).join(", ")}};\n`;
@@ -2805,6 +2806,41 @@ secao("25. Motor de pesquisa adaptativa");
         tela.replace(/leva vantagem/gi, "")), "");
     checar("a tela mostra quantas hipóteses foram testadas",
       /hipóteses testadas/.test(tela));
+    /* O cartão do veredito já traz a manchete como título; repeti-la no
+       parágrafo era dizer a mesma frase duas vezes seguidas. */
+    checar("a manchete do veredito não sai duplicada no cartão",
+      (tela.match(/Nenhuma hipótese sobreviveu/g) || []).length === 1,
+      `${(tela.match(/Nenhuma hipótese sobreviveu/g) || []).length} ocorrências`);
+    checar("mas quem chama o veredito sozinho continua recebendo a manchete",
+      /^<strong>Nenhuma hipótese sobreviveu\.<\/strong>/.test(
+        contexto.vereditoPesquisa({sobreviveu:false, familia:10, p:0.3, limiar:0.005})));
+
+    /* Direção visual trazida do pacote de upgrade: hero, veredito com selo e
+       linhas de traço. O traço tem de dizer o LADO — uma hipótese que separa
+       ao contrário separa igual, e uma barra que só cresce para a direita
+       esconderia isso. */
+    checar("a tela abre com o hero do laboratório", /class="pq-hero"/.test(tela));
+    checar("e o veredito sai em cartão próprio, com selo",
+      /class="pq-veredito/.test(tela) && /class="pq-selo"/.test(tela));
+    checar("o veredito de acaso e o de sinal usam cartões diferentes",
+      /pq-veredito (acaso|sinal)/.test(tela));
+    checar("os recortes viram linhas de traço, com a validação junto",
+      (tela.match(/class="pq-traco/g) || []).length >= 5,
+      `${(tela.match(/class="pq-traco/g) || []).length} traços`);
+
+    const acima = contexto.tracoAuc("t", 0.56);
+    const abaixo = contexto.tracoAuc("t", 0.44);
+    checar("o traço acima de 0,5 cresce para a direita",
+      /--dx:0/.test(acima) && !/negativo/.test(acima), "");
+    checar("e o abaixo de 0,5 cresce para a esquerda, marcado como negativo",
+      /--dx:-100%/.test(abaixo) && /negativo/.test(abaixo), "");
+    checar("desvios iguais dão barras de mesmo tamanho, para os dois lados",
+      (acima.match(/--w:([\d.]+)%/) || [])[1] === (abaixo.match(/--w:([\d.]+)%/) || [])[1],
+      (acima.match(/--w:([\d.]+)%/) || [])[1]);
+    checar("AUC 0,5 não desenha barra nenhuma",
+      /--w:0\.0%/.test(contexto.tracoAuc("t", 0.5)));
+    checar("desvio enorme não estoura a barra",
+      parseFloat((contexto.tracoAuc("t", 0.99).match(/--w:([\d.]+)%/) || [])[1]) <= 50);
     checar("e o limiar corrigido, com a conta à vista",
       /0,05 ÷/.test(tela));
     checar("e avisa que subir a aptidão na busca é esperado",

@@ -274,6 +274,61 @@ nav button[aria-current="page"] svg{stroke-width:2.2}
 /* Selo de ganhadores. Três estados com três pesos visuais diferentes, porque
    "não sei" não pode parecer um resultado: ele é discreto e vazado, enquanto
    ter ganhador e acumular são afirmações e ficam preenchidas. */
+/* ---------- tela de pesquisa: hero, veredito e traços ----------
+   Direção visual trazida do pacote de upgrade, reescrita sobre os tokens que o
+   app já tem. Adotar a paleta dele por cima teria dado dois sistemas de cor no
+   mesmo aplicativo — o dele chama de primária um teal que aqui já quer dizer
+   "o acaso", e a mesma cor passaria a significar duas coisas. O que veio foram
+   os RECURSOS: hero com selo, cartão de veredito, linhas de traço e barra em
+   gradiente. */
+.pq-hero{display:grid;grid-template-columns:1fr auto;gap:var(--e4);align-items:center;
+  padding:var(--e5);border-radius:var(--r);border:1px solid var(--linha);
+  background:linear-gradient(135deg,var(--carta),
+    color-mix(in srgb,var(--acaso) 7%,var(--carta)));
+  box-shadow:var(--sombra)}
+.pq-hero h2{font-size:1.5rem;line-height:1.1;margin:0 0 6px}
+.pq-hero p{margin:0;color:var(--secundaria);font-size:.84rem;max-width:46ch}
+.pq-orbe{width:66px;height:66px;border-radius:50%;display:grid;place-items:center;flex:none;
+  background:radial-gradient(circle at 35% 30%,
+    color-mix(in srgb,var(--acaso) 38%,white),var(--acaso));
+  box-shadow:0 0 0 8px color-mix(in srgb,var(--acaso) 8%,transparent);
+  color:#fff;font-family:var(--mono);font-weight:700;font-size:.9rem;letter-spacing:.04em}
+@media(max-width:520px){ .pq-hero{grid-template-columns:1fr} .pq-orbe{display:none} }
+
+.pq-selo{display:inline-block;padding:4px 9px;border-radius:99px;font-family:var(--mono);
+  font-size:.58rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
+  background:var(--trama);color:var(--secundaria)}
+.pq-veredito{padding:var(--e4);border-radius:var(--r);border:1px solid var(--linha);
+  background:var(--carta);margin-top:var(--e3)}
+.pq-veredito.acaso{border-color:color-mix(in srgb,var(--acaso) 30%,var(--linha))}
+.pq-veredito.acaso .pq-selo{background:color-mix(in srgb,var(--acaso) 14%,transparent);
+  color:var(--acaso)}
+.pq-veredito.sinal{border-color:color-mix(in srgb,var(--seu) 42%,var(--linha))}
+.pq-veredito.sinal .pq-selo{background:color-mix(in srgb,var(--seu) 16%,transparent);
+  color:var(--seu)}
+.pq-veredito h3{margin:9px 0 5px;font-size:1.06rem}
+.pq-veredito p{margin:0;color:var(--secundaria);font-size:.86rem;line-height:1.55}
+.pq-inline{display:flex;gap:var(--e4);flex-wrap:wrap;margin-top:var(--e3);
+  padding-top:var(--e3);border-top:1px solid var(--linha);
+  font-family:var(--mono);font-size:.66rem;color:var(--secundaria)}
+.pq-inline b{color:var(--tinta)}
+
+/* Linha de traço: rótulo, barra e valor. Serve para ler quatro recortes de
+   walk-forward de relance, sem virar tabela. */
+.pq-traco{display:grid;grid-template-columns:74px 1fr 52px;align-items:center;gap:var(--e2);
+  font-family:var(--mono);font-size:.66rem;color:var(--secundaria);margin:6px 0}
+.pq-traco i{height:6px;background:var(--trama);border-radius:99px;overflow:hidden;
+  position:relative}
+.pq-traco i::after{content:"";position:absolute;top:0;bottom:0;left:50%;
+  width:var(--w,0);transform:translateX(var(--dx,0));background:var(--acaso);
+  border-radius:99px}
+.pq-traco.negativo i::after{background:var(--seu)}
+.pq-traco b{text-align:right;color:var(--tinta);font-weight:600}
+.pq-eixo{display:grid;grid-template-columns:74px 1fr 52px;gap:var(--e2);
+  font-family:var(--mono);font-size:.58rem;color:var(--secundaria);
+  text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px}
+.pq-eixo span:nth-child(2){text-align:center}
+
 .ganho{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:5px}
 /* Mesma leitura nos cartões: uma faixa na borda esquerda, na cor do resultado. */
 .carta.ganhou,.nota.ganhou{border-left:4px solid var(--ganhou)}
@@ -4340,10 +4395,15 @@ function descreverHipotese(entrada){
     }).join(" · ");
 }
 
-function vereditoPesquisa(c){
+/* `manchete` diz se a frase de abertura entra no texto. O cartão da tela já
+   mostra essa frase como título; repeti-la no parágrafo logo abaixo era dizer a
+   mesma coisa duas vezes seguidas. Quem chama sem opção continua recebendo o
+   texto inteiro, que é como os testes e qualquer outro uso esperam. */
+function vereditoPesquisa(c, opcoes){
+  const o = Object.assign({manchete:true}, opcoes || {});
   if(!c || c.erro) return esc((c && c.erro) || "sem conclusão");
   if(!c.sobreviveu){
-    return `<strong>Nenhuma hipótese sobreviveu.</strong> A melhor de
+    return `${o.manchete ? "<strong>Nenhuma hipótese sobreviveu.</strong> " : ""}A melhor de
       ${inf(c.familia)} hipótese${c.familia > 1 ? "s" : ""} testada${c.familia > 1 ? "s" : ""}
       chegou a p = ${nf(c.p, 4)}, e o limiar honesto para uma busca desse tamanho é
       ${c.limiar < 0.0001 ? c.limiar.toExponential(1).replace(".", ",") : nf(c.limiar, 5)}
@@ -4351,7 +4411,7 @@ function vereditoPesquisa(c){
       esperado de sorteios independentes, e é o resultado que o motor vem
       encontrando.`;
   }
-  return `<strong>Uma hipótese sobreviveu à correção.</strong> p = ${nf(c.p, 5)} contra o
+  return `${o.manchete ? "<strong>Uma hipótese sobreviveu à correção.</strong> " : ""}p = ${nf(c.p, 5)} contra o
     limiar ${c.limiar.toExponential(1).replace(".", ",")}, medida nos concursos que a busca
     nunca viu. Isso <strong>não</strong> quer dizer que ela preveja sorteio, e
     <strong>não</strong> vira aposta: quer dizer que vale repetir com mais concursos e ver
@@ -4932,14 +4992,44 @@ T.aprendizado = () => {
    melhor pontua" transformaria um experimento em aposta com um olhar. Também
    não há botão de copiar nem de salvar, pelo mesmo motivo — e há um teste que
    reprova se algum aparecer. */
+/* Uma linha de traço: rótulo, barra a partir do centro, valor. O centro é
+   0,5 — que é "não distingue nada" — então a barra cresce para a direita
+   quando a hipótese separa a favor e para a esquerda quando separa ao
+   contrário. Ler quatro recortes vira um relance em vez de uma tabela. */
+function tracoAuc(rotulo, valor, escala){
+  const desvio = valor - 0.5;
+  const largura = Math.min(50, Math.abs(desvio) / (escala || 0.06) * 50);
+  const negativo = desvio < 0;
+  return `<div class="pq-traco ${negativo?"negativo":""}">
+    <span>${esc(rotulo)}</span>
+    <i style="--w:${largura.toFixed(1)}%;--dx:${negativo?"-100%":"0"}"></i>
+    <b>${nf(valor,4)}</b></div>`;
+}
+
 T.pesquisa = () => {
   const m = S.modalidade;
   const c = MODALIDADES[m];
   const mem = S.pesquisaAdaptativa[m];
   const hist = historicoDe(m);
 
+  const mem0 = S.pesquisaAdaptativa[m];
   const cabeca = `
-  <div class="nota atencao"><strong>Isto é um laboratório, não um gerador de jogos.</strong>
+  <div class="pq-hero">
+    <div>
+      <span class="pq-selo">laboratório estatístico</span>
+      <h2 style="margin-top:8px">${mem0 && mem0.geracao
+        ? `${inf(mem0.hipotesesTestadas||0)} hipóteses testadas`
+        : "Nenhuma hipótese testada ainda"}</h2>
+      <p>${mem0 && mem0.geracao
+        ? `${inf(mem0.geracao)} gerações na ${esc(c.nome)}. O motor inventa, mede e
+           descarta sozinho — e o que ele encontra quase sempre é acaso.`
+        : `O motor cria hipóteses sobre os sorteios, testa cada uma contra o acaso e
+           descarta as que não se sustentam.`}</p>
+    </div>
+    <div class="pq-orbe" aria-hidden="true">${mem0 && mem0.geracao ? "G"+inf(mem0.geracao) : "—"}</div>
+  </div>
+
+  <div class="nota atencao" style="margin-top:12px"><strong>Isto é um laboratório, não um gerador de jogos.</strong>
     O motor inventa hipóteses sobre os sorteios e as testa contra si mesmas e contra o
     acaso. Ele <strong>não</strong> prevê resultado, <strong>não</strong> muda a chance de
     nenhuma dezena e <strong>não</strong> produz números para apostar — por isso esta tela
@@ -4981,17 +5071,10 @@ T.pesquisa = () => {
   const conc = mem.conclusao;
   const linhasHist = (mem.historico || []).slice(-12).reverse();
 
-  const painel = `
-  <div class="kpis" style="margin-top:14px">
-    <div class="kpi"><div class="rot">geração</div><div class="val">${inf(mem.geracao)}</div>
-      <div class="sub">memória da ${esc(c.nome)}</div></div>
-    <div class="kpi"><div class="rot">hipóteses testadas</div>
-      <div class="val">${inf(mem.hipotesesTestadas || 0)}</div>
-      <div class="sub">distintas, desde a primeira geração</div></div>
-    <div class="kpi"><div class="rot">concursos</div>
-      <div class="val" style="font-size:1.02rem">${inf(mem.concursosDesenvolvimento||0)} + ${inf(mem.concursosValidacao||0)}</div>
-      <div class="sub">busca + validação nunca vista</div></div>
-  </div>`;
+  /* Sem faixa de KPIs: o hero já diz gerações e hipóteses, e o cartão do
+     veredito repete os dois com a validação junto. Três lugares para o mesmo
+     número é ruído, não reforço. */
+  const painel = "";
 
   const campeao = mem.campeaoDev ? `
   <div class="carta" style="margin-top:12px">
@@ -4999,13 +5082,14 @@ T.pesquisa = () => {
       color:var(--secundaria)">a hipótese que lidera a busca</div>
     <p style="margin:8px 0 0;font-size:.9rem;line-height:1.5">
       ${esc(descreverHipotese(mem.campeaoDev.genes))}</p>
+    <p style="margin:8px 0 6px;font-size:.78rem;color:var(--secundaria)">
+      Surgiu por <strong>${esc(mem.campeaoDev.origem)}</strong>.</p>
+    <div class="pq-eixo"><span>recorte</span><span>← contra · 0,5 · a favor →</span><span>auc</span></div>
+    ${(mem.campeaoDev.aucPorRecorte||[]).map((a,i)=>tracoAuc(`janela ${i+1}`, a)).join("")}
+    ${conc ? tracoAuc("validação", conc.aucValidacao) : ""}
     <p style="margin:8px 0 0;font-size:.78rem;color:var(--secundaria)">
-      Surgiu por <strong>${esc(mem.campeaoDev.origem)}</strong>.
-      AUC por recorte do desenvolvimento:
-      ${(mem.campeaoDev.aucPorRecorte||[]).map(a=>nf(a,4)).join(" · ")}.
-      <span style="display:block;margin-top:4px">AUC 0,5 quer dizer que a hipótese não
-      distingue nada. Estes números são de dentro da busca — o que vale é o julgamento
-      abaixo.</span></p>
+      AUC 0,5 quer dizer que a hipótese não distingue nada. As janelas são de dentro da
+      busca; a validação é o recorte que ela nunca viu — e é só esse que conta.</p>
   </div>` : "";
 
   const julgamento = !conc ? `<div class="nota" style="margin-top:12px">A população
@@ -5029,8 +5113,19 @@ T.pesquisa = () => {
             <td style="text-align:right">${nf(Math.max(0,Math.min(1,conc.degradacao))*100,0)}%</td></tr>
       </tbody>
     </table></div>
-    <div class="nota ${conc.sobreviveu?"atencao":""}" style="margin-top:10px">
-      ${vereditoPesquisa(conc)}</div>
+  </div>
+  <div class="pq-veredito ${conc.sobreviveu?"sinal":"acaso"}">
+    <span class="pq-selo">${conc.sobreviveu ? "achado a conferir" : "compatível com o acaso"}</span>
+    <h3>${conc.sobreviveu
+      ? "Uma hipótese passou do limiar"
+      : "Nenhuma hipótese sobreviveu"}</h3>
+    <p>${vereditoPesquisa(conc, {manchete:false})}</p>
+    <div class="pq-inline">
+      <span>hipóteses <b>${inf(conc.familia)}</b></span>
+      <span>gerações <b>${inf(conc.geracao)}</b></span>
+      <span>validação <b>${inf(mem.concursosValidacao||0)} concursos</b></span>
+      <span>sumiu fora da amostra <b>${nf(Math.max(0,Math.min(1,conc.degradacao))*100,0)}%</b></span>
+    </div>
   </div>`;
 
   const tabela = linhasHist.length ? `
