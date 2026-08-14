@@ -2820,6 +2820,13 @@ secao("25. Motor de pesquisa adaptativa");
        ao contrário separa igual, e uma barra que só cresce para a direita
        esconderia isso. */
     checar("a tela abre com o hero do laboratório", /class="pq-hero"/.test(tela));
+    checar("uma geração é 'geração', e não 'gerações'",
+      /1 geração na/.test(tela) && !/1 gerações/.test(tela), "");
+    checar("o anel da geração é desenhado", /aria-label="geração/.test(tela));
+    /* As dezenas do resultado viram bolas verdes — a peça mais repetida da
+       interface, e a que faz a lista parecer loteria e não banco de dados. */
+    checar("o resultado sai em bolas, e não em texto corrido",
+      /class="bola"/.test(contexto.T.resultados()));
     checar("e o veredito sai em cartão próprio, com selo",
       /class="pq-veredito/.test(tela) && /class="pq-selo"/.test(tela));
     checar("o veredito de acaso e o de sinal usam cartões diferentes",
