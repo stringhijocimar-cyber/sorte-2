@@ -47,7 +47,7 @@ A modalidade é escolhida uma vez no cabeçalho e vale em todas as telas.
 | **Gerar** | *Automático* — a sugestão do sistema e quatro métodos de montagem · *Manual* — marcação na cartela, com custo, validade e características do jogo |
 | **Jogos** | *Meus jogos* — tudo o que foi salvo, com a cartela conferida · *Teimosinha* — repete o jogo por N concursos, com custo total e conferência de cada um |
 | **Conferir** | *Conferir* — informa um resultado e confere os jogos · *Resultados* — histórico por modalidade, importado por colagem ou pelo serviço da Caixa |
-| **Análise** | *Placar* — resultado acumulado contra o acaso · *Bancada* — todos os métodos contra o mesmo sorteio · *Aprendizado* — um modelo por modalidade, medido fora da amostra |
+| **Análise** | *Placar* — resultado acumulado contra o acaso · *Bancada* — todos os métodos contra o mesmo sorteio · *Aprendizado* — um modelo por modalidade, medido fora da amostra · *Pesquisa* — o motor que inventa e derruba hipóteses sozinho |
 | **Entender** | o que o app faz, o que não faz, e por quê |
 
 ### A cartela
@@ -92,6 +92,100 @@ permutação com semente fixa, então **rodar de novo dá o mesmo resultado**.
 Com sorteios independentes o veredito é "não há sinal, e este é o resultado
 esperado". A bateria de testes prova que o medidor não é cego: com um sorteio
 deliberadamente viciado, ele detecta (AUC 0,755, p = 0,010).
+
+### Motor autônomo de pesquisa estatística adaptativa
+
+Uma camada **sobre** o aprendizado, não no lugar dele. O modelo logístico
+continua onde estava; o motor é outra coisa: um laboratório que inventa
+hipóteses, testa, descarta, cruza as que sobram, muta, injeta hipóteses novas a
+cada geração e guarda memória separada por loteria. Roda sozinho quando entra
+concurso novo.
+
+**O que ele não é**, e isto é desenho e não ressalva: não prevê sorteio, não
+muda probabilidade de nada, não produz dezenas para apostar. A tela **não tem
+botão de copiar nem de salvar**, e há um teste que reprova se algum aparecer —
+uma hipótese experimental que vira aposta com um toque seria a mentira mais
+fácil de contar aqui. A tela também não exibe dezena nenhuma, pelo mesmo motivo.
+
+#### Uma hipótese
+
+Uma combinação de até cinco **primitivos** — perguntas sobre uma dezena
+respondidas só com os concursos anteriores — cada um com peso e uma
+transformação (`direto`, `ao contrário`, `reforçando o alto`, `só acima da
+média`). São 14 primitivos: frequências em três janelas, ausência, presença nos
+concursos anteriores, posição, paridade, primo, Fibonacci, terminação, linha,
+coluna e vizinhança.
+
+O motor descreve o campeão em português — *"está na sequência de Fibonacci (só
+acima da média, a favor, peso 1,84) · vizinha de dezena do concurso anterior
+(direto, a favor, peso 1,40)"*. Uma afirmação que não se consegue ler não se
+consegue contestar.
+
+#### Por que uma busca evolutiva precisa de MAIS rigor, e não de menos
+
+Uma busca que testa milhares de hipóteses **sempre** acha uma com AUC 0,58 em
+algum recorte. Isso não é descoberta, é dragagem de dados. Três mecanismos
+existem contra isso, e são a parte mais importante do módulo:
+
+| Mecanismo | O que impede |
+|---|---|
+| **Separação estrita** — a evolução vive nos primeiros 70% dos concursos; os 30% finais são território proibido e o campeão só é medido lá uma vez | a busca decorar o conjunto que deveria julgá-la |
+| **Família real** — o limiar é 0,05 ÷ nº de hipóteses **distintas** já testadas, acumulado desde a primeira geração | reportar p = 0,01 da melhor de 3.000 como se valesse alguma coisa |
+| **Nulo construído igual** — a nuvem de comparação é uma população de hipóteses aleatórias com a mesma estrutura, medida na mesma validação | confundir o afastamento que a própria forma da hipótese produz com achado |
+
+A aptidão usa o **pior** recorte de walk-forward, não a média: com a média, uma
+hipótese que acerta muito num recorte e erra nos outros ganha da consistente — e
+é a primeira que não se sustenta fora da amostra.
+
+#### O que ele encontra nos dados reais
+
+Quinze gerações em cada uma das oito loterias, com o histórico de verdade:
+
+| Loteria | AUC na busca | AUC fora da amostra | Sumiu | Veredito |
+|---|---:|---:|---:|---|
+| Mega-Sena | 0,5182 | 0,5083 | 54% | nada |
+| Lotofácil | 0,5174 | 0,4893 | 39% | nada |
+| Quina | 0,5260 | 0,5061 | 76% | nada |
+| Lotomania | 0,5110 | 0,4911 | 19% | nada |
+| Dupla Sena | 0,5175 | 0,5221 | 0% | nada |
+| Dia de Sorte | 0,5221 | 0,4877 | 44% | nada |
+| Timemania | 0,5093 | 0,5041 | 57% | nada |
+| +Milionária | 0,5352 | 0,5128 | 64% | nada |
+
+**Oito de oito.** A busca sempre encontra uma vantagem aparente; boa parte dela
+evapora fora da amostra; e nenhuma chega perto do limiar corrigido. É o retrato
+de dragagem de dados sendo pega no ato.
+
+#### Como se sabe que o silêncio dele significa algo
+
+Um motor que nunca acha nada poderia estar quebrado. Um teste alimenta um
+sorteio **deliberadamente viciado** — metade das dezenas repete o concurso
+anterior — e exige que ele ache. Ele acha: AUC 0,737, e a hipótese vencedora
+nomeia o primitivo certo (*"apareceu no concurso anterior"*). O mesmo gerador
+sem o vício dá 0,4755 e nada sobrevive.
+
+Esse teste também expôs dois defeitos que só apareceriam em produção:
+
+**O cache colidia.** A chave era `quantos:último concurso` — dois históricos
+diferentes com a mesma quantidade e o mesmo último número devolviam a mesma
+matriz, em silêncio. O teste do sorteio viciado respondeu, com cinco casas de
+precisão, o resultado do sorteio honesto rodado antes. Agora a chave inclui uma
+impressão digital do conteúdo.
+
+**O p-valor tinha piso.** Com 200 permutações o menor p possível é 0,00995, e o
+limiar honesto de uma busca com centenas de hipóteses fica em 1e-4 — abaixo do
+piso. Do jeito ingênuo o motor nunca poderia declarar achado nenhum, **nem um
+verdadeiro**: contra o sorteio viciado ele encontrou AUC 0,737 e mesmo assim
+reprovou. A saída não foi afrouxar o limiar: as permutações passaram a estimar a
+média e o desvio do nulo — preservando a dependência dentro de cada concurso — e
+o p sai da cauda normal desse nulo. O p empírico continua reportado ao lado, e
+um teste exige que os dois concordem quando o empírico está longe do piso.
+
+#### Custo
+
+187 ms por geração e 690 ms para o julgamento, na Mega-Sena. Usa os 300
+concursos mais recentes: com o histórico inteiro cada geração varreria 170 mil
+linhas num celular, e o motor deixaria de rodar sozinho por ser insuportável.
 
 ### Busca de resultados na Caixa
 
@@ -392,7 +486,7 @@ identificador.
 ### Testes
 
 ```bash
-node ferramentas/testar-motor.mjs                          # lógica — 397 testes
+node ferramentas/testar-motor.mjs                          # lógica — 530 testes
 node --experimental-websocket ferramentas/testar-interface.mjs   # interface — 42 testes
 ```
 

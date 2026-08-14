@@ -616,7 +616,12 @@ const S = {
      modalidade e voltar não apagar o que a pessoa já tinha marcado. */
   marcadas:{}, avisos:[], teimosinhas:[], aprendizado:{}, jogoAberto:null,
   autoAnalise:true, tipoEstatistica:"dezenas", ordemEstatistica:"vezes",
-  calibracao:{}, buscaAutomatica:true, ultimaBusca:{}, avisarSorteio:true
+  calibracao:{}, buscaAutomatica:true, ultimaBusca:{}, avisarSorteio:true,
+  /* Memória do motor de pesquisa, uma entrada por modalidade: população,
+     geração, campeão e conclusão. Fica separado de `aprendizado` de propósito
+     — são dois inquilinos com ciclos de vida diferentes, e misturá-los faria
+     limpar um apagar o outro. */
+  pesquisaAdaptativa:{}, pesquisaAutomatica:true
 };
 
 /* Persistência tolerante: se o navegador bloquear, o app segue funcionando
@@ -3049,6 +3054,52 @@ function modalidadesPendentes(){
   });
 }
 
+/* Modalidades cuja pesquisa está atrás do histórico. Critério separado do
+   `modalidadesPendentes` do modelo logístico: o mínimo é outro e a memória é
+   outra — misturar os dois faria uma pesquisa parar por causa do estado da
+   outra camada. */
+function pesquisasPendentes(){
+  return Object.keys(MODALIDADES).filter(k => {
+    if(historicoDe(k).length < MINIMO_PESQUISA) return false;
+    const mem = S.pesquisaAdaptativa[k];
+    return !mem || mem.assinatura !== assinaturaHistorico(k);
+  });
+}
+
+/* Evolui uma geração em cada modalidade pendente e julga o campeão. Devolve o
+   que rodou, para os testes poderem conferir sem esperar relógio. */
+function evoluirPendentes(opcoes){
+  const o = Object.assign({geracoes:1}, opcoes || {});
+  const fila = pesquisasPendentes();
+  const feitas = [];
+  for(const k of fila){
+    try{
+      for(let g = 0; g < o.geracoes; g++) rodarGeracao(k);
+      const c = concluirPesquisa(k);
+      if(!c.erro) feitas.push({modalidade:k, conclusao:c});
+    }catch(e){
+      /* Uma modalidade que falha não pode levar as outras junto: a pesquisa é
+         acessória, e derrubar a conferência de jogos por causa dela seria
+         trocar o essencial pelo experimental. */
+      avisar("erro", `Falha na pesquisa de ${MODALIDADES[k].nome}`,
+        `${e.message}. As outras modalidades seguem normalmente.`,
+        `erroPesquisa:${k}:${assinaturaHistorico(k)}`);
+    }
+  }
+  if(feitas.length) Guardar.gravar("pesquisaAdaptativa", S.pesquisaAdaptativa);
+  /* Achado que sobrevive à correção é raro por construção — quando acontece,
+     merece aviso, e o aviso diz o que é e o que não é. */
+  const sobreviventes = feitas.filter(f => f.conclusao.sobreviveu);
+  if(sobreviventes.length){
+    const nomes = sobreviventes.map(f => MODALIDADES[f.modalidade].nome).join(", ");
+    avisar("pesquisa", `Hipótese sobreviveu à correção: ${nomes}`,
+      "Um achado a conferir na tela de Pesquisa. Não é previsão e não vira aposta — " +
+      "é motivo para repetir com mais concursos.",
+      `pesquisa:${sobreviventes.map(f => f.modalidade + ":" + f.conclusao.assinatura).join("|")}`);
+  }
+  return feitas;
+}
+
 /* Devolve quantas ficaram na fila. O `aoTerminar` existe para os testes
    poderem esperar o fim sem depender de tempo de relógio. */
 function analisarPendentes(aoTerminar){
@@ -3063,6 +3114,11 @@ function analisarPendentes(aoTerminar){
          que o achado não sobrevive à correção seria alarme falso entregue. */
       aplicarCorrecao(S.aprendizado);
       Guardar.gravar("aprendizado", S.aprendizado);
+      /* O motor de pesquisa evolui junto, uma geracao por modalidade que
+         recebeu concurso. Uma so, e nao vinte: isto roda sem ninguem pedir, e
+         um motor autonomo que trava o aparelho e desligado no dia seguinte.
+         Quem quiser acelerar usa o botao da tela. */
+      if(S.pesquisaAutomatica !== false) evoluirPendentes();
       /* A calibração de popularidade também melhora com concurso novo, e é
          barata perto do treino — roda junto, sem fila própria. */
       Object.keys(MODALIDADES).forEach(k => {
@@ -3546,6 +3602,19 @@ function dadosAprendizado(modalidade){
 
 const sigmoide = z => 1 / (1 + Math.exp(-Math.max(-30, Math.min(30, z))));
 
+/* P(Z > z) para a normal padrão, pela aproximação de Abramowitz e Stegun 7.1.26
+   (erro < 1,5e-7). Existe porque o teste de permutação tem piso de resolução:
+   com 200 permutações não se mede p abaixo de 0,005, e uma busca com centenas
+   de hipóteses precisa julgar em 1e-4. */
+function caudaNormal(z){
+  if(!Number.isFinite(z)) return 0;
+  const t = 1 / (1 + 0.2316419 * Math.abs(z));
+  const d = 0.3989422804014327 * Math.exp(-z * z / 2);
+  const p = d * t * (0.319381530 + t * (-0.356563782 + t * (1.781477937 +
+            t * (-1.821255978 + t * 1.330274429))));
+  return z >= 0 ? p : 1 - p;
+}
+
 /* Regressão logística por gradiente descendente, com regularização L2. Sem
    biblioteca: são vinte linhas, e uma dependência externa aqui significaria o
    app não abrir offline. */
@@ -3747,6 +3816,547 @@ function aplicarCorrecao(mapa, alfa=0.05){
     r.limiteAplicado = limite;
   });
   return mapa;
+}
+
+/* ============================================================================
+   MOTOR AUTÔNOMO DE PESQUISA ESTATÍSTICA ADAPTATIVA
+   ============================================================================
+
+   O que é: um laboratório que inventa hipóteses sobre os sorteios, testa cada
+   uma com rigor, descarta as que não se sustentam, cruza e muta as que
+   sobrevivem, e injeta hipóteses novas a cada geração. Roda sozinho quando
+   entra concurso novo, e guarda memória separada por modalidade.
+
+   O que NÃO é, e isto não é ressalva de rodapé — é o desenho do módulo:
+
+     * não prevê sorteio;
+     * não aumenta probabilidade de acerto de nada;
+     * não produz dezenas para apostar, e por isso esta tela não tem botão de
+       copiar nem de salvar. Uma hipótese experimental transformada em aposta
+       com um toque seria a mentira mais fácil de contar aqui;
+     * o que ele entrega é EVIDÊNCIA: quantas hipóteses foram testadas, qual
+       sobreviveu, e — quase sempre — que nenhuma sobreviveu.
+
+   Por que um buscador evolutivo precisa de mais rigor, e não de menos:
+
+   Uma busca que testa milhares de hipóteses SEMPRE acha uma com AUC 0,58 em
+   algum recorte. Isso não é descoberta, é dragagem de dados: com 5.000
+   hipóteses, esperar que a melhor pareça boa é o mesmo que esperar que alguém
+   ganhe na loteria — alguém ganha. Três mecanismos existem contra isso, e são
+   a parte mais importante deste código:
+
+   1. SEPARAÇÃO ESTRITA. A evolução inteira acontece nos primeiros 70% dos
+      concursos. Os 30% finais são território proibido durante a busca, e o
+      campeão só é medido lá UMA vez, no fim. Sem isso a evolução simplesmente
+      decora o conjunto de validação.
+
+   2. FAMÍLIA REAL. O limiar não é 0,05: é 0,05 dividido pelo número de
+      hipóteses DISTINTAS já testadas, acumulado ao longo das gerações. Testar
+      3.000 hipóteses e reportar p = 0,01 da melhor não significa nada; o
+      limiar honesto ali é 0,0000167.
+
+   3. NULO CONSTRUÍDO IGUAL. A nuvem de comparação não é teoria: é uma
+      população de hipóteses aleatórias, com a mesma estrutura e o mesmo
+      tamanho, medida no mesmo recorte de validação. Se o campeão não se
+      destaca dessa nuvem, ele é a nuvem.
+
+   O resultado esperado com sorteios honestos é "nada sobreviveu". Um motor que
+   nunca acha nada poderia estar quebrado, então há um teste que alimenta um
+   sorteio deliberadamente viciado e exige que ele ACHE — é assim que se sabe
+   que o silêncio dele significa alguma coisa.                                */
+
+/* Teto de concursos usados na pesquisa. Não é economia de rigor: com o
+   histórico inteiro cada geração varreria 170 mil linhas num celular, e o
+   motor deixaria de rodar sozinho por ser insuportável. Os mais recentes,
+   porque refletem o volante e o calendário de hoje. */
+const TETO_PESQUISA = 300;
+const POPULACAO_PESQUISA = 36;
+const RECORTES_PESQUISA = 4;     /* janelas de walk-forward no desenvolvimento */
+const IMIGRANTES_POR_GERACAO = 6;
+const ELITE_PESQUISA = 4;
+const MAX_GENES = 5;
+const MINIMO_PESQUISA = 80;      /* concursos mínimos para a pesquisa fazer sentido */
+const HISTORICO_GERACOES = 40;   /* gerações guardadas por modalidade */
+
+/* Os primitivos com que as hipóteses são construídas. Cada um é uma pergunta
+   sobre uma dezena, respondida SÓ com os concursos anteriores. O nome importa:
+   uma hipótese que não se consegue ler em português não se consegue conferir,
+   e uma hipótese que não se confere não é evidência de nada. */
+const PRIMITIVOS = [
+  {id:"freqCurta",   nome:"saiu muito nos últimos 10"},
+  {id:"freqMedia",   nome:"saiu muito nos últimos 25"},
+  {id:"freqLonga",   nome:"saiu muito nos últimos 50"},
+  {id:"ausencia",    nome:"há quantos concursos não aparece"},
+  {id:"noAnterior",  nome:"apareceu no concurso anterior"},
+  {id:"nosDois",     nome:"apareceu em algum dos dois anteriores"},
+  {id:"posicao",     nome:"posição no volante"},
+  {id:"paridade",    nome:"é par"},
+  {id:"primo",       nome:"é primo"},
+  {id:"fibonacci",   nome:"está na sequência de Fibonacci"},
+  {id:"terminacao",  nome:"terminação da dezena"},
+  {id:"linha",       nome:"linha no volante"},
+  {id:"coluna",      nome:"coluna no volante"},
+  {id:"vizinhanca",  nome:"vizinha de dezena do concurso anterior"},
+];
+
+/* As transformações que uma hipótese pode aplicar a um primitivo. Existem para
+   que o motor possa expressar ideias não lineares — "só importa quando é
+   alto", "importa ao contrário" — sem virar uma rede neural que ninguém lê. */
+const TRANSFORMACOES = {
+  linear:    {nome:"direto",            f:v => v},
+  inversa:   {nome:"ao contrário",      f:v => 1 - v},
+  quadratica:{nome:"reforçando o alto", f:v => v * v},
+  degrau:    {nome:"só acima da média", f:v => v > 0.5 ? 1 : 0},
+};
+const IDS_TRANSFORMACAO = Object.keys(TRANSFORMACOES);
+
+/* Matriz de primitivos de UMA modalidade, calculada uma vez e reaproveitada
+   por todas as hipóteses de todas as gerações. Sem este cache, cada geração
+   recalcularia as mesmas dezenas de milhares de linhas — e o motor levaria
+   minutos por geração em vez de segundos. */
+const CACHE_PESQUISA = {};
+
+/* Impressão digital do CONTEÚDO, e não só do tamanho.
+
+   `assinaturaHistorico` devolve "quantos:último concurso", o que basta para
+   saber que entrou concurso novo. Não basta para um cache: dois históricos
+   diferentes com a mesma quantidade e o mesmo último número colidem, e o motor
+   devolve a matriz do primeiro para o segundo — em silêncio, com números que
+   parecem legítimos. Foi exatamente o que aconteceu ao testar o motor contra um
+   sorteio viciado: ele respondeu, com cinco casas de precisão, o resultado do
+   sorteio honesto que rodara antes. */
+function digitalDoHistorico(hist){
+  let x = 2166136261;
+  for(const r of hist){
+    x ^= Number(r.concurso) | 0; x = Math.imul(x, 16777619);
+    for(const d of r.dezenas){ x ^= d; x = Math.imul(x, 16777619); }
+  }
+  return (x >>> 0).toString(36);
+}
+
+function matrizDePesquisa(modalidade){
+  const assinatura = assinaturaHistorico(modalidade)
+    + ":" + digitalDoHistorico(historicoDe(modalidade));
+  const guardado = CACHE_PESQUISA[modalidade];
+  if(guardado && guardado.assinatura === assinatura) return guardado;
+
+  const c = MODALIDADES[modalidade];
+  const todos = historicoDe(modalidade);
+  if(todos.length < MINIMO_PESQUISA)
+    return {erro:`faltam ${MINIMO_PESQUISA - todos.length} concursos para a pesquisa`,
+            tem:todos.length, precisa:MINIMO_PESQUISA};
+
+  /* Os JANELA_LONGA primeiros servem de aquecimento: são lidos para calcular
+     as características e nunca viram alvo, porque para eles não há passado
+     suficiente. */
+  const hist = todos.slice(-(TETO_PESQUISA + JANELA_LONGA));
+  const primos = new Set();
+  for(let d = 2; d <= c.N + c.base; d++) if(ehPrimo(d)) primos.add(d);
+  const fib = fibonacciAte(c.N + c.base - 1);
+  const cols = GRADE[modalidade] || 10;
+  const linhas = Math.max(1, Math.ceil(c.N / cols));
+
+  const X = [], y = [], concursoDe = [];
+  for(let i = JANELA_LONGA; i < hist.length; i++){
+    const anteriores = hist.slice(0, i);
+    const n = anteriores.length;
+    const curta = anteriores.slice(-JANELA_CURTA);
+    const media = anteriores.slice(-25);
+    const longa = anteriores.slice(-JANELA_LONGA);
+    const ultimo = new Set(anteriores[n-1].dezenas);
+    const penultimo = n > 1 ? new Set(anteriores[n-2].dezenas) : new Set();
+    const vizinhas = new Set();
+    ultimo.forEach(v => { vizinhas.add(v-1); vizinhas.add(v+1); });
+    const sorteadas = new Set(hist[i].dezenas);
+    const intervalo = c.N / c.k;
+
+    for(let d = c.base; d <= c.N + c.base - 1; d++){
+      let ausencia = anteriores.length;
+      for(let j = n - 1; j >= 0; j--)
+        if(anteriores[j].dezenas.includes(d)){ ausencia = n - 1 - j; break; }
+      const p = d - c.base;
+      const conta = lista => {
+        let s = 0;
+        for(const r of lista) if(r.dezenas.includes(d)) s++;
+        return lista.length ? s / lista.length : 0;
+      };
+      X.push([
+        conta(curta), conta(media), conta(longa),
+        Math.min(1, ausencia / (intervalo * 3)),
+        ultimo.has(d) ? 1 : 0,
+        (ultimo.has(d) || penultimo.has(d)) ? 1 : 0,
+        p / Math.max(1, c.N - 1),
+        d % 2 === 0 ? 1 : 0,
+        primos.has(d) ? 1 : 0,
+        fib.has(d) ? 1 : 0,
+        (d % 10) / 9,
+        Math.floor(p / cols) / Math.max(1, linhas - 1),
+        (p % cols) / Math.max(1, cols - 1),
+        vizinhas.has(d) ? 1 : 0,
+      ]);
+      y.push(sorteadas.has(d) ? 1 : 0);
+      concursoDe.push(i);
+    }
+  }
+
+  /* Corte por CONCURSO, nunca no meio de um: as linhas de um mesmo concurso
+     são dependentes, e partir um concurso ao meio deixa a busca ver parte do
+     alvo que ela deveria estar tentando acertar. */
+  const primeiro = concursoDe[0], ultimo = concursoDe[concursoDe.length - 1];
+  const corte = primeiro + Math.floor((ultimo - primeiro + 1) * 0.7);
+  const desenvolvimento = [], validacao = [];
+  concursoDe.forEach((ci, k) => (ci < corte ? desenvolvimento : validacao).push(k));
+
+  /* Recortes de walk-forward DENTRO do desenvolvimento. Uma hipótese boa é a
+     que funciona em todos, e não a que funciona em um. */
+  const concursosDev = [...new Set(desenvolvimento.map(k => concursoDe[k]))];
+  const porRecorte = [];
+  const tamanho = Math.max(1, Math.floor(concursosDev.length / RECORTES_PESQUISA));
+  for(let r = 0; r < RECORTES_PESQUISA; r++){
+    const ini = concursosDev[r * tamanho];
+    const fim = r === RECORTES_PESQUISA - 1
+      ? concursosDev[concursosDev.length - 1]
+      : concursosDev[(r + 1) * tamanho - 1];
+    porRecorte.push(desenvolvimento.filter(k => concursoDe[k] >= ini && concursoDe[k] <= fim));
+  }
+
+  const pronto = {assinatura, X, y, concursoDe, desenvolvimento, validacao,
+    recortes: porRecorte.filter(r => r.length),
+    nConcursos: todos.length, concursosUsados: hist.length - JANELA_LONGA,
+    concursosDesenvolvimento: corte - primeiro,
+    concursosValidacao: ultimo - corte + 1, modalidade};
+  CACHE_PESQUISA[modalidade] = pronto;
+  return pronto;
+}
+
+/* ---------------------------- as hipóteses ---------------------------- */
+
+function hipoteseAleatoria(rnd, geracao, origem){
+  const quantos = 1 + Math.floor(rnd() * MAX_GENES);
+  const usados = new Set();
+  const genes = [];
+  for(let i = 0; i < quantos; i++){
+    const idx = Math.floor(rnd() * PRIMITIVOS.length);
+    if(usados.has(idx)) continue;
+    usados.add(idx);
+    genes.push({
+      primitivo: idx,
+      peso: (rnd() * 2 - 1) * 2,
+      transformacao: IDS_TRANSFORMACAO[Math.floor(rnd() * IDS_TRANSFORMACAO.length)],
+    });
+  }
+  return {genes, origem: origem || "aleatória", nascimento: geracao};
+}
+
+/* Escore de uma hipótese para uma linha da matriz. Somatório simples e legível:
+   o objetivo aqui não é capacidade de ajuste, é poder dizer em português o que
+   a hipótese afirma. */
+function escoreDaHipotese(h, linha){
+  let s = 0;
+  for(const g of h.genes){
+    const v = linha[g.primitivo];
+    s += g.peso * TRANSFORMACOES[g.transformacao].f(v);
+  }
+  return s;
+}
+
+function avaliarHipotese(h, dados, indices){
+  const escores = new Array(indices.length);
+  const rotulos = new Array(indices.length);
+  for(let i = 0; i < indices.length; i++){
+    escores[i] = escoreDaHipotese(h, dados.X[indices[i]]);
+    rotulos[i] = dados.y[indices[i]];
+  }
+  return auc(escores, rotulos);
+}
+
+/* Aptidão: o PIOR recorte, e não a média.
+
+   Com a média, uma hipótese que acerta muito num recorte e erra nos outros
+   ganha da que é consistente — e é exatamente a primeira que não se sustenta
+   fora da amostra. Usar o pior recorte é exigir que funcione sempre, que é o
+   que "robusto" quer dizer. O afastamento de 0,5 é o que interessa: uma
+   hipótese que separa ao contrário separa igual, e o sinal dela é só uma
+   convenção. */
+function aptidao(h, dados){
+  const porRecorte = dados.recortes.map(r => avaliarHipotese(h, dados, r));
+  const afastamentos = porRecorte.map(a => Math.abs(a - 0.5));
+  const pior = Math.min(...afastamentos);
+  /* Punição por complexidade: entre duas hipóteses que explicam igual, a mais
+     simples é a que tem chance de não ser coincidência. */
+  const punicao = 0.0015 * h.genes.length;
+  return {valor: pior - punicao, porRecorte, pior};
+}
+
+/* --------------------------- os operadores --------------------------- */
+
+function cruzar(a, b, rnd, geracao){
+  const genes = [];
+  const vistos = new Set();
+  const juntos = a.genes.concat(b.genes);
+  for(const g of juntos){
+    if(rnd() < 0.5) continue;
+    if(vistos.has(g.primitivo)) continue;
+    vistos.add(g.primitivo);
+    genes.push({...g});
+    if(genes.length >= MAX_GENES) break;
+  }
+  if(!genes.length) genes.push({...juntos[Math.floor(rnd() * juntos.length)]});
+  return {genes, origem:"cruzamento", nascimento: geracao};
+}
+
+function mutar(h, rnd, geracao){
+  const genes = h.genes.map(g => ({...g}));
+  const sorte = rnd();
+  if(sorte < 0.45 && genes.length){
+    /* Ajuste fino de um peso. */
+    const g = genes[Math.floor(rnd() * genes.length)];
+    g.peso += (rnd() * 2 - 1) * 0.8;
+  } else if(sorte < 0.65 && genes.length){
+    const g = genes[Math.floor(rnd() * genes.length)];
+    g.transformacao = IDS_TRANSFORMACAO[Math.floor(rnd() * IDS_TRANSFORMACAO.length)];
+  } else if(sorte < 0.85 && genes.length < MAX_GENES){
+    const idx = Math.floor(rnd() * PRIMITIVOS.length);
+    if(!genes.some(g => g.primitivo === idx))
+      genes.push({primitivo: idx, peso:(rnd() * 2 - 1) * 2,
+        transformacao: IDS_TRANSFORMACAO[Math.floor(rnd() * IDS_TRANSFORMACAO.length)]});
+  } else if(genes.length > 1){
+    genes.splice(Math.floor(rnd() * genes.length), 1);
+  }
+  return {genes, origem:"mutação", nascimento: geracao};
+}
+
+function chaveDaHipotese(h){
+  return h.genes.slice().sort((a,b)=> a.primitivo - b.primitivo)
+    .map(g => `${g.primitivo}:${g.transformacao}:${g.peso.toFixed(2)}`).join("|");
+}
+
+/* --------------------------- uma geração --------------------------- */
+
+/* Uma geração completa: avalia a população no desenvolvimento, guarda os
+   melhores, cruza, muta e traz imigrantes novos. A validação NÃO é tocada
+   aqui — só em `concluirPesquisa`. */
+function rodarGeracao(modalidade, opcoes){
+  const o = Object.assign({semente:null}, opcoes || {});
+  const dados = matrizDePesquisa(modalidade);
+  if(dados.erro) return dados;
+
+  const memoria = S.pesquisaAdaptativa[modalidade] || {
+    geracao: 0, populacao: [], historico: [], hipotesesTestadas: 0, vistas: [],
+  };
+  const geracao = memoria.geracao + 1;
+  /* Semente derivada da geração: reprodutível, e ainda assim diferente a cada
+     geração. Semente fixa daria a mesma população para sempre. */
+  const rnd = geradorSemeado(o.semente != null ? o.semente : (20260808 + geracao * 7919));
+
+  let populacao = (memoria.populacao || []).slice();
+  while(populacao.length < POPULACAO_PESQUISA)
+    populacao.push(hipoteseAleatoria(rnd, geracao, "aleatória"));
+
+  const vistas = new Set(memoria.vistas || []);
+  let novas = 0;
+  const avaliadas = populacao.map(h => {
+    const chave = chaveDaHipotese(h);
+    if(!vistas.has(chave)){ vistas.add(chave); novas++; }
+    const ap = aptidao(h, dados);
+    return {h, ...ap, chave};
+  });
+  avaliadas.sort((a, b) => b.valor - a.valor);
+
+  const elite = avaliadas.slice(0, ELITE_PESQUISA).map(x => x.h);
+  const descartadas = avaliadas.length - elite.length;
+
+  /* Torneio: dois sorteados, o melhor vence. Simples, e não deixa a população
+     inteira virar cópia do campeão em três gerações. */
+  const torneio = () => {
+    const a = avaliadas[Math.floor(rnd() * avaliadas.length)];
+    const b = avaliadas[Math.floor(rnd() * avaliadas.length)];
+    return (a.valor >= b.valor ? a : b).h;
+  };
+
+  const proxima = elite.slice();
+  while(proxima.length < POPULACAO_PESQUISA - IMIGRANTES_POR_GERACAO){
+    const filho = rnd() < 0.6 ? cruzar(torneio(), torneio(), rnd, geracao)
+                              : mutar(torneio(), rnd, geracao);
+    proxima.push(filho);
+  }
+  /* Imigrantes: hipóteses completamente novas, sem parentesco com nada que já
+     existe. Sem elas a busca converge para o primeiro vale que encontrar e
+     nunca mais sai de lá. */
+  for(let i = 0; i < IMIGRANTES_POR_GERACAO; i++)
+    proxima.push(hipoteseAleatoria(rnd, geracao, "imigrante"));
+
+  const melhor = avaliadas[0];
+  const mediana = avaliadas[Math.floor(avaliadas.length / 2)].valor;
+
+  const linhaHistorico = {
+    geracao, melhorAptidao: melhor.valor, medianaAptidao: mediana,
+    aucPorRecorte: melhor.porRecorte, descartadas,
+    genes: melhor.h.genes.length, origem: melhor.h.origem,
+  };
+  const historico = (memoria.historico || []).concat([linhaHistorico])
+    .slice(-HISTORICO_GERACOES);
+
+  S.pesquisaAdaptativa[modalidade] = {
+    geracao, populacao: proxima, historico,
+    hipotesesTestadas: (memoria.hipotesesTestadas || 0) + novas,
+    vistas: [...vistas].slice(-4000),
+    campeaoDev: {genes: melhor.h.genes, origem: melhor.h.origem,
+                 aptidao: melhor.valor, aucPorRecorte: melhor.porRecorte},
+    /* Duas assinaturas, e a distinção importa: a CURTA ("quantos:último")
+       decide se a pesquisa está atrasada em relação ao histórico, e a LONGA
+       (com impressão digital do conteúdo) é a chave do cache da matriz.
+       Guardar só a longa aqui fazia `pesquisasPendentes` nunca reconhecer a
+       modalidade como em dia — ela voltava à fila a cada chamada e o motor
+       re-evoluía para sempre, gastando bateria sem nada novo para aprender.
+       Um teste pegou isso. */
+    assinatura: assinaturaHistorico(modalidade),
+    assinaturaMatriz: dados.assinatura,
+    quando: new Date().toISOString(),
+    concursosUsados: dados.concursosUsados,
+    concursosDesenvolvimento: dados.concursosDesenvolvimento,
+    concursosValidacao: dados.concursosValidacao,
+    conclusao: null,   /* invalidada: a população mudou */
+  };
+  return S.pesquisaAdaptativa[modalidade];
+}
+
+/* ------------------- o julgamento, fora da amostra ------------------- */
+
+/* Mede o campeão na validação — o recorte que a evolução nunca viu — contra
+   uma nuvem de hipóteses aleatórias medidas no mesmo lugar, e contra o teste
+   de permutação. Só aqui a validação é tocada, e só uma vez. */
+function concluirPesquisa(modalidade, opcoes){
+  const o = Object.assign({permutacoes:200, semente:20260808, nulos:120}, opcoes || {});
+  const memoria = S.pesquisaAdaptativa[modalidade];
+  if(!memoria || !memoria.campeaoDev)
+    return {erro:"nenhuma geração rodou ainda nesta modalidade"};
+  const dados = matrizDePesquisa(modalidade);
+  if(dados.erro) return dados;
+
+  const campeao = {genes: memoria.campeaoDev.genes, origem: memoria.campeaoDev.origem};
+  const aucValidacao = avaliarHipotese(campeao, dados, dados.validacao);
+
+  /* A nuvem do acaso: hipóteses aleatórias com a MESMA estrutura, medidas na
+     MESMA validação. Comparar com 0,5 teórico esconderia que a própria forma
+     da hipótese já produz algum afastamento. */
+  const rndNulo = geradorSemeado(o.semente + 12345);
+  const nulos = [];
+  for(let i = 0; i < o.nulos; i++)
+    nulos.push(Math.abs(avaliarHipotese(
+      hipoteseAleatoria(rndNulo, 0, "nulo"), dados, dados.validacao) - 0.5));
+  nulos.sort((a, b) => a - b);
+  const afastamento = Math.abs(aucValidacao - 0.5);
+  const percentilNaNuvem = nulos.filter(x => x <= afastamento).length / nulos.length;
+
+  /* Permutação: embaralha os rótulos DENTRO de cada concurso. Embaralhar
+     livremente geraria concursos impossíveis, com quantidade errada de dezenas
+     sorteadas, e alargaria o nulo indevidamente. */
+  const escores = dados.validacao.map(i => escoreDaHipotese(campeao, dados.X[i]));
+  const rotulos = dados.validacao.map(i => dados.y[i]);
+  const grupos = dados.validacao.map(i => dados.concursoDe[i]);
+  const nulosPerm = permutarAuc(escores, rotulos, o.permutacoes,
+                                geradorSemeado(o.semente), grupos);
+  const acima = nulosPerm.filter(x => x >= aucValidacao).length;
+  const abaixo = nulosPerm.filter(x => x <= aucValidacao).length;
+  const m = nulosPerm.length;
+  const pEmpirico = Math.min(1, 2 * Math.min((acima + 1) / (m + 1), (abaixo + 1) / (m + 1)));
+
+  /* O p empírico tem PISO: com 200 permutações o menor valor possível é
+     2/201 = 0,00995. E o limiar honesto de uma busca com centenas de hipóteses
+     fica em 1e-4 — abaixo do piso. Do jeito ingênuo, o motor nunca poderia
+     declarar achado nenhum, nem um verdadeiro: medi isso contra um sorteio
+     deliberadamente viciado, onde ele encontrou AUC 0,737 e mesmo assim
+     reprovou, porque o p não tinha como descer.
+
+     A saída não é afrouxar o limiar — é medir o p com resolução suficiente. As
+     permutações são usadas para estimar a MÉDIA e o DESVIO do nulo, mantendo a
+     dependência dentro de cada concurso, e o p sai da cauda normal desse nulo.
+     A estatística de Mann-Whitney sobre milhares de linhas é aproximadamente
+     normal, então isto não é um atalho: é a forma padrão de obter resolução
+     além do número de permutações. O p empírico continua sendo reportado ao
+     lado, e há um teste que exige que os dois concordem quando o empírico está
+     longe do piso — se um dia divergirem ali, a suposição de normalidade caiu
+     e este número precisa ser revisto. */
+  const mediaNulo = nulosPerm.reduce((a, b) => a + b, 0) / m;
+  const varNulo = nulosPerm.reduce((a, b) => a + (b - mediaNulo) ** 2, 0) / Math.max(1, m - 1);
+  const dpNulo = Math.sqrt(varNulo);
+  const z = dpNulo > 0 ? (aucValidacao - mediaNulo) / dpNulo : 0;
+  const p = dpNulo > 0 ? Math.min(1, 2 * caudaNormal(Math.abs(z))) : 1;
+
+  /* O limiar honesto. Testar N hipóteses e julgar a melhor com 0,05 é dragagem
+     de dados: a cada 20 hipóteses, uma passa por acaso. O divisor é o número de
+     hipóteses DISTINTAS já testadas nesta modalidade, acumulado desde a
+     primeira geração — porque foi essa a busca inteira que produziu o campeão,
+     e não só a última geração. */
+  const familia = Math.max(1, memoria.hipotesesTestadas);
+  const limiar = 0.05 / familia;
+  const sobreviveu = p <= limiar;
+
+  /* Estabilidade: o campeão se comporta igual nos recortes de desenvolvimento?
+     Um campeão que só funciona num recorte é ruído com sorte. */
+  const porRecorte = memoria.campeaoDev.aucPorRecorte || [];
+  const mesmoLado = porRecorte.length
+    ? porRecorte.every(a => a >= 0.5) || porRecorte.every(a => a <= 0.5)
+    : false;
+  const amplitude = porRecorte.length
+    ? Math.max(...porRecorte) - Math.min(...porRecorte) : 1;
+
+  /* Degradação: quanto do afastamento medido no desenvolvimento sobreviveu na
+     validação. É o número que mais desmancha resultado de busca evolutiva. */
+  const afastamentoDev = memoria.campeaoDev.aucPorRecorte && memoria.campeaoDev.aucPorRecorte.length
+    ? Math.min(...memoria.campeaoDev.aucPorRecorte.map(a => Math.abs(a - 0.5))) : 0;
+  const degradacao = afastamentoDev > 0 ? 1 - (afastamento / afastamentoDev) : 1;
+
+  const conclusao = {
+    aucValidacao, afastamento, p, pEmpirico, z, mediaNulo, dpNulo,
+    limiar, familia, sobreviveu,
+    percentilNaNuvem, nulosNuvem: o.nulos, permutacoes: o.permutacoes,
+    mesmoLado, amplitudeRecortes: amplitude, degradacao, afastamentoDev,
+    aucPorRecorte: porRecorte, genes: campeao.genes, origem: campeao.origem,
+    geracao: memoria.geracao, quando: new Date().toISOString(),
+    assinatura: assinaturaHistorico(modalidade),
+  };
+  S.pesquisaAdaptativa[modalidade].conclusao = conclusao;
+  return conclusao;
+}
+
+/* Uma hipótese dita em português. Sem isto o motor entrega uma lista de pesos,
+   e uma afirmação que não se consegue ler não se consegue contestar. */
+function descreverHipotese(entrada){
+  /* Aceita tanto a lista de genes quanto a hipótese inteira. A primeira versão
+     só aceitava a lista e devolvia "hipótese vazia" — em silêncio — quando
+     recebia o objeto: um engano de uma linha que teria acabado impresso na
+     tela como se fosse um resultado. */
+  const genes = Array.isArray(entrada) ? entrada : (entrada && entrada.genes);
+  if(!genes || !genes.length) return "hipótese vazia";
+  return genes.slice()
+    .sort((a, b) => Math.abs(b.peso) - Math.abs(a.peso))
+    .map(g => {
+      const prim = PRIMITIVOS[g.primitivo];
+      const tr = TRANSFORMACOES[g.transformacao];
+      const sentido = g.peso >= 0 ? "a favor" : "contra";
+      return `${prim.nome} (${tr.nome}, ${sentido}, peso ${nf(Math.abs(g.peso), 2)})`;
+    }).join(" · ");
+}
+
+function vereditoPesquisa(c){
+  if(!c || c.erro) return esc((c && c.erro) || "sem conclusão");
+  if(!c.sobreviveu){
+    return `<strong>Nenhuma hipótese sobreviveu.</strong> A melhor de
+      ${inf(c.familia)} hipótese${c.familia > 1 ? "s" : ""} testada${c.familia > 1 ? "s" : ""}
+      chegou a p = ${nf(c.p, 4)}, e o limiar honesto para uma busca desse tamanho é
+      ${c.limiar < 0.0001 ? c.limiar.toExponential(1).replace(".", ",") : nf(c.limiar, 5)}
+      — 0,05 dividido pelo número de hipóteses testadas. Este é o resultado
+      esperado de sorteios independentes, e é o resultado que o motor vem
+      encontrando.`;
+  }
+  return `<strong>Uma hipótese sobreviveu à correção.</strong> p = ${nf(c.p, 5)} contra o
+    limiar ${c.limiar.toExponential(1).replace(".", ",")}, medida nos concursos que a busca
+    nunca viu. Isso <strong>não</strong> quer dizer que ela preveja sorteio, e
+    <strong>não</strong> vira aposta: quer dizer que vale repetir com mais concursos e ver
+    se continua de pé. Um achado que não se repete é uma coincidência que se
+    conheceu tarde demais.`;
 }
 
 function vereditoAprendizado(r){
@@ -4315,6 +4925,136 @@ T.aprendizado = () => {
   </div>`;
 };
 
+/* Tela do motor de pesquisa.
+
+   Uma regra de desenho manda em tudo aqui: NENHUMA dezena aparece. O motor
+   produz hipóteses sobre estrutura, e mostrar "as dezenas que a hipótese
+   melhor pontua" transformaria um experimento em aposta com um olhar. Também
+   não há botão de copiar nem de salvar, pelo mesmo motivo — e há um teste que
+   reprova se algum aparecer. */
+T.pesquisa = () => {
+  const m = S.modalidade;
+  const c = MODALIDADES[m];
+  const mem = S.pesquisaAdaptativa[m];
+  const hist = historicoDe(m);
+
+  const cabeca = `
+  <div class="nota atencao"><strong>Isto é um laboratório, não um gerador de jogos.</strong>
+    O motor inventa hipóteses sobre os sorteios e as testa contra si mesmas e contra o
+    acaso. Ele <strong>não</strong> prevê resultado, <strong>não</strong> muda a chance de
+    nenhuma dezena e <strong>não</strong> produz números para apostar — por isso esta tela
+    não tem onde copiar ou salvar nada. O que ela entrega é evidência: quantas hipóteses
+    foram testadas e quais sobreviveram.</div>`;
+
+  if(hist.length < MINIMO_PESQUISA)
+    return cabeca + `<div class="vazio">A pesquisa precisa de ${MINIMO_PESQUISA}
+      concursos da ${esc(c.nome)} e há ${hist.length}.<br>
+      Faltam ${MINIMO_PESQUISA - hist.length}. Traga histórico em
+      <strong>Conferir › Resultados</strong>.</div>`;
+
+  const controles = `
+  <div class="carta">
+    <div class="linha2">
+      <label class="campo"><label>gerações por rodada</label>
+        <select id="pq-n">${[1,5,20,50].map(v =>
+          `<option value="${v}" ${v===5?"selected":""}>${v}</option>`).join("")}</select></label>
+      <label class="campo"><label>modalidade</label>
+        <input value="${esc(c.nome)}" disabled></label>
+    </div>
+    <button class="acao" id="pq-go">Evoluir e julgar</button>
+    <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;
+      border:1px solid var(--linha);border-radius:12px;margin-top:10px;cursor:pointer">
+      <input type="checkbox" id="pq-auto" ${S.pesquisaAutomatica!==false?"checked":""}
+        style="width:20px;height:20px;flex:none;accent-color:var(--acaso)">
+      <span style="flex:1;font-size:.86rem"><b>Evoluir sozinho a cada concurso novo</b>
+        <span style="display:block;font-size:.76rem;color:var(--secundaria)">
+          Uma geração por modalidade, quando entra resultado. A memória é
+          separada por loteria.</span></span>
+    </label>
+    <div id="pq-saida"></div>
+  </div>`;
+
+  if(!mem || !mem.geracao)
+    return cabeca + controles + `<div class="vazio">Nenhuma geração ainda na
+      ${esc(c.nome)}.<br>Toque em <strong>Evoluir e julgar</strong> para começar.</div>`;
+
+  const conc = mem.conclusao;
+  const linhasHist = (mem.historico || []).slice(-12).reverse();
+
+  const painel = `
+  <div class="kpis" style="margin-top:14px">
+    <div class="kpi"><div class="rot">geração</div><div class="val">${inf(mem.geracao)}</div>
+      <div class="sub">memória da ${esc(c.nome)}</div></div>
+    <div class="kpi"><div class="rot">hipóteses testadas</div>
+      <div class="val">${inf(mem.hipotesesTestadas || 0)}</div>
+      <div class="sub">distintas, desde a primeira geração</div></div>
+    <div class="kpi"><div class="rot">concursos</div>
+      <div class="val" style="font-size:1.02rem">${inf(mem.concursosDesenvolvimento||0)} + ${inf(mem.concursosValidacao||0)}</div>
+      <div class="sub">busca + validação nunca vista</div></div>
+  </div>`;
+
+  const campeao = mem.campeaoDev ? `
+  <div class="carta" style="margin-top:12px">
+    <div class="rot" style="font-size:.62rem;text-transform:uppercase;letter-spacing:.1em;
+      color:var(--secundaria)">a hipótese que lidera a busca</div>
+    <p style="margin:8px 0 0;font-size:.9rem;line-height:1.5">
+      ${esc(descreverHipotese(mem.campeaoDev.genes))}</p>
+    <p style="margin:8px 0 0;font-size:.78rem;color:var(--secundaria)">
+      Surgiu por <strong>${esc(mem.campeaoDev.origem)}</strong>.
+      AUC por recorte do desenvolvimento:
+      ${(mem.campeaoDev.aucPorRecorte||[]).map(a=>nf(a,4)).join(" · ")}.
+      <span style="display:block;margin-top:4px">AUC 0,5 quer dizer que a hipótese não
+      distingue nada. Estes números são de dentro da busca — o que vale é o julgamento
+      abaixo.</span></p>
+  </div>` : "";
+
+  const julgamento = !conc ? `<div class="nota" style="margin-top:12px">A população
+    mudou desde o último julgamento. Toque em <strong>Evoluir e julgar</strong> para medir
+    o campeão nos concursos que a busca nunca viu.</div>` : `
+  <div class="carta" style="margin-top:12px">
+    <h3 style="margin:0 0 8px">Julgamento fora da amostra</h3>
+    <div class="rolagem"><table>
+      <tbody>
+        <tr><td>AUC na validação</td><td class="num" style="text-align:right"><b>${nf(conc.aucValidacao,4)}</b></td></tr>
+        <tr><td>afastamento de 0,5</td><td style="text-align:right">${nf(conc.afastamento,4)}</td></tr>
+        <tr><td>percentil na nuvem de hipóteses aleatórias</td>
+            <td style="text-align:right">${nf(conc.percentilNaNuvem*100,0)}%</td></tr>
+        <tr><td>p-valor por permutação</td><td style="text-align:right">${nf(conc.p,4)}</td></tr>
+        <tr><td>limiar honesto (0,05 ÷ ${inf(conc.familia)} hipóteses)</td>
+            <td style="text-align:right">${conc.limiar < 0.0001
+              ? conc.limiar.toExponential(1).replace(".",",") : nf(conc.limiar,5)}</td></tr>
+        <tr><td>mesmo sentido em todos os recortes</td>
+            <td style="text-align:right">${conc.mesmoLado ? "sim" : "não"}</td></tr>
+        <tr><td>quanto do efeito sumiu fora da amostra</td>
+            <td style="text-align:right">${nf(Math.max(0,Math.min(1,conc.degradacao))*100,0)}%</td></tr>
+      </tbody>
+    </table></div>
+    <div class="nota ${conc.sobreviveu?"atencao":""}" style="margin-top:10px">
+      ${vereditoPesquisa(conc)}</div>
+  </div>`;
+
+  const tabela = linhasHist.length ? `
+  <div class="carta" style="margin-top:12px">
+    <h3 style="margin:0 0 8px">Gerações recentes</h3>
+    <div class="rolagem"><table>
+      <thead><tr><th>ger.</th><th>aptidão do melhor</th><th>mediana</th>
+        <th>descartadas</th><th>origem</th></tr></thead>
+      <tbody>${linhasHist.map(l=>`<tr>
+        <td>${inf(l.geracao)}</td>
+        <td style="text-align:right">${nf(l.melhorAptidao,4)}</td>
+        <td style="text-align:right">${nf(l.medianaAptidao,4)}</td>
+        <td style="text-align:right">${inf(l.descartadas)}</td>
+        <td>${esc(l.origem)}</td></tr>`).join("")}</tbody>
+    </table></div>
+    <div class="nota">A aptidão é o afastamento de 0,5 no <em>pior</em> recorte, menos uma
+    punição por complexidade. Subir aqui é esperado — a busca sempre encontra algo que
+    parece melhor dentro do próprio recorte em que procurou. É por isso que o julgamento
+    acontece em outro lugar.</div>
+  </div>` : "";
+
+  return cabeca + controles + painel + campeao + julgamento + tabela;
+};
+
 T.resultados = () => {
   const meus = S.resultados.filter(r => r.modalidade === S.modalidade)
     .slice().sort((a,b)=> b.concurso - a.concurso);
@@ -4798,6 +5538,37 @@ function acoes(){
     el.onkeydown = ev => { if(ev.key==="Enter"||ev.key===" "){ ev.preventDefault(); escolher(); } };
   });
 
+  /* --- motor de pesquisa --- */
+  const pqauto = $("#pq-auto");
+  if(pqauto) pqauto.onchange = e => {
+    S.pesquisaAutomatica = e.target.checked;
+    Guardar.gravar("pesquisaAutomatica", S.pesquisaAutomatica);
+  };
+  const pqgo = $("#pq-go");
+  if(pqgo) pqgo.onclick = () => {
+    const saida = $("#pq-saida");
+    const quantas = Number(($("#pq-n") || {}).value || 5);
+    const rotulo = pqgo.textContent;
+    pqgo.disabled = true;
+    const passos = Array.from({length: quantas}, (_, i) => i + 1);
+    saida.innerHTML = barraProgresso(0, quantas + 1, "evoluindo hipóteses");
+    /* emFatias devolve o controle ao navegador entre gerações: sem isso, 50
+       gerações seguidas travam a tela e o app parece ter morrido. */
+    emFatias(passos,
+      () => rodarGeracao(S.modalidade),
+      (feitos) => { saida.innerHTML = barraProgresso(feitos, quantas + 1, "evoluindo hipóteses"); },
+      () => {
+        saida.innerHTML = barraProgresso(quantas, quantas + 1, "julgando fora da amostra");
+        setTimeout(() => {
+          try{ concluirPesquisa(S.modalidade); }
+          catch(e){ saida.innerHTML = `<div class="nota atencao">${esc(e.message)}</div>`; }
+          Guardar.gravar("pesquisaAdaptativa", S.pesquisaAdaptativa);
+          pqgo.disabled = false; pqgo.textContent = rotulo;
+          pintar();
+        }, 20);
+      });
+  };
+
   const sgo = $("#s-go");
   if(sgo) sgo.onclick = () => {
     const saida = $("#s-saida");
@@ -5086,7 +5857,9 @@ const SECOES = [
      {id:"estatisticas", nome:"Estatísticas", titulo:"Estatísticas do histórico",
       sub:"O retrato do que já saiu, sempre ao lado do que o acaso produziria. Descreve o passado; não prevê o próximo."},
      {id:"aprendizado", nome:"Aprendizado", titulo:"Aprendizado por modalidade",
-      sub:"Treina um modelo em cada modalidade separadamente e mede, fora da amostra, se ele aprendeu algo."}
+      sub:"Treina um modelo em cada modalidade separadamente e mede, fora da amostra, se ele aprendeu algo."},
+     {id:"pesquisa", nome:"Pesquisa", titulo:"Motor de pesquisa",
+      sub:"Cria hipóteses sozinho, testa, descarta as ruins e cruza as que sobram. É um laboratório: não produz dezenas para apostar."}
    ]},
   {id:"entender", nome:"entender",
    icone:'<circle cx="12" cy="12" r="9"/><path d="M12 16v-4M12 8h.01"/>',
@@ -5170,6 +5943,8 @@ async function carregarCalibracao(){
   S.calibracao = Guardar.ler("calibracao", {});
   S.buscaAutomatica = Guardar.ler("buscaAutomatica", true);
   S.avisarSorteio = Guardar.ler("avisarSorteio", true);
+  S.pesquisaAdaptativa = Guardar.ler("pesquisaAdaptativa", {});
+  S.pesquisaAutomatica = Guardar.ler("pesquisaAutomatica", true);
   S.bancadaAlvos = Guardar.ler("bancadaAlvos", 10);
   S.ultimaBusca = Guardar.ler("ultimaBusca", {});
   S.modalidade = Guardar.ler("modalidade", S.modalidade);
