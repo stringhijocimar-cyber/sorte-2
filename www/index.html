@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0F1E2E">
+<meta name="theme-color" content="#061522">
 <meta name="description" content="Gerador e conferidor de jogos das loterias brasileiras, com comparação honesta contra o acaso.">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icone.svg" type="image/svg+xml">
@@ -22,8 +22,12 @@
    o que é seu.
 ------------------------------------------------------------------ */
 :root{
-  --fundo:#EDF0F2; --carta:#FFFFFF; --tinta:#0F1E2E; --secundaria:#5C6B7A;
-  --acaso:#0E6E62; --seu:#B26B00; --alerta:#A3324C; --linha:#D9DFE4; --trama:#E7ECEF;
+  --fundo:#EEF5F6; --carta:#FFFFFF; --tinta:#0B1E27; --secundaria:#657D86;
+  /* O teal do pacote (#2BE0C1) é claro demais para virar texto sobre branco —
+     no claro ele desce para um tom que passa em contraste, mantendo a família.
+     O escuro fica com o valor original do pacote. */
+  --acaso:#0B8B78; --acaso-fundo:#0B8B78; --seu:#9A6A10; --alerta:#B0324C;
+  --linha:#D7E4E6; --trama:#EDF5F6;
   /* Verde e amarelo do resultado do concurso. São cores PRÓPRIAS, e não o
      --acaso e o --seu: teal já quer dizer "o acaso" e âmbar "o seu" na
      interface inteira, e reaproveitá-los aqui faria a mesma cor significar
@@ -34,14 +38,14 @@
   --veu:rgba(15,30,46,.045);
   --mono:ui-monospace,"SF Mono","Roboto Mono",Menlo,Consolas,monospace;
   --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
-  --r:15px;
+  --r:19px;
   --sombra:0 1px 2px rgba(15,30,46,.05),0 12px 28px -20px rgba(15,30,46,.45);
   --sombra-alta:0 2px 4px rgba(15,30,46,.06),0 20px 44px -26px rgba(15,30,46,.55);
   --topo:env(safe-area-inset-top,0px); --base:env(safe-area-inset-bottom,0px);
   /* Largura da coluna de leitura. Cabeçalho, conteúdo e abas se alinham a
      ela, para que os três leiam como uma peça só em tela larga. */
   --coluna:720px;
-  --barra:55px; /* altura da barra de abas; dita o respiro do fim do main */
+  --barra:62px; /* altura da barra de abas; dita o respiro do fim do main */
   /* Escala de espaço. Existir num só lugar é o que faz o ritmo da página ser
      uma decisão, e não o acúmulo de números escolhidos um a um. */
   --e1:4px; --e2:8px; --e3:12px; --e4:16px; --e5:24px; --e6:34px;
@@ -50,11 +54,15 @@
      escuro, apenas rebaixado, senão a marca de caneta perde o contraste. */
   --papel:#FBF8F1; --tintaPapel:#1A1A17; --grade:#CFC9BC;
 }
+/* Azul-marinho e teal: a identidade visual pedida, com os valores do pacote
+   premium. O escuro passou a ser o tema PADRÃO — é ele que dá a cara do app —
+   e o claro continua inteiro para quem usa o celular no sol. */
 html[data-tema="escuro"]{
-  --fundo:#0B1622; --carta:#132030; --tinta:#E7EDF2; --secundaria:#8FA0AF;
-  --acaso:#3FB3A3; --seu:#E9A73C; --alerta:#E2607C; --linha:#1E2E40; --trama:#16253A;
-  --ganhou:#4FC97B; --ganhou-tinta:#7BDC9F;
-  --acumulou:#E9C24C; --acumulou-tinta:#F2D57E;
+  --fundo:#061522; --carta:#0A2030; --tinta:#F4FBFC; --secundaria:#8EA7B2;
+  --acaso:#2BE0C1; --acaso-fundo:#0FB99E; --seu:#F0B65D; --alerta:#FF6F86;
+  --linha:#173A4D; --trama:#0D2939;
+  --ganhou:#4BD07A; --ganhou-tinta:#7FE3A2;
+  --acumulou:#F0B65D; --acumulou-tinta:#F7CE8C;
   --veu:rgba(255,255,255,.04);
   --sombra:0 1px 2px rgba(0,0,0,.3),0 12px 28px -20px rgba(0,0,0,.8);
   --sombra-alta:0 2px 4px rgba(0,0,0,.35),0 20px 44px -26px rgba(0,0,0,.9);
@@ -100,7 +108,13 @@ main{padding:14px 16px calc(var(--barra) + 45px + var(--base));
   color:var(--secundaria);cursor:pointer;white-space:nowrap;font-weight:550;
   transition:color .16s ease,border-color .16s ease,background .16s ease}
 .trilha button:hover{border-color:var(--secundaria)}
-.trilha button[aria-pressed="true"]{background:var(--tinta);border-color:var(--tinta);
+/* Ativa em teal vazado, no lugar do bloco de tinta cheia. Em fundo
+   azul-marinho um retângulo preto some; o contorno luminoso é o que se lê. */
+.trilha button[aria-pressed="true"]{
+  background:color-mix(in srgb,var(--acaso) 14%,transparent);
+  border-color:color-mix(in srgb,var(--acaso) 62%,transparent);
+  color:var(--acaso);font-weight:650;
+  box-shadow:0 0 0 1px color-mix(in srgb,var(--acaso) 22%,transparent);
   color:var(--carta)}
 
 /* ---------- controle segmentado: as telas dentro de uma seção ---------- */
@@ -235,13 +249,16 @@ nav{position:fixed;left:0;right:0;bottom:0;z-index:30;display:grid;
     box-shadow:var(--sombra-alta)}
 }
 @supports not (backdrop-filter:blur(2px)){nav{background:var(--carta)}}
-nav button{position:relative;background:none;border:0;padding:10px 1px 9px;display:flex;
+nav button{position:relative;background:none;border:0;padding:13px 1px 11px;display:flex;
   flex-direction:column;align-items:center;gap:3px;color:var(--secundaria);font-size:.58rem;
   cursor:pointer;letter-spacing:.03em;transition:color .18s ease}
-nav button[aria-current="page"]{color:var(--tinta)}
+/* Aba ativa em teal, e não em tinta: no pacote é o teal que marca onde você
+   está, e é o que faz a barra inferior parecer parte da identidade em vez de
+   uma régua cinza. */
+nav button[aria-current="page"]{color:var(--acaso)}
 nav button[aria-current="page"]::before{content:"";position:absolute;top:0;left:50%;
-  transform:translateX(-50%);width:26px;height:2.5px;border-radius:0 0 3px 3px;
-  background:var(--acaso)}
+  transform:translateX(-50%);width:30px;height:3px;border-radius:0 0 4px 4px;
+  background:var(--acaso);box-shadow:0 0 12px color-mix(in srgb,var(--acaso) 55%,transparent)}
 nav button svg{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width:1.7;
   stroke-linecap:round;stroke-linejoin:round;transition:stroke-width .18s ease}
 nav button[aria-current="page"] svg{stroke-width:2.2}
@@ -404,11 +421,20 @@ select,input[type=number],input[type=text],input[type=date]{width:100%;padding:1
 select:focus,input:focus{border-color:var(--acaso);
   box-shadow:0 0 0 3px color-mix(in srgb,var(--acaso) 16%,transparent);outline:none}
 .linha2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.acao{width:100%;padding:14px;border:0;border-radius:13px;background:var(--tinta);
-  color:var(--carta);font-weight:650;cursor:pointer;letter-spacing:.01em;
+/* Teal com texto escuro, no lugar de tinta com texto claro. É o gesto mais
+   reconhecível do pacote, e o que faz a ação principal saltar do azul-marinho.
+   O texto usa --fundo (quase preto no escuro, quase branco no claro), então o
+   contraste se resolve sozinho nos dois temas. */
+.acao{width:100%;padding:15px;border:0;border-radius:15px;
+  background:linear-gradient(135deg,var(--acaso),var(--acaso-fundo));
+  color:var(--fundo);font-weight:750;cursor:pointer;letter-spacing:.02em;
   transition:transform .12s ease,opacity .16s ease,box-shadow .16s ease;
-  box-shadow:0 1px 2px rgba(15,30,46,.12),0 8px 18px -12px rgba(15,30,46,.5)}
+  box-shadow:0 10px 26px -12px color-mix(in srgb,var(--acaso) 60%,transparent)}
 .acao:active{transform:translateY(1px)}
+/* A variante de contorno continua sóbria: duas ações em teal na mesma tela
+   brigariam entre si e nenhuma seria a principal. */
+.acao.contorno,.acao.secundaria{background:transparent;color:var(--tinta);
+  box-shadow:inset 0 0 0 1.5px var(--linha)}
 .acao:disabled{opacity:.5;box-shadow:none}
 .acao.contorno{background:transparent;color:var(--tinta);border:1px solid var(--linha);
   box-shadow:none}
@@ -455,10 +481,10 @@ select:focus,input:focus{border-color:var(--acaso);
 .kpis{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:12px}
 .kpi{background:var(--carta);border:1px solid var(--linha);border-radius:var(--r);
   padding:13px;box-shadow:var(--sombra)}
-.kpi .rot{font-size:.62rem;text-transform:uppercase;letter-spacing:.1em;
-  color:var(--secundaria);font-weight:600}
-.kpi .val{font-family:var(--mono);font-size:1.45rem;font-weight:650;letter-spacing:-.02em;
-  margin-top:2px}
+.kpi .rot{font-size:.6rem;text-transform:uppercase;letter-spacing:.12em;
+  color:var(--secundaria);font-weight:700}
+.kpi .val{font-family:var(--mono);font-size:1.72rem;font-weight:700;letter-spacing:-.025em;
+  margin-top:3px;color:var(--acaso)}
 .kpi .sub{font-size:.7rem;color:var(--secundaria);font-family:var(--mono)}
 
 /* ---------- avisos ---------- */
@@ -529,10 +555,11 @@ td{padding:6px 7px;border-bottom:1px solid var(--trama)}
   border-radius:3px}
 .fraco{color:var(--secundaria);font-size:.72rem}
 .topo-sugestao{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
-/* Botão de ação em segundo plano: mesma forma, peso visual menor — a sugestão
-   é uma oferta, não o caminho principal da tela. */
-.acao.secundaria{background:transparent;color:var(--tinta);
-  box-shadow:inset 0 0 0 1.5px var(--grade)}
+/* A regra de `.acao.secundaria` vive junto com `.acao.contorno`, mais acima.
+   Havia uma segunda cópia aqui que usava `--grade` — a cor da GRADE DO PAPEL da
+   cartela, um bege — e como vinha depois no arquivo, era ela que valia: o botão
+   "Sugerir um jogo" aparecia com contorno dourado sobre o azul-marinho. Duas
+   regras para o mesmo seletor é sempre uma a mais. */
 
 @media (prefers-reduced-motion:no-preference){
   .ficha{animation:entra .22s ease-out both}
@@ -665,7 +692,9 @@ function nomeDoMetodo(id){
 const S = {
   tela:"gerar", modalidade:"lotofacil", metodo:"uniforme", quantidade:3,
   tamanho:null, dezenasFechamento:[], jFechamento:14, garantia:13,
-  jogos:[], resultados:[], tema:"claro", ultimoLote:[],
+  /* O escuro é o padrão: o azul-marinho com teal é a identidade do app, e
+     quem prefere claro troca no cabeçalho — a escolha continua guardada. */
+  jogos:[], resultados:[], tema:"escuro", ultimoLote:[],
   bancadaRep:20, bancadaQtd:3, bancadaAlvos:10,
   /* marcadas: dezenas do volante manual, por modalidade, para trocar de
      modalidade e voltar não apagar o que a pessoa já tinha marcado. */
@@ -6029,7 +6058,7 @@ async function carregarCalibracao(){
 (function iniciar(){
   S.jogos = Guardar.ler("jogos", []);
   S.resultados = Guardar.ler("resultados", []);
-  S.tema = Guardar.ler("tema", "claro");
+  S.tema = Guardar.ler("tema", "escuro");
   S.avisos = Guardar.ler("avisos", []);
   S.teimosinhas = Guardar.ler("teimosinhas", []);
   S.marcadas = Guardar.ler("marcadas", {});
