@@ -58,9 +58,12 @@
    premium. O escuro passou a ser o tema PADRÃO — é ele que dá a cara do app —
    e o claro continua inteiro para quem usa o celular no sol. */
 html[data-tema="escuro"]{
-  --fundo:#061522; --carta:#0A2030; --tinta:#F4FBFC; --secundaria:#8EA7B2;
-  --acaso:#2BE0C1; --acaso-fundo:#0FB99E; --seu:#F0B65D; --alerta:#FF6F86;
-  --linha:#173A4D; --trama:#0D2939;
+  /* Valores do pacote, sem retoque: bg, panel, panel2, line, text, muted,
+     teal, teal2, red. É o que faz as dez telas antigas herdarem a paleta nova
+     em vez de conviverem com duas. */
+  --fundo:#061521; --carta:#081A28; --tinta:#F5FBFD; --secundaria:#91A5B0;
+  --acaso:#24D9B7; --acaso-fundo:#10A98F; --seu:#F0B65D; --alerta:#FF735F;
+  --linha:#17384A; --trama:#0B2232;
   --ganhou:#4BD07A; --ganhou-tinta:#7FE3A2;
   --acumulou:#F0B65D; --acumulou-tinta:#F7CE8C;
   --veu:rgba(255,255,255,.04);
@@ -291,6 +294,114 @@ nav button[aria-current="page"] svg{stroke-width:2.2}
 /* Selo de ganhadores. Três estados com três pesos visuais diferentes, porque
    "não sei" não pode parecer um resultado: ele é discreto e vazado, enquanto
    ter ganhador e acumular são afirmações e ficam preenchidas. */
+/* ===================== VISUAL DO PACOTE sorte2_mockup_exact =====================
+   O CSS do pacote entra INTEIRO e sem retoque — é o que garante que a tela
+   fique igual ao mockup, e não parecida. Os tokens dele viram os tokens do
+   tema escuro do app, para as telas antigas herdarem a mesma paleta.
+   Regras de body/header/nav/main foram retiradas porque o app já tem as suas
+   e duas definições do mesmo elemento é sempre uma a mais. */
+:root{
+  /* Nomes originais do pacote, de propósito: as regras dele referenciam
+     var(--text), var(--teal), var(--line). Renomear quebra tudo em silêncio —
+     a tela sai com texto escuro sobre fundo escuro, que foi o que aconteceu. */
+  --bg:#061521;
+  --panel:#081a28;
+  --panel2:#0b2232;
+  --panel3:#0d293b;
+  --line:#17384a;
+  --text:#f5fbfd;
+  --muted:#91a5b0;
+  --teal:#24d9b7;
+  --teal2:#10a98f;
+  --blue:#4e72ff;
+  --purple:#934fff;
+  --green:#2faa55;
+  --green2:#57c56e;
+  --red:#ff735f;
+  --cyan:#5bd7ff;
+  --radius:18px;
+  --shadow:0 16px 50px rgba(0,0,0,.25);
+  --safe-bottom:env(safe-area-inset-bottom,0px);
+  --safe-top:env(safe-area-inset-top,0px)
+};
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:#04111b;color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+.status-safe{height:calc(28px + var(--safe-top));padding-top:var(--safe-top);background:#061521}
+.fake-status{height:28px;display:flex;justify-content:space-between;align-items:center;padding:0 18px;font-size:10px;max-width:430px;margin:auto}
+.status-icons{letter-spacing:1px}
+.app-header{
+  height:66px;display:grid;grid-template-columns:44px 1fr 44px;align-items:center;
+  padding:0 14px;background:#061521;position:sticky;top:calc(28px + var(--safe-top));z-index:20;
+  border-bottom:1px solid rgba(23,56,74,.7)
+}
+.head-icon{width:38px;height:38px;border:0;background:transparent;color:var(--text);font-size:24px;display:grid;place-items:center}
+.bell{position:relative;font-size:21px}.bell i{position:absolute;right:7px;top:7px;width:7px;height:7px;border-radius:50%;background:#ff6f69;border:1px solid #061521}
+.brand{text-align:center}.brand-title{font-size:24px;font-weight:800;letter-spacing:-.03em}.brand-title b{color:var(--teal)}.brand-sub{font-size:9px;color:var(--muted);margin-top:2px}
+
+.bottom-nav{
+  position:fixed;left:50%;bottom:0;transform:translateX(-50%);z-index:40;width:min(430px,100%);
+  height:calc(72px + var(--safe-bottom));padding:8px 6px var(--safe-bottom);display:grid;grid-template-columns:repeat(5,1fr);
+  background:rgba(5,17,27,.96);border-top:1px solid var(--line);backdrop-filter:blur(18px)
+}
+.bottom-nav button{border:0;background:transparent;color:#72838d;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
+.bottom-nav button span{font-size:21px;line-height:1}.bottom-nav button small{font-size:8px}.bottom-nav button.active{color:var(--teal)}
+.hero-card,.panel,.mini-card,.draw-card,.activity-item{
+  background:linear-gradient(180deg,var(--panel),#071823);border:1px solid var(--line);border-radius:16px;box-shadow:0 6px 24px rgba(0,0,0,.09)
+}
+.hero-card{padding:17px;display:grid;grid-template-columns:1fr 116px;gap:12px;align-items:center;margin-bottom:12px}
+.hero-card h2{margin:0;font-size:18px;letter-spacing:.02em}.hero-card p{margin:5px 0 14px;color:var(--muted);font-size:10px}
+.brain{
+  height:112px;border-radius:18px;position:relative;display:grid;place-items:center;
+  background:radial-gradient(circle at 50% 45%,rgba(36,217,183,.16),transparent 58%)
+}
+.brain:before{content:"";width:82px;height:68px;border:2px solid rgba(36,217,183,.8);border-radius:42% 48% 46% 50%;box-shadow:inset 0 0 24px rgba(36,217,183,.12)}
+.brain:after{content:"AI";position:absolute;color:var(--teal);font-size:19px;font-weight:900;letter-spacing:.05em}
+.primary-btn{
+  min-height:42px;border-radius:10px;border:1px solid rgba(36,217,183,.5);
+  background:linear-gradient(180deg,#0d8f7b,#08725f);color:white;font-weight:800;font-size:11px;padding:0 16px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.08)
+}
+.quick-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px}
+.quick{
+  min-height:112px;border-radius:16px;border:1px solid var(--line);background:linear-gradient(180deg,var(--panel2),#071925);
+  padding:13px 10px;text-align:left;display:flex;flex-direction:column;justify-content:space-between
+}
+.quick-icon{width:40px;height:40px;border-radius:13px;display:grid;place-items:center;font-size:19px}
+.quick:nth-child(1){border-color:rgba(36,217,183,.28)}.quick:nth-child(1) .quick-icon{background:rgba(36,217,183,.13);color:var(--teal)}
+.quick:nth-child(2){border-color:rgba(78,114,255,.28)}.quick:nth-child(2) .quick-icon{background:rgba(78,114,255,.14);color:#8aa0ff}
+.quick:nth-child(3){border-color:rgba(147,79,255,.28)}.quick:nth-child(3) .quick-icon{background:rgba(147,79,255,.13);color:#c398ff}
+.quick b{font-size:11px}.quick small{font-size:8px;color:var(--muted);display:block;margin-top:2px}
+.panel{padding:14px;margin-bottom:12px}.panel-title{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}.panel-title h3{margin:0;font-size:13px}.panel-title span{font-size:8px;color:var(--muted)}
+.kpi-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.mini-card{padding:12px;text-align:center}.mini-card strong{display:block;font-size:21px}.mini-card small{color:var(--muted);font-size:8px}.teal{color:var(--teal)}.red{color:var(--red)}
+.page-head{display:grid;grid-template-columns:35px 1fr 35px;align-items:center;margin-bottom:12px}.page-head h1{margin:0;text-align:center;font-size:19px}.page-head small{display:block;text-align:center;color:var(--muted);font-size:9px;margin-top:2px}
+.back,.filter-btn{border:0;background:transparent;color:var(--text);font-size:20px}
+.tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-bottom:12px}.tabs button{border:1px solid var(--line);background:var(--panel);color:var(--muted);padding:8px 4px;border-radius:10px;font-size:9px}.tabs button.active{color:white;border-color:var(--teal);background:linear-gradient(180deg,rgba(36,217,183,.16),rgba(36,217,183,.05))}
+.analysis-card{padding:15px}.analysis-top{display:grid;grid-template-columns:130px 1fr;gap:12px;align-items:center}
+.generation{font-size:11px;color:var(--muted)}.generation b{display:block;color:white;font-size:21px;margin-top:2px}
+.donut{width:108px;height:108px;border-radius:50%;background:conic-gradient(var(--teal) var(--p),#30414c 0);display:grid;place-items:center;position:relative;margin-top:12px}.donut:before{content:"";position:absolute;inset:13px;border-radius:50%;background:var(--panel)}.donut span{z-index:1;font-size:10px;color:var(--muted)}
+.stats-col{display:grid;gap:9px}.stat-line span{font-size:8px;color:var(--muted);display:block}.stat-line b{font-size:16px}.info-box{display:flex;gap:9px;padding:10px;margin-top:12px;border-radius:12px;background:#0a2535;border:1px solid #174057}.info-box i{font-style:normal;color:#4ad3ff}.info-box p{margin:0;color:var(--muted);font-size:8px}
+.metrics{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.metric{padding:12px;border:1px solid var(--line);border-radius:13px;background:#0a2030}.metric span{display:block;font-size:8px;color:var(--muted)}.metric b{display:block;font-size:20px;margin:5px 0 0}.metric small{font-size:8px;color:var(--muted)}
+.chart-card{padding:14px}.chart-card svg{width:100%;height:230px}.grid{stroke:#123143;stroke-width:1}.baseline{stroke:#95a4ad;stroke-dasharray:5 5;stroke-width:1}.curve{stroke:var(--teal);stroke-width:2.3;fill:none}.dot{fill:var(--teal);stroke:#071823;stroke-width:2}
+.generation-list{display:grid;gap:8px;margin-top:12px}.gen-row{padding:11px;border-radius:12px;border:1px solid var(--line);background:#081b29}.gen-top{display:flex;justify-content:space-between;gap:8px}.gen-top b{font-size:10px}.gen-metrics{font-size:8px;color:var(--muted);display:flex;gap:12px;margin-top:4px}
+.good-banner{margin-top:12px;padding:12px;border-radius:11px;border:1px solid rgba(36,217,183,.38);background:rgba(0,137,91,.20);color:#72ebce;font-size:9px}
+.summary-row{display:grid;grid-template-columns:1.2fr .8fr .8fr .8fr;gap:8px}.sum-card{padding:10px 8px;text-align:center;border:1px solid var(--line);border-radius:12px;background:#0a2232}.sum-card b{font-size:15px;display:block}.sum-card small{font-size:7px;color:var(--muted)}
+.big-action{margin:12px 0;padding:13px;border-radius:14px;border:1px solid rgba(36,217,183,.25);background:linear-gradient(180deg,#0d8c78,#086453);text-align:center}.big-action b{display:block;font-size:13px}.big-action small{font-size:8px;color:#bcefe6}
+.table{width:100%;border-collapse:collapse}.table td,.table th{padding:9px 6px;border-bottom:1px solid var(--line);font-size:8px}.table th{color:var(--muted);font-weight:600}.table td:last-child,.table th:last-child{text-align:right}
+.mode-tabs{display:flex;gap:7px;overflow:auto;margin-bottom:10px}.mode-tabs button{flex:none;border:1px solid var(--line);border-radius:10px;background:var(--panel);color:var(--muted);padding:8px 11px;font-size:9px}.mode-tabs .active{border-color:var(--teal);color:white;background:rgba(36,217,183,.08)}
+.draws{display:grid;gap:8px}.draw-card{padding:12px}.draw-top{display:flex;justify-content:space-between;align-items:center}.draw-top b{font-size:10px}.draw-top time{font-size:8px;color:var(--muted)}.balls{display:flex;gap:6px;margin-top:9px;flex-wrap:wrap}.ball{min-width:29px;height:29px;padding:0 8px;border-radius:99px;display:grid;place-items:center;background:linear-gradient(180deg,#4bb658,#258f3d);font-size:9px;font-weight:800}
+.search{width:100%;height:40px;background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:0 12px;margin-bottom:10px}
+.modal{position:fixed;inset:0;z-index:90;display:none}.modal.open{display:block}.modal-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(5px)}
+.activity-sheet{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(430px,calc(100% - 20px));max-height:88vh;overflow:auto;background:#061521;border:1px solid var(--line);border-radius:20px;padding:14px}
+.activity-head{display:flex;justify-content:space-between;align-items:center}.activity-head h2{margin:0;font-size:18px}.activity-tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin:12px 0}.activity-tabs button{border:0;background:transparent;color:var(--muted);padding:8px 5px;border-bottom:1px solid transparent;font-size:9px}.activity-tabs .active{color:white;border-color:var(--teal)}
+.activity-item{padding:11px;display:grid;grid-template-columns:46px 1fr;gap:9px;margin-bottom:8px}.activity-icon{width:43px;height:43px;border-radius:13px;display:grid;place-items:center;font-size:19px}.activity-item.analysis .activity-icon{background:rgba(36,217,183,.12);color:var(--teal)}.activity-item.sync .activity-icon{background:rgba(47,170,85,.12);color:var(--green2)}.activity-item.system .activity-icon{background:rgba(147,79,255,.12);color:#c49cff}.activity-top{display:flex;justify-content:space-between;gap:9px}.activity-top b{font-size:9px}.activity-top time{font-size:7px;color:var(--muted)}.activity-item p{margin:3px 0 0;color:var(--muted);font-size:8px}
+.setting{padding:13px;display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}.setting b{font-size:10px}.setting small{display:block;color:var(--muted);font-size:8px;margin-top:3px}
+.toast-wrap{position:fixed;left:50%;bottom:84px;transform:translateX(-50%);z-index:120;width:min(400px,calc(100% - 24px));display:grid;gap:8px}.toast{padding:12px;border-radius:14px;background:linear-gradient(135deg,#103a2e,#0b2b23);border:1px solid #2a6c54;box-shadow:var(--shadow)}.toast b{display:block;font-size:10px}.toast span{display:block;color:#cde8dd;font-size:8px;margin-top:2px}
+@media(max-width:390px){.hero-card{grid-template-columns:1fr 96px}.brain{height:96px}.quick-grid{gap:7px}.quick{min-height:104px;padding:11px 8px}.analysis-top{grid-template-columns:112px 1fr}.donut{width:96px;height:96px}}
+
 /* Cartões de atalho com ícone colorido, e a grade de resumo — as duas peças da
    primeira tela do mockup. As três cores (teal, azul, roxo) não são decoração:
    marcam destinos diferentes, e repetem no ícone da central de atividades. */
@@ -724,7 +835,7 @@ function nomeDoMetodo(id){
 
 /* ============================ estado ============================ */
 const S = {
-  tela:"gerar", modalidade:"lotofacil", metodo:"uniforme", quantidade:3,
+  tela:"inicio", modalidade:"lotofacil", metodo:"uniforme", quantidade:3,
   tamanho:null, dezenasFechamento:[], jFechamento:14, garantia:13,
   /* O escuro é o padrão: o azul-marinho com teal é a identidade do app, e
      quem prefere claro troca no cabeçalho — a escolha continua guardada. */
@@ -1723,6 +1834,60 @@ function atalhos(){
       <b>${esc(i.nome)}</b><span>${esc(i.sub)}</span>
     </button>`).join("")}</div>`;
 }
+
+/* Tela Início — marcação copiada do pacote sorte2_mockup_exact, com os dados
+   reais do app no lugar dos de demonstração. Nenhuma classe foi renomeada e
+   nenhuma cor trocada: se a marcação é a dele e o CSS é o dele, o resultado é
+   igual por construção, e não por semelhança. */
+T.inicio = () => {
+  const mem = S.pesquisaAdaptativa[S.modalidade];
+  const conc = mem && mem.conclusao;
+  const concursos = historicoDe(S.modalidade).length;
+  return `
+  <section class="hero-card">
+    <div>
+      <h2>IA ADAPTATIVA</h2>
+      <p>Motor de pesquisa estatística</p>
+      <button class="primary-btn" data-atalho="pesquisa">VER ANÁLISE</button>
+    </div>
+    <div class="brain"></div>
+  </section>
+
+  <section class="quick-grid">
+    <button class="quick" data-atalho="pesquisa"><div class="quick-icon">▥</div>
+      <div><b>Analisar</b><small>IA Adaptativa</small></div></button>
+    <button class="quick" data-atalho="bancada"><div class="quick-icon">⚗</div>
+      <div><b>Experimentos</b><small>Protocolos estatísticos</small></div></button>
+    <button class="quick" data-atalho="resultados"><div class="quick-icon">▣</div>
+      <div><b>Resultados</b><small>Ver concursos</small></div></button>
+  </section>
+
+  <section class="panel">
+    <div class="panel-title"><h3>Resumo rápido</h3>
+      <span>${mem && mem.geracao ? "Atualizado agora" : "Aguardando análise"}</span></div>
+    <div class="kpi-grid">
+      <div class="mini-card"><strong>${inf(Object.keys(MODALIDADES).length)}</strong>
+        <small>Modalidades ativas</small></div>
+      <div class="mini-card"><strong>${inf(concursos)}</strong>
+        <small>Concursos analisados</small></div>
+      <div class="mini-card"><strong class="teal">${inf(mem ? (mem.hipotesesTestadas||0) : 0)}</strong>
+        <small>Hipóteses testadas</small></div>
+      <div class="mini-card"><strong class="red">${conc && conc.sobreviveu ? 1 : 0}</strong>
+        <small>Evidência robusta</small></div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-title"><h3>Seus jogos</h3>
+      <span>${S.jogos.length ? "no aparelho" : "nenhum salvo"}</span></div>
+    <div class="kpi-grid">
+      <div class="mini-card"><strong>${inf(S.jogos.length)}</strong><small>Jogos salvos</small></div>
+      <div class="mini-card"><strong>${inf(new Set(S.jogos.map(j=>j.modalidade)).size)}</strong>
+        <small>Modalidades</small></div>
+    </div>
+    <button class="big-action" data-atalho="gerar">Gerar um jogo</button>
+  </section>`;
+};
 
 T.placar = () => {
   const porModalidade = {};
@@ -6120,6 +6285,8 @@ const SECOES = [
   {id:"gerar", nome:"gerar",
    icone:'<path d="M4 7h16M4 12h16M4 17h10"/><circle cx="18" cy="17" r="3"/>',
    telas:[
+     {id:"inicio", nome:"Início", titulo:"Sorte 2",
+      sub:"Laboratório Estatístico. O motor de pesquisa, seus jogos e os concursos."},
      {id:"gerar", nome:"Automático", titulo:"Gerar jogos",
       sub:"Monta combinações válidas por método. Todos têm a mesma chance de acerto — o que muda é com quantas pessoas você dividiria."},
      {id:"montar", nome:"Manual", titulo:"Montar à mão",
