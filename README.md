@@ -50,6 +50,37 @@ A modalidade é escolhida uma vez no cabeçalho e vale em todas as telas.
 | **Análise** | *Placar* — resultado acumulado contra o acaso · *Bancada* — todos os métodos contra o mesmo sorteio · *Aprendizado* — um modelo por modalidade, medido fora da amostra · *Pesquisa* — o motor que inventa e derruba hipóteses sozinho |
 | **Entender** | o que o app faz, o que não faz, e por quê |
 
+### A cara do app
+
+Azul-marinho e teal, com cartões escuros e barra de navegação inferior — a
+direção visual do pacote `sorte2_premium_full`, aplicada às dez telas.
+
+O **escuro é o tema padrão**: é ele que dá a identidade. O claro continua
+inteiro para quem usa o celular no sol, e a escolha fica guardada.
+
+Não foi um redesenho tela a tela: a aparência mora nos **tokens**
+(`--fundo`, `--carta`, `--acaso`, `--linha`, `--r`) e em meia dúzia de
+componentes — barra inferior, pílulas de modalidade, KPIs e botão de ação.
+Retunar os tokens levou a direção para todas as telas de uma vez, e é o que
+mantém o app coerente quando uma tela nova aparece.
+
+| Token | Escuro | Claro |
+|---|---|---|
+| `--fundo` | `#061522` | `#EEF5F6` |
+| `--carta` | `#0A2030` | `#FFFFFF` |
+| `--acaso` (teal) | `#2BE0C1` | `#0B8B78` |
+| `--linha` | `#173A4D` | `#D7E4E6` |
+
+O teal do pacote (`#2BE0C1`) vira texto ilegível sobre branco, então no claro
+ele desce para `#0B8B78` — mesma família, contraste que passa. Os valores do
+escuro são os do pacote, sem retoque.
+
+**A cor da splash do Android acompanhou o app** (`#061522`), senão ele abriria
+num azul e trocaria para outro meio segundo depois. **O fundo do ícone ficou
+onde estava** (`#0F1E2E`): a arte do trevo foi desenhada e conferida sobre
+aquele tom, e mudá-lo junto alteraria o ícone na tela inicial de quem já
+instalou, sem ninguém ter pedido. Cor de app e cor de ícone são duas decisões.
+
 ### A cartela
 
 A peça de escolha e de conferência é o volante de papel: grade impressa, marca

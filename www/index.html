@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0F1E2E">
+<meta name="theme-color" content="#061522">
 <meta name="description" content="Gerador e conferidor de jogos das loterias brasileiras, com comparação honesta contra o acaso.">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icone.svg" type="image/svg+xml">
@@ -22,8 +22,12 @@
    o que é seu.
 ------------------------------------------------------------------ */
 :root{
-  --fundo:#EDF0F2; --carta:#FFFFFF; --tinta:#0F1E2E; --secundaria:#5C6B7A;
-  --acaso:#0E6E62; --seu:#B26B00; --alerta:#A3324C; --linha:#D9DFE4; --trama:#E7ECEF;
+  --fundo:#EEF5F6; --carta:#FFFFFF; --tinta:#0B1E27; --secundaria:#657D86;
+  /* O teal do pacote (#2BE0C1) é claro demais para virar texto sobre branco —
+     no claro ele desce para um tom que passa em contraste, mantendo a família.
+     O escuro fica com o valor original do pacote. */
+  --acaso:#0B8B78; --acaso-fundo:#0B8B78; --seu:#9A6A10; --alerta:#B0324C;
+  --linha:#D7E4E6; --trama:#EDF5F6;
   /* Verde e amarelo do resultado do concurso. São cores PRÓPRIAS, e não o
      --acaso e o --seu: teal já quer dizer "o acaso" e âmbar "o seu" na
      interface inteira, e reaproveitá-los aqui faria a mesma cor significar
@@ -34,14 +38,14 @@
   --veu:rgba(15,30,46,.045);
   --mono:ui-monospace,"SF Mono","Roboto Mono",Menlo,Consolas,monospace;
   --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
-  --r:15px;
+  --r:19px;
   --sombra:0 1px 2px rgba(15,30,46,.05),0 12px 28px -20px rgba(15,30,46,.45);
   --sombra-alta:0 2px 4px rgba(15,30,46,.06),0 20px 44px -26px rgba(15,30,46,.55);
   --topo:env(safe-area-inset-top,0px); --base:env(safe-area-inset-bottom,0px);
   /* Largura da coluna de leitura. Cabeçalho, conteúdo e abas se alinham a
      ela, para que os três leiam como uma peça só em tela larga. */
   --coluna:720px;
-  --barra:55px; /* altura da barra de abas; dita o respiro do fim do main */
+  --barra:62px; /* altura da barra de abas; dita o respiro do fim do main */
   /* Escala de espaço. Existir num só lugar é o que faz o ritmo da página ser
      uma decisão, e não o acúmulo de números escolhidos um a um. */
   --e1:4px; --e2:8px; --e3:12px; --e4:16px; --e5:24px; --e6:34px;
@@ -50,11 +54,18 @@
      escuro, apenas rebaixado, senão a marca de caneta perde o contraste. */
   --papel:#FBF8F1; --tintaPapel:#1A1A17; --grade:#CFC9BC;
 }
+/* Azul-marinho e teal: a identidade visual pedida, com os valores do pacote
+   premium. O escuro passou a ser o tema PADRÃO — é ele que dá a cara do app —
+   e o claro continua inteiro para quem usa o celular no sol. */
 html[data-tema="escuro"]{
-  --fundo:#0B1622; --carta:#132030; --tinta:#E7EDF2; --secundaria:#8FA0AF;
-  --acaso:#3FB3A3; --seu:#E9A73C; --alerta:#E2607C; --linha:#1E2E40; --trama:#16253A;
-  --ganhou:#4FC97B; --ganhou-tinta:#7BDC9F;
-  --acumulou:#E9C24C; --acumulou-tinta:#F2D57E;
+  /* Valores do pacote, sem retoque: bg, panel, panel2, line, text, muted,
+     teal, teal2, red. É o que faz as dez telas antigas herdarem a paleta nova
+     em vez de conviverem com duas. */
+  --fundo:#061521; --carta:#081A28; --tinta:#F5FBFD; --secundaria:#91A5B0;
+  --acaso:#24D9B7; --acaso-fundo:#10A98F; --seu:#F0B65D; --alerta:#FF735F;
+  --linha:#17384A; --trama:#0B2232;
+  --ganhou:#4BD07A; --ganhou-tinta:#7FE3A2;
+  --acumulou:#F0B65D; --acumulou-tinta:#F7CE8C;
   --veu:rgba(255,255,255,.04);
   --sombra:0 1px 2px rgba(0,0,0,.3),0 12px 28px -20px rgba(0,0,0,.8);
   --sombra-alta:0 2px 4px rgba(0,0,0,.35),0 20px 44px -26px rgba(0,0,0,.9);
@@ -100,7 +111,13 @@ main{padding:14px 16px calc(var(--barra) + 45px + var(--base));
   color:var(--secundaria);cursor:pointer;white-space:nowrap;font-weight:550;
   transition:color .16s ease,border-color .16s ease,background .16s ease}
 .trilha button:hover{border-color:var(--secundaria)}
-.trilha button[aria-pressed="true"]{background:var(--tinta);border-color:var(--tinta);
+/* Ativa em teal vazado, no lugar do bloco de tinta cheia. Em fundo
+   azul-marinho um retângulo preto some; o contorno luminoso é o que se lê. */
+.trilha button[aria-pressed="true"]{
+  background:color-mix(in srgb,var(--acaso) 14%,transparent);
+  border-color:color-mix(in srgb,var(--acaso) 62%,transparent);
+  color:var(--acaso);font-weight:650;
+  box-shadow:0 0 0 1px color-mix(in srgb,var(--acaso) 22%,transparent);
   color:var(--carta)}
 
 /* ---------- controle segmentado: as telas dentro de uma seção ---------- */
@@ -235,13 +252,16 @@ nav{position:fixed;left:0;right:0;bottom:0;z-index:30;display:grid;
     box-shadow:var(--sombra-alta)}
 }
 @supports not (backdrop-filter:blur(2px)){nav{background:var(--carta)}}
-nav button{position:relative;background:none;border:0;padding:10px 1px 9px;display:flex;
+nav button{position:relative;background:none;border:0;padding:13px 1px 11px;display:flex;
   flex-direction:column;align-items:center;gap:3px;color:var(--secundaria);font-size:.58rem;
   cursor:pointer;letter-spacing:.03em;transition:color .18s ease}
-nav button[aria-current="page"]{color:var(--tinta)}
+/* Aba ativa em teal, e não em tinta: no pacote é o teal que marca onde você
+   está, e é o que faz a barra inferior parecer parte da identidade em vez de
+   uma régua cinza. */
+nav button[aria-current="page"]{color:var(--acaso)}
 nav button[aria-current="page"]::before{content:"";position:absolute;top:0;left:50%;
-  transform:translateX(-50%);width:26px;height:2.5px;border-radius:0 0 3px 3px;
-  background:var(--acaso)}
+  transform:translateX(-50%);width:30px;height:3px;border-radius:0 0 4px 4px;
+  background:var(--acaso);box-shadow:0 0 12px color-mix(in srgb,var(--acaso) 55%,transparent)}
 nav button svg{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width:1.7;
   stroke-linecap:round;stroke-linejoin:round;transition:stroke-width .18s ease}
 nav button[aria-current="page"] svg{stroke-width:2.2}
@@ -274,6 +294,138 @@ nav button[aria-current="page"] svg{stroke-width:2.2}
 /* Selo de ganhadores. Três estados com três pesos visuais diferentes, porque
    "não sei" não pode parecer um resultado: ele é discreto e vazado, enquanto
    ter ganhador e acumular são afirmações e ficam preenchidas. */
+/* ===================== VISUAL DO PACOTE sorte2_mockup_exact =====================
+   O CSS do pacote entra INTEIRO e sem retoque — é o que garante que a tela
+   fique igual ao mockup, e não parecida. Os tokens dele viram os tokens do
+   tema escuro do app, para as telas antigas herdarem a mesma paleta.
+   Regras de body/header/nav/main foram retiradas porque o app já tem as suas
+   e duas definições do mesmo elemento é sempre uma a mais. */
+:root{
+  /* Nomes originais do pacote, de propósito: as regras dele referenciam
+     var(--text), var(--teal), var(--line). Renomear quebra tudo em silêncio —
+     a tela sai com texto escuro sobre fundo escuro, que foi o que aconteceu. */
+  --bg:#061521;
+  --panel:#081a28;
+  --panel2:#0b2232;
+  --panel3:#0d293b;
+  --line:#17384a;
+  --text:#f5fbfd;
+  --muted:#91a5b0;
+  --teal:#24d9b7;
+  --teal2:#10a98f;
+  --blue:#4e72ff;
+  --purple:#934fff;
+  --green:#2faa55;
+  --green2:#57c56e;
+  --red:#ff735f;
+  --cyan:#5bd7ff;
+  --radius:18px;
+  --shadow:0 16px 50px rgba(0,0,0,.25);
+  --safe-bottom:env(safe-area-inset-bottom,0px);
+  --safe-top:env(safe-area-inset-top,0px)
+};
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:#04111b;color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+.status-safe{height:calc(28px + var(--safe-top));padding-top:var(--safe-top);background:#061521}
+.fake-status{height:28px;display:flex;justify-content:space-between;align-items:center;padding:0 18px;font-size:10px;max-width:430px;margin:auto}
+.status-icons{letter-spacing:1px}
+.app-header{
+  height:66px;display:grid;grid-template-columns:44px 1fr 44px;align-items:center;
+  padding:0 14px;background:#061521;position:sticky;top:calc(28px + var(--safe-top));z-index:20;
+  border-bottom:1px solid rgba(23,56,74,.7)
+}
+.head-icon{width:38px;height:38px;border:0;background:transparent;color:var(--text);font-size:24px;display:grid;place-items:center}
+.bell{position:relative;font-size:21px}.bell i{position:absolute;right:7px;top:7px;width:7px;height:7px;border-radius:50%;background:#ff6f69;border:1px solid #061521}
+.brand{text-align:center}.brand-title{font-size:24px;font-weight:800;letter-spacing:-.03em}.brand-title b{color:var(--teal)}.brand-sub{font-size:9px;color:var(--muted);margin-top:2px}
+
+.bottom-nav{
+  position:fixed;left:50%;bottom:0;transform:translateX(-50%);z-index:40;width:min(430px,100%);
+  height:calc(72px + var(--safe-bottom));padding:8px 6px var(--safe-bottom);display:grid;grid-template-columns:repeat(5,1fr);
+  background:rgba(5,17,27,.96);border-top:1px solid var(--line);backdrop-filter:blur(18px)
+}
+.bottom-nav button{border:0;background:transparent;color:#72838d;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
+.bottom-nav button span{font-size:21px;line-height:1}.bottom-nav button small{font-size:8px}.bottom-nav button.active{color:var(--teal)}
+.hero-card,.panel,.mini-card,.draw-card,.activity-item{
+  background:linear-gradient(180deg,var(--panel),#071823);border:1px solid var(--line);border-radius:16px;box-shadow:0 6px 24px rgba(0,0,0,.09)
+}
+.hero-card{padding:17px;display:grid;grid-template-columns:1fr 116px;gap:12px;align-items:center;margin-bottom:12px}
+.hero-card h2{margin:0;font-size:18px;letter-spacing:.02em}.hero-card p{margin:5px 0 14px;color:var(--muted);font-size:10px}
+.brain{
+  height:112px;border-radius:18px;position:relative;display:grid;place-items:center;
+  background:radial-gradient(circle at 50% 45%,rgba(36,217,183,.16),transparent 58%)
+}
+.brain:before{content:"";width:82px;height:68px;border:2px solid rgba(36,217,183,.8);border-radius:42% 48% 46% 50%;box-shadow:inset 0 0 24px rgba(36,217,183,.12)}
+.brain:after{content:"AI";position:absolute;color:var(--teal);font-size:19px;font-weight:900;letter-spacing:.05em}
+.primary-btn{
+  min-height:42px;border-radius:10px;border:1px solid rgba(36,217,183,.5);
+  background:linear-gradient(180deg,#0d8f7b,#08725f);color:white;font-weight:800;font-size:11px;padding:0 16px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.08)
+}
+.quick-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px}
+.quick{
+  min-height:112px;border-radius:16px;border:1px solid var(--line);background:linear-gradient(180deg,var(--panel2),#071925);
+  padding:13px 10px;text-align:left;display:flex;flex-direction:column;justify-content:space-between
+}
+.quick-icon{width:40px;height:40px;border-radius:13px;display:grid;place-items:center;font-size:19px}
+.quick:nth-child(1){border-color:rgba(36,217,183,.28)}.quick:nth-child(1) .quick-icon{background:rgba(36,217,183,.13);color:var(--teal)}
+.quick:nth-child(2){border-color:rgba(78,114,255,.28)}.quick:nth-child(2) .quick-icon{background:rgba(78,114,255,.14);color:#8aa0ff}
+.quick:nth-child(3){border-color:rgba(147,79,255,.28)}.quick:nth-child(3) .quick-icon{background:rgba(147,79,255,.13);color:#c398ff}
+.quick b{font-size:11px}.quick small{font-size:8px;color:var(--muted);display:block;margin-top:2px}
+.panel{padding:14px;margin-bottom:12px}.panel-title{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}.panel-title h3{margin:0;font-size:13px}.panel-title span{font-size:8px;color:var(--muted)}
+.kpi-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.mini-card{padding:12px;text-align:center}.mini-card strong{display:block;font-size:21px}.mini-card small{color:var(--muted);font-size:8px}.teal{color:var(--teal)}.red{color:var(--red)}
+.page-head{display:grid;grid-template-columns:35px 1fr 35px;align-items:center;margin-bottom:12px}.page-head h1{margin:0;text-align:center;font-size:19px}.page-head small{display:block;text-align:center;color:var(--muted);font-size:9px;margin-top:2px}
+.back,.filter-btn{border:0;background:transparent;color:var(--text);font-size:20px}
+.tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-bottom:12px}.tabs button{border:1px solid var(--line);background:var(--panel);color:var(--muted);padding:8px 4px;border-radius:10px;font-size:9px}.tabs button.active{color:white;border-color:var(--teal);background:linear-gradient(180deg,rgba(36,217,183,.16),rgba(36,217,183,.05))}
+.analysis-card{padding:15px}.analysis-top{display:grid;grid-template-columns:130px 1fr;gap:12px;align-items:center}
+.generation{font-size:11px;color:var(--muted)}.generation b{display:block;color:white;font-size:21px;margin-top:2px}
+.donut{width:108px;height:108px;border-radius:50%;background:conic-gradient(var(--teal) var(--p),#30414c 0);display:grid;place-items:center;position:relative;margin-top:12px}.donut:before{content:"";position:absolute;inset:13px;border-radius:50%;background:var(--panel)}.donut span{z-index:1;font-size:10px;color:var(--muted)}
+.stats-col{display:grid;gap:9px}.stat-line span{font-size:8px;color:var(--muted);display:block}.stat-line b{font-size:16px}.info-box{display:flex;gap:9px;padding:10px;margin-top:12px;border-radius:12px;background:#0a2535;border:1px solid #174057}.info-box i{font-style:normal;color:#4ad3ff}.info-box p{margin:0;color:var(--muted);font-size:8px}
+.metrics{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.metric{padding:12px;border:1px solid var(--line);border-radius:13px;background:#0a2030}.metric span{display:block;font-size:8px;color:var(--muted)}.metric b{display:block;font-size:20px;margin:5px 0 0}.metric small{font-size:8px;color:var(--muted)}
+.chart-card{padding:14px}.chart-card svg{width:100%;height:230px}.grid{stroke:#123143;stroke-width:1}.baseline{stroke:#95a4ad;stroke-dasharray:5 5;stroke-width:1}.curve{stroke:var(--teal);stroke-width:2.3;fill:none}.dot{fill:var(--teal);stroke:#071823;stroke-width:2}
+.generation-list{display:grid;gap:8px;margin-top:12px}.gen-row{padding:11px;border-radius:12px;border:1px solid var(--line);background:#081b29}.gen-top{display:flex;justify-content:space-between;gap:8px}.gen-top b{font-size:10px}.gen-metrics{font-size:8px;color:var(--muted);display:flex;gap:12px;margin-top:4px}
+.good-banner{margin-top:12px;padding:12px;border-radius:11px;border:1px solid rgba(36,217,183,.38);background:rgba(0,137,91,.20);color:#72ebce;font-size:9px}
+.summary-row{display:grid;grid-template-columns:1.2fr .8fr .8fr .8fr;gap:8px}.sum-card{padding:10px 8px;text-align:center;border:1px solid var(--line);border-radius:12px;background:#0a2232}.sum-card b{font-size:15px;display:block}.sum-card small{font-size:7px;color:var(--muted)}
+.big-action{margin:12px 0;padding:13px;border-radius:14px;border:1px solid rgba(36,217,183,.25);background:linear-gradient(180deg,#0d8c78,#086453);text-align:center}.big-action b{display:block;font-size:13px}.big-action small{font-size:8px;color:#bcefe6}
+.table{width:100%;border-collapse:collapse}.table td,.table th{padding:9px 6px;border-bottom:1px solid var(--line);font-size:8px}.table th{color:var(--muted);font-weight:600}.table td:last-child,.table th:last-child{text-align:right}
+.mode-tabs{display:flex;gap:7px;overflow:auto;margin-bottom:10px}.mode-tabs button{flex:none;border:1px solid var(--line);border-radius:10px;background:var(--panel);color:var(--muted);padding:8px 11px;font-size:9px}.mode-tabs .active{border-color:var(--teal);color:white;background:rgba(36,217,183,.08)}
+.draws{display:grid;gap:8px}.draw-card{padding:12px}.draw-top{display:flex;justify-content:space-between;align-items:center}.draw-top b{font-size:10px}.draw-top time{font-size:8px;color:var(--muted)}.balls{display:flex;gap:6px;margin-top:9px;flex-wrap:wrap}.ball{min-width:29px;height:29px;padding:0 8px;border-radius:99px;display:grid;place-items:center;background:linear-gradient(180deg,#4bb658,#258f3d);font-size:9px;font-weight:800}
+.search{width:100%;height:40px;background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:0 12px;margin-bottom:10px}
+.modal{position:fixed;inset:0;z-index:90;display:none}.modal.open{display:block}.modal-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(5px)}
+.activity-sheet{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(430px,calc(100% - 20px));max-height:88vh;overflow:auto;background:#061521;border:1px solid var(--line);border-radius:20px;padding:14px}
+.activity-head{display:flex;justify-content:space-between;align-items:center}.activity-head h2{margin:0;font-size:18px}.activity-tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin:12px 0}.activity-tabs button{border:0;background:transparent;color:var(--muted);padding:8px 5px;border-bottom:1px solid transparent;font-size:9px}.activity-tabs .active{color:white;border-color:var(--teal)}
+.activity-item{padding:11px;display:grid;grid-template-columns:46px 1fr;gap:9px;margin-bottom:8px}.activity-icon{width:43px;height:43px;border-radius:13px;display:grid;place-items:center;font-size:19px}.activity-item.analysis .activity-icon{background:rgba(36,217,183,.12);color:var(--teal)}.activity-item.sync .activity-icon{background:rgba(47,170,85,.12);color:var(--green2)}.activity-item.system .activity-icon{background:rgba(147,79,255,.12);color:#c49cff}.activity-top{display:flex;justify-content:space-between;gap:9px}.activity-top b{font-size:9px}.activity-top time{font-size:7px;color:var(--muted)}.activity-item p{margin:3px 0 0;color:var(--muted);font-size:8px}
+.setting{padding:13px;display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}.setting b{font-size:10px}.setting small{display:block;color:var(--muted);font-size:8px;margin-top:3px}
+.toast-wrap{position:fixed;left:50%;bottom:84px;transform:translateX(-50%);z-index:120;width:min(400px,calc(100% - 24px));display:grid;gap:8px}.toast{padding:12px;border-radius:14px;background:linear-gradient(135deg,#103a2e,#0b2b23);border:1px solid #2a6c54;box-shadow:var(--shadow)}.toast b{display:block;font-size:10px}.toast span{display:block;color:#cde8dd;font-size:8px;margin-top:2px}
+@media(max-width:390px){.hero-card{grid-template-columns:1fr 96px}.brain{height:96px}.quick-grid{gap:7px}.quick{min-height:104px;padding:11px 8px}.analysis-top{grid-template-columns:112px 1fr}.donut{width:96px;height:96px}}
+
+/* Cartões de atalho com ícone colorido, e a grade de resumo — as duas peças da
+   primeira tela do mockup. As três cores (teal, azul, roxo) não são decoração:
+   marcam destinos diferentes, e repetem no ícone da central de atividades. */
+.atalhos{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--e2);margin-top:var(--e3)}
+@media(max-width:400px){ .atalhos{grid-template-columns:repeat(2,1fr)} }
+.atalho{background:var(--carta);border:1px solid var(--linha);border-radius:var(--r);
+  padding:var(--e3);display:flex;flex-direction:column;gap:6px;cursor:pointer;text-align:left;
+  transition:border-color .16s ease,transform .12s ease}
+.atalho:hover{border-color:color-mix(in srgb,var(--acaso) 40%,var(--linha))}
+.atalho:active{transform:translateY(1px)}
+.atalho .ic{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;flex:none}
+.atalho .ic svg{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:1.9;
+  stroke-linecap:round;stroke-linejoin:round}
+.atalho.teal .ic{background:color-mix(in srgb,var(--acaso) 16%,transparent);color:var(--acaso)}
+.atalho.azul .ic{background:color-mix(in srgb,#5A7FFF 18%,transparent);color:#7E9BFF}
+.atalho.roxo .ic{background:color-mix(in srgb,#A16BFF 18%,transparent);color:#B98CFF}
+.atalho b{font-size:.86rem;font-weight:650}
+.atalho span{font-size:.7rem;color:var(--secundaria);line-height:1.3}
+
+/* Resumo rápido: quatro números grandes em grade 2x2. */
+.resumo{display:grid;grid-template-columns:1fr 1fr;gap:var(--e2);margin-top:var(--e2)}
+.resumo .kpi{padding:var(--e3) var(--e4)}
+.resumo .kpi .val{font-size:1.55rem}
+
 /* ---------- tela de pesquisa: hero, veredito e traços ----------
    Direção visual trazida do pacote de upgrade, reescrita sobre os tokens que o
    app já tem. Adotar a paleta dele por cima teria dado dois sistemas de cor no
@@ -404,11 +556,20 @@ select,input[type=number],input[type=text],input[type=date]{width:100%;padding:1
 select:focus,input:focus{border-color:var(--acaso);
   box-shadow:0 0 0 3px color-mix(in srgb,var(--acaso) 16%,transparent);outline:none}
 .linha2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.acao{width:100%;padding:14px;border:0;border-radius:13px;background:var(--tinta);
-  color:var(--carta);font-weight:650;cursor:pointer;letter-spacing:.01em;
+/* Teal com texto escuro, no lugar de tinta com texto claro. É o gesto mais
+   reconhecível do pacote, e o que faz a ação principal saltar do azul-marinho.
+   O texto usa --fundo (quase preto no escuro, quase branco no claro), então o
+   contraste se resolve sozinho nos dois temas. */
+.acao{width:100%;padding:15px;border:0;border-radius:15px;
+  background:linear-gradient(135deg,var(--acaso),var(--acaso-fundo));
+  color:var(--fundo);font-weight:750;cursor:pointer;letter-spacing:.02em;
   transition:transform .12s ease,opacity .16s ease,box-shadow .16s ease;
-  box-shadow:0 1px 2px rgba(15,30,46,.12),0 8px 18px -12px rgba(15,30,46,.5)}
+  box-shadow:0 10px 26px -12px color-mix(in srgb,var(--acaso) 60%,transparent)}
 .acao:active{transform:translateY(1px)}
+/* A variante de contorno continua sóbria: duas ações em teal na mesma tela
+   brigariam entre si e nenhuma seria a principal. */
+.acao.contorno,.acao.secundaria{background:transparent;color:var(--tinta);
+  box-shadow:inset 0 0 0 1.5px var(--linha)}
 .acao:disabled{opacity:.5;box-shadow:none}
 .acao.contorno{background:transparent;color:var(--tinta);border:1px solid var(--linha);
   box-shadow:none}
@@ -439,6 +600,16 @@ select:focus,input:focus{border-color:var(--acaso);
 .dz{font-family:var(--mono);font-size:.85rem;font-weight:600;min-width:35px;height:35px;
   display:grid;place-items:center;border:1px solid var(--linha);border-radius:10px;
   background:var(--fundo);font-variant-numeric:tabular-nums}
+
+/* Bolas do resultado sorteado. É a peça mais repetida da interface — aparece em
+   toda linha de histórico — e é o que faz a lista parecer resultado de loteria
+   em vez de tabela de banco de dados. Verde e redonda, como no volante. */
+.bolas{display:flex;flex-wrap:wrap;gap:7px;margin-top:8px}
+.bola{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;flex:none;
+  font-family:var(--mono);font-size:.78rem;font-weight:650;font-variant-numeric:tabular-nums;
+  color:var(--ganhou);background:color-mix(in srgb,var(--ganhou) 13%,transparent);
+  border:1.5px solid color-mix(in srgb,var(--ganhou) 45%,transparent)}
+@media(max-width:380px){ .bola{width:31px;height:31px;font-size:.72rem} }
 .dz.acertou{background:var(--acaso);border-color:var(--acaso);color:#fff;
   box-shadow:0 2px 8px -3px color-mix(in srgb,var(--acaso) 70%,transparent)}
 .dz.marcada{border-color:var(--seu);color:var(--seu)}
@@ -455,10 +626,10 @@ select:focus,input:focus{border-color:var(--acaso);
 .kpis{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:12px}
 .kpi{background:var(--carta);border:1px solid var(--linha);border-radius:var(--r);
   padding:13px;box-shadow:var(--sombra)}
-.kpi .rot{font-size:.62rem;text-transform:uppercase;letter-spacing:.1em;
-  color:var(--secundaria);font-weight:600}
-.kpi .val{font-family:var(--mono);font-size:1.45rem;font-weight:650;letter-spacing:-.02em;
-  margin-top:2px}
+.kpi .rot{font-size:.6rem;text-transform:uppercase;letter-spacing:.12em;
+  color:var(--secundaria);font-weight:700}
+.kpi .val{font-family:var(--mono);font-size:1.72rem;font-weight:700;letter-spacing:-.025em;
+  margin-top:3px;color:var(--acaso)}
 .kpi .sub{font-size:.7rem;color:var(--secundaria);font-family:var(--mono)}
 
 /* ---------- avisos ---------- */
@@ -529,10 +700,11 @@ td{padding:6px 7px;border-bottom:1px solid var(--trama)}
   border-radius:3px}
 .fraco{color:var(--secundaria);font-size:.72rem}
 .topo-sugestao{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
-/* Botão de ação em segundo plano: mesma forma, peso visual menor — a sugestão
-   é uma oferta, não o caminho principal da tela. */
-.acao.secundaria{background:transparent;color:var(--tinta);
-  box-shadow:inset 0 0 0 1.5px var(--grade)}
+/* A regra de `.acao.secundaria` vive junto com `.acao.contorno`, mais acima.
+   Havia uma segunda cópia aqui que usava `--grade` — a cor da GRADE DO PAPEL da
+   cartela, um bege — e como vinha depois no arquivo, era ela que valia: o botão
+   "Sugerir um jogo" aparecia com contorno dourado sobre o azul-marinho. Duas
+   regras para o mesmo seletor é sempre uma a mais. */
 
 @media (prefers-reduced-motion:no-preference){
   .ficha{animation:entra .22s ease-out both}
@@ -663,9 +835,11 @@ function nomeDoMetodo(id){
 
 /* ============================ estado ============================ */
 const S = {
-  tela:"gerar", modalidade:"lotofacil", metodo:"uniforme", quantidade:3,
+  tela:"inicio", modalidade:"lotofacil", metodo:"uniforme", quantidade:3,
   tamanho:null, dezenasFechamento:[], jFechamento:14, garantia:13,
-  jogos:[], resultados:[], tema:"claro", ultimoLote:[],
+  /* O escuro é o padrão: o azul-marinho com teal é a identidade do app, e
+     quem prefere claro troca no cabeçalho — a escolha continua guardada. */
+  jogos:[], resultados:[], tema:"escuro", ultimoLote:[],
   bancadaRep:20, bancadaQtd:3, bancadaAlvos:10,
   /* marcadas: dezenas do volante manual, por modalidade, para trocar de
      modalidade e voltar não apagar o que a pessoa já tinha marcado. */
@@ -676,7 +850,7 @@ const S = {
      geração, campeão e conclusão. Fica separado de `aprendizado` de propósito
      — são dois inquilinos com ciclos de vida diferentes, e misturá-los faria
      limpar um apagar o outro. */
-  pesquisaAdaptativa:{}, pesquisaAutomatica:true
+  pesquisaAdaptativa:{}, pesquisaAutomatica:true, abaPesquisa:"geral"
 };
 
 /* Persistência tolerante: se o navegador bloquear, o app segue funcionando
@@ -1609,6 +1783,112 @@ function blocoDaModalidade(codigo, conf){
   </div>`;
 }
 
+/* Resumo geral e atalhos — o topo da tela inicial do mockup.
+
+   Ficam no Placar porque é a tela que este app tem mais perto de um painel: ela
+   já responde "como estou indo". Inventar uma tela inicial só para hospedar
+   quatro números empurraria todas as outras um toque para baixo. */
+function resumoGeral(){
+  const jogos = S.jogos.length;
+  const mods = new Set(S.jogos.map(j => j.modalidade)).size;
+  const concursos = S.resultados.length;
+  const aConferir = S.jogos.reduce((n, j) =>
+    n + concursosDoJogo(j).filter(r =>
+      !(j.conferencias||[]).some(cf => cf.concurso === r.concurso)).length, 0);
+  const premios = S.jogos.reduce((n, j) =>
+    n + (j.conferencias||[]).filter(cf =>
+      faixaAtingida(j.modalidade, cf.acertos) !== null).length, 0);
+
+  const cartao = (rot, val, sub, cor) => `<div class="kpi">
+    <div class="rot">${esc(rot)}</div>
+    <div class="val"${cor?` style="color:${cor}"`:""}>${inf(val)}</div>
+    <div class="sub">${esc(sub)}</div></div>`;
+
+  return `<div class="resumo">
+    ${cartao("jogos salvos", jogos, "no aparelho")}
+    ${cartao("modalidades", mods, "com jogo salvo")}
+    ${cartao("concursos", concursos, "no histórico")}
+    ${cartao("premiados", premios, premios ? "confira no volante" : "nenhum ainda",
+             premios ? "var(--ganhou)" : "var(--secundaria)")}
+  </div>
+  ${aConferir ? `<div class="nota" style="margin-top:10px">
+    <strong>${inf(aConferir)} conferência${aConferir>1?"s":""}</strong> pendente${aConferir>1?"s":""}.
+    O app confere sozinho quando o resultado chega.</div>` : ""}`;
+}
+
+const ICONES_ATALHO = {
+  analise: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
+  jogos: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9h10M7 13h6"/>',
+  pesquisa: '<path d="M12 3v3M12 18v3M3 12h3M18 12h3"/><circle cx="12" cy="12" r="4.2"/>',
+};
+
+function atalhos(){
+  const itens = [
+    {tela:"pesquisa", classe:"teal", icone:"pesquisa", nome:"Pesquisa", sub:"IA adaptativa"},
+    {tela:"jogos", classe:"azul", icone:"jogos", nome:"Meus jogos", sub:"conferir e gerir"},
+    {tela:"resultados", classe:"roxo", icone:"analise", nome:"Resultados", sub:"ver concursos"},
+  ];
+  return `<div class="atalhos">${itens.map(i => `
+    <button class="atalho ${i.classe}" data-atalho="${i.tela}">
+      <span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true">${ICONES_ATALHO[i.icone]}</svg></span>
+      <b>${esc(i.nome)}</b><span>${esc(i.sub)}</span>
+    </button>`).join("")}</div>`;
+}
+
+/* Tela Início — marcação copiada do pacote sorte2_mockup_exact, com os dados
+   reais do app no lugar dos de demonstração. Nenhuma classe foi renomeada e
+   nenhuma cor trocada: se a marcação é a dele e o CSS é o dele, o resultado é
+   igual por construção, e não por semelhança. */
+T.inicio = () => {
+  const mem = S.pesquisaAdaptativa[S.modalidade];
+  const conc = mem && mem.conclusao;
+  const concursos = historicoDe(S.modalidade).length;
+  return `
+  <section class="hero-card">
+    <div>
+      <h2>IA ADAPTATIVA</h2>
+      <p>Motor de pesquisa estatística</p>
+      <button class="primary-btn" data-atalho="pesquisa">VER ANÁLISE</button>
+    </div>
+    <div class="brain"></div>
+  </section>
+
+  <section class="quick-grid">
+    <button class="quick" data-atalho="pesquisa"><div class="quick-icon">▥</div>
+      <div><b>Analisar</b><small>IA Adaptativa</small></div></button>
+    <button class="quick" data-atalho="bancada"><div class="quick-icon">⚗</div>
+      <div><b>Experimentos</b><small>Protocolos estatísticos</small></div></button>
+    <button class="quick" data-atalho="resultados"><div class="quick-icon">▣</div>
+      <div><b>Resultados</b><small>Ver concursos</small></div></button>
+  </section>
+
+  <section class="panel">
+    <div class="panel-title"><h3>Resumo rápido</h3>
+      <span>${mem && mem.geracao ? "Atualizado agora" : "Aguardando análise"}</span></div>
+    <div class="kpi-grid">
+      <div class="mini-card"><strong>${inf(Object.keys(MODALIDADES).length)}</strong>
+        <small>Modalidades ativas</small></div>
+      <div class="mini-card"><strong>${inf(concursos)}</strong>
+        <small>Concursos analisados</small></div>
+      <div class="mini-card"><strong class="teal">${inf(mem ? (mem.hipotesesTestadas||0) : 0)}</strong>
+        <small>Hipóteses testadas</small></div>
+      <div class="mini-card"><strong class="red">${conc && conc.sobreviveu ? 1 : 0}</strong>
+        <small>Evidência robusta</small></div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-title"><h3>Seus jogos</h3>
+      <span>${S.jogos.length ? "no aparelho" : "nenhum salvo"}</span></div>
+    <div class="kpi-grid">
+      <div class="mini-card"><strong>${inf(S.jogos.length)}</strong><small>Jogos salvos</small></div>
+      <div class="mini-card"><strong>${inf(new Set(S.jogos.map(j=>j.modalidade)).size)}</strong>
+        <small>Modalidades</small></div>
+    </div>
+    <button class="big-action" data-atalho="gerar">Gerar um jogo</button>
+  </section>`;
+};
+
 T.placar = () => {
   const porModalidade = {};
   S.jogos.concat(S.teimosinhas||[]).forEach(j =>
@@ -1649,7 +1929,9 @@ T.placar = () => {
       entretenimento — este é o número que importa acompanhar.</div>
   </div>`;
 
-  return cabeca + totalGasto +
+  /* Resumo e atalhos no topo: é a primeira coisa que a pessoa quer saber ao
+     abrir a análise, e antes ela precisava rolar até achar. */
+  return resumoGeral() + atalhos() + cabeca + totalGasto +
     codigos.sort((a,b)=> porModalidade[b].length - porModalidade[a].length)
       .map(k => blocoDaModalidade(k, porModalidade[k])).join("");
 };
@@ -4992,6 +5274,71 @@ T.aprendizado = () => {
    melhor pontua" transformaria um experimento em aposta com um olhar. Também
    não há botão de copiar nem de salvar, pelo mesmo motivo — e há um teste que
    reprova se algum aparecer. */
+/* Anel de geração e gráfico de evolução — as duas peças do mockup que contam a
+   história da busca sem exigir leitura de tabela.
+
+   Ambos são SVG desenhado à mão, sem biblioteca: uma dependência aqui
+   significaria o app não abrir sem internet, que é a coisa que ele mais
+   garante. */
+
+function anelGeracao(geracao, fracao){
+  const r = 46, circ = 2 * Math.PI * r;
+  const cheio = Math.max(0, Math.min(1, fracao || 0));
+  return `<svg viewBox="0 0 120 120" width="126" height="126" role="img"
+    aria-label="geração ${esc(String(geracao))}">
+    <circle cx="60" cy="60" r="${r}" fill="none" stroke="var(--trama)" stroke-width="10"/>
+    <circle cx="60" cy="60" r="${r}" fill="none" stroke="var(--acaso)" stroke-width="10"
+      stroke-linecap="round" stroke-dasharray="${(circ*cheio).toFixed(1)} ${circ.toFixed(1)}"
+      transform="rotate(-90 60 60)"/>
+    <text x="60" y="58" text-anchor="middle" fill="var(--tinta)"
+      font-family="var(--mono)" font-size="20" font-weight="700">G${esc(String(geracao))}</text>
+    <text x="60" y="76" text-anchor="middle" fill="var(--secundaria)"
+      font-family="var(--sans)" font-size="10" letter-spacing="1">geração</text>
+  </svg>`;
+}
+
+/* AUC do melhor de cada geração, contra a linha do acaso em 0,5.
+
+   O eixo é apertado de propósito — de 0,45 a 0,55 — porque é nessa faixa que
+   tudo acontece: num eixo de 0 a 1 as gerações viram uma reta e o gráfico não
+   diz nada. A linha tracejada em 0,5 é a referência que dá sentido ao resto. */
+function graficoEvolucao(historico){
+  const pontos = (historico || []).map(l => ({
+    g: l.geracao,
+    auc: (l.aucPorRecorte && l.aucPorRecorte.length)
+      ? l.aucPorRecorte.reduce((a,b)=>a+b,0) / l.aucPorRecorte.length : 0.5,
+  }));
+  if(pontos.length < 2) return `<div class="nota">O gráfico aparece a partir da
+    segunda geração — com um ponto só não há evolução para mostrar.</div>`;
+
+  const L = 300, A = 132, mx = 34, my = 14;
+  const baixo = 0.45, alto = 0.55;
+  const px = i => mx + (L - mx - 8) * (pontos.length === 1 ? 0 : i / (pontos.length - 1));
+  const py = v => my + (A - my*2) * (1 - (Math.max(baixo, Math.min(alto, v)) - baixo) / (alto - baixo));
+  const linha = pontos.map((p,i)=>`${i?"L":"M"}${px(i).toFixed(1)},${py(p.auc).toFixed(1)}`).join("");
+  const area = `${linha}L${px(pontos.length-1).toFixed(1)},${py(baixo)}L${px(0).toFixed(1)},${py(baixo)}Z`;
+
+  return `<svg viewBox="0 0 ${L} ${A}" width="100%" height="${A}" role="img"
+    aria-label="AUC do melhor de cada geração, ${pontos.length} gerações">
+    <defs><linearGradient id="ev" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="var(--acaso)" stop-opacity=".22"/>
+      <stop offset="1" stop-color="var(--acaso)" stop-opacity="0"/>
+    </linearGradient></defs>
+    ${[0.45,0.50,0.55].map(v=>`
+      <line x1="${mx}" y1="${py(v)}" x2="${L-8}" y2="${py(v)}"
+        stroke="var(--linha)" stroke-width="1" ${v===0.5?'stroke-dasharray="4 4"':""}/>
+      <text x="${mx-6}" y="${py(v)+3.5}" text-anchor="end" fill="var(--secundaria)"
+        font-family="var(--mono)" font-size="9">${nf(v,2)}</text>`).join("")}
+    <path d="${area}" fill="url(#ev)"/>
+    <path d="${linha}" fill="none" stroke="var(--acaso)" stroke-width="2"
+      stroke-linejoin="round" stroke-linecap="round"/>
+    ${pontos.map((p,i)=>`<circle cx="${px(i).toFixed(1)}" cy="${py(p.auc).toFixed(1)}" r="${
+      i===pontos.length-1?3.5:2}" fill="var(--acaso)"/>`).join("")}
+    <text x="${L-8}" y="${A-2}" text-anchor="end" fill="var(--secundaria)"
+      font-family="var(--sans)" font-size="9">gerações</text>
+  </svg>`;
+}
+
 /* Uma linha de traço: rótulo, barra a partir do centro, valor. O centro é
    0,5 — que é "não distingue nada" — então a barra cresce para a direita
    quando a hipótese separa a favor e para a esquerda quando separa ao
@@ -5021,12 +5368,14 @@ T.pesquisa = () => {
         ? `${inf(mem0.hipotesesTestadas||0)} hipóteses testadas`
         : "Nenhuma hipótese testada ainda"}</h2>
       <p>${mem0 && mem0.geracao
-        ? `${inf(mem0.geracao)} gerações na ${esc(c.nome)}. O motor inventa, mede e
+        ? `${inf(mem0.geracao)} geraç${mem0.geracao === 1 ? "ão" : "ões"} na ${esc(c.nome)}. O motor inventa, mede e
            descarta sozinho — e o que ele encontra quase sempre é acaso.`
         : `O motor cria hipóteses sobre os sorteios, testa cada uma contra o acaso e
            descarta as que não se sustentam.`}</p>
     </div>
-    <div class="pq-orbe" aria-hidden="true">${mem0 && mem0.geracao ? "G"+inf(mem0.geracao) : "—"}</div>
+    ${mem0 && mem0.geracao
+      ? anelGeracao(mem0.geracao, ((mem0.geracao % 12) + 1) / 12)
+      : `<div class="pq-orbe" aria-hidden="true">—</div>`}
   </div>
 
   <div class="nota atencao" style="margin-top:12px"><strong>Isto é um laboratório, não um gerador de jogos.</strong>
@@ -5128,6 +5477,16 @@ T.pesquisa = () => {
     </div>
   </div>`;
 
+  const grafico = (mem.historico || []).length >= 2 ? `
+  <div class="carta" style="margin-top:12px">
+    <div class="contador"><span>evolução da busca</span>
+      <b style="font-family:var(--mono);font-size:.78rem">AUC médio por geração</b></div>
+    ${graficoEvolucao(mem.historico)}
+    <div class="nota">A linha tracejada é 0,5 — "não distingue nada". Subir aqui é
+    esperado: a busca sempre encontra algo que parece melhor dentro do próprio recorte
+    em que procurou. O que decide é o julgamento fora da amostra, acima.</div>
+  </div>` : "";
+
   const tabela = linhasHist.length ? `
   <div class="carta" style="margin-top:12px">
     <h3 style="margin:0 0 8px">Gerações recentes</h3>
@@ -5147,7 +5506,44 @@ T.pesquisa = () => {
     acontece em outro lugar.</div>
   </div>` : "";
 
-  return cabeca + controles + painel + campeao + julgamento + tabela;
+  /* Abas internas do mockup: Visão Geral · Evolução · Estratégias · Detalhes.
+     O conteúdo já existia todo — o que muda é que ele deixa de ser uma rolagem
+     única e passa a caber numa tela de celular sem exigir dez arrastadas. */
+  const aba = S.abaPesquisa || "geral";
+  const abas = [
+    {id:"geral", nome:"Visão Geral"},
+    {id:"evolucao", nome:"Evolução"},
+    {id:"estrategias", nome:"Estratégias"},
+    {id:"detalhes", nome:"Detalhes"},
+  ];
+  const barra = `<div class="analysis-tabs">${abas.map(a =>
+    `<button data-aba-pq="${a.id}" class="${a===abas.find(x=>x.id===aba)?"active":""}"
+      >${esc(a.nome)}</button>`).join("")}</div>`;
+
+  const detalhes = `<div class="carta" style="margin-top:12px">
+    <h3 style="margin:0 0 8px">Como a busca está configurada</h3>
+    <div class="rolagem"><table><tbody>
+      <tr><td>população por geração</td><td style="text-align:right">${inf(POPULACAO_PESQUISA)}</td></tr>
+      <tr><td>imigrantes por geração</td><td style="text-align:right">${inf(IMIGRANTES_POR_GERACAO)}</td></tr>
+      <tr><td>elite preservada</td><td style="text-align:right">${inf(ELITE_PESQUISA)}</td></tr>
+      <tr><td>genes por hipótese, no máximo</td><td style="text-align:right">${inf(MAX_GENES)}</td></tr>
+      <tr><td>primitivos disponíveis</td><td style="text-align:right">${inf(PRIMITIVOS.length)}</td></tr>
+      <tr><td>recortes de walk-forward</td><td style="text-align:right">${inf(RECORTES_PESQUISA)}</td></tr>
+      <tr><td>concursos usados</td><td style="text-align:right">${inf(mem.concursosUsados||0)}</td></tr>
+      <tr><td>desenvolvimento / validação</td><td style="text-align:right">${
+        inf(mem.concursosDesenvolvimento||0)} / ${inf(mem.concursosValidacao||0)}</td></tr>
+    </tbody></table></div>
+    <div class="nota">Os 300 concursos mais recentes. Com o histórico inteiro cada
+    geração varreria 170 mil linhas num celular, e o motor deixaria de rodar sozinho
+    por ser insuportável.</div>
+  </div>`;
+
+  const corpo = aba === "evolucao" ? (grafico + tabela)
+              : aba === "estrategias" ? campeao
+              : aba === "detalhes" ? detalhes
+              : julgamento;
+
+  return cabeca + controles + barra + corpo;
 };
 
 T.resultados = () => {
@@ -5225,7 +5621,7 @@ T.resultados = () => {
           <div class="item ${ganhadoresDoConcurso(r).estado}">
             <span class="marca-cor"></span>
             <span class="txt"><b>Concurso ${esc(r.concurso)}</b>
-              <span>${r.dezenas.map(pad).join(" ")}</span>
+              <span class="bolas">${r.dezenas.map(d=>`<i class="bola">${pad(d)}</i>`).join("")}</span>
               ${seloGanhadores(r)}
             </span>
             <span class="quando">${esc(r.data)}<br>
@@ -5634,6 +6030,14 @@ function acoes(){
   });
 
   /* --- motor de pesquisa --- */
+  document.querySelectorAll("[data-atalho]").forEach(b => b.onclick = () => {
+    S.tela = b.dataset.atalho; window.scrollTo(0,0); pintar();
+  });
+
+  document.querySelectorAll("[data-aba-pq]").forEach(b => b.onclick = () => {
+    S.abaPesquisa = b.dataset.abaPq; pintar();
+  });
+
   const pqauto = $("#pq-auto");
   if(pqauto) pqauto.onchange = e => {
     S.pesquisaAutomatica = e.target.checked;
@@ -5918,51 +6322,65 @@ function acoes(){
 
    Cada tela declara também um subtítulo: o título sozinho ("Bancada") não diz
    o que a tela faz, e a explicação ficava perdida no meio do conteúdo.      */
+/* As cinco rotas do mockup: Início · Análise · Experimentos · Resultados · Mais.
+
+   O mapeamento preserva TODAS as telas que já existiam — nenhuma ficou sem
+   porta. Foi a única regra que me impus aqui: reorganizar navegação é onde
+   recurso some calado, e este app já perdeu função assim antes.
+
+   Gerar e a bancada foram para "Experimentos" porque é o que elas são: montar
+   combinações e testar métodos contra o sorteio. Meus jogos e a teimosinha
+   foram para "Mais" junto com o Entender — são o que a pessoa consulta, não o
+   que ela faz todo dia. */
 const SECOES = [
-  {id:"gerar", nome:"gerar",
-   icone:'<path d="M4 7h16M4 12h16M4 17h10"/><circle cx="18" cy="17" r="3"/>',
+  {id:"inicio", nome:"Início",
+   icone:'<path d="M3 10.5 12 3l9 7.5"/><path d="M5.5 9.5V20h13V9.5"/>',
+   telas:[
+     {id:"inicio", nome:"Início", titulo:"Sorte 2",
+      sub:"Laboratório Estatístico. O motor de pesquisa, seus jogos e os concursos."}
+   ]},
+  {id:"analise", nome:"Análise",
+   icone:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
+   telas:[
+     {id:"pesquisa", nome:"IA Adaptativa", titulo:"Motor de pesquisa",
+      sub:"Cria hipóteses sozinho, testa, descarta as ruins e cruza as que sobram. É um laboratório: não produz dezenas para apostar."},
+     {id:"aprendizado", nome:"Aprendizado", titulo:"Aprendizado por modalidade",
+      sub:"Treina um modelo em cada modalidade separadamente e mede, fora da amostra, se ele aprendeu algo."},
+     {id:"placar", nome:"Placar", titulo:"Placar",
+      sub:"Seu resultado acumulado, comparado com o que o acaso teria feito com o mesmo dinheiro."},
+     {id:"estatisticas", nome:"Estatísticas", titulo:"Estatísticas do histórico",
+      sub:"O retrato do que já saiu, sempre ao lado do que o acaso produziria. Descreve o passado; não prevê o próximo."}
+   ]},
+  {id:"experimentos", nome:"Experimentos",
+   icone:'<path d="M10 3h4M10 3v6.5L4.5 19a2 2 0 0 0 1.8 3h11.4a2 2 0 0 0 1.8-3L14 9.5V3"/>',
    telas:[
      {id:"gerar", nome:"Automático", titulo:"Gerar jogos",
       sub:"Monta combinações válidas por método. Todos têm a mesma chance de acerto — o que muda é com quantas pessoas você dividiria."},
      {id:"montar", nome:"Manual", titulo:"Montar à mão",
-      sub:"Marque as dezenas que quiser. O app mostra as características do jogo e como elas se comparam ao esperado do acaso."}
+      sub:"Marque as dezenas que quiser. O app mostra as características do jogo e como elas se comparam ao esperado do acaso."},
+     {id:"bancada", nome:"Bancada", titulo:"Bancada de testes",
+      sub:"Roda todos os métodos contra o mesmo sorteio e mede se algum se distingue do acaso."}
    ]},
-  {id:"jogos", nome:"jogos",
-   icone:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9h10M7 13h6"/>',
+  {id:"resultados", nome:"Resultados",
+   icone:'<rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9.5h18M8 3v3M16 3v3"/>',
+   telas:[
+     {id:"resultados", nome:"Concursos", titulo:"Histórico de resultados",
+      sub:"Os concursos que o app conhece. É esta base que alimenta a análise, a bancada e o aprendizado."},
+     {id:"conferir", nome:"Conferir", titulo:"Conferir",
+      sub:"Informe o resultado de um concurso e o app confere todos os seus jogos daquela modalidade."}
+   ]},
+  {id:"mais", nome:"Mais",
+   icone:'<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>',
    telas:[
      {id:"jogos", nome:"Meus jogos", titulo:"Meus jogos",
       sub:"Tudo o que você salvou, conferido automaticamente contra os resultados que o app conhece."},
      {id:"teimosinha", nome:"Teimosinha", titulo:"Teimosinha",
-      sub:"Repete o mesmo jogo por vários concursos seguidos. O app acompanha o custo total e confere cada concurso sozinho."}
-   ]},
-  {id:"conferir", nome:"conferir", icone:'<path d="M4 12l5 5L20 6"/>',
-   telas:[
-     {id:"conferir", nome:"Conferir", titulo:"Conferir",
-      sub:"Informe o resultado de um concurso e o app confere todos os seus jogos daquela modalidade."},
-     {id:"resultados", nome:"Resultados", titulo:"Histórico de resultados",
-      sub:"Os concursos que o app conhece. É esta base que alimenta a análise, a bancada e o aprendizado."}
-   ]},
-  {id:"analise", nome:"análise",
-   icone:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
-   telas:[
-     {id:"placar", nome:"Placar", titulo:"Placar",
-      sub:"Seu resultado acumulado, comparado com o que o acaso teria feito com o mesmo dinheiro."},
-     {id:"bancada", nome:"Bancada", titulo:"Bancada de testes",
-      sub:"Roda todos os métodos contra o mesmo sorteio e mede se algum se distingue do acaso."},
-     {id:"estatisticas", nome:"Estatísticas", titulo:"Estatísticas do histórico",
-      sub:"O retrato do que já saiu, sempre ao lado do que o acaso produziria. Descreve o passado; não prevê o próximo."},
-     {id:"aprendizado", nome:"Aprendizado", titulo:"Aprendizado por modalidade",
-      sub:"Treina um modelo em cada modalidade separadamente e mede, fora da amostra, se ele aprendeu algo."},
-     {id:"pesquisa", nome:"Pesquisa", titulo:"Motor de pesquisa",
-      sub:"Cria hipóteses sozinho, testa, descarta as ruins e cruza as que sobram. É um laboratório: não produz dezenas para apostar."}
-   ]},
-  {id:"entender", nome:"entender",
-   icone:'<circle cx="12" cy="12" r="9"/><path d="M12 16v-4M12 8h.01"/>',
-   telas:[
+      sub:"Repete o mesmo jogo por vários concursos seguidos. O app acompanha o custo total e confere cada concurso sozinho."},
      {id:"entender", nome:"Entender", titulo:"Entender",
       sub:"O que este app faz, o que ele não faz, e por quê."}
    ]}
 ];
+
 
 const secaoAtual = () => SECOES.find(s => s.telas.some(t => t.id === S.tela)) || SECOES[0];
 const telaAtual = () => secaoAtual().telas.find(t => t.id === S.tela) || secaoAtual().telas[0];
@@ -6029,7 +6447,7 @@ async function carregarCalibracao(){
 (function iniciar(){
   S.jogos = Guardar.ler("jogos", []);
   S.resultados = Guardar.ler("resultados", []);
-  S.tema = Guardar.ler("tema", "claro");
+  S.tema = Guardar.ler("tema", "escuro");
   S.avisos = Guardar.ler("avisos", []);
   S.teimosinhas = Guardar.ler("teimosinhas", []);
   S.marcadas = Guardar.ler("marcadas", {});

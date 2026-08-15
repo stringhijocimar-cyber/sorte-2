@@ -7,13 +7,36 @@
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#EDF0F2",
-  "theme_color": "#0F1E2E",
-  "categories": ["utilities", "education"],
+  "background_color": "#061522",
+  "theme_color": "#061522",
+  "categories": [
+    "utilities",
+    "education"
+  ],
   "icons": [
-    { "src": "icone.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
-    { "src": "icone-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "icone-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "icone-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    {
+      "src": "icone.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "icone-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icone-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icone-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
   ]
 }
