@@ -517,8 +517,14 @@ identificador.
 ### Testes
 
 ```bash
-node ferramentas/testar-motor.mjs                          # lógica — 541 testes
-node --experimental-websocket ferramentas/testar-interface.mjs   # interface — 42 testes
+node ferramentas/testar-motor.mjs             # lógica — 546 testes
+python3 ferramentas/conferir-icones.py        # ícones — 34 conferências
+python3 ferramentas/conferir-xml-android.py   # XML do projeto nativo
+
+# A interface precisa de um servidor HTTP: em file:// o service worker não
+# registra, e o teste do modo avião passaria medindo outra coisa.
+python3 -m http.server 8123 &
+node --experimental-websocket ferramentas/testar-interface.mjs   # interface — 45 testes
 ```
 
 O executável do navegador é configurável, porque nem todo ambiente tem
@@ -531,6 +537,28 @@ LOTOLAB_CHROME=/caminho/para/chromium node ferramentas/testar-interface.mjs
 `testar-motor.mjs` não reimplementa nada: extrai o `<script>` do `index.html` e
 o executa numa VM com um DOM mínimo. O que é testado é exatamente o código que
 roda no aparelho.
+
+#### Duas lições que custaram uma compilação
+
+A v26 falhou com **625 verificações verdes**. As duas causas valem registro,
+porque a forma delas se repete:
+
+**O que ninguém olha, ninguém testa.** O defeito era um `--` dentro de um
+comentário XML em `colors.xml` — proibido pela norma, e erro fatal para o
+Android. Nenhuma das baterias lia o projeto nativo, então a primeira coisa a
+reclamar foi o Gradle, no meio de uma compilação de release. Hoje
+`conferir-xml-android.py` roda a cada push e custa milissegundos. No mesmo
+espírito: `testar-interface.mjs` existia mas não rodava em workflow nenhum, o
+que na prática é igual a não existir. Agora roda.
+
+**Um teste verde não é prova de que ele testa algo.** O teste "sem erro de
+JavaScript no console" lia apenas `Log.entryAdded`. Exceção de JavaScript não
+chega por esse canal — vai para `Runtime.exceptionThrown`, e `console.error`
+para `Runtime.consoleAPICalled`. Ele vigiava o canal errado: uma função
+inexistente chamada no carregamento passava como "ok". Descoberto ao quebrar o
+app de propósito para ver se acusava. Hoje escuta os três canais, ignora falha
+de rede pela origem que o Chrome atribui (e não por lista de textos), e há
+teste negativo confirmando que exceção e `console.error` derrubam a bateria.
 
 ### Quanto tempo a bancada leva
 

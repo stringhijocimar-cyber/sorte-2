@@ -14,6 +14,12 @@
 
     <color name="colorPrimary">#061522</color>
     <color name="colorPrimaryDark">#030D16</color>
-    <!-- Teal do pacote premium, o mesmo --acaso do tema escuro. -->
+    <!-- Teal do pacote premium, o mesmo tom da variável "acaso" do tema escuro.
+
+         Sem hífen duplo aqui dentro: XML proíbe "- -" (junto) dentro de um
+         comentário, e o Android trata isso como erro de compilação, não como
+         aviso. Escrever o nome da variável CSS como var(- -acaso) derrubou uma
+         build inteira depois que todos os testes já tinham passado. -->
+
     <color name="colorAccent">#2BE0C1</color>
 </resources>
