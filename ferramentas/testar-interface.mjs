@@ -9,6 +9,14 @@
  * projeto seria peso morto para um app que não tem dependência nenhuma.
  * O WebSocket nativo do Node 20 exige a flag acima; no Node 22+ ela é
  * dispensável.
+ *
+ * PRECISA de um servidor HTTP na raiz do projeto, porque em file:// o service
+ * worker não registra e o teste do modo avião passaria medindo outra coisa:
+ *
+ *     python3 -m http.server 8123 &
+ *     node ferramentas/testar-interface.mjs
+ *
+ * Ajuste com LOTOLAB_URL (endereço) e LOTOLAB_CHROME (executável).
  */
 import { spawn } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
@@ -33,6 +41,19 @@ const chrome = spawn(NAVEGADOR, [
   "--no-proxy-server", "--proxy-bypass-list=*",
   `--window-size=${LARGURA},${ALTURA}`, "about:blank",
 ], { stdio: "ignore" });
+
+/* Sem este ouvinte, um Chrome ausente vira "Unhandled 'error' event" com trinta
+   linhas de pilha interna do Node e a causa real — ENOENT — no meio. Quem lê o
+   log de CI precisa saber o que fazer, não onde o child_process se perdeu. */
+chrome.on("error", (erro) => {
+  console.error(
+    erro.code === "ENOENT"
+      ? `\nNão achei o navegador "${NAVEGADOR}".\n` +
+        "Instale o Chrome/Chromium ou aponte o caminho:\n" +
+        "  LOTOLAB_CHROME=/caminho/para/chrome node ferramentas/testar-interface.mjs\n"
+      : `\nFalha ao subir "${NAVEGADOR}": ${erro.message}\n`);
+  process.exit(1);
+});
 
 const dormir = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -109,15 +130,42 @@ await dormir(2500);
 secao("A. Carregamento");
 checar("página carregou", (await js("return document.title")).includes("LotoLab"),
   await js("return document.title"));
-// `pesos.json` é opcional por projeto: sem ele o app usa hipóteses declaradas
-// e avisa na tela. O 404 é o comportamento esperado, não um defeito — por isso
-// entra na lista de ruído tolerado, junto com favicon e manifest.
-const ruidoEsperado = /favicon|manifest|pesos\.json/i;
-const errosConsole = eventos.filter((e) =>
-  e.method === "Log.entryAdded" && e.params.entry.level === "error" &&
-  !ruidoEsperado.test(e.params.entry.text + " " + (e.params.entry.url || "")));
-checar("sem erro de JavaScript no console", errosConsole.length === 0,
-  errosConsole.map((e) => e.params.entry.text).join(" | ").slice(0, 200));
+/* ATENÇÃO: este teste passou anos verde sem testar nada do que o nome promete.
+   Ele lia só `Log.entryAdded`, e exceção de JavaScript NÃO chega por aí — o
+   Chrome manda exceção não capturada em `Runtime.exceptionThrown` e chamada de
+   console.error em `Runtime.consoleAPICalled`. `Log.entryAdded` traz sobretudo
+   falha de rede. Ou seja: a bateria vigiava o canal errado, e uma função
+   inexistente chamada no carregamento passava como "ok".
+
+   Descoberto ao tentar quebrar o app de propósito para conferir se o teste
+   acusava. Não acusou. O que vinha derrubando a bateria era o outro lado do
+   mesmo defeito: ERR_CERT_AUTHORITY_INVALID de um proxy com certificado
+   próprio, ou seja, ruído de ambiente contado como erro do app.
+
+   Agora escuta os três canais e separa por origem:
+
+   * exceção não capturada  -> sempre falha, é defeito do app
+   * console.error do app   -> sempre falha
+   * falha de rede          -> ignorada, e de propósito: o app é feito para
+                               funcionar sem rede, os dados ficam guardados no
+                               aparelho, e quem cobra esse comportamento é a
+                               seção "Modo avião", que derruba a rede de
+                               propósito em vez de depender dela estar de pé. */
+const problemasJS = [];
+for (const e of eventos) {
+  if (e.method === "Runtime.exceptionThrown") {
+    const d = e.params.exceptionDetails;
+    problemasJS.push(`[exceção] ${d.exception?.description || d.text}`);
+  } else if (e.method === "Runtime.consoleAPICalled" && e.params.type === "error") {
+    problemasJS.push(`[console.error] ${e.params.args.map((a) =>
+      a.description ?? a.value ?? a.type).join(" ")}`);
+  } else if (e.method === "Log.entryAdded" && e.params.entry.level === "error" &&
+             e.params.entry.source !== "network") {
+    problemasJS.push(`[${e.params.entry.source}] ${e.params.entry.text}`);
+  }
+}
+checar("sem erro de JavaScript no console", problemasJS.length === 0,
+  problemasJS.join(" | ").slice(0, 300));
 checar("ausência de pesos.json não quebra o app",
   await js("return typeof MODALIDADES !== 'undefined' || document.body.innerText.length > 200"));
 /* As cinco rotas do mockup. Os nomes mudaram — o que NÃO pode mudar é o

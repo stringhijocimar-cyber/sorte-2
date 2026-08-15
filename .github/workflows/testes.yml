@@ -40,6 +40,44 @@ jobs:
       - name: Testes do motor
         run: node ferramentas/testar-motor.mjs
 
+      - name: Testes da interface
+        # Estes existiam desde sempre e não rodavam em lugar nenhum: nem aqui,
+        # nem em "Compilar APK". Ficavam à espera de alguém lembrar de rodá-los
+        # à mão — que é o mesmo que não existir. São eles que garantem que toda
+        # tela continua alcançável pela navegação e que o laboratório não ganhou
+        # botão de aposta.
+        #
+        # A bateria abre o app num Chrome de verdade, servido por HTTP: em
+        # file:// o service worker não registra e o teste do modo avião mediria
+        # outra coisa. O runner do GitHub já traz o google-chrome instalado.
+        run: |
+          python3 -m http.server 8123 >/dev/null 2>&1 &
+          servidor=$!
+          trap 'kill $servidor 2>/dev/null' EXIT
+          # Espera a porta abrir em vez de dormir um tempo fixo e torcer.
+          for i in $(seq 1 30); do
+            curl -sf http://127.0.0.1:8123/index.html >/dev/null && break
+            sleep 0.5
+          done
+          node ferramentas/testar-interface.mjs
+
+      - name: Guardar as capturas de tela
+        # As capturas são o único registro visual do que a build viu. Quando um
+        # teste de layout falha, "estourou a largura em 360px" sem imagem manda
+        # a pessoa reproduzir tudo de novo na mão.
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: capturas
+          path: capturas/
+          if-no-files-found: ignore
+
+      - name: O XML do projeto Android é bem-formado
+        # A v26 quebrou com tudo verde: um "--" dentro de comentário em
+        # colors.xml, que só o Gradle viu, no meio de uma compilação de release.
+        # Nenhum teste olhava para o projeto nativo. Agora olha, em milissegundos.
+        run: python3 ferramentas/conferir-xml-android.py
+
       - name: Os testes são reprodutíveis
         # Toda medida estatística desta suíte roda com gerador semeado. Se duas
         # execuções seguidas discordarem, algum teste voltou a depender do
