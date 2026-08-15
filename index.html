@@ -850,7 +850,7 @@ const S = {
      geração, campeão e conclusão. Fica separado de `aprendizado` de propósito
      — são dois inquilinos com ciclos de vida diferentes, e misturá-los faria
      limpar um apagar o outro. */
-  pesquisaAdaptativa:{}, pesquisaAutomatica:true
+  pesquisaAdaptativa:{}, pesquisaAutomatica:true, abaPesquisa:"geral"
 };
 
 /* Persistência tolerante: se o navegador bloquear, o app segue funcionando
@@ -5506,7 +5506,44 @@ T.pesquisa = () => {
     acontece em outro lugar.</div>
   </div>` : "";
 
-  return cabeca + controles + painel + campeao + julgamento + grafico + tabela;
+  /* Abas internas do mockup: Visão Geral · Evolução · Estratégias · Detalhes.
+     O conteúdo já existia todo — o que muda é que ele deixa de ser uma rolagem
+     única e passa a caber numa tela de celular sem exigir dez arrastadas. */
+  const aba = S.abaPesquisa || "geral";
+  const abas = [
+    {id:"geral", nome:"Visão Geral"},
+    {id:"evolucao", nome:"Evolução"},
+    {id:"estrategias", nome:"Estratégias"},
+    {id:"detalhes", nome:"Detalhes"},
+  ];
+  const barra = `<div class="analysis-tabs">${abas.map(a =>
+    `<button data-aba-pq="${a.id}" class="${a===abas.find(x=>x.id===aba)?"active":""}"
+      >${esc(a.nome)}</button>`).join("")}</div>`;
+
+  const detalhes = `<div class="carta" style="margin-top:12px">
+    <h3 style="margin:0 0 8px">Como a busca está configurada</h3>
+    <div class="rolagem"><table><tbody>
+      <tr><td>população por geração</td><td style="text-align:right">${inf(POPULACAO_PESQUISA)}</td></tr>
+      <tr><td>imigrantes por geração</td><td style="text-align:right">${inf(IMIGRANTES_POR_GERACAO)}</td></tr>
+      <tr><td>elite preservada</td><td style="text-align:right">${inf(ELITE_PESQUISA)}</td></tr>
+      <tr><td>genes por hipótese, no máximo</td><td style="text-align:right">${inf(MAX_GENES)}</td></tr>
+      <tr><td>primitivos disponíveis</td><td style="text-align:right">${inf(PRIMITIVOS.length)}</td></tr>
+      <tr><td>recortes de walk-forward</td><td style="text-align:right">${inf(RECORTES_PESQUISA)}</td></tr>
+      <tr><td>concursos usados</td><td style="text-align:right">${inf(mem.concursosUsados||0)}</td></tr>
+      <tr><td>desenvolvimento / validação</td><td style="text-align:right">${
+        inf(mem.concursosDesenvolvimento||0)} / ${inf(mem.concursosValidacao||0)}</td></tr>
+    </tbody></table></div>
+    <div class="nota">Os 300 concursos mais recentes. Com o histórico inteiro cada
+    geração varreria 170 mil linhas num celular, e o motor deixaria de rodar sozinho
+    por ser insuportável.</div>
+  </div>`;
+
+  const corpo = aba === "evolucao" ? (grafico + tabela)
+              : aba === "estrategias" ? campeao
+              : aba === "detalhes" ? detalhes
+              : julgamento;
+
+  return cabeca + controles + barra + corpo;
 };
 
 T.resultados = () => {
@@ -5995,6 +6032,10 @@ function acoes(){
   /* --- motor de pesquisa --- */
   document.querySelectorAll("[data-atalho]").forEach(b => b.onclick = () => {
     S.tela = b.dataset.atalho; window.scrollTo(0,0); pintar();
+  });
+
+  document.querySelectorAll("[data-aba-pq]").forEach(b => b.onclick = () => {
+    S.abaPesquisa = b.dataset.abaPq; pintar();
   });
 
   const pqauto = $("#pq-auto");

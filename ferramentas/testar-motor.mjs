@@ -2831,9 +2831,25 @@ secao("25. Motor de pesquisa adaptativa");
       /class="pq-veredito/.test(tela) && /class="pq-selo"/.test(tela));
     checar("o veredito de acaso e o de sinal usam cartões diferentes",
       /pq-veredito (acaso|sinal)/.test(tela));
+    /* A tela ganhou abas internas (Visão Geral · Evolução · Estratégias ·
+       Detalhes). O conteúdo continua o mesmo — muda em qual aba ele mora, e o
+       teste passa a olhar onde ele está em vez de deixar de olhar. */
+    checar("a tela tem as quatro abas do mockup",
+      ["Visão Geral","Evolução","Estratégias","Detalhes"].every(n => tela.includes(n)));
+
+    S.abaPesquisa = "estrategias";
+    const telaEstr = contexto.T.pesquisa();
     checar("os recortes viram linhas de traço, com a validação junto",
-      (tela.match(/class="pq-traco/g) || []).length >= 5,
-      `${(tela.match(/class="pq-traco/g) || []).length} traços`);
+      (telaEstr.match(/class="pq-traco/g) || []).length >= 5,
+      `${(telaEstr.match(/class="pq-traco/g) || []).length} traços`);
+
+    S.abaPesquisa = "detalhes";
+    checar("a aba Detalhes diz como a busca está configurada",
+      /população por geração/.test(contexto.T.pesquisa()));
+
+    S.abaPesquisa = "evolucao";
+    const telaEvo = contexto.T.pesquisa();
+    S.abaPesquisa = "geral";
 
     const acima = contexto.tracoAuc("t", 0.56);
     const abaixo = contexto.tracoAuc("t", 0.44);
@@ -2851,7 +2867,7 @@ secao("25. Motor de pesquisa adaptativa");
     checar("e o limiar corrigido, com a conta à vista",
       /0,05 ÷/.test(tela));
     checar("e avisa que subir a aptidão na busca é esperado",
-      /a busca sempre encontra algo/.test(tela));
+      /a busca sempre encontra algo/.test(telaEvo));
 
     S.pesquisaAdaptativa = {};
     S.resultados = historicoSemeado("mega-sena", 60, 6, 30, 3);
