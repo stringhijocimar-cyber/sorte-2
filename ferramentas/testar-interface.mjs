@@ -120,11 +120,25 @@ checar("sem erro de JavaScript no console", errosConsole.length === 0,
   errosConsole.map((e) => e.params.entry.text).join(" | ").slice(0, 200));
 checar("ausência de pesos.json não quebra o app",
   await js("return typeof MODALIDADES !== 'undefined' || document.body.innerText.length > 200"));
+/* As cinco rotas do mockup. Os nomes mudaram — o que NÃO pode mudar é o
+   número de telas alcançáveis: reorganizar navegação é onde recurso some
+   calado, então o teste confere as duas coisas. */
+const ROTAS = ['início','análise','experimentos','resultados','mais'];
 checar("as cinco abas estão presentes",
   await js(`
     const t = document.body.innerText.toLowerCase();
-    return ['gerar','jogos','conferir','análise','entender'].every(a => t.includes(a));
+    return ${JSON.stringify(ROTAS)}.every(a => t.includes(a));
   `));
+checar("nenhuma tela ficou sem porta na navegação",
+  await js(`
+    const alvos = new Set(SECOES.flatMap(s => s.telas.map(t => t.id)));
+    const existem = Object.keys(T).filter(k => typeof T[k] === 'function');
+    const orfas = existem.filter(k => !alvos.has(k));
+    return orfas.length === 0 ? true : 'órfãs: ' + orfas.join(', ');
+  `) === true);
+checar("as treze telas continuam alcançáveis",
+  await js(`return SECOES.reduce((n,s)=>n+s.telas.length,0)`) === 13,
+  String(await js(`return SECOES.reduce((n,s)=>n+s.telas.length,0)`)));
 
 /* ---------- percorrer a navegação ----------
    Duas camadas desde o redesenho: `data-secao` na barra inferior e `data-tela`
@@ -440,7 +454,7 @@ checar("app abre sem rede", offline.titulo.includes("LotoLab") && offline.texto 
   `offline=${!offline.online}, ${offline.texto} caracteres`);
 const abasOffline = await js(`
   const t = document.body.innerText.toLowerCase();
-  return ['gerar','jogos','conferir','análise','entender'].every(a => t.includes(a));
+  return ${JSON.stringify(ROTAS)}.every(a => t.includes(a));
 `);
 checar("todas as abas presentes sem rede", abasOffline);
 await irPara("gerar");
