@@ -2969,8 +2969,13 @@ secao("26. Último concurso × jogos salvos");
     /depois do sorteio/.test(cmp.fora[0].motivo), cmp.fora[0] && cmp.fora[0].motivo);
   checar("e o melhor da rodada é o jogo legítimo",
     cmp.melhor.jogo.id === "antes");
-  checar("15 acertos contam como faixa de prêmio",
-    cmp.premiados === 1);
+  /* A comparação conta dezenas coincidentes, e só. A noção de "faixa de
+     prêmio" saiu daqui de propósito: quem confere bilhete é a Caixa, contra o
+     volante registrado — o app compara duas listas guardadas no aparelho. */
+  checar("o total de coincidências é somado",
+    cmp.coincidencias === 15, `coincidencias=${cmp.coincidencias}`);
+  checar("a comparação não devolve faixa de prêmio",
+    cmp.premiados === undefined && cmp.conferidos.every(x => x.faixa === undefined));
 
   /* Teimosinha fora da faixa declarada: mesmo cuidado, motivo diferente. */
   S.teimosinhas = [
@@ -3014,15 +3019,27 @@ secao("26. Último concurso × jogos salvos");
   checar("e diz que teve ganhador",
     /ganhador/i.test(tela));
   checar("e resume o confronto numa frase",
-    /jogos? conferidos?/.test(tela) && /melhor/.test(tela));
+    /jogos? comparados?/.test(tela) && /melhor/.test(tela));
   checar("e oferece atualizar para o mais recente",
     /id="c-atualizar"/.test(tela));
   /* O painel não pode afirmar que sabe o último concurso do mundo — ele sabe o
      último que guardou. A diferença é a que separa informar de inventar. */
   checar("e admite que pode existir concurso mais novo",
     /pode haver um mais novo/.test(tela));
-  checar("e não promete prêmio: manda conferir no volante oficial",
-    /volante oficial/.test(tela));
+
+  /* A trava do pacote v2.1: a conferência dos SEUS jogos fala em coincidência,
+     nunca em prêmio, faixa ou valor. O que continua é o estado do CONCURSO —
+     "2 ganhadores", "acumulou" — que é fato publicado pela Caixa sobre o
+     sorteio, e foi pedido explicitamente. As duas coisas convivem, e o teste
+     cobra as duas para nenhuma sumir por descuido. */
+  checar("a conferência fala em coincidência, não em acerto premiado",
+    /coincidência/.test(tela));
+  checar("e não carimba faixa de prêmio no jogo de ninguém",
+    !/faixa de prêmio/.test(tela) && !/\bpremiado\b/.test(tela));
+  checar("e diz que quem confere bilhete é a Caixa",
+    /quem diz se um jogo pagou é a Caixa/i.test(tela));
+  checar("mas o estado do concurso continua: ganhador ou acumulado",
+    /ganhador/i.test(tela));
 
   /* Concordância com 1. Texto montado com `${n} jogos` acerta no plural e erra
      no singular sempre, e o singular é justamente o caso de quem está
@@ -3063,6 +3080,111 @@ secao("26. Último concurso × jogos salvos");
 
   S.jogos = guardaJogos; S.resultados = guardaRes;
   S.modalidade = guardaMod; S.teimosinhas = guardaTeim;
+}
+
+/* ==================================================================
+   27. Concurso-alvo opcional e conferência sob demanda (pacote v2.1)
+
+   O pacote pede: combinação salva com concurso OPCIONAL, comparada com o
+   concurso associado ou, na falta dele, com o último resultado; contagem de
+   coincidências; e atividade "Conferência concluída". E manda não calcular
+   prêmio, faixa nem valor na conferência dos jogos.
+   ================================================================== */
+secao("27. Concurso-alvo e conferência sob demanda");
+
+{
+  const S = motor.S;
+  const guardaJ = S.jogos, guardaR = S.resultados;
+  const guardaM = S.modalidade, guardaT = S.teimosinhas, guardaA = S.avisos;
+
+  S.modalidade = "lotofacil";
+  S.teimosinhas = []; S.avisos = [];
+  const dz3401 = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,25];
+  const dz3402 = [1,2,3,4,5,16,17,18,19,20,21,22,23,24,25];
+  S.resultados = [
+    {concurso:3401, data:"2026-08-12", modalidade:"lotofacil", dezenas:dz3401},
+    {concurso:3402, data:"2026-08-14", modalidade:"lotofacil", dezenas:dz3402},
+  ];
+
+  /* Um jogo mirando o 3401 e outro sem alvo, ambos salvos antes dos dois
+     sorteios. Sem alvo, a data manda e ele cobre os dois. */
+  S.jogos = [
+    {id:"alvo", dezenas:dz3401.slice(), modalidade:"lotofacil",
+     metodo:"manual", data:"2026-08-01", concursoAlvo:3401, conferencias:[]},
+    {id:"livre", dezenas:dz3401.slice(), modalidade:"lotofacil",
+     metodo:"manual", data:"2026-08-01", conferencias:[]},
+  ];
+  contexto.conferenciaAutomatica();
+
+  const doAlvo = S.jogos[0].conferencias.map(c => c.concurso);
+  const doLivre = S.jogos[1].conferencias.map(c => c.concurso).sort();
+  checar("jogo com concurso declarado cobre só aquele concurso",
+    doAlvo.length === 1 && doAlvo[0] === 3401, `cobriu ${doAlvo.join(",")}`);
+  checar("jogo sem concurso declarado cobre todos a partir da data",
+    doLivre.length === 2, `cobriu ${doLivre.join(",")}`);
+
+  /* No painel do concurso mais recente (3402), o jogo do 3401 não é erro nem
+     zero: ele tem dono declarado e o painel diz qual. */
+  const cmp = contexto.jogosContraConcurso(contexto.ultimoResultado("lotofacil"));
+  checar("no painel do 3402, o jogo do 3401 sai da comparação",
+    !cmp.conferidos.some(x => x.jogo.id === "alvo"));
+  checar("e explica que foi salvo para outro concurso",
+    cmp.fora.some(f => f.jogo.id === "alvo" && /salvo para o concurso 3401/.test(f.motivo)),
+    (cmp.fora.find(f => f.jogo.id === "alvo") || {}).motivo);
+
+  /* Um alvo ainda não sorteado não pode contar como conferência nenhuma — nem
+     como zero acertos, que seria uma afirmação sobre um sorteio que não houve. */
+  S.jogos = [{id:"futuro", dezenas:dz3401.slice(), modalidade:"lotofacil",
+              metodo:"manual", data:"2026-08-01", concursoAlvo:3500,
+              conferencias:[]}];
+  contexto.conferenciaAutomatica();
+  checar("alvo ainda não sorteado não gera conferência",
+    S.jogos[0].conferencias.length === 0);
+
+  /* Alvo declarado vale mesmo quando o jogo entrou depois do sorteio: quem
+     digita o número está declarando que jogou nele, e é o mesmo tratamento que
+     a teimosinha já recebia. A trava da data continua valendo onde ninguém
+     declarou nada — coberto na seção 26. */
+  S.jogos = [{id:"tardio", dezenas:dz3401.slice(), modalidade:"lotofacil",
+              metodo:"manual", data:"2026-12-01", concursoAlvo:3401,
+              conferencias:[]}];
+  contexto.conferenciaAutomatica();
+  checar("alvo declarado é respeitado mesmo salvando depois",
+    S.jogos[0].conferencias.length === 1 &&
+    S.jogos[0].conferencias[0].concurso === 3401);
+
+  /* ---- a tela de Meus jogos ---- */
+  S.jogos = [{id:"m1", dezenas:dz3401.slice(), modalidade:"lotofacil",
+              metodo:"manual", data:"2026-08-01", conferencias:[]}];
+  contexto.conferenciaAutomatica();
+  const tela = contexto.T.jogos();
+  checar("Meus jogos abre com o resumo e o botão de conferir",
+    /id="j-conferir"/.test(tela) && /jogos salvos/.test(tela));
+  checar("o resumo mostra o último concurso e as coincidências",
+    /último concurso/.test(tela) && /coincidências/.test(tela));
+  checar("e avisa que não calcula prêmio nem faixa",
+    /não\s+calcula prêmio nem faixa/.test(tela.replace(/\s+/g, " ")));
+  checar("a ficha do jogo fala em coincidências",
+    /coincidência/.test(tela));
+  checar("e não carimba prêmio no jogo",
+    !/faixa de prêmio/.test(tela) && !/<span class="selo ok">prêmio</.test(tela));
+
+  /* O selo do alvo precisa aparecer, senão a regra de comparação fica invisível
+     e o jogo só parece não conferido. */
+  S.jogos = [{id:"m2", dezenas:dz3401.slice(), modalidade:"lotofacil",
+              metodo:"manual", data:"2026-08-01", concursoAlvo:3401,
+              conferencias:[]}];
+  contexto.conferenciaAutomatica();
+  checar("jogo com alvo mostra o concurso na ficha",
+    /concurso 3401/.test(contexto.T.jogos()));
+
+  /* A cartela oferece o campo, e só ela: nos jogos gerados pelo app não existe
+     bilhete, e pedir concurso ali sugeriria que existe. */
+  checar("a cartela oferece o campo de concurso opcional",
+    /id="m-concurso"/.test(contexto.T.montar()));
+
+  S.jogos = guardaJ; S.resultados = guardaR;
+  S.modalidade = guardaM; S.teimosinhas = guardaT; S.avisos = guardaA;
 }
 
 /* ---------- saída ---------- */

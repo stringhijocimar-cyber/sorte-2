@@ -1623,6 +1623,42 @@ function tabelaSugestao(s){
   <button class="acao" id="s-salvar" style="margin-top:8px">Salvar este jogo</button>`;
 }
 
+/* ==================== o cabeçalho de Meus Jogos ====================
+   Quatro números e um botão, respondendo de cima o que a lista abaixo só conta
+   depois de rolada: quantos jogos, contra qual concurso, quantos couberam na
+   comparação e quantas dezenas bateram no total.
+
+   "Comparados" e "salvos" são diferentes de propósito, e a diferença é o ponto:
+   um jogo salvo hoje não é comparável ao sorteio de ontem. Mostrar só o total
+   esconderia isso. */
+function resumoDeMeusJogos(meus){
+  const c = MODALIDADES[S.modalidade];
+  const r = ultimoResultado(S.modalidade);
+  const cmp = jogosContraConcurso(r);
+  return `<div class="carta">
+    <div class="kpis">
+      <div class="kpi"><div class="rot">jogos salvos</div>
+        <div class="val" style="font-size:1.15rem">${inf(meus.length)}</div>
+        <div class="sub">na ${esc(c.nome)}</div></div>
+      <div class="kpi"><div class="rot">último concurso</div>
+        <div class="val" style="font-size:1.15rem">${r ? esc(r.concurso) : "—"}</div>
+        <div class="sub">${r ? esc(r.data || "sem data") : "nenhum guardado"}</div></div>
+      <div class="kpi"><div class="rot">comparados</div>
+        <div class="val" style="font-size:1.15rem">${inf(cmp.conferidos.length)}</div>
+        <div class="sub">de ${inf(cmp.total)}</div></div>
+      <div class="kpi"><div class="rot">coincidências</div>
+        <div class="val" style="font-size:1.15rem">${inf(cmp.coincidencias)}</div>
+        <div class="sub">dezenas, somadas</div></div>
+    </div>
+    <button class="acao" id="j-conferir" style="margin-top:12px">Conferir os jogos agora</button>
+    ${(S.avisoJogos && S.avisoJogos.modalidade === S.modalidade)
+      ? `<div class="nota">${esc(S.avisoJogos.texto)}</div>` : ""}
+    <div class="nota">Compara cada jogo com o concurso que ele declara, ou com o
+    último resultado guardado. Mostra quantas dezenas coincidiram e quais — não
+    calcula prêmio nem faixa, porque quem confere bilhete é a Caixa.</div>
+  </div>`;
+}
+
 T.jogos = () => {
   if(!S.jogos.length) return `<div class="vazio">Nenhum jogo salvo ainda.<br>
     Gere jogos na primeira aba e toque em <strong>Salvar</strong>.</div>`;
@@ -1650,7 +1686,7 @@ T.jogos = () => {
 
   const porLote = {};
   meus.forEach(j => (porLote[j.lote] = porLote[j.lote] || []).push(j));
-  return Object.entries(porLote).reverse().map(([lote, jogos])=>{
+  return resumoDeMeusJogos(meus) + Object.entries(porLote).reverse().map(([lote, jogos])=>{
     const p = jogos[0];
     return `<h2 style="margin:14px 0 8px">${esc(MODALIDADES[p.modalidade].nome)} ·
       ${esc(p.data)} · ${esc(p.metodo)}</h2>
@@ -1674,6 +1710,11 @@ function ficha(j){
   return `<div class="ficha ${conferencias.length?"conferida":""}">
     <div class="topo">
       <span class="id">#${esc(j.id)}</span>
+      ${/* Um jogo com concurso declarado tem regra de comparação diferente dos
+            outros. Se isso não aparecer na ficha, a regra fica invisível e o
+            jogo parece simplesmente não ter sido conferido. */
+        Number.isFinite(j.concursoAlvo)
+          ? `<span class="selo">concurso ${esc(j.concursoAlvo)}</span>` : ""}
       ${conferencias.length
         ? `<span class="selo ok">${conferencias.length} conferência${conferencias.length>1?"s":""}</span>`
         : `<span class="selo seu">não conferido</span>`}
@@ -1683,7 +1724,7 @@ function ficha(j){
       return `<span class="dz ${acertou?"acertou":""}">${pad(d)}</span>`;
     }).join("")}</div>
     ${ultima ? `<div style="margin-top:9px;font-size:.82rem;color:var(--secundaria)">
-      concurso ${esc(ultima.concurso)}: <strong style="color:var(--tinta)">${ultima.acertos} acerto${ultima.acertos===1?"":"s"}</strong>
+      concurso ${esc(ultima.concurso)}: <strong style="color:var(--tinta)">${ultima.acertos} coincidência${ultima.acertos===1?"":"s"}</strong>
       — o acaso faria ${nf(esperadoAcertos(j.modalidade, j.dezenas.length),2)}</div>` : ""}
     <div class="botoes" style="margin-top:10px">
       <button class="acao contorno mini" data-abrir-jogo="${esc(j.id)}"
@@ -1695,16 +1736,16 @@ function ficha(j){
         selo: ultima ? `concurso ${ultima.concurso}` : "não conferido"})}
       ${ultima ? legendaCartela : ""}
       ${conferencias.length > 1 ? `<div class="rolagem" style="margin-top:10px"><table>
-        <tr><th>concurso</th><th>acertos</th><th>faixa</th><th>sorteio</th></tr>
+        <tr><th>concurso</th><th>coincidências</th><th>sorteio</th></tr>
         ${conferencias.map(cf=>{
-          /* O estado do sorteio, e não do seu jogo: teve ganhador na faixa 1?
-             São perguntas diferentes e a tabela agora responde as duas. */
+          /* A coluna "faixa" saiu daqui: carimbava "prêmio" no seu jogo, que é
+             afirmação que o app não sustenta. A coluna do SORTEIO fica, porque
+             responde outra pergunta — teve ganhador na faixa 1? — e essa é fato
+             publicado pela Caixa, não leitura do bilhete de ninguém. */
           const doSorteio = S.resultados.find(r =>
             r.concurso === cf.concurso && r.modalidade === j.modalidade) || {};
           const g = ganhadoresDoConcurso(doSorteio);
           return `<tr><td>${esc(cf.concurso)}</td><td>${cf.acertos}</td>
-          <td>${faixaAtingida(j.modalidade, cf.acertos) !== null
-            ? `<span class="selo ok">prêmio</span>` : "—"}</td>
           <td><span class="ponto-sorteio ${g.estado}" title="${esc(g.rotulo)}"></span>${
             g.estado === "ganhou" ? "teve ganhador"
             : g.estado === "acumulou" ? "acumulou" : "—"}</td></tr>`;
@@ -1762,6 +1803,8 @@ function ultimoResultado(modalidade){
 /* Por que este jogo não tem conferência neste concurso. Retorna null quando
    está tudo certo — ou seja, quando o jogo de fato cobre o concurso. */
 function motivoSemConferencia(j, r){
+  if(Number.isFinite(j.concursoAlvo) && j.concursoAlvo !== r.concurso)
+    return `salvo para o concurso ${j.concursoAlvo}`;
   if(j.deConcurso){
     const fim = j.deConcurso + (j.concursos || 1) - 1;
     /* Número de concurso sai cru, sem separador de milhar: "3.301" lê como
@@ -1785,27 +1828,37 @@ function jogosContraConcurso(r){
   const conferidos = [], fora = [];
   todos.forEach(j => {
     const cf = (j.conferencias || []).find(x => x.concurso === r.concurso);
-    if(cf) conferidos.push({jogo:j, acertos:cf.acertos,
-                            faixa:faixaAtingida(j.modalidade, cf.acertos)});
+    if(cf) conferidos.push({jogo:j, acertos:cf.acertos});
     else fora.push({jogo:j, motivo: motivoSemConferencia(j, r) || "ainda não conferido"});
   });
   conferidos.sort((a,b) => b.acertos - a.acertos);
   return {
     conferidos, fora,
     melhor: conferidos[0] || null,
-    premiados: conferidos.filter(x => x.faixa !== null).length,
+    coincidencias: conferidos.reduce((n, x) => n + x.acertos, 0),
     total: todos.length,
   };
 }
 
+/* A conferência mostra COINCIDÊNCIA, e não prêmio.
+
+   A versão anterior carimbava "faixa de prêmio" no jogo que batia o número de
+   acertos de uma faixa. É uma conta fácil de fazer e uma afirmação que o app
+   não tem como sustentar: quem decide se um bilhete pagou é a Caixa, contra o
+   volante registrado, e não uma comparação de listas guardada no aparelho.
+   Entre dizer "você acertou 14 dezenas" e "seu jogo está em faixa de prêmio",
+   só a primeira é verificável aqui.
+
+   O que continua: quantas dezenas coincidiram e QUAIS — o suficiente para a
+   pessoa decidir se vale conferir o bilhete de verdade. E o cabeçalho do painel
+   segue dizendo se o CONCURSO teve ganhador, que é fato publicado pela Caixa
+   sobre o sorteio, e não uma leitura do bilhete de ninguém. */
 function linhaDoJogo(item, sorteadas){
   const j = item.jogo;
-  const premiado = item.faixa !== null;
   const esperado = esperadoAcertos(j.modalidade, j.dezenas.length);
-  return `<div class="confronto ${premiado ? "premiado" : ""}">
+  return `<div class="confronto">
     <div class="cabeca-confronto">
-      <span class="quanto"><b>${item.acertos}</b> acerto${item.acertos===1?"":"s"}</span>
-      ${premiado ? `<span class="selo ok">faixa de prêmio</span>` : ""}
+      <span class="quanto"><b>${item.acertos}</b> coincidência${item.acertos===1?"":"s"}</span>
       <span class="contexto">${esc(j.metodo || "salvo")} · o acaso faria ${nf(esperado,2)}</span>
     </div>
     <div class="dezenas">${j.dezenas.map(d =>
@@ -1858,16 +1911,14 @@ function painelUltimoConcurso(){
     Gere ou monte um jogo e ele passa a ser conferido sozinho a cada concurso novo.</p>
     ${botao}</div>`;
 
-  /* Uma frase que resolve a tela para quem só quer a resposta. */
+  /* Uma frase que resolve a tela para quem só quer a resposta. Conta
+     coincidências, não prêmio: o que o app sabe é quantas dezenas bateram. */
   const resumo = !cmp.conferidos.length
     ? (cmp.total === 1
         ? `O seu jogo da ${esc(c.nome)} não cobre este concurso.`
         : `Nenhum dos seus ${inf(cmp.total)} jogos da ${esc(c.nome)} cobre este concurso.`)
-    : `<b>${inf(cmp.conferidos.length)}</b> jogo${cmp.conferidos.length>1?"s":""} conferido${cmp.conferidos.length>1?"s":""} · melhor
-       <b>${cmp.melhor.acertos} acerto${cmp.melhor.acertos===1?"":"s"}</b> · ` +
-      (cmp.premiados
-        ? `<b style="color:var(--acaso)">${inf(cmp.premiados)} em faixa de prêmio</b>`
-        : "nenhum em faixa de prêmio");
+    : `<b>${inf(cmp.conferidos.length)}</b> jogo${cmp.conferidos.length>1?"s":""} comparado${cmp.conferidos.length>1?"s":""} · melhor
+       <b>${cmp.melhor.acertos} coincidência${cmp.melhor.acertos===1?"":"s"}</b>`;
 
   return `<div class="carta ${g.estado}">
     ${cabeca}
@@ -1879,8 +1930,8 @@ function painelUltimoConcurso(){
         <span class="num">${f.jogo.dezenas.map(pad).join(" ")}</span>
         <span>${esc(f.motivo)}</span></div>`).join("")}
     </details>`}
-    ${cmp.premiados ? `<div class="nota">Confira no volante oficial da Caixa antes de
-      comemorar. O app compara números; quem paga é a lotérica.</div>` : ""}
+    <div class="nota">Isto é comparação de dezenas, não conferência de bilhete.
+    Quem diz se um jogo pagou é a Caixa, contra o volante registrado.</div>
     ${botao}
     <div class="nota">Este é o concurso mais recente <strong>que o app guardou</strong> —
     pode haver um mais novo que ninguém buscou ainda. A conferência acontece sozinha
@@ -3503,7 +3554,24 @@ function faixaAtingida(modalidade, acertos){
 /* Os concursos que um jogo cobre. Para teimosinha é a faixa declarada; para um
    jogo comum, todo concurso conhecido da modalidade a partir da data de
    criação. */
+/* Três formas de um jogo dizer a que concursos ele pertence, da mais explícita
+   para a mais implícita:
+
+   1. `concursoAlvo` — a pessoa declarou UM concurso ao salvar. Vale só ele.
+   2. `deConcurso` + `concursos` — a faixa da teimosinha.
+   3. nada declarado — todo concurso da modalidade a partir da data em que o
+      jogo foi salvo.
+
+   Os dois primeiros são declarações e valem como tais, mesmo que o concurso já
+   tenha sido sorteado quando o jogo entrou: quem digita "concurso 3401" está
+   dizendo que jogou nele, e o app não tem como conferir bilhete. A data continua
+   mandando no terceiro caso, que é o automático — ali ninguém declarou nada, e
+   assumir cobertura para trás inventaria acerto em sorteio anterior ao dia em
+   que o jogo existiu. */
 function concursosDoJogo(j){
+  if(Number.isFinite(j.concursoAlvo))
+    return S.resultados.filter(r =>
+      r.modalidade === j.modalidade && r.concurso === j.concursoAlvo);
   return S.resultados.filter(r =>
     r.modalidade === j.modalidade &&
     (j.deConcurso
@@ -5219,6 +5287,14 @@ T.montar = () => {
       <span>marcadas <b>${dez.length}</b> de ${c.min}${c.max>c.min?` a ${c.max}`:""}</span>
       <span>${valido ? `${inf(cobertas)} aposta${cobertas>1?"s":""} simples` : "aposta incompleta"}</span>
     </div>
+    <!-- Concurso opcional. É aqui que ele faz sentido, e não nas outras duas
+         formas de salvar: a cartela é onde alguém transcreve um bilhete que já
+         tem na mão, e quem tem o bilhete sabe o número do concurso. Nos jogos
+         gerados pelo app não existe bilhete nenhum, e um campo pedindo concurso
+         ali sugeriria que existe. -->
+    <label class="campo" style="margin-bottom:10px"><label>concurso (opcional)</label>
+      <input id="m-concurso" type="number" inputmode="numeric"
+        placeholder="vazio = compara com os concursos a partir de hoje"></label>
     <div class="botoes" style="margin-bottom:12px">
       <button class="acao mini" id="m-salvar" ${valido?"":"disabled"}>salvar jogo</button>
       <button class="acao contorno mini" id="m-completar">completar ao acaso</button>
@@ -5947,10 +6023,17 @@ function acoesNovas(){
   const salvar = $("#m-salvar");
   if(salvar) salvar.onclick = () => {
     const dez = marcadasDe(S.modalidade).slice().sort((a,b)=>a-b);
-    S.jogos.push({
+    /* Campo vazio vira ausência, e não zero: `Number("")` é 0, e um alvo 0
+       casaria com concurso nenhum e mandaria o jogo para "fora deste concurso"
+       para sempre — sem que ninguém tivesse digitado nada. */
+    const bruto = ($("#m-concurso") || {}).value;
+    const alvo = parseInt(bruto, 10);
+    const jogo = {
       id:`${Date.now().toString(36)}-m`, dezenas:dez, modalidade:S.modalidade,
       metodo:"manual", data:hoje(), lote:`M${Date.now().toString(36)}`, conferencias:[]
-    });
+    };
+    if(Number.isFinite(alvo) && alvo > 0) jogo.concursoAlvo = alvo;
+    S.jogos.push(jogo);
     Guardar.gravar("jogos", S.jogos);
     conferenciaAutomatica();
     S.tela = "jogos"; pintar();
@@ -6271,6 +6354,32 @@ function acoesNovas(){
     S.jogoAberto = S.jogoAberto === b.dataset.abrirJogo ? null : b.dataset.abrirJogo;
     pintar();
   });
+
+  /* --- conferir os jogos salvos, sob demanda ---
+     A conferência já roda sozinha a cada concurso novo, então este botão quase
+     sempre não tem o que fazer. Ele existe porque "automático e invisível" é
+     indistinguível de "não funciona": a pessoa precisa de um gesto que devolva
+     uma resposta. Quando não há nada novo, ele diz isso — em vez de fingir
+     trabalho para parecer útil. */
+  const conferirJogos = $("#j-conferir");
+  if(conferirJogos) conferirJogos.onclick = () => {
+    const antes = ultimoResultado(S.modalidade);
+    const r = conferenciaAutomatica();
+    const cmp = jogosContraConcurso(antes);
+    const nome = MODALIDADES[S.modalidade].nome;
+    const detalhe = !antes
+      ? `${nome} · nenhum concurso guardado para comparar.`
+      : `${nome} · ${inf(cmp.conferidos.length)} ` +
+        `${cmp.conferidos.length === 1 ? "jogo comparado" : "jogos comparados"} ` +
+        `com o concurso ${antes.concurso}.`;
+    /* A chave leva o instante: conferir de novo é um ato novo da pessoa, e
+       deve aparecer na lista. As chaves de prêmio é que são idempotentes. */
+    avisar("sistema", "Conferência concluída", detalhe, `conf:${Date.now()}`);
+    S.avisoJogos = {modalidade:S.modalidade, texto: r.novas
+      ? `${inf(r.novas)} ${r.novas === 1 ? "conferência nova" : "conferências novas"}. ${detalhe}`
+      : `Nada de novo para conferir. ${detalhe}`};
+    pintar();
+  };
 }
 
 function acoes(){
@@ -6672,9 +6781,10 @@ function trilhaModalidade(){
 
 function pintar(){
   const sec = secaoAtual(), tela = telaAtual();
-  /* O recado da busca vale para a visita atual à tela Conferir. Sair da tela o
-     descarta, senão ele reaparece dias depois falando de uma busca esquecida. */
+  /* O recado da busca vale para a visita atual à tela. Sair dela o descarta,
+     senão reaparece dias depois falando de uma conferência esquecida. */
   if(tela.id !== "conferir") S.avisoConferir = null;
+  if(tela.id !== "jogos") S.avisoJogos = null;
   const segmento = sec.telas.length < 2 ? "" :
     `<div class="segmento" role="tablist">${sec.telas.map(t=>
       `<button role="tab" data-tela="${t.id}" aria-selected="${t.id===tela.id}">

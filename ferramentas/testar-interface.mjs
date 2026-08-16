@@ -444,7 +444,7 @@ await dormir(500);
 
 const painel = await js(`return document.querySelector('main').innerText`);
 checar("o painel responde sem clique: concurso, ganhadores e acertos",
-  /3401/.test(painel) && /13 acertos/.test(painel),
+  /3401/.test(painel) && /13 coincidências/.test(painel),
   (painel.match(/.{0,40}acertos.{0,20}/) || [""])[0].trim());
 await capturar("conferir-ultimo-concurso");
 
@@ -459,7 +459,7 @@ await js(`
 await dormir(900);
 const novo = await js(`return document.querySelector('main').innerText`);
 checar("buscar traz o concurso novo e confere na hora",
-  /3402/.test(novo) && /é novo por aqui/.test(novo) && /14 acertos/.test(novo));
+  /3402/.test(novo) && /é novo por aqui/.test(novo) && /14 coincidências/.test(novo));
 
 /* Desfecho 2: o mesmo concurso de novo. Precisa dizer outra coisa, e não pode
    duplicar a conferência do jogo. */
@@ -517,6 +517,73 @@ await js(`
   Guardar.gravar('resultados', S.resultados);
   pintar();
   return true;
+`);
+await dormir(400);
+
+/* ---------- Meus jogos: conferência sob demanda (pacote v2.1) ---------- */
+secao("F4. Meus jogos — conferir agora e atividade");
+
+await irPara("jogos");
+await js(`
+  const b = document.querySelector('[data-mod="lotofacil"]'); if (b) b.click();
+  return true;
+`);
+await dormir(500);
+const estadoAntesJogos = await js(`
+  return {jogos: JSON.stringify(S.jogos), resultados: JSON.stringify(S.resultados),
+          avisos: JSON.stringify(S.avisos || [])};
+`);
+await js(`
+  S.jogos = [
+    {id:'g1', dezenas:[1,2,3,4,5,6,7,8,9,10,11,12,13,14,25], modalidade:'lotofacil',
+     metodo:'manual', data:'2026-08-01', lote:'L9', conferencias:[]},
+    {id:'g2', dezenas:[1,2,3,4,5,6,7,8,9,10,11,12,13,14,25], modalidade:'lotofacil',
+     metodo:'manual', data:'2026-08-01', lote:'L9', concursoAlvo:3300, conferencias:[]}];
+  S.teimosinhas = [];
+  S.resultados = [{concurso:3401, data:'2026-08-12', modalidade:'lotofacil',
+    dezenas:[1,2,3,4,5,6,7,8,9,10,11,12,13,14,25]}];
+  S.avisos = []; S.avisoJogos = null;
+  conferenciaAutomatica(); pintar(); return true;
+`);
+await dormir(500);
+
+const jogosTela = await js(`return document.querySelector('main').innerText`);
+checar("Meus jogos mostra o resumo com o último concurso",
+  /3401/.test(jogosTela) && /COINCID/i.test(jogosTela));
+checar("e o jogo com concurso declarado mostra esse concurso",
+  /concurso 3300/i.test(jogosTela));
+await capturar("meus-jogos-resumo");
+
+/* O botão devolve resposta e registra a atividade. */
+await js(`document.querySelector('#j-conferir').click(); return true;`);
+await dormir(600);
+const depoisDoBotao = await js(`
+  return {texto: document.querySelector('main').innerText,
+          avisos: (S.avisos||[]).map(a => a.titulo)};
+`);
+checar("conferir agora registra a atividade \"Conferência concluída\"",
+  depoisDoBotao.avisos.includes("Conferência concluída"),
+  depoisDoBotao.avisos.join(" | ") || "nenhum aviso");
+checar("e devolve resposta na tela mesmo sem nada novo",
+  /Nada de novo para conferir|conferência/i.test(depoisDoBotao.texto));
+
+/* A trava do pacote: coincidência, nunca prêmio ou faixa. */
+checar("Meus jogos não fala em faixa de prêmio",
+  !/faixa de prêmio/i.test(depoisDoBotao.texto),
+  (depoisDoBotao.texto.match(/.{0,40}faixa de prêmio.{0,20}/i) || [""])[0]);
+
+/* O recado é da visita: sair e voltar limpa. */
+await irPara("conferir"); await dormir(400);
+await irPara("jogos"); await dormir(500);
+checar("sair da tela e voltar limpa o recado da conferência",
+  !/Nada de novo para conferir/.test(await js(`return document.querySelector('main').innerText`)));
+
+await js(`
+  S.jogos = JSON.parse(${JSON.stringify(estadoAntesJogos.jogos)});
+  S.resultados = JSON.parse(${JSON.stringify(estadoAntesJogos.resultados)});
+  S.avisos = JSON.parse(${JSON.stringify(estadoAntesJogos.avisos)});
+  Guardar.gravar('jogos', S.jogos); Guardar.gravar('resultados', S.resultados);
+  pintar(); return true;
 `);
 await dormir(400);
 
