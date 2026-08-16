@@ -39,16 +39,23 @@ dezena sair. O que ele faz é medir, comparar contra o acaso, e dizer quando um
 
 ## As telas
 
-Cinco seções na barra inferior, cada uma com suas telas num controle segmentado.
-A modalidade é escolhida uma vez no cabeçalho e vale em todas as telas.
+Cinco seções na barra inferior — as do mockup —, cada uma com suas telas num
+controle segmentado. A modalidade é global e mora na gaveta do ☰; a tela
+Resultados também a oferece em chips, porque é lá que se troca de loteria com
+mais frequência.
 
 | Seção | Telas |
 |---|---|
-| **Gerar** | *Automático* — a sugestão do sistema e quatro métodos de montagem · *Manual* — marcação na cartela, com custo, validade e características do jogo |
-| **Jogos** | *Meus jogos* — tudo o que foi salvo, com a cartela conferida · *Teimosinha* — repete o jogo por N concursos, com custo total e conferência de cada um |
-| **Conferir** | *Conferir* — o último sorteio confrontado com os jogos salvos, sem clique, mais a digitação à mão para um concurso avulso · *Resultados* — histórico por modalidade, importado por colagem ou pelo serviço da Caixa |
-| **Análise** | *Placar* — resultado acumulado contra o acaso · *Bancada* — todos os métodos contra o mesmo sorteio · *Aprendizado* — um modelo por modalidade, medido fora da amostra · *Pesquisa* — o motor que inventa e derruba hipóteses sozinho |
-| **Entender** | o que o app faz, o que não faz, e por quê |
+| **Início** | o painel: cartão da IA adaptativa, três atalhos e o resumo rápido |
+| **Análise** | *IA Adaptativa* — o motor que inventa e derruba hipóteses sozinho, com Visão Geral · Evolução · Estratégias · Detalhes · *Aprendizado* — um modelo por modalidade, medido fora da amostra · *Placar* — resultado acumulado contra o acaso · *Estatísticas* — o retrato do histórico |
+| **Jogos** | *Jogos Salvos* — o que foi salvo, com a cartela conferida · *Conferência* — o último sorteio confrontado com os jogos, sem clique · *Teimosinha* — o mesmo jogo por N concursos |
+| **Resultados** | os concursos em cartões, com as bolas e o estado do sorteio; busca e ajustes recolhidos no fim |
+| **Mais** | *Gerar* · *Montar* · *Bancada* · *Entender* |
+
+O cabeçalho é ☰ · **Sorte 2 / Laboratório Estatístico** · sino. Nas subtelas
+alcançadas por atalho ele ganha seta de voltar e título centrado; em Resultados,
+o ícone de recarregar ocupa a terceira coluna — a mesma que a seta reserva do
+outro lado, e é isso que mantém o título no centro de verdade.
 
 ### A cara do app
 
@@ -636,14 +643,14 @@ identificador.
 ### Testes
 
 ```bash
-node ferramentas/testar-motor.mjs             # lógica — 620 testes
+node ferramentas/testar-motor.mjs             # lógica — 639 testes
 python3 ferramentas/conferir-icones.py        # ícones — 34 conferências
 python3 ferramentas/conferir-xml-android.py   # XML do projeto nativo
 
 # A interface precisa de um servidor HTTP: em file:// o service worker não
 # registra, e o teste do modo avião passaria medindo outra coisa.
 python3 -m http.server 8123 &
-node --experimental-websocket ferramentas/testar-interface.mjs   # interface — 71 testes
+node --experimental-websocket ferramentas/testar-interface.mjs   # interface — 77 testes
 ```
 
 O executável do navegador é configurável, porque nem todo ambiente tem

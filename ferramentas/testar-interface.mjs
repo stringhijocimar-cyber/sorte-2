@@ -699,6 +699,45 @@ checar("a barra inferior limpa a pilha e some com a seta",
 
 await irPara("inicio"); await dormir(300);
 
+/* ---------- ação no cabeçalho da tela ---------- */
+secao("F7. Ação no cabeçalho — recarregar em Resultados");
+
+await irPara("resultados"); await dormir(600);
+const acaoCab = await js(`
+  const b = document.querySelector("#r-caixa");
+  if (!b) return {existe:false};
+  const h1 = document.querySelector(".titulo.com-volta h1");
+  const cx = h1.getBoundingClientRect().left + h1.getBoundingClientRect().width/2;
+  return {existe:true, noCabecalho:!!b.closest(".titulo"), ligado:typeof b.onclick === "function",
+          desabilitado:b.disabled, centro: Math.abs(cx - window.innerWidth/2) < 12,
+          soltoNaTela: /atualizar<\\/button>/.test(document.querySelector("main").innerHTML)};
+`);
+checar("o ícone de recarregar fica no cabeçalho da tela",
+  acaoCab.existe && acaoCab.noCabecalho);
+checar("o título continua centrado com a ação à direita", acaoCab.centro === true);
+checar("e o botão continua ligado ao tratador", acaoCab.ligado === true);
+checar("o botão solto de atualizar saiu da tela", acaoCab.soltoNaTela === false);
+
+/* O ramo desativado não acontece hoje — todas as modalidades têm serviço na
+   Caixa. Forçá-lo é o único jeito de ele não ficar escrito e nunca executado,
+   que é como um `disabled` errado sobrevive a tudo. */
+const semServico = await js(`
+  const mod = S.modalidade;
+  const guarda = SLUG_CAIXA[mod];
+  delete SLUG_CAIXA[mod];
+  pintar();
+  const b = document.querySelector("#r-caixa");
+  const r = {desabilitado: b.disabled, rotulo: b.getAttribute("aria-label")};
+  SLUG_CAIXA[mod] = guarda; pintar();
+  return r;
+`);
+checar("sem serviço na Caixa, a ação nasce desativada",
+  semServico.desabilitado === true && /Sem serviço/i.test(semServico.rotulo || ""),
+  `${semServico.desabilitado} · ${semServico.rotulo}`);
+checar("e volta a ficar ativa quando o serviço existe",
+  (await js(`return document.querySelector("#r-caixa").disabled`)) === false);
+await capturar("resultados-cabecalho");
+
 /* ---------- placar ---------- */
 secao("F2. Placar — faixa do acaso");
 await irPara("placar");
