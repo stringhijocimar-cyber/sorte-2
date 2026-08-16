@@ -135,6 +135,42 @@ O botão de atualizar tem três desfechos e cada um fala diferente — concurso
 novo, já conhecido, ou nenhuma fonte respondeu. Um botão que responde sempre a
 mesma coisa ensina a pessoa a não ler o que ele diz.
 
+#### Coincidência, e não prêmio
+
+A conferência dos seus jogos conta **dezenas coincidentes** e mostra quais. Ela
+não diz "faixa de prêmio", não calcula valor, não carimba "premiado".
+
+A conta da faixa é fácil de fazer e a afirmação é difícil de sustentar: quem
+decide se um bilhete pagou é a Caixa, contra o volante registrado — e o app está
+comparando duas listas guardadas no aparelho, que podem estar erradas de várias
+formas (concurso trocado, modalidade trocada, dezena digitada errado). Entre
+"você acertou 14 dezenas" e "seu jogo está em faixa de prêmio", só a primeira é
+verificável aqui.
+
+Duas coisas que **continuam**, e a distinção é o ponto:
+
+* O estado do **concurso** — "2 ganhadores", "acumulou", com o valor do prêmio.
+  É fato publicado pela Caixa sobre o sorteio, não leitura do bilhete de
+  ninguém.
+* A **notificação** de que um jogo salvo cruzou uma faixa. Ela é o motivo de a
+  pessoa abrir o app, e continua saindo.
+
+#### Concurso opcional por jogo
+
+Um jogo salvo pode declarar **um** concurso. Aí ele vale só para aquele — útil
+para transcrever um bilhete que já se tem na mão. Sem declaração, continua
+valendo a regra da data.
+
+O campo aparece só na cartela (montagem manual), porque é ali que existe um
+bilhete de verdade. Nos jogos que o app gera não existe bilhete nenhum, e um
+campo pedindo concurso ali sugeriria que existe.
+
+Alvo declarado é respeitado mesmo que o jogo entre depois do sorteio: quem
+digita "3401" está dizendo que jogou nele, e o app não confere bilhete. É o
+mesmo tratamento que a teimosinha já recebia. A trava da data continua onde
+ninguém declarou nada — que é o caso automático, e o único onde o app estaria
+inventando cobertura.
+
 ### Aprendizado por modalidade
 
 Um modelo **por modalidade**, treinado e avaliado separadamente. Juntar
@@ -548,14 +584,14 @@ identificador.
 ### Testes
 
 ```bash
-node ferramentas/testar-motor.mjs             # lógica — 575 testes
+node ferramentas/testar-motor.mjs             # lógica — 592 testes
 python3 ferramentas/conferir-icones.py        # ícones — 34 conferências
 python3 ferramentas/conferir-xml-android.py   # XML do projeto nativo
 
 # A interface precisa de um servidor HTTP: em file:// o service worker não
 # registra, e o teste do modo avião passaria medindo outra coisa.
 python3 -m http.server 8123 &
-node --experimental-websocket ferramentas/testar-interface.mjs   # interface — 52 testes
+node --experimental-websocket ferramentas/testar-interface.mjs   # interface — 58 testes
 ```
 
 O executável do navegador é configurável, porque nem todo ambiente tem
