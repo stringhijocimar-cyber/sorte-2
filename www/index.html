@@ -5870,8 +5870,17 @@ T.resultados = () => {
         <span style="display:block;font-size:.76rem;color:var(--secundaria)">
           Um alarme do próprio aparelho, marcado para 90 minutos depois de cada
           sorteio das loterias em que você tem jogo — toca com o app fechado.
-          Quando o resultado entra, o app também avisa se algum jogo seu foi
-          premiado, e de quanto.</span></span>
+          Quando o resultado entra, o app confere os seus jogos e avisa o que
+          encontrou, com o número de dezenas que coincidiram.</span></span>
+    ${/* A frase anterior prometia dizer o valor do prêmio. Nunca foi verdade: o
+          aviso sempre trouxe a contagem de dezenas. Descrição que promete mais
+          do que o recurso entrega é a forma mais barata de perder a confiança.
+
+          Nota sobre a FORMA deste comentário: ele é `${/*…*\/""}` e não um
+          comentário HTML. Comentário HTML dentro do template vai para a saída,
+          e as varreduras de vocabulário leem a saída — foi assim que a minha
+          própria explicação derrubou o teste duas vezes seguidas. Explicação
+          fica em comentário de JavaScript, que não é emitido. */""}
     </label>
     <div id="r-avisos-estado"></div>
 
@@ -5970,16 +5979,20 @@ T.teimosinha = () => {
             <div class="kpi"><div class="rot">custo total</div>
               <div class="val" style="font-size:1.15rem">${brl(t.custo)}</div>
               <div class="sub">${t.concursos} concursos</div></div>
-            <div class="kpi"><div class="rot">melhor acerto</div>
+            <div class="kpi"><div class="rot">melhor resultado</div>
               <div class="val">${melhor === null ? "—" : melhor}</div>
               <div class="sub">${conf.length} conferido${conf.length===1?"":"s"}</div></div>
           </div>
+          ${/* A coluna "faixa" saiu daqui pelo mesmo motivo que saiu da ficha e
+                do painel: a teimosinha é jogo salvo como qualquer outro, e a
+                conferência dela conta coincidência, não prêmio. Esta tabela e a
+                do resultado da conferência à mão passaram batido na primeira
+                varredura — o teste que veio junto agora percorre TODAS as telas
+                atrás do carimbo, em vez de conferir duas de cor. */""}
           ${conf.length ? `<div class="rolagem"><table>
-            <tr><th>concurso</th><th>acertos</th><th>faixa</th></tr>
+            <tr><th>concurso</th><th>coincidências</th></tr>
             ${conf.slice().sort((a,b)=>a.concurso-b.concurso).map(x=>`<tr>
-              <td>${esc(x.concurso)}</td><td>${x.acertos}</td>
-              <td>${faixaAtingida(t.modalidade, x.acertos) !== null
-                ? `<span class="selo ok">prêmio</span>` : "—"}</td></tr>`).join("")}
+              <td>${esc(x.concurso)}</td><td>${x.acertos}</td></tr>`).join("")}
           </table></div>` : `<div class="pe">Nenhum dos concursos entrou no histórico ainda.</div>`}
           <div class="botoes" style="margin-top:10px">
             <button class="acao perigo mini" data-apagar-teimosinha="${esc(t.id)}">apagar</button>
@@ -6642,8 +6655,10 @@ function acoes(){
 
     const media = soma/alvo.length, esperado = somaEsperado/alvo.length;
     const dp = desvioAcertos(S.modalidade, alvo[0].dezenas.length)/Math.sqrt(alvo.length);
-    const premiou = alvo.filter(j => c.faixas.includes(
-      j.conferencias[j.conferencias.length-1].acertos)).length;
+    /* Era `premiou`: quantos jogos caíram numa faixa. Virou "melhor resultado",
+       porque a conferência conta coincidência e não prêmio. */
+    const melhorAcerto = alvo.reduce((m, j) =>
+      Math.max(m, j.conferencias[j.conferencias.length-1].acertos), 0);
 
     const doConcurso = S.resultados.find(r =>
       r.concurso === concurso && r.modalidade === S.modalidade) || {};
@@ -6664,10 +6679,10 @@ function acoes(){
               rodape:`<div class="pe"><span>resultado sorteado</span>
                 <span>${alvo.length} jogos conferidos — veja cada cartela em Meus jogos</span></div>`})}
       <div class="kpis">
-        <div class="kpi"><div class="rot">acertos médios</div><div class="val">${nf(media,2)}</div>
+        <div class="kpi"><div class="rot">coincidências médias</div><div class="val">${nf(media,2)}</div>
           <div class="sub">acaso: ${nf(esperado,2)}</div></div>
-        <div class="kpi"><div class="rot">jogos em faixa de prêmio</div>
-          <div class="val">${premiou}</div><div class="sub">de ${alvo.length}</div></div>
+        <div class="kpi"><div class="rot">melhor resultado</div>
+          <div class="val">${melhorAcerto}</div><div class="sub">de ${alvo.length} jogo${alvo.length>1?"s":""}</div></div>
       </div>
       ${faixaAcaso(media, esperado, Math.max(dp,0.05))}
     </div>

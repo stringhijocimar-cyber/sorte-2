@@ -2484,8 +2484,14 @@ secao("24. Avisos no celular");
   const tela = contexto.T.resultados();
   checar("a tela oferece o aviso no celular", /Avisar no celular quando sair sorteio/.test(tela));
   checar("e explica que toca com o app fechado", /com o app fechado/.test(tela));
-  checar("e diz que o aviso do prêmio informa de quanto",
-    /premiado, e de quanto/.test(tela));
+  /* Este teste cobrava que a tela prometesse dizer "de quanto" foi. A promessa
+     era falsa: o aviso sempre trouxe a contagem de dezenas, nunca um valor —
+     e o teste estava fixando a mentira no lugar de pegá-la. Agora cobra o
+     contrário, nos dois sentidos. */
+  checar("e descreve o aviso pelo que ele entrega: dezenas coincidentes",
+    /dezenas que coincidiram/.test(tela));
+  checar("e não promete informar valor de prêmio",
+    !/de quanto/.test(tela));
   checar("a tela não promete aviso que o app não sabe entregar",
     !/push|servidor (nos )?avisa|avisamos você/i.test(tela));
 
@@ -3182,6 +3188,52 @@ secao("27. Concurso-alvo e conferência sob demanda");
      bilhete, e pedir concurso ali sugeriria que existe. */
   checar("a cartela oferece o campo de concurso opcional",
     /id="m-concurso"/.test(contexto.T.montar()));
+
+  /* ---- a varredura ----
+     Conferi "Conferir" e "Meus jogos" de cor e dei por encerrado. Duas telas
+     ficaram para trás com o carimbo antigo: a tabela da teimosinha e o
+     resultado da conferência à mão. Só apareceram ao abrir o APK e procurar a
+     string no arquivo inteiro — ou seja, depois de já ter dito que estava
+     pronto.
+
+     Este teste percorre TODAS as telas que renderizam sem estado especial e
+     procura o carimbo de prêmio sobre o jogo do usuário. Ele é chato de
+     propósito: a trava não vale por tela, vale por app.
+
+     O Placar fica de fora da lista porque ali o indicador é escolha explícita
+     e continua valendo — mas o teste seguinte cobra que ele continue lá, para
+     a exceção não virar buraco. */
+  {
+    const guardaTela = S.jogos, guardaTeim2 = S.teimosinhas;
+    S.jogos = [{id:"v1", dezenas:dz3401.slice(), modalidade:"lotofacil",
+                metodo:"manual", data:"2026-08-01", lote:"LV", conferencias:[]}];
+    S.teimosinhas = [{id:"v2", dezenas:dz3401.slice(), modalidade:"lotofacil",
+                      metodo:"teimosinha", data:"2026-08-01", deConcurso:3401,
+                      concursos:3, conferencias:[]}];
+    contexto.conferenciaAutomatica();
+
+    const carimbo = /faixa de prêmio|>prêmio<|\bpremiado\b/;
+    const semRisco = new Set(["placar"]);   // ver a nota acima
+    const sujas = [];
+    for(const nome of Object.keys(contexto.T)){
+      if(typeof contexto.T[nome] !== "function" || semRisco.has(nome)) continue;
+      let saida = "";
+      try{ saida = String(contexto.T[nome]() || ""); }
+      catch(e){ continue; }          // tela que exige estado que não montamos
+      const achado = saida.match(carimbo);
+      if(achado) sujas.push(`${nome}: "${achado[0]}"`);
+    }
+    checar("nenhuma tela carimba prêmio sobre o jogo do usuário",
+      sujas.length === 0, sujas.join(" · ") || `${Object.keys(contexto.T).length} telas varridas`);
+
+    /* A exceção declarada continua de pé. Sem isto, "limpar o carimbo" poderia
+       ir longe demais numa próxima varredura e apagar o indicador do Placar,
+       que foi decisão consciente de manter. */
+    checar("mas o Placar mantém o indicador que foi decidido manter",
+      /em faixa de prêmio/.test(contexto.T.placar()));
+
+    S.jogos = guardaTela; S.teimosinhas = guardaTeim2;
+  }
 
   S.jogos = guardaJ; S.resultados = guardaR;
   S.modalidade = guardaM; S.teimosinhas = guardaT; S.avisos = guardaA;
