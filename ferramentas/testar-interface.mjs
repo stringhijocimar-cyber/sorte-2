@@ -404,6 +404,122 @@ await preencherConferencia("5 6 7 8 9 10", "3002");
 checar("concurso diferente acrescenta registro",
   (await js(`return JSON.parse(localStorage.getItem('lotolab:resultados')||'[]').length`)) === 2);
 
+/* ---------- painel do último concurso ----------
+   A tela Conferir abria com um formulário vazio pedindo as dezenas à mão
+   enquanto o app já tinha o concurso e já havia conferido tudo sozinho. O
+   painel resolve isso, e o botão dele tem três desfechos que precisam soar
+   diferentes — senão a pessoa aprende que o botão responde sempre a mesma
+   coisa e para de ler.
+
+   `buscarNaCaixa` é trocada por uma função de teste: os três desfechos têm de
+   ser determinísticos, e depender da Caixa responder tornaria esta seção um
+   gerador de falha intermitente. */
+secao("F3. Último concurso × jogos salvos");
+
+await irPara("conferir");
+await js(`
+  const b = document.querySelector('[data-mod="lotofacil"]'); if (b) b.click();
+  return true;
+`);
+await dormir(500);
+/* Guarda o estado da seção anterior. Esta seção troca jogos e resultados para
+   montar o seu cenário, e as seções seguintes — o Placar — leem os dados que a
+   Conferência deixou. Limpar aqui derrubou três testes do Placar antes de eu
+   perceber que o dano não era do painel, e sim da limpeza. */
+const estadoAntesDoPainel = await js(`
+  return {jogos: JSON.stringify(S.jogos),
+          resultados: JSON.stringify(S.resultados),
+          teimosinhas: JSON.stringify(S.teimosinhas || [])};
+`);
+await js(`
+  S.jogos = [{id:'p1', dezenas:[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],
+    modalidade:'lotofacil', metodo:'aleatório', data:'2026-08-01', conferencias:[]}];
+  S.teimosinhas = [];
+  S.resultados = [{concurso:3401, data:'2026-08-12', modalidade:'lotofacil',
+    dezenas:[1,2,3,4,5,6,7,8,9,10,11,12,13,20,25]}];
+  S.avisoConferir = null;
+  conferenciaAutomatica(); pintar(); return true;
+`);
+await dormir(500);
+
+const painel = await js(`return document.querySelector('main').innerText`);
+checar("o painel responde sem clique: concurso, ganhadores e acertos",
+  /3401/.test(painel) && /13 acertos/.test(painel),
+  (painel.match(/.{0,40}acertos.{0,20}/) || [""])[0].trim());
+await capturar("conferir-ultimo-concurso");
+
+/* Desfecho 1: a busca traz concurso novo. */
+await js(`
+  window.__buscaReal = buscarNaCaixa;
+  buscarNaCaixa = async () => ({concurso:3402, data:'2026-08-14',
+    modalidade:'lotofacil', dezenas:[1,2,3,4,5,6,7,8,9,10,11,12,13,14,25],
+    rateio:[{faixa:1, ganhadores:1, premio:500000}], fonte:'teste'});
+  document.querySelector('#c-atualizar').click(); return true;
+`);
+await dormir(900);
+const novo = await js(`return document.querySelector('main').innerText`);
+checar("buscar traz o concurso novo e confere na hora",
+  /3402/.test(novo) && /é novo por aqui/.test(novo) && /14 acertos/.test(novo));
+
+/* Desfecho 2: o mesmo concurso de novo. Precisa dizer outra coisa, e não pode
+   duplicar a conferência do jogo. */
+await js(`document.querySelector('#c-atualizar').click(); return true;`);
+await dormir(900);
+checar("buscar de novo diz que já estava atualizado",
+  /já estava atualizado/i.test(await js(`return document.querySelector('main').innerText`)));
+checar("e não duplica a conferência do jogo",
+  (await js(`return S.jogos[0].conferencias.filter(c => c.concurso === 3402).length`)) === 1);
+
+/* Desfecho 3: a rede falha. Vira recado legível, não exceção. */
+await js(`
+  buscarNaCaixa = async () => { throw new Error('sem rede'); };
+  document.querySelector('#c-atualizar').click(); return true;
+`);
+await dormir(900);
+const falha = await js(`return document.querySelector('main').innerText`);
+checar("falha de rede vira recado legível e preserva o que já se sabia",
+  /Nenhuma fonte respondeu/.test(falha) && /3402/.test(falha));
+
+/* O recado é da visita, não do app: sair e voltar limpa. */
+await irPara("jogos"); await dormir(400);
+await irPara("conferir"); await dormir(500);
+checar("sair da tela e voltar limpa o recado da busca",
+  !/Nenhuma fonte respondeu/.test(await js(`return document.querySelector('main').innerText`)));
+
+/* Um jogo salvo DEPOIS do sorteio não pode aparecer como acerto, mesmo tendo
+   as dezenas idênticas — é a trava de honestidade do painel, vista pela tela. */
+await js(`
+  S.jogos.push({id:'p2', dezenas:[1,2,3,4,5,6,7,8,9,10,11,12,13,14,25],
+    modalidade:'lotofacil', metodo:'aleatório', data:'2026-12-01', conferencias:[]});
+  conferenciaAutomatica(); pintar(); return true;
+`);
+await dormir(500);
+const tarde = await js(`
+  const main = document.querySelector('main');
+  /* innerText de um <details> fechado não traz o conteúdo escondido, e a lista
+     de jogos fora do concurso mora dentro de um. Para o motivo, vale
+     textContent; para o que a pessoa vê como acerto, vale innerText. */
+  return { quinze: /15 acertos/.test(main.innerText),
+           fora: /depois do sorteio/.test(main.textContent) };
+`);
+checar("jogo salvo depois do sorteio não vira acerto na tela",
+  !tarde.quinze && tarde.fora,
+  `mostrou 15 acertos: ${tarde.quinze} · listou o motivo: ${tarde.fora}`);
+
+/* Devolve o estado como estava, para as seções seguintes lerem o que a
+   Conferência montou e não o cenário deste painel. */
+await js(`
+  buscarNaCaixa = window.__buscaReal;
+  S.jogos = ${JSON.stringify(estadoAntesDoPainel.jogos)} ? JSON.parse(${JSON.stringify(estadoAntesDoPainel.jogos)}) : [];
+  S.resultados = JSON.parse(${JSON.stringify(estadoAntesDoPainel.resultados)});
+  S.teimosinhas = JSON.parse(${JSON.stringify(estadoAntesDoPainel.teimosinhas)});
+  Guardar.gravar('jogos', S.jogos);
+  Guardar.gravar('resultados', S.resultados);
+  pintar();
+  return true;
+`);
+await dormir(400);
+
 /* ---------- placar ---------- */
 secao("F2. Placar — faixa do acaso");
 await irPara("placar");

@@ -2048,9 +2048,31 @@ secao("19. Conferir: texto e busca");
   checar("a tela continua afirmando que o app não inventa resultado",
     /não inventa[\s\S]{0,40}resultado/i.test(tela));
   checar("a tela oferece buscar o resultado",
-    /id="c-buscar"/.test(tela) && /id="c-ultimo"/.test(tela));
+    /id="c-buscar"/.test(tela) && /id="c-atualizar"/.test(tela));
+  /* "buscar o último" saiu do formulário porque o painel do topo passou a fazer
+     isso — e melhor, conferindo em seguida. O teste guarda a AUSÊNCIA para que
+     a duplicata não volte por distração. */
+  checar("o botão duplicado de buscar o último saiu do formulário",
+    !/id="c-ultimo"/.test(tela));
   checar("a digitação continua oferecida como via válida",
     /digite o resultado/i.test(tela) && /c-dez/.test(tela));
+
+  /* Com UM jogo salvo o botão dizia "Conferir 1 jogo salvos". */
+  {
+    const guardaJ = S.jogos;
+    S.jogos = [{id:"s1", dezenas:[1,2,3,4,5,6], modalidade:"mega-sena",
+                metodo:"a", data:"2026-01-01", conferencias:[]}];
+    checar("com um jogo, o botão fala no singular inteiro",
+      /Conferir 1 jogo salvo</.test(contexto.T.conferir()),
+      (contexto.T.conferir().match(/Conferir 1 [^<]*/) || [""])[0]);
+    S.jogos = guardaJ.concat([{id:"s2", dezenas:[7,8,9,10,11,12],
+      modalidade:"mega-sena", metodo:"a", data:"2026-01-01", conferencias:[]},
+      {id:"s3", dezenas:[13,14,15,16,17,18], modalidade:"mega-sena",
+       metodo:"a", data:"2026-01-01", conferencias:[]}]);
+    checar("com mais de um, no plural inteiro",
+      /jogos salvos</.test(contexto.T.conferir()));
+    S.jogos = guardaJ;
+  }
 
   S.modalidade = guardado;
 }
@@ -2877,6 +2899,170 @@ secao("25. Motor de pesquisa adaptativa");
 
   S.resultados = guardado; S.modalidade = guardadaMod;
   S.pesquisaAdaptativa = guardaPesq;
+}
+
+/* ==================================================================
+   26. O último concurso confrontado com os jogos salvos
+
+   Este painel existe porque a tela Conferir abria com um formulário vazio
+   pedindo as dezenas à mão — enquanto o app já tinha o concurso guardado e já
+   havia conferido tudo sozinho. O risco ao consertar isso é o oposto: mostrar
+   acerto onde não houve. Daí o peso desta seção estar na honestidade, e não no
+   layout.
+   ================================================================== */
+secao("26. Último concurso × jogos salvos");
+
+{
+  const S = motor.S;
+  const guardaJogos = S.jogos, guardaRes = S.resultados;
+  const guardaMod = S.modalidade, guardaTeim = S.teimosinhas;
+
+  S.modalidade = "lotofacil";
+  S.teimosinhas = [];
+  const sorteio = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,25];
+  S.resultados = [
+    {concurso:3400, data:"2026-08-10", modalidade:"lotofacil",
+     dezenas:[1,2,3,4,5,6,7,8,9,10,11,12,13,20,25]},
+    {concurso:3401, data:"2026-08-12", modalidade:"lotofacil", dezenas:sorteio,
+     rateio:[{faixa:1, ganhadores:2, premio:1000000}]},
+    /* Uma Mega-Sena no meio: o painel não pode misturar modalidades. */
+    {concurso:2800, data:"2026-08-13", modalidade:"mega-sena", dezenas:[1,2,3,4,5,6]},
+  ];
+
+  checar("o último concurso é o de maior número da modalidade",
+    contexto.ultimoResultado("lotofacil").concurso === 3401);
+  checar("e não vaza concurso de outra modalidade",
+    contexto.ultimoResultado("mega-sena").concurso === 2800);
+  checar("modalidade sem nenhum resultado devolve nulo",
+    contexto.ultimoResultado("timemania") === null);
+
+  /* Três jogos: um anterior ao sorteio (vale), um salvo DEPOIS do sorteio (não
+     pode valer), e um de outra modalidade (não entra na conta). */
+  S.jogos = [
+    {id:"antes", dezenas:sorteio.slice(), modalidade:"lotofacil",
+     metodo:"aleatório", data:"2026-08-01", conferencias:[]},
+    {id:"depois", dezenas:sorteio.slice(), modalidade:"lotofacil",
+     metodo:"aleatório", data:"2026-08-20", conferencias:[]},
+    {id:"outra", dezenas:[1,2,3,4,5,6], modalidade:"mega-sena",
+     metodo:"aleatório", data:"2026-08-01", conferencias:[]},
+  ];
+  contexto.conferenciaAutomatica();
+
+  const r = contexto.ultimoResultado("lotofacil");
+  const cmp = contexto.jogosContraConcurso(r);
+
+  checar("só os jogos da modalidade entram na comparação",
+    cmp.total === 2, `total=${cmp.total}`);
+  checar("o jogo salvo ANTES do sorteio é conferido",
+    cmp.conferidos.length === 1 && cmp.conferidos[0].jogo.id === "antes");
+  checar("com os 15 acertos que ele de fato fez",
+    cmp.conferidos[0].acertos === 15);
+
+  /* O ponto central: o jogo salvo depois do sorteio tem as MESMAS dezenas do
+     resultado. Se o painel recontasse por conta própria em vez de ler as
+     conferências, ele apareceria com 15 acertos — um prêmio que ninguém
+     poderia ter apostado. */
+  checar("o jogo salvo DEPOIS do sorteio não aparece como acerto",
+    !cmp.conferidos.some(x => x.jogo.id === "depois"));
+  checar("ele aparece explicando por que ficou de fora",
+    cmp.fora.length === 1 && cmp.fora[0].jogo.id === "depois" &&
+    /depois do sorteio/.test(cmp.fora[0].motivo), cmp.fora[0] && cmp.fora[0].motivo);
+  checar("e o melhor da rodada é o jogo legítimo",
+    cmp.melhor.jogo.id === "antes");
+  checar("15 acertos contam como faixa de prêmio",
+    cmp.premiados === 1);
+
+  /* Teimosinha fora da faixa declarada: mesmo cuidado, motivo diferente. */
+  S.teimosinhas = [
+    {id:"t-velha", dezenas:sorteio.slice(), modalidade:"lotofacil",
+     metodo:"teimosinha", data:"2026-08-01", deConcurso:3300, concursos:2,
+     conferencias:[]},
+    {id:"t-futura", dezenas:sorteio.slice(), modalidade:"lotofacil",
+     metodo:"teimosinha", data:"2026-08-01", deConcurso:3500, concursos:2,
+     conferencias:[]},
+  ];
+  contexto.conferenciaAutomatica();
+  const cmp2 = contexto.jogosContraConcurso(contexto.ultimoResultado("lotofacil"));
+  const motivos = cmp2.fora.map(f => f.motivo).join(" | ");
+  /* Concurso é identificador, não quantidade: sai sem separador de milhar. */
+  checar("teimosinha encerrada antes do concurso diz que terminou",
+    /terminou no 3301\b/.test(motivos), motivos);
+  checar("teimosinha que só começa depois diz que começa adiante",
+    /começa no 3500\b/.test(motivos), motivos);
+  checar("nenhuma das duas entra como conferida",
+    !cmp2.conferidos.some(x => x.jogo.id.startsWith("t-")));
+
+  /* A ordenação é do melhor para o pior: quem abre a tela quer o melhor
+     primeiro, e uma lista fora de ordem obriga a ler tudo para achar. */
+  S.teimosinhas = [];
+  S.jogos = [
+    {id:"fraco", dezenas:[1,2,3,16,17,18,19,20,21,22,23,24,25,15,13],
+     modalidade:"lotofacil", metodo:"a", data:"2026-08-01", conferencias:[]},
+    {id:"forte", dezenas:sorteio.slice(), modalidade:"lotofacil",
+     metodo:"b", data:"2026-08-01", conferencias:[]},
+  ];
+  contexto.conferenciaAutomatica();
+  const cmp3 = contexto.jogosContraConcurso(contexto.ultimoResultado("lotofacil"));
+  checar("os jogos saem do melhor para o pior",
+    cmp3.conferidos[0].acertos >= cmp3.conferidos[1].acertos,
+    cmp3.conferidos.map(x => x.acertos).join(" > "));
+
+  /* ---- a tela ---- */
+  const tela = contexto.T.conferir();
+  checar("a tela mostra o número do concurso sem precisar de clique",
+    /3401/.test(tela));
+  checar("e diz que teve ganhador",
+    /ganhador/i.test(tela));
+  checar("e resume o confronto numa frase",
+    /jogos? conferidos?/.test(tela) && /melhor/.test(tela));
+  checar("e oferece atualizar para o mais recente",
+    /id="c-atualizar"/.test(tela));
+  /* O painel não pode afirmar que sabe o último concurso do mundo — ele sabe o
+     último que guardou. A diferença é a que separa informar de inventar. */
+  checar("e admite que pode existir concurso mais novo",
+    /pode haver um mais novo/.test(tela));
+  checar("e não promete prêmio: manda conferir no volante oficial",
+    /volante oficial/.test(tela));
+
+  /* Concordância com 1. Texto montado com `${n} jogos` acerta no plural e erra
+     no singular sempre, e o singular é justamente o caso de quem está
+     começando — a primeira tela que a pessoa vê é a que sai errada. Aqui o
+     painel é renderizado em cada configuração e o texto é varrido. */
+  {
+    const feio = /\b1 (jogos|acertos|conferências|concursos|ganhadores)\b|\bseus 1\b/;
+    const cenarios = [
+      ["um jogo, sem prêmio",
+       [{id:"u1", dezenas:[1,2,3,16,17,18,19,20,21,22,23,24,25,15,13],
+         modalidade:"lotofacil", metodo:"a", data:"2026-08-01", conferencias:[]}]],
+      ["um jogo premiado",
+       [{id:"u2", dezenas:sorteio.slice(), modalidade:"lotofacil",
+         metodo:"a", data:"2026-08-01", conferencias:[]}]],
+      ["um jogo fora do concurso",
+       [{id:"u3", dezenas:sorteio.slice(), modalidade:"lotofacil",
+         metodo:"a", data:"2026-12-01", conferencias:[]}]],
+    ];
+    cenarios.forEach(([nome, jogos]) => {
+      S.jogos = jogos; S.teimosinhas = [];
+      contexto.conferenciaAutomatica();
+      const texto = contexto.painelUltimoConcurso().replace(/<[^>]+>/g, " ");
+      const erro = (texto.match(feio) || [])[0];
+      checar(`concordância no singular — ${nome}`, !erro, erro || "sem plural indevido");
+    });
+  }
+
+  /* Estados vazios: cada um com a sua frase, porque "nada aqui" sem motivo
+     manda a pessoa procurar defeito onde não tem. */
+  S.jogos = [];
+  checar("sem jogos salvos, a tela diz isso e não finge conferência",
+    /ainda não tem jogos salvos/i.test(contexto.T.conferir()));
+  S.resultados = S.resultados.filter(x => x.modalidade !== "lotofacil");
+  checar("sem concurso guardado, a tela diz isso",
+    /não tem nenhum concurso/i.test(contexto.T.conferir()));
+  checar("e ainda assim oferece o botão de buscar",
+    /id="c-atualizar"/.test(contexto.T.conferir()));
+
+  S.jogos = guardaJogos; S.resultados = guardaRes;
+  S.modalidade = guardaMod; S.teimosinhas = guardaTeim;
 }
 
 /* ---------- saída ---------- */

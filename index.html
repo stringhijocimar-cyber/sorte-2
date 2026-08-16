@@ -615,6 +615,47 @@ select:focus,input:focus{border-color:var(--acaso);
 .dz.marcada{border-color:var(--seu);color:var(--seu)}
 .dz.trevo{border-color:var(--acaso);color:var(--acaso);border-radius:50%}
 
+/* ---------- o último sorteio contra os jogos salvos ----------
+   A dezena SORTEADA e a dezena ACERTADA não podem ter a mesma cara. A de cima
+   é o que a Caixa sorteou; a de baixo é o encontro entre aquilo e o seu jogo.
+   Pintar as duas de verde chapado faria a tela inteira parecer acerto. */
+.dz.sorteada{border-color:color-mix(in srgb,var(--ganhou) 45%,transparent);
+  color:var(--ganhou);background:color-mix(in srgb,var(--ganhou) 12%,transparent)}
+.sorteio-cabeca{display:flex;justify-content:space-between;align-items:flex-start;
+  gap:10px;flex-wrap:wrap}
+.titulo-painel{font-family:var(--mono);font-size:.6rem;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--secundaria)}
+.sorteio-num{font-size:1.02rem;color:var(--secundaria);margin-top:3px}
+.sorteio-num b{font-family:var(--mono);font-size:1.35rem;font-weight:650;
+  color:var(--tinta);font-variant-numeric:tabular-nums}
+.sorteio-num span{display:block;font-size:.76rem;margin-top:1px}
+.sorteio-dezenas{margin-top:10px}
+.resumo-confronto{margin:13px 0 4px;padding-top:12px;border-top:1px solid var(--linha);
+  font-size:.88rem;color:var(--secundaria);line-height:1.5}
+.resumo-confronto b{color:var(--tinta)}
+
+/* Um bloco por jogo. A faixa na borda esquerda repete a gramática da .ficha:
+   sem faixa é jogo comum, faixa acesa é faixa de prêmio. */
+.confronto{position:relative;margin-top:10px;padding:10px 11px 11px 13px;
+  border:1px solid var(--linha);border-radius:12px;background:var(--fundo)}
+.confronto::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;
+  border-radius:12px 0 0 12px;background:var(--linha)}
+.confronto.premiado::before{background:var(--acaso)}
+.confronto.premiado{border-color:color-mix(in srgb,var(--acaso) 38%,var(--linha))}
+.cabeca-confronto{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;
+  margin-bottom:9px}
+.quanto{font-size:.82rem;color:var(--secundaria)}
+.quanto b{font-family:var(--mono);font-size:1.5rem;font-weight:650;color:var(--tinta);
+  font-variant-numeric:tabular-nums;margin-right:2px}
+.cabeca-confronto .contexto{font-size:.72rem;color:var(--secundaria);
+  flex-basis:100%;line-height:1.4}
+.vazio-painel{margin:9px 0 12px;font-size:.86rem;color:var(--secundaria);line-height:1.5}
+.fora-do-concurso{margin-top:11px;font-size:.8rem;color:var(--secundaria)}
+.fora-do-concurso summary{cursor:pointer;padding:4px 0}
+.linha-fora{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;
+  padding:6px 0;border-top:1px solid var(--linha);font-size:.74rem}
+.linha-fora .num{font-family:var(--mono);color:var(--tinta)}
+
 /* ---------- faixa do acaso ---------- */
 .faixa{margin-top:11px}
 .faixa svg{display:block;width:100%;height:38px;overflow:visible}
@@ -1683,10 +1724,178 @@ function desvioAcertos(m, tamanho){
   return Math.sqrt(Math.max(v,1e-9));
 }
 
+/* ==================== o último concurso contra os jogos salvos ============
+
+   Esta tela existia e mentia por omissão. Ela abria com um formulário vazio
+   pedindo o número do concurso e as quinze dezenas — enquanto o app JÁ tinha
+   o concurso mais recente guardado e JÁ havia conferido todos os jogos contra
+   ele, sozinho, na abertura. Um jogo com 14 acertos na Lotofácil ficava
+   invisível aqui: para descobrir, a pessoa tinha de ir até Meus jogos e
+   procurar. Pedir para digitar à mão um resultado que o app conhece não é só
+   trabalho repetido — é dizer que não sabe.
+
+   O painel abaixo responde, sem clique nenhum, à pergunta que traz a pessoa a
+   esta tela: **saiu o sorteio; e os meus jogos?**
+
+   Três cuidados que separam informação de conto:
+
+   * Quem manda é `conferencias`, preenchida por `conferenciaAutomatica()`, e
+     nunca uma recontagem feita aqui. Aquela função respeita a regra de que um
+     jogo só vale para concursos a partir da data em que foi salvo. Recontar
+     por conta própria produziria "acertos" em sorteios anteriores ao dia em
+     que o jogo existiu — o número mais fácil de exibir e o mais desonesto.
+   * Jogo não coberto aparece dizendo POR QUE não foi conferido, em vez de
+     sumir da lista ou aparecer com zero. Zero é uma afirmação; ausência de
+     conferência é outra coisa.
+   * O painel diz o que o app sabe, não o que existe. O último concurso aqui é
+     o mais recente que ele guardou — pode haver um mais novo que ninguém
+     buscou, e o botão de atualizar diz isso com essas palavras.            */
+
+function ultimoResultado(modalidade){
+  let ultimo = null;
+  for(const r of S.resultados)
+    if(r.modalidade === modalidade && (!ultimo || r.concurso > ultimo.concurso))
+      ultimo = r;
+  return ultimo;
+}
+
+/* Por que este jogo não tem conferência neste concurso. Retorna null quando
+   está tudo certo — ou seja, quando o jogo de fato cobre o concurso. */
+function motivoSemConferencia(j, r){
+  if(j.deConcurso){
+    const fim = j.deConcurso + (j.concursos || 1) - 1;
+    /* Número de concurso sai cru, sem separador de milhar: "3.301" lê como
+       decimal e não é assim que a Caixa numera. `inf()` serve para contagens. */
+    if(r.concurso < j.deConcurso) return `teimosinha começa no ${j.deConcurso}`;
+    if(r.concurso > fim) return `teimosinha terminou no ${fim}`;
+    return null;
+  }
+  if(String(r.data || "") < String(j.data || ""))
+    return `jogo salvo em ${esc(j.data)}, depois do sorteio`;
+  return null;
+}
+
+/* Os jogos salvos confrontados com um concurso. Separa em conferidos e não
+   conferidos, e ordena os conferidos do melhor para o pior — quem abre esta
+   tela quer ver primeiro o melhor que aconteceu. */
+function jogosContraConcurso(r){
+  if(!r) return {conferidos:[], fora:[], melhor:null, premiados:0, total:0};
+  const todos = S.jogos.concat(S.teimosinhas || [])
+    .filter(j => j.modalidade === r.modalidade);
+  const conferidos = [], fora = [];
+  todos.forEach(j => {
+    const cf = (j.conferencias || []).find(x => x.concurso === r.concurso);
+    if(cf) conferidos.push({jogo:j, acertos:cf.acertos,
+                            faixa:faixaAtingida(j.modalidade, cf.acertos)});
+    else fora.push({jogo:j, motivo: motivoSemConferencia(j, r) || "ainda não conferido"});
+  });
+  conferidos.sort((a,b) => b.acertos - a.acertos);
+  return {
+    conferidos, fora,
+    melhor: conferidos[0] || null,
+    premiados: conferidos.filter(x => x.faixa !== null).length,
+    total: todos.length,
+  };
+}
+
+function linhaDoJogo(item, sorteadas){
+  const j = item.jogo;
+  const premiado = item.faixa !== null;
+  const esperado = esperadoAcertos(j.modalidade, j.dezenas.length);
+  return `<div class="confronto ${premiado ? "premiado" : ""}">
+    <div class="cabeca-confronto">
+      <span class="quanto"><b>${item.acertos}</b> acerto${item.acertos===1?"":"s"}</span>
+      ${premiado ? `<span class="selo ok">faixa de prêmio</span>` : ""}
+      <span class="contexto">${esc(j.metodo || "salvo")} · o acaso faria ${nf(esperado,2)}</span>
+    </div>
+    <div class="dezenas">${j.dezenas.map(d =>
+      `<span class="dz ${sorteadas.includes(d) ? "acertou" : ""}">${pad(d)}</span>`).join("")}</div>
+  </div>`;
+}
+
+function painelUltimoConcurso(){
+  const c = MODALIDADES[S.modalidade];
+  const r = ultimoResultado(S.modalidade);
+  const salvos = S.jogos.concat(S.teimosinhas || [])
+    .filter(j => j.modalidade === S.modalidade).length;
+
+  /* O recado da última busca vem do estado, e não do DOM: `pintar()` redesenha
+     a tela inteira e apagaria qualquer coisa escrita direto no elemento. */
+  const recado = (S.avisoConferir && S.avisoConferir.modalidade === S.modalidade)
+    ? `<div class="nota ${S.avisoConferir.tipo === "atencao" ? "atencao" : ""}"
+        >${esc(S.avisoConferir.texto)}</div>` : "";
+  const botao = `<button class="acao" id="c-atualizar">Buscar o resultado mais recente</button>
+    <div id="c-atualizando"></div>${recado}`;
+
+  if(!r) return `<div class="carta">
+    <div class="titulo-painel">último sorteio da ${esc(c.nome)}</div>
+    <p class="vazio-painel">O app ainda não tem nenhum concurso da ${esc(c.nome)} guardado,
+    então não há o que comparar com ${
+      !salvos ? "jogos salvos"
+      : salvos === 1 ? "o seu jogo salvo"
+      : `os seus ${inf(salvos)} jogos salvos`}.</p>
+    ${botao}</div>`;
+
+  const cmp = jogosContraConcurso(r);
+  const g = ganhadoresDoConcurso(r);
+
+  /* O cabeçalho do sorteio: que concurso, quando, e o que saiu. Vem antes dos
+     jogos porque é o fato; os jogos são a leitura dele. */
+  const cabeca = `<div class="sorteio-cabeca">
+      <div>
+        <div class="titulo-painel">último sorteio que o app tem</div>
+        <div class="sorteio-num">${esc(c.nome)} <b>${esc(r.concurso)}</b>
+          <span>${esc(r.data || "sem data")}</span></div>
+      </div>
+      ${seloGanhadores(r, {cidades:false})}
+    </div>
+    <div class="dezenas sorteio-dezenas">${r.dezenas.map(d =>
+      `<span class="dz sorteada">${pad(d)}</span>`).join("")}</div>`;
+
+  if(!cmp.total) return `<div class="carta ${g.estado}">
+    ${cabeca}
+    <p class="vazio-painel">Você ainda não tem jogos salvos na ${esc(c.nome)}.
+    Gere ou monte um jogo e ele passa a ser conferido sozinho a cada concurso novo.</p>
+    ${botao}</div>`;
+
+  /* Uma frase que resolve a tela para quem só quer a resposta. */
+  const resumo = !cmp.conferidos.length
+    ? (cmp.total === 1
+        ? `O seu jogo da ${esc(c.nome)} não cobre este concurso.`
+        : `Nenhum dos seus ${inf(cmp.total)} jogos da ${esc(c.nome)} cobre este concurso.`)
+    : `<b>${inf(cmp.conferidos.length)}</b> jogo${cmp.conferidos.length>1?"s":""} conferido${cmp.conferidos.length>1?"s":""} · melhor
+       <b>${cmp.melhor.acertos} acerto${cmp.melhor.acertos===1?"":"s"}</b> · ` +
+      (cmp.premiados
+        ? `<b style="color:var(--acaso)">${inf(cmp.premiados)} em faixa de prêmio</b>`
+        : "nenhum em faixa de prêmio");
+
+  return `<div class="carta ${g.estado}">
+    ${cabeca}
+    <div class="resumo-confronto">${resumo}</div>
+    ${cmp.conferidos.map(i => linhaDoJogo(i, r.dezenas)).join("")}
+    ${!cmp.fora.length ? "" : `<details class="fora-do-concurso">
+      <summary>${inf(cmp.fora.length)} jogo${cmp.fora.length>1?"s":""} fora deste concurso</summary>
+      ${cmp.fora.map(f => `<div class="linha-fora">
+        <span class="num">${f.jogo.dezenas.map(pad).join(" ")}</span>
+        <span>${esc(f.motivo)}</span></div>`).join("")}
+    </details>`}
+    ${cmp.premiados ? `<div class="nota">Confira no volante oficial da Caixa antes de
+      comemorar. O app compara números; quem paga é a lotérica.</div>` : ""}
+    ${botao}
+    <div class="nota">Este é o concurso mais recente <strong>que o app guardou</strong> —
+    pode haver um mais novo que ninguém buscou ainda. A conferência acontece sozinha
+    sempre que entra concurso novo.</div>
+  </div>`;
+}
+
 T.conferir = () => {
   const c = MODALIDADES[S.modalidade];
   const naoConferidos = S.jogos.filter(j=>j.modalidade===S.modalidade).length;
-  return `<div class="carta">
+  return painelUltimoConcurso() + `
+  <h2 style="margin:18px 0 8px">conferir um concurso à mão</h2>
+  <div class="nota" style="margin-bottom:10px">Para um concurso que a busca não trouxe,
+  ou para conferir um sorteio antigo contra os jogos desta modalidade.</div>
+  <div class="carta">
     <div class="linha2">
       <label class="campo"><label>concurso</label>
         <input id="c-num" type="number" inputmode="numeric" placeholder="ex.: 3421"></label>
@@ -1695,12 +1904,22 @@ T.conferir = () => {
     </div>
     <label class="campo"><label>dezenas sorteadas (${c.k} números, separados por espaço)</label>
       <input id="c-dez" type="text" inputmode="numeric" placeholder="ex.: 02 07 11 19 23 41"></label>
-    <button class="acao" id="c-go">Conferir ${naoConferidos} jogo${naoConferidos===1?"":"s"} salvos</button>
+    <!-- O "s" caía só no substantivo e o adjetivo ficava fixo no plural, então
+         com um único jogo o botão saía com a concordância quebrada. Defeito
+         velho, que só apareceu quando o painel novo empurrou este botão para
+         debaixo do olho. O texto errado não é repetido aqui de propósito: um
+         teste que procure a frase defeituosa acharia o comentário e passaria
+         achando que achou o código. -->
+    <button class="acao" id="c-go">Conferir ${naoConferidos} ${
+      naoConferidos === 1 ? "jogo salvo" : "jogos salvos"}</button>
   </div>
   <div id="c-saida"></div>
+  <!-- "buscar o último" morava aqui e virou duplicata: o painel do topo já
+       busca o mais recente e confere sozinho. Dois botões com o mesmo efeito e
+       nomes diferentes na mesma tela é convite a testar qual dos dois funciona.
+       O que sobra é buscar UM concurso — o número digitado ao lado. -->
   <div class="botoes" style="margin-bottom:10px">
-    <button class="acao mini" id="c-buscar">buscar este resultado</button>
-    <button class="acao contorno mini" id="c-ultimo">buscar o último concurso</button>
+    <button class="acao mini" id="c-buscar">buscar as dezenas deste concurso</button>
   </div>
   <div id="c-busca"></div>
   <div class="nota">Se a busca não funcionar, digite o resultado oficial publicado pela
@@ -5891,14 +6110,17 @@ function acoesNovas(){
   };
   contarLembretes();
 
-  /* --- buscar resultado direto na tela de conferir --- */
-  const preencher = async (qual) => {
+  /* --- buscar as dezenas de UM concurso, para o formulário à mão ---
+     Recebia um modo ("este" ou "ultimo"); o "ultimo" ficou sem chamador quando
+     o painel do topo assumiu essa função, e parâmetro sem chamador é armadilha
+     — dá a impressão de haver dois caminhos vivos quando só há um. */
+  const preencher = async () => {
     const alvo = $("#c-busca");
     const num = $("#c-num");
-    const concurso = qual === "este" ? parseInt(num.value, 10) : null;
-    if(qual === "este" && !Number.isFinite(concurso)){
-      alvo.innerHTML = `<div class="nota atencao">Informe o número do concurso primeiro,
-        ou use "buscar o último".</div>`;
+    const concurso = parseInt(num.value, 10);
+    if(!Number.isFinite(concurso)){
+      alvo.innerHTML = `<div class="nota atencao">Informe o número do concurso primeiro.
+        Para o mais recente, use o botão do painel lá em cima.</div>`;
       return;
     }
     alvo.innerHTML = `<div class="nota"><span class="girando"></span>buscando…</div>`;
@@ -5926,8 +6148,46 @@ function acoesNovas(){
         sempre, e é a via que não depende de rede.</span></div>`;
     }
   };
-  if($("#c-buscar")) $("#c-buscar").onclick = () => preencher("este");
-  if($("#c-ultimo")) $("#c-ultimo").onclick = () => preencher("ultimo");
+  if($("#c-buscar")) $("#c-buscar").onclick = () => preencher();
+
+  /* --- atualizar o painel do último concurso ---
+     Busca, guarda, deixa `aoMudarHistorico` conferir os jogos e repinta. O
+     retorno diz qual dos três casos aconteceu, porque "nada mudou" e "veio
+     concurso novo" precisam de respostas diferentes: um botão que responde a
+     mesma coisa sempre ensina a pessoa a desconfiar dele. */
+  const atualizar = $("#c-atualizar");
+  if(atualizar) atualizar.onclick = async () => {
+    const aviso = $("#c-atualizando");
+    const antes = ultimoResultado(S.modalidade);
+    atualizar.disabled = true;
+    aviso.innerHTML = `<div class="nota"><span class="girando"></span>procurando o
+      concurso mais recente…</div>`;
+    try{
+      const r = await buscarNaCaixa(S.modalidade, null);
+      const inseridos = guardarResultados([r]);
+      /* Mesmo sem concurso novo, a conferência roda: o resultado pode ter
+         chegado antes sem rateio, ou um jogo salvo depois pode nunca ter sido
+         confrontado com ele. */
+      const conf = aoMudarHistorico(inseridos, "busca do último concurso");
+      if(inseridos){
+        S.avisoConferir = {modalidade:S.modalidade, tipo:"ok", texto:
+          `Concurso ${r.concurso} é novo por aqui. ` +
+          (conf.novas ? `${conf.novas} conferência${conf.novas===1?"":"s"} feita${conf.novas===1?"":"s"}.`
+                      : "Nenhum jogo salvo cobria ele.")};
+      } else if(conf.novas){
+        S.avisoConferir = {modalidade:S.modalidade, tipo:"ok", texto:
+          `O concurso ${r.concurso} já era conhecido, e ${conf.novas} conferência${conf.novas===1?"":"s"} nova${conf.novas===1?"":"s"} saiu daí.`};
+      } else {
+        S.avisoConferir = {modalidade:S.modalidade, tipo:"ok", texto: antes && antes.concurso === r.concurso
+          ? `Já estava atualizado: ${r.concurso} continua sendo o último.`
+          : `Nada novo veio da busca.`};
+      }
+    }catch(e){
+      S.avisoConferir = {modalidade:S.modalidade, tipo:"atencao", texto:
+        `Nenhuma fonte respondeu (${e.message}). Dá para digitar o resultado à mão abaixo.`};
+    }
+    pintar();
+  };
 
   /* --- teimosinha --- */
   const criar = $("#t-criar");
@@ -6367,7 +6627,7 @@ const SECOES = [
      {id:"resultados", nome:"Concursos", titulo:"Histórico de resultados",
       sub:"Os concursos que o app conhece. É esta base que alimenta a análise, a bancada e o aprendizado."},
      {id:"conferir", nome:"Conferir", titulo:"Conferir",
-      sub:"Informe o resultado de um concurso e o app confere todos os seus jogos daquela modalidade."}
+      sub:"O último sorteio que o app conhece, comparado com os seus jogos salvos. A conferência é automática."}
    ]},
   {id:"mais", nome:"Mais",
    icone:'<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>',
@@ -6412,6 +6672,9 @@ function trilhaModalidade(){
 
 function pintar(){
   const sec = secaoAtual(), tela = telaAtual();
+  /* O recado da busca vale para a visita atual à tela Conferir. Sair da tela o
+     descarta, senão ele reaparece dias depois falando de uma busca esquecida. */
+  if(tela.id !== "conferir") S.avisoConferir = null;
   const segmento = sec.telas.length < 2 ? "" :
     `<div class="segmento" role="tablist">${sec.telas.map(t=>
       `<button role="tab" data-tela="${t.id}" aria-selected="${t.id===tela.id}">
