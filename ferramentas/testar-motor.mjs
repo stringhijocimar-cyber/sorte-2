@@ -3402,6 +3402,64 @@ secao("29. Voltar");
   S.tela = guardaTela; S.pilha = guardaPilha || [];
 }
 
+/* ==================================================================
+   30. O funil da tela de pesquisa é medido, não inventado
+
+   Escrevi este painel uma primeira vez com um campo que não existia
+   (`passaramPrimeiroFiltro`) e outro que era ARRAY exibido como contagem
+   (`populacao`). Os dois teriam aparecido na tela como fato, numa tela cujo
+   assunto inteiro é não afirmar o que não se mediu. Esta seção existe para a
+   próxima linha do funil não entrar do mesmo jeito.
+   ================================================================== */
+secao("30. Funil da pesquisa: medido, não inventado");
+
+{
+  const S = motor.S;
+  const guardaRes = S.resultados, guardaMod = S.modalidade;
+  const guardaPesq = S.pesquisaAdaptativa;
+
+  S.modalidade = "mega-sena";
+  S.pesquisaAdaptativa = {};
+  S.resultados = historicoSemeado("mega-sena", 60, 6, 200, 7);
+
+  const dados = contexto.matrizDePesquisa("mega-sena");
+  const mem = contexto.rodarGeracao("mega-sena", dados, {semente: 4242});
+
+  /* Os três números do funil têm de existir e ser inteiros plausíveis. */
+  checar("a geração grava quantas hipóteses foram avaliadas",
+    Number.isInteger(mem.avaliadas) && mem.avaliadas > 0, `avaliadas=${mem.avaliadas}`);
+  checar("e quantas ficaram acima do acaso no pior recorte",
+    Number.isInteger(mem.acimaDoAcaso) && mem.acimaDoAcaso >= 0 &&
+    mem.acimaDoAcaso <= mem.avaliadas, `acimaDoAcaso=${mem.acimaDoAcaso}`);
+  checar("e quantas apontaram para o mesmo lado em todos os recortes",
+    Number.isInteger(mem.mesmoSentido) && mem.mesmoSentido >= 0 &&
+    mem.mesmoSentido <= mem.avaliadas, `mesmoSentido=${mem.mesmoSentido}`);
+
+  /* `populacao` é ARRAY. Exibi-lo com `inf()` imprimiria algo sem sentido, e
+     foi o que eu fiz na primeira escrita. */
+  checar("populacao continua sendo lista, e a tela sabe disso",
+    Array.isArray(mem.populacao));
+
+  /* A tela: todo número do funil vem da memória. Se um rótulo aparecer com um
+     campo que não existe, `inf(undefined)` produz "NaN" — e é isso que este
+     teste procura, em vez de conferir rótulo por rótulo. */
+  S.pesquisaAdaptativa["mega-sena"] = mem;
+  const tela = contexto.T.pesquisa();
+  checar("a tela do funil não imprime NaN nem undefined",
+    !/NaN|undefined/.test(tela),
+    (tela.match(/.{0,40}(NaN|undefined).{0,20}/) || [""])[0]);
+  checar("e mostra o funil com os rótulos medidos",
+    /Estratégias testadas/.test(tela) && /Acima do acaso/.test(tela) &&
+    /Mesmo sentido/.test(tela) && /Evidência robusta/.test(tela));
+
+  /* A trava de honestidade da tela continua: laboratório, não gerador. */
+  checar("e continua dizendo que não produz números para apostar",
+    /não<\/strong> produz números para apostar/.test(tela));
+
+  S.resultados = guardaRes; S.modalidade = guardaMod;
+  S.pesquisaAdaptativa = guardaPesq;
+}
+
 /* ---------- saída ---------- */
 console.log(linhas.join("\n"));
 console.log(`\n${"─".repeat(60)}`);

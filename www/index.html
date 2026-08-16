@@ -346,6 +346,39 @@ main{padding:14px 16px calc(var(--barra) + 45px + var(--base));
   border-radius:12px;background:var(--carta);font-size:.86rem;color:var(--secundaria)}
 .ajustes[open] summary{margin-bottom:10px;color:var(--tinta)}
 
+/* Painel "Geração atual": anel à esquerda, funil à direita. */
+.geracao-linha{display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap}
+.funil{flex:1;min-width:150px;display:grid;gap:9px}
+.funil div{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.funil span{font-size:.76rem;color:var(--secundaria);line-height:1.3}
+.funil b{font-family:var(--mono);font-size:1.15rem;font-weight:650;color:var(--tinta);
+  font-variant-numeric:tabular-nums;flex:none}
+
+/* Ícone quadrado por tipo, na cor do GRUPO — a mesma dos chips de filtro, para
+   olho e filtro falarem a mesma língua. */
+.ic-aviso{width:34px;height:34px;flex:none;border-radius:11px;display:grid;
+  place-items:center;align-self:flex-start}
+.ic-aviso svg{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:1.8;
+  stroke-linecap:round;stroke-linejoin:round}
+.ic-aviso.conferencia{background:color-mix(in srgb,var(--acaso) 15%,transparent);
+  color:var(--acaso)}
+.ic-aviso.analise{background:color-mix(in srgb,#6f8dff 20%,transparent);color:#93a8ff}
+.ic-aviso.sistema{background:color-mix(in srgb,#a06bff 18%,transparent);color:#c19cff}
+.ponto-lido{width:8px;height:8px;border-radius:50%;flex:none;align-self:center;
+  background:transparent;box-shadow:inset 0 0 0 1px var(--linha)}
+.ponto-lido.novo{background:var(--acaso);box-shadow:none}
+
+/* Últimas conferências: data | modalidade+concurso | jogos+melhor. */
+.conferencias{display:grid;gap:1px;background:var(--linha);border-radius:12px;
+  overflow:hidden}
+.linha-conf{display:grid;grid-template-columns:auto 1fr auto;gap:10px;
+  align-items:center;padding:10px 12px;background:var(--carta);font-size:.8rem}
+.linha-conf .quando{font-family:var(--mono);font-size:.68rem;color:var(--secundaria)}
+.linha-conf .qual{min-width:0;color:var(--tinta)}
+.linha-conf .qual small,.linha-conf .quanto2 small{display:block;font-size:.68rem;
+  color:var(--secundaria);margin-top:1px}
+.linha-conf .quanto2{text-align:right;color:var(--tinta);flex:none}
+
 .dia-avisos{margin-bottom:16px}
 /* O rótulo do dia gruda no topo ao rolar: numa lista longa, saber em que dia
    se está sem ter de rolar de volta é metade do motivo de agrupar. */
@@ -1779,6 +1812,13 @@ function resumoDeMeusJogos(meus){
   const c = MODALIDADES[S.modalidade];
   const r = ultimoResultado(S.modalidade);
   const cmp = jogosContraConcurso(r);
+  /* Reusa `concursosDoJogo`, que é quem conhece as três regras de cobertura —
+     concurso declarado, faixa da teimosinha e data. Recontar aqui seria um
+     quarto lugar com a mesma lógica, pronto para divergir. */
+  const aConferir = S.jogos.concat(S.teimosinhas || [])
+    .filter(j => j.modalidade === S.modalidade)
+    .reduce((n, j) => n + concursosDoJogo(j).filter(x =>
+      !(j.conferencias || []).some(cf => cf.concurso === x.concurso)).length, 0);
   return `<div class="carta">
     <div class="kpis">
       <div class="kpi"><div class="rot">jogos salvos</div>
@@ -1787,9 +1827,13 @@ function resumoDeMeusJogos(meus){
       <div class="kpi"><div class="rot">último concurso</div>
         <div class="val" style="font-size:1.15rem">${r ? esc(r.concurso) : "—"}</div>
         <div class="sub">${r ? esc(r.data || "sem data") : "nenhum guardado"}</div></div>
-      <div class="kpi"><div class="rot">comparados</div>
-        <div class="val" style="font-size:1.15rem">${inf(cmp.conferidos.length)}</div>
-        <div class="sub">de ${inf(cmp.total)}</div></div>
+      ${/* "A conferir" em âmbar é o número que pede ação — o mockup destaca
+            justamente ele. Conta concursos que um jogo cobre e que ainda não
+            têm conferência registrada, somando todos os jogos. */""}
+      <div class="kpi"><div class="rot">a conferir</div>
+        <div class="val" style="font-size:1.15rem;${aConferir ? "color:var(--acumulou-tinta)" : ""}"
+          >${inf(aConferir)}</div>
+        <div class="sub">${aConferir ? "pendentes" : "tudo em dia"}</div></div>
       <div class="kpi"><div class="rot">coincidências</div>
         <div class="val" style="font-size:1.15rem">${inf(cmp.coincidencias)}</div>
         <div class="sub">dezenas, somadas</div></div>
@@ -1800,7 +1844,42 @@ function resumoDeMeusJogos(meus){
     <div class="nota">Compara cada jogo com o concurso que ele declara, ou com o
     último resultado guardado. Mostra quantas dezenas coincidiram e quais — não
     calcula prêmio nem faixa, porque quem confere bilhete é a Caixa.</div>
-  </div>`;
+  </div>` + ultimasConferencias();
+}
+
+/* "Últimas conferências" do mockup: uma linha por concurso conferido, com
+   quantos jogos entraram e qual foi o melhor. Atravessa modalidades de
+   propósito — é o histórico do que o app fez, e o que ele fez na Quina ontem
+   não deixa de ter acontecido porque agora se está olhando a Lotofácil. */
+function ultimasConferencias(limite){
+  const porConcurso = new Map();
+  for(const j of S.jogos.concat(S.teimosinhas || [])){
+    for(const cf of (j.conferencias || [])){
+      const chave = `${j.modalidade}:${cf.concurso}`;
+      const atual = porConcurso.get(chave) ||
+        {modalidade:j.modalidade, concurso:cf.concurso, data:cf.data, jogos:0, melhor:0};
+      atual.jogos++;
+      if(cf.acertos > atual.melhor) atual.melhor = cf.acertos;
+      porConcurso.set(chave, atual);
+    }
+  }
+  const linhas = [...porConcurso.values()]
+    .sort((a, b) => String(b.data || "").localeCompare(String(a.data || "")) ||
+                    b.concurso - a.concurso)
+    .slice(0, limite || 6);
+  if(!linhas.length) return "";
+  return `<section class="carta" style="margin-top:12px">
+    <div class="panel-title"><h3>Últimas conferências</h3>
+      <span>${inf(porConcurso.size)} concurso${porConcurso.size>1?"s":""}</span></div>
+    <div class="conferencias">${linhas.map(l => `
+      <div class="linha-conf">
+        <span class="quando">${esc(l.data || "—")}</span>
+        <span class="qual">${esc(MODALIDADES[l.modalidade].nome)}
+          <small>concurso ${esc(l.concurso)}</small></span>
+        <span class="quanto2">${inf(l.jogos)} jogo${l.jogos>1?"s":""}
+          <small>melhor: ${l.melhor}</small></span>
+      </div>`).join("")}</div>
+  </section>`;
 }
 
 T.jogos = () => {
@@ -3977,6 +4056,21 @@ const GRUPOS_DE_AVISO = {
   sistema:     {nome:"Sistema",      tipos:["sistema", "erro", "atualizacao"]},
 };
 
+/* Um desenho por tipo, como no mockup: cérebro para análise, visto para
+   conferência, troféu para prêmio, seta circular para histórico. O ícone repete
+   a informação que a cor já dá — e é essa repetição que faz a lista ser
+   varrível por quem não distingue as cores. */
+const ICONE_AVISO = {
+  premio:      '<path d="M7 4h10v4a5 5 0 0 1-10 0Z"/><path d="M7 6H4.5v1.5A3.5 3.5 0 0 0 8 11"/><path d="M17 6h2.5v1.5A3.5 3.5 0 0 1 16 11"/><path d="M12 13v4M9 20h6"/>',
+  conferencia: '<circle cx="12" cy="12" r="8.5"/><path d="M8.5 12.2l2.4 2.4 4.6-4.8"/>',
+  historico:   '<path d="M20 12a8 8 0 1 1-2.6-5.9"/><path d="M20 4v4h-4"/>',
+  analise:     '<path d="M12 4a4 4 0 0 0-3.9 4.9A3.5 3.5 0 0 0 8 15.5 3.5 3.5 0 0 0 12 19a3.5 3.5 0 0 0 4-3.5 3.5 3.5 0 0 0-.1-6.6A4 4 0 0 0 12 4Z"/><path d="M12 4v15"/>',
+  pesquisa:    '<circle cx="11" cy="11" r="6"/><path d="M15.5 15.5 20 20"/>',
+  erro:        '<path d="M12 4 2.5 20h19Z"/><path d="M12 10v4M12 17h.01"/>',
+  atualizacao: '<path d="M12 3v12"/><path d="M8 11l4 4 4-4"/><path d="M4 20h16"/>',
+  sistema:     '<circle cx="12" cy="12" r="8.5"/><path d="M12 8v5M12 16h.01"/>',
+};
+
 function grupoDoAviso(tipo){
   for(const [id, g] of Object.entries(GRUPOS_DE_AVISO))
     if(g.tipos.includes(tipo)) return id;
@@ -4052,9 +4146,16 @@ function pintarAvisos(){
 
   const item = a => `<div class="item ${a.tipo==="premio"?"ok":a.tipo==="erro"?"aviso":""} ${a.lido?"":"nao-lido"}">
       <span class="marca-cor"></span>
+      <span class="ic-aviso ${esc(grupoDoAviso(a.tipo))}" aria-hidden="true">
+        <svg viewBox="0 0 24 24">${ICONE_AVISO[a.tipo] || ICONE_AVISO.sistema}</svg></span>
       <span class="txt"><b>${esc(a.titulo)}</b><span>${esc(a.texto)}</span></span>
       <span class="quando">${esc(new Date(a.quando).toLocaleTimeString("pt-BR",
         {hour:"2-digit", minute:"2-digit"}))}</span>
+      ${/* O ponto de status do mockup. Ele NÃO diz "deu certo" — diz que o
+            item já foi visto. Verde aceso é aviso novo; apagado é lido. Um
+            ponto verde em tudo, sempre, não informa nada. */""}
+      <span class="ponto-lido ${a.lido ? "" : "novo"}"
+        title="${a.lido ? "já visto" : "novo"}"></span>
     </div>`;
 
   const lista = !S.avisos.length
@@ -5048,6 +5149,21 @@ function rodarGeracao(modalidade, opcoes){
   });
   avaliadas.sort((a, b) => b.valor - a.valor);
 
+  /* Dois números do funil da tela, medidos aqui porque é aqui que existem.
+     Não são enfeite: são os dois degraus entre "testei" e "sobreviveu", e sem
+     eles a tela teria de inventá-los — coisa que ela, mais do que qualquer
+     outra deste app, não pode fazer.
+
+     * acimaDoAcaso: aptidão positiva, ou seja, o PIOR recorte de walk-forward
+       ainda ficou acima de 0,5 depois da punição por complexidade.
+     * mesmoSentido: todos os recortes apontaram para o mesmo lado. Uma
+       hipótese que acerta num recorte e erra no outro não descreve nada — ela
+       só encontrou dois acasos com sinais trocados. */
+  const acimaDoAcaso = avaliadas.filter(x => x.valor > 0).length;
+  const mesmoSentido = avaliadas.filter(x =>
+    Array.isArray(x.porRecorte) && x.porRecorte.length > 0 &&
+    (x.porRecorte.every(v => v >= 0.5) || x.porRecorte.every(v => v <= 0.5))).length;
+
   const elite = avaliadas.slice(0, ELITE_PESQUISA).map(x => x.h);
   const descartadas = avaliadas.length - elite.length;
 
@@ -5085,6 +5201,9 @@ function rodarGeracao(modalidade, opcoes){
   S.pesquisaAdaptativa[modalidade] = {
     geracao, populacao: proxima, historico,
     hipotesesTestadas: (memoria.hipotesesTestadas || 0) + novas,
+    /* O funil desta geração. Fica na memória porque a tela precisa dele e a
+       tela não tem como recalculá-lo: os escores morrem no fim desta função. */
+    acimaDoAcaso, mesmoSentido, avaliadas: avaliadas.length,
     vistas: [...vistas].slice(-4000),
     campeaoDev: {genes: melhor.h.genes, origem: melhor.h.origem,
                  aptidao: melhor.valor, aucPorRecorte: melhor.porRecorte},
@@ -5997,9 +6116,55 @@ T.pesquisa = () => {
       busca; a validação é o recorte que ela nunca viu — e é só esse que conta.</p>
   </div>` : "";
 
-  const julgamento = !conc ? `<div class="nota" style="margin-top:12px">A população
+  /* "Geração atual" e "Desempenho geral", com os rótulos e a disposição do
+     mockup: o anel à esquerda, o funil da geração à direita, e embaixo os
+     quatro números de fora da amostra.
+
+     O funil é a peça que explica o motor sem texto: 8.640 testadas → 320
+     passaram do primeiro filtro → 18 sobreviveram ao walk-forward → 0 com
+     evidência robusta. É a mesma história que o veredito conta em palavras,
+     mas em quatro linhas que se lê de relance — e o zero no fim é o ponto. */
+  const funil = `<section class="carta" style="margin-top:12px">
+    <div class="panel-title"><h3>Geração atual</h3>
+      <span>${mem.quando ? `Atualizado ${esc(new Date(mem.quando)
+        .toLocaleString("pt-BR", {day:"2-digit", month:"2-digit", year:"numeric",
+                                  hour:"2-digit", minute:"2-digit"}))}` : "ainda não julgada"}</span></div>
+    <div class="geracao-linha">
+      ${anelGeracao(mem.geracao || 0, (((mem.geracao || 0) % 12) + 1) / 12)}
+      ${/* Cada linha é um número medido, não um enchimento de layout. Escrevi
+            este bloco uma vez com um campo inventado ("passaram do 1º filtro")
+            e um campo que era array contado como número; os dois teriam
+            aparecido na tela como fato. Agora os dois do meio são gravados
+            pela própria geração, onde os escores existem. */""}
+      <div class="funil">
+        <div><span>Estratégias testadas</span><b>${inf(mem.hipotesesTestadas || 0)}</b></div>
+        <div><span>Acima do acaso no pior recorte</span><b>${inf(mem.acimaDoAcaso || 0)}</b></div>
+        <div><span>Mesmo sentido em todos</span><b>${inf(mem.mesmoSentido || 0)}</b></div>
+        <div><span>Evidência robusta</span>
+          <b class="${conc && conc.sobreviveu ? "teal" : "red"}">${conc && conc.sobreviveu ? 1 : 0}</b></div>
+      </div>
+    </div>
+    <div class="nota">A IA testa milhares de estratégias automaticamente. Apenas
+    hipóteses com evidência estatística consistente permanecem.</div>
+  </section>`;
+
+  const desempenho = !conc ? "" : `<section class="carta" style="margin-top:12px">
+    <div class="panel-title"><h3>Desempenho geral</h3><span>fora da amostra</span></div>
+    <div class="kpi-grid">
+      <div class="mini-card"><strong>${nf(conc.aucValidacao,3)}</strong>
+        <small>AUC médio<br>(vs 0,500 aleatório)</small></div>
+      <div class="mini-card"><strong>${nf(conc.p,3)}</strong>
+        <small>p-value mínimo<br>(correção Holm)</small></div>
+      <div class="mini-card"><strong>${nf(Math.max(0,Math.min(1,1-conc.degradacao))*100,0)}%</strong>
+        <small>Estabilidade<br>(média)</small></div>
+      <div class="mini-card"><strong>${inf((mem.populacao || []).length)}</strong>
+        <small>Estratégias ativas<br>(desta geração)</small></div>
+    </div>
+  </section>`;
+
+  const julgamento = funil + (!conc ? `<div class="nota" style="margin-top:12px">A população
     mudou desde o último julgamento. Toque em <strong>Evoluir e julgar</strong> para medir
-    o campeão nos concursos que a busca nunca viu.</div>` : `
+    o campeão nos concursos que a busca nunca viu.</div>` : desempenho + `
   <div class="carta" style="margin-top:12px">
     <h3 style="margin:0 0 8px">Julgamento fora da amostra</h3>
     <div class="rolagem"><table>
@@ -6031,7 +6196,7 @@ T.pesquisa = () => {
       <span>validação <b>${inf(mem.concursosValidacao||0)} concursos</b></span>
       <span>sumiu fora da amostra <b>${nf(Math.max(0,Math.min(1,conc.degradacao))*100,0)}%</b></span>
     </div>
-  </div>`;
+  </div>`);
 
   const grafico = (mem.historico || []).length >= 2 ? `
   <div class="carta" style="margin-top:12px">
