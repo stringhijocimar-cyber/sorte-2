@@ -2369,15 +2369,20 @@ secao("23. Teve ganhador?");
   /* --- verde e amarelo: a cor do concurso inteiro, em todas as buscas --- */
   S.resultados = [comGanhador, acumulado, semDado];
   const lista = contexto.T.resultados();
-  checar("o concurso com ganhador sai VERDE (classe ganhou)",
-    /class="item ganhou"/.test(lista));
-  checar("o acumulado sai AMARELO (classe acumulou)",
-    /class="item acumulou"/.test(lista));
+  /* O cartão do concurso passou de `.item` a `.concurso` quando a tela ganhou o
+     desenho do mockup. O que estes testes protegem NÃO é o nome do contêiner —
+     é o estado carimbado nele. A expressão aceita qualquer contêiner e continua
+     exigindo um cartão por estado, para a próxima troca de marcação não pedir
+     mais uma rodada de conserto de teste. */
+  const cartaoCom = (estado) =>
+    (lista.match(new RegExp(`class="(?:item|concurso) ${estado}"`, "g")) || []).length;
+  checar("o concurso com ganhador sai VERDE (classe ganhou)", cartaoCom("ganhou") === 1);
+  checar("o acumulado sai AMARELO (classe acumulou)", cartaoCom("acumulou") === 1);
   checar("o sem informação não recebe cor nenhuma das duas",
-    /class="item desconhecido"/.test(lista));
+    cartaoCom("desconhecido") === 1);
   checar("as três classes aparecem, uma por concurso",
-    ["ganhou","acumulou","desconhecido"].every(c =>
-      (lista.match(new RegExp(`class="item ${c}"`, "g")) || []).length === 1));
+    ["ganhou","acumulou","desconhecido"].every(c => cartaoCom(c) === 1),
+    ["ganhou","acumulou","desconhecido"].map(c => `${c}=${cartaoCom(c)}`).join(" "));
 
   /* A cor nunca vai sozinha: quem não distingue verde de amarelo continua
      lendo a mesma informação em texto. */

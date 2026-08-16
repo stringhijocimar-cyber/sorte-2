@@ -171,7 +171,7 @@ checar("ausência de pesos.json não quebra o app",
 /* As cinco rotas do mockup. Os nomes mudaram — o que NÃO pode mudar é o
    número de telas alcançáveis: reorganizar navegação é onde recurso some
    calado, então o teste confere as duas coisas. */
-const ROTAS = ['início','análise','experimentos','resultados','mais'];
+const ROTAS = ['início','análise','jogos','resultados','mais'];
 checar("as cinco abas estão presentes",
   await js(`
     const t = document.body.innerText.toLowerCase();
@@ -238,10 +238,12 @@ for (const aba of ["gerar", "jogos", "conferir", "analise", "entender"]) {
 /* ---------- gerar um lote de verdade ---------- */
 secao("C. Gerar e salvar pela interface");
 await irPara("gerar");
+/* Pelo id, e não pelo texto. O seletor por texto casava com qualquer botão
+   começando em "Gerar" — e quando a aba do segmento passou a se chamar "Gerar",
+   ele clicou na ABA, que já estava selecionada, e concluiu que gerar jogos não
+   produzia jogo nenhum. Id é contrato; texto de botão é aparência. */
 const gerou = await js(`
-  const b = [...document.querySelectorAll('button')]
-    .find(e => /gerar/i.test(e.textContent) && !/^gerar$/i.test(e.textContent.trim()) === false ||
-               /^gerar\\b/i.test(e.textContent.trim()));
+  const b = document.querySelector('#g-go');
   if (!b) return 'sem botão gerar';
   b.click();
   return 'clicou';
@@ -800,7 +802,7 @@ const abasOffline = await js(`
 checar("todas as abas presentes sem rede", abasOffline);
 await irPara("gerar");
 const gerouOffline = await js(`
-  const b = [...document.querySelectorAll('button')].find(e => /^gerar\\b/i.test(e.textContent.trim()));
+  const b = document.querySelector('#g-go');
   if (b) { b.click(); return true; } return false;
 `);
 await dormir(1000);
