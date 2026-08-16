@@ -3541,6 +3541,63 @@ secao("31. Destino da notificação");
   contexto.Avisos.plugin = guarda;
 }
 
+/* ==================================================================
+   32. A tela avisa quando o histórico está velho
+
+   A falha que motivou isto: a atualização automática parou de trazer concursos
+   e ninguém percebeu por dois dias, porque a tela mostrava o último concurso
+   que tinha sem dizer de quando ele era. Histórico vencido é indistinguível de
+   histórico em dia quando a tela não conta a idade dele — e a conferência, a
+   análise e o placar passam todos a trabalhar sobre um retrato velho.
+   ================================================================== */
+secao("32. Aviso de histórico atrasado");
+
+{
+  const S = motor.S;
+  const guardaRes = S.resultados, guardaMod = S.modalidade;
+  S.modalidade = "lotofacil";
+
+  const serie = (datas) => datas.map((d, i) => ({
+    concurso: 3000 + i, data: d, modalidade: "lotofacil",
+    dezenas: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],
+  }));
+  const agora = new Date(2026, 7, 16);
+
+  /* Diária em dia: um dia de atraso, limite 4. */
+  S.resultados = serie(["2026-08-11","2026-08-12","2026-08-13","2026-08-14","2026-08-15"]);
+  const emDia = contexto.idadeDoHistorico("lotofacil", agora);
+  checar("o ritmo é medido do próprio histórico", emDia.tipico === 1,
+    `tipico=${emDia.tipico}`);
+  checar("uma diária com um dia de atraso não é 'parada'", emDia.parado === false,
+    `atraso=${emDia.atraso} limite=${emDia.limite}`);
+  checar("e a tela não mostra alerta", !/pode estar\s+atrasado/.test(contexto.T.resultados()));
+
+  /* Diária parada há onze dias. */
+  S.resultados = serie(["2026-08-01","2026-08-02","2026-08-03","2026-08-04","2026-08-05"]);
+  const parada = contexto.idadeDoHistorico("lotofacil", agora);
+  checar("uma diária parada há onze dias é acusada", parada.parado === true,
+    `atraso=${parada.atraso} limite=${parada.limite}`);
+
+  /* O limite acompanha o ritmo: a mesma folga numa semanal não é alarme. */
+  S.resultados = serie(["2026-07-05","2026-07-12","2026-07-19","2026-07-26","2026-08-05"]);
+  const semanal = contexto.idadeDoHistorico("lotofacil", agora);
+  checar("numa semanal, onze dias ainda não é parada", semanal.parado === false,
+    `tipico=${semanal.tipico} atraso=${semanal.atraso} limite=${semanal.limite}`);
+
+  /* Sem dado não pode virar alarme: um alarme sem base ensina a ignorar
+     alarme, e aí o verdadeiro passa junto. */
+  S.resultados = [];
+  checar("histórico vazio não é avaliável",
+    contexto.idadeDoHistorico("lotofacil", agora).avaliavel === false);
+  S.resultados = serie(["2026-08-14"]);
+  checar("um concurso só não inventa ritmo",
+    contexto.idadeDoHistorico("lotofacil", agora).avaliavel === false);
+  checar("e nenhum dos dois casos mostra alerta",
+    !/pode estar\s+atrasado/.test(contexto.T.resultados()));
+
+  S.resultados = guardaRes; S.modalidade = guardaMod;
+}
+
 /* ---------- saída ---------- */
 console.log(linhas.join("\n"));
 console.log(`\n${"─".repeat(60)}`);

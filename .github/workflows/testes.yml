@@ -72,6 +72,14 @@ jobs:
           path: capturas/
           if-no-files-found: ignore
 
+      - name: Guarda de atraso do atualizador
+        # O cron de resultados rodava todo dia, dava verde e commitava — com os
+        # dados parados há dois dias. Este teste cobra o guarda que passou a
+        # medir o resultado (os dados avançaram?) em vez do percurso (a busca
+        # terminou?). Roda sem rede: um teste que depende da Caixa estar de pé
+        # mede a Caixa, não o código.
+        run: node ferramentas/testar-atualizador.mjs
+
       - name: O XML do projeto Android é bem-formado
         # A v26 quebrou com tudo verde: um "--" dentro de comentário em
         # colors.xml, que só o Gradle viu, no meio de uma compilação de release.

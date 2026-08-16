@@ -2035,6 +2035,38 @@ function desvioAcertos(m, tamanho){
      o mais recente que ele guardou — pode haver um mais novo que ninguém
      buscou, e o botão de atualizar diz isso com essas palavras.            */
 
+/* Quanto tempo faz que o histórico desta modalidade parou de crescer.
+
+   O ritmo é medido do próprio histórico — a mediana dos últimos trinta
+   intervalos — e não de uma tabela de dias da semana escrita no código: a
+   Lotofácil sorteia todo dia e a +Milionária a cada quatro, então "dois dias
+   sem novidade" quer dizer coisas opostas nas duas, e calendário escrito à mão
+   envelhece em silêncio.
+
+   A folga é de três ciclos mais um dia. O alvo é "a atualização parou", não "o
+   sorteio de ontem ainda não foi publicado" — alarme que dispara à toa ensina
+   a ignorar alarme, e aí o verdadeiro passa junto. */
+function idadeDoHistorico(modalidade, agora){
+  const hist = S.resultados
+    .filter(r => r.modalidade === modalidade && r.data)
+    .map(r => String(r.data)).sort();
+  if(hist.length < 2) return {avaliavel:false};
+  const gaps = [];
+  for(let i = Math.max(1, hist.length - 30); i < hist.length; i++){
+    const d = (Date.parse(hist[i]) - Date.parse(hist[i-1])) / 86400000;
+    if(Number.isFinite(d) && d > 0) gaps.push(d);
+  }
+  if(!gaps.length) return {avaliavel:false};
+  gaps.sort((a,b) => a - b);
+  const tipico = gaps[Math.floor(gaps.length / 2)];
+  const dataUltimo = hist[hist.length - 1];
+  const atraso = Math.floor(((agora instanceof Date ? agora : new Date()) -
+    Date.parse(dataUltimo)) / 86400000);
+  if(!Number.isFinite(atraso)) return {avaliavel:false};
+  const limite = Math.ceil(tipico * 3) + 1;
+  return {avaliavel:true, tipico, atraso, limite, dataUltimo, parado: atraso > limite};
+}
+
 function ultimoResultado(modalidade){
   let ultimo = null;
   for(const r of S.resultados)
@@ -6393,6 +6425,29 @@ T.resultados = () => {
       `<button class="chip" data-mod="${k}" aria-pressed="${k===S.modalidade}"
         >${esc(v.nome)}</button>`).join("")}</div>`;
 
+  /* Aviso de dado velho.
+
+     O motivo é uma falha real: a atualização automática parou de trazer
+     concursos e ninguém percebeu por dois dias, porque a tela mostrava o
+     último concurso que ela TINHA sem dizer de quando ele era. Um histórico
+     desatualizado é indistinguível de um histórico em dia se a tela não conta
+     a idade dele — e o app inteiro (conferência, análise, placar) passa a
+     trabalhar sobre um retrato vencido sem avisar.
+
+     O limite acompanha o ritmo medido da própria modalidade, e não uma tabela
+     de dias da semana: a Lotofácil sorteia todo dia e a +Milionária a cada
+     quatro, então "dois dias sem novidade" quer dizer coisas opostas nas
+     duas. */
+  const idade = idadeDoHistorico(S.modalidade);
+  const alerta = !idade || !idade.avaliavel || !idade.parado ? "" :
+    `<div class="nota atencao"><strong>O histórico da ${esc(c.nome)} pode estar
+      atrasado.</strong> O concurso mais recente que o app tem é de
+      ${esc(idade.dataUltimo)} — ${inf(idade.atraso)} dia${idade.atraso===1?"":"s"} atrás,
+      e esta loteria costuma sortear a cada ${inf(idade.tipico)}
+      dia${idade.tipico===1?"":"s"}. Toque em atualizar aqui em cima. Se não vier
+      nada, a fonte pode estar fora do ar — a conferência e a análise continuam
+      valendo, mas sobre os concursos que já estão aqui.</div>`;
+
   const cartoes = !meus.length
     ? `<div class="vazio">Nenhum resultado desta modalidade ainda.<br>
         Sem histórico, a bancada e o placar não têm o que medir.</div>`
@@ -6420,7 +6475,7 @@ T.resultados = () => {
   /* O botão "atualizar" saiu daqui: virou o ícone de recarregar no cabeçalho da
      tela, como no mockup. O id continua "r-caixa", então o tratador não mudou
      de lugar nem de nome. */
-  return chips + `<div id="r-saida"></div>` + cartoes + `
+  return chips + alerta + `<div id="r-saida"></div>` + cartoes + `
   <details class="ajustes">
     <summary>Trazer resultados e ajustes</summary>
     <div class="carta">
