@@ -46,7 +46,7 @@ A modalidade é escolhida uma vez no cabeçalho e vale em todas as telas.
 |---|---|
 | **Gerar** | *Automático* — a sugestão do sistema e quatro métodos de montagem · *Manual* — marcação na cartela, com custo, validade e características do jogo |
 | **Jogos** | *Meus jogos* — tudo o que foi salvo, com a cartela conferida · *Teimosinha* — repete o jogo por N concursos, com custo total e conferência de cada um |
-| **Conferir** | *Conferir* — informa um resultado e confere os jogos · *Resultados* — histórico por modalidade, importado por colagem ou pelo serviço da Caixa |
+| **Conferir** | *Conferir* — o último sorteio confrontado com os jogos salvos, sem clique, mais a digitação à mão para um concurso avulso · *Resultados* — histórico por modalidade, importado por colagem ou pelo serviço da Caixa |
 | **Análise** | *Placar* — resultado acumulado contra o acaso · *Bancada* — todos os métodos contra o mesmo sorteio · *Aprendizado* — um modelo por modalidade, medido fora da amostra · *Pesquisa* — o motor que inventa e derruba hipóteses sozinho |
 | **Entender** | o que o app faz, o que não faz, e por quê |
 
@@ -103,6 +103,37 @@ do jogo produziria "acertos" que ninguém poderia ter apostado.
 
 O sino no cabeçalho é a via garantida, porque não depende de permissão. A
 notificação do sistema é adicional e só depois de autorizada.
+
+#### A tela Conferir mostrava o contrário do que o app fazia
+
+Tudo acima já funcionava — e a tela Conferir abria com um formulário vazio
+pedindo o número do concurso e as quinze dezenas à mão. O app **já** tinha o
+concurso guardado e **já** havia conferido todos os jogos contra ele na
+abertura. Um jogo com 14 acertos na Lotofácil ficava invisível ali: para
+descobrir, era preciso ir até Meus jogos e procurar.
+
+Pedir para digitar um resultado que o app conhece não é só trabalho repetido —
+é dizer que não sabe. Hoje a tela abre com o painel do último concurso: qual
+sorteio, se teve ganhador, e cada jogo salvo com os acertos marcados, do melhor
+para o pior. Sem clique nenhum.
+
+Três travas separam informação de conto:
+
+* Quem manda é `conferencias`, preenchida por `conferenciaAutomatica()` — nunca
+  uma recontagem feita no painel. Aquela função respeita a regra da data acima.
+  Recontar por conta própria produziria acertos em sorteios anteriores ao dia em
+  que o jogo existiu: o número mais fácil de exibir e o mais desonesto. Há teste
+  com um jogo salvo **depois** do sorteio e com as dezenas **idênticas** às
+  sorteadas — ele não pode aparecer com acerto nenhum.
+* Jogo não coberto aparece dizendo **por que** ficou de fora, em vez de sumir da
+  lista ou aparecer com zero. Zero é uma afirmação; ausência de conferência é
+  outra coisa.
+* O painel diz o que o app **guardou**, não o que existe no mundo. Pode haver
+  concurso mais novo que ninguém buscou, e o texto diz isso com essas palavras.
+
+O botão de atualizar tem três desfechos e cada um fala diferente — concurso
+novo, já conhecido, ou nenhuma fonte respondeu. Um botão que responde sempre a
+mesma coisa ensina a pessoa a não ler o que ele diz.
 
 ### Aprendizado por modalidade
 
@@ -517,14 +548,14 @@ identificador.
 ### Testes
 
 ```bash
-node ferramentas/testar-motor.mjs             # lógica — 546 testes
+node ferramentas/testar-motor.mjs             # lógica — 575 testes
 python3 ferramentas/conferir-icones.py        # ícones — 34 conferências
 python3 ferramentas/conferir-xml-android.py   # XML do projeto nativo
 
 # A interface precisa de um servidor HTTP: em file:// o service worker não
 # registra, e o teste do modo avião passaria medindo outra coisa.
 python3 -m http.server 8123 &
-node --experimental-websocket ferramentas/testar-interface.mjs   # interface — 45 testes
+node --experimental-websocket ferramentas/testar-interface.mjs   # interface — 52 testes
 ```
 
 O executável do navegador é configurável, porque nem todo ambiente tem
