@@ -3456,8 +3456,89 @@ secao("30. Funil da pesquisa: medido, não inventado");
   checar("e continua dizendo que não produz números para apostar",
     /não<\/strong> produz números para apostar/.test(tela));
 
+  /* ---- a aba Evolução ----
+     O mockup pedia um alternador "AUC / p-value mínimo". O p-valor sai do
+     JULGAMENTO e existe uma vez, não por geração — desenhar uma linha dele
+     seria inventar uma série inteira. O alternador ficou entre duas medidas que
+     de fato existem por geração, e a tela diz, nas duas, que são de dentro da
+     amostra. É a distinção que este app inteiro protege. */
+  {
+    S.abaPesquisa = "evolucao";
+    for(let i = 0; i < 2; i++)
+      S.pesquisaAdaptativa["mega-sena"] =
+        contexto.rodarGeracao("mega-sena", dados, {semente: 900 + i});
+
+    S.serieEvolucao = "auc";
+    const comAuc = contexto.T.pesquisa();
+    checar("a aba Evolução oferece o alternador",
+      /data-serie="auc"/.test(comAuc) && /data-serie="aptidao"/.test(comAuc));
+    checar("e a série de AUC diz que é de desenvolvimento",
+      /AUC \(desenvolvimento\)/.test(comAuc));
+    checar("e a tabela do histórico de gerações aparece",
+      /Histórico de gerações/.test(comAuc) && /Geração/.test(comAuc));
+    checar("com a mais recente marcada como Atual",
+      /linha-ger atual/.test(comAuc));
+
+    S.serieEvolucao = "aptidao";
+    const comApt = contexto.T.pesquisa();
+    checar("trocar a série troca o que o gráfico anuncia",
+      /aptidão do melhor, por geração/.test(comApt) &&
+      !/AUC do melhor, por geração/.test(comApt));
+
+    /* O ponto: nenhuma das duas séries pode ser vendida como fora da amostra. */
+    checar("nenhuma das séries se apresenta como fora da amostra",
+      !/fora da amostra[^<]{0,40}(gráfico|série|linha)/i.test(comAuc + comApt));
+    checar("e a tela manda o julgamento para a Visão Geral",
+      /Visão Geral/.test(comAuc));
+    checar("nem AUC nem aptidão imprimem NaN",
+      !/NaN|undefined/.test(comAuc + comApt),
+      ((comAuc + comApt).match(/.{0,40}(NaN|undefined).{0,15}/) || [""])[0]);
+
+    S.abaPesquisa = "geral"; S.serieEvolucao = "auc";
+  }
+
   S.resultados = guardaRes; S.modalidade = guardaMod;
   S.pesquisaAdaptativa = guardaPesq;
+}
+
+/* ==================================================================
+   31. O toque na notificação leva à tela do assunto
+   ================================================================== */
+secao("31. Destino da notificação");
+
+{
+  /* O destino viaja em `extra`, porque é o único campo que volta no evento de
+     toque do plugin. Sem isso o app abre no Início e a pessoa procura sozinha
+     o que a notificação já sabia — o contrário de avisar. */
+  const enviados = [];
+  const guarda = contexto.Avisos.plugin;
+  contexto.Avisos.plugin = () => ({
+    schedule: (arg) => { enviados.push(arg.notifications[0]); return Promise.resolve(); },
+  });
+
+  contexto.notificarSistema("t", "x", "c1", "resultados");
+  contexto.notificarSistema("t", "x", "c2", "conferir");
+  contexto.notificarSistema("t", "x", "c3");
+
+  checar("a notificação carrega a tela de destino",
+    enviados[0] && enviados[0].extra && enviados[0].extra.tela === "resultados",
+    JSON.stringify(enviados[0] && enviados[0].extra));
+  checar("cada assunto leva ao seu lugar",
+    enviados[1].extra.tela === "conferir");
+  /* Sem destino não pode virar `undefined` no payload: o ouvinte compara com a
+     lista de telas, e undefined ali só produziria uma navegação silenciosa
+     para lugar nenhum. */
+  checar("sem destino declarado, cai no Início",
+    enviados[2].extra.tela === "inicio", enviados[2].extra.tela);
+
+  /* Todo destino usado tem de ser uma tela que existe. Um valor escrito errado
+     aqui só apareceria no aparelho, ao tocar — e falharia em silêncio. */
+  const telas = new Set(motor.SECOES.flatMap(s => s.telas.map(t => t.id)));
+  checar("todos os destinos usados são telas reais",
+    enviados.every(n => telas.has(n.extra.tela)),
+    enviados.map(n => n.extra.tela).join(", "));
+
+  contexto.Avisos.plugin = guarda;
 }
 
 /* ---------- saída ---------- */
