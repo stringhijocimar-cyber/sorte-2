@@ -2983,6 +2983,34 @@ secao("26. Último concurso × jogos salvos");
   checar("a comparação não devolve faixa de prêmio",
     cmp.premiados === undefined && cmp.conferidos.every(x => x.faixa === undefined));
 
+  /* As DUAS formas de retorno têm de ter as mesmas chaves.
+     O retorno de "não há concurso" ficou para trás quando `premiados` saiu e
+     `coincidencias` entrou. Ninguém viu, porque os testes só exercitavam o
+     caminho com resultado — e a tela mostrou "COINCIDÊNCIAS: NaN" para quem
+     tem jogo salvo e nenhum concurso guardado, ou seja, para quem acabou de
+     instalar. Comparar os conjuntos de chaves pega a próxima divergência
+     sozinho, sem precisar de alguém lembrar de olhar. */
+  {
+    const vazio = contexto.jogosContraConcurso(null);
+    const cheio = contexto.jogosContraConcurso(contexto.ultimoResultado("lotofacil"));
+    const kv = Object.keys(vazio).sort().join(","), kc = Object.keys(cheio).sort().join(",");
+    checar("as duas formas de retorno têm as mesmas chaves", kv === kc,
+      kv === kc ? kv : `vazio=[${kv}] cheio=[${kc}]`);
+    checar("e nenhum número do retorno vazio é NaN",
+      Number.isFinite(vazio.coincidencias) && Number.isFinite(vazio.total));
+  }
+
+  /* E a tela, que é onde o NaN apareceu. */
+  {
+    const guardaRes = S.resultados;
+    S.resultados = [];
+    const semConcurso = contexto.T.jogos();
+    checar("Meus jogos sem nenhum concurso guardado não mostra NaN",
+      !/NaN/.test(semConcurso),
+      (semConcurso.match(/.{0,50}NaN.{0,20}/) || [""])[0]);
+    S.resultados = guardaRes;
+  }
+
   /* Teimosinha fora da faixa declarada: mesmo cuidado, motivo diferente. */
   S.teimosinhas = [
     {id:"t-velha", dezenas:sorteio.slice(), modalidade:"lotofacil",

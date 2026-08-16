@@ -1822,7 +1822,13 @@ function motivoSemConferencia(j, r){
    conferidos, e ordena os conferidos do melhor para o pior — quem abre esta
    tela quer ver primeiro o melhor que aconteceu. */
 function jogosContraConcurso(r){
-  if(!r) return {conferidos:[], fora:[], melhor:null, premiados:0, total:0};
+  /* Este retorno tem de ter EXATAMENTE as mesmas chaves do outro. Ele ficou
+     para trás quando `premiados` saiu e `coincidencias` entrou, e o resultado
+     apareceu na tela como "COINCIDÊNCIAS: NaN" — `inf(undefined)` — para quem
+     tem jogo salvo e nenhum concurso guardado, que é justamente o estado de
+     quem acabou de instalar o app. Duas formas de retorno da mesma função é
+     defeito esperando data. */
+  if(!r) return {conferidos:[], fora:[], melhor:null, coincidencias:0, total:0};
   const todos = S.jogos.concat(S.teimosinhas || [])
     .filter(j => j.modalidade === r.modalidade);
   const conferidos = [], fora = [];
