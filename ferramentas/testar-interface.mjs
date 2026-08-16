@@ -587,6 +587,116 @@ await js(`
 `);
 await dormir(400);
 
+/* ---------- central de atividades ---------- */
+secao("F5. Central de atividades — dias e filtros");
+
+const guardaAvisos = await js(`return JSON.stringify(S.avisos || [])`);
+await js(`
+  const h = 3600000, agora = Date.now();
+  const mk = (tipo, titulo, quandoMs) => ({id: tipo + quandoMs, tipo, titulo,
+    texto: "detalhe", quando: new Date(quandoMs).toISOString(), lido: false});
+  S.avisos = [
+    mk("premio", "Lotofácil: 14 acertos", agora - 1*h),
+    mk("conferencia", "Conferência concluída", agora - 2*h),
+    mk("historico", "2 concursos novos", agora - 3*h),
+    mk("analise", "Análise da Quina pronta", agora - 26*h),
+    mk("pesquisa", "Nenhuma hipótese sobreviveu", agora - 28*h),
+    mk("sistema", "Versão nova disponível", agora - 30*h),
+  ];
+  document.querySelector("#btn-avisos").click();
+  return true;
+`);
+await dormir(600);
+
+const central = await js(`return document.querySelector("#corpo-avisos").innerText`);
+checar("a central agrupa por Hoje e Ontem",
+  /HOJE|Hoje/.test(central) && /ONTEM|Ontem/.test(central));
+checar("e traz os quatro filtros do mockup, com contagem",
+  ["Todas","Conferências","Análises","Sistema"].every(n => central.includes(n)) &&
+  /\b6\b/.test(central));
+await capturar("central-atividades");
+
+/* A folha rola; a faixa de chips só ganha o esmaecimento quando de fato
+   transborda. Aplicá-lo sempre apagaria a borda de um chip que cabe. */
+const faixa = await js(`
+  const c = document.querySelector(".chips");
+  return {transborda: c.scrollWidth > c.clientWidth + 1, rola: c.classList.contains("rola")};
+`);
+checar("o esmaecimento da faixa combina com o transbordo real",
+  faixa.transborda === faixa.rola, `transborda=${faixa.transborda} classe=${faixa.rola}`);
+
+/* Cada filtro mostra só o seu assunto — e continua agrupado por dia. */
+for(const [id, esperado, ausente] of [
+  ["analise", "Análise da Quina pronta", "Lotofácil: 14 acertos"],
+  ["conferencia", "Conferência concluída", "Versão nova disponível"],
+  ["sistema", "Versão nova disponível", "Análise da Quina pronta"],
+]){
+  await js(`document.querySelector('[data-filtro="${id}"]').click(); return true;`);
+  await dormir(300);
+  const t = await js(`return document.querySelector("#corpo-avisos").innerText`);
+  checar(`filtro "${id}" mostra o seu e esconde o resto`,
+    t.includes(esperado) && !t.includes(ausente),
+    t.includes(esperado) ? `escondeu ${ausente}? ${!t.includes(ausente)}` : `não achou ${esperado}`);
+}
+
+/* Filtro sem nada não pode parecer "o app perdeu os avisos". */
+await js(`
+  S.avisos = S.avisos.filter(a => a.tipo !== "analise" && a.tipo !== "pesquisa");
+  S.filtroAvisos = "analise"; pintarAvisos(); return true;
+`);
+await dormir(300);
+const vazio = await js(`return document.querySelector("#corpo-avisos").innerText`);
+checar("filtro vazio explica que os outros continuam em Todas",
+  /Nenhum aviso em/.test(vazio) && /Todas/.test(vazio), vazio.slice(0, 90).replace(/\n/g, " "));
+
+await js(`
+  document.querySelector("#folha-avisos").dataset.aberta = "0";
+  S.avisos = JSON.parse(${JSON.stringify(guardaAvisos)});
+  S.filtroAvisos = "todas"; pintarContaAvisos(); return true;
+`);
+
+/* ---------- voltar ---------- */
+secao("F6. Voltar — seta e pilha");
+
+await irPara("inicio"); await dormir(400);
+checar("a tela inicial não tem seta de voltar",
+  !(await js(`return !!document.querySelector("#voltar")`)));
+
+/* Um atalho da tela inicial é um mergulho: seta aparece, título centra. */
+await js(`
+  const b = document.querySelector('[data-atalho="jogos"]');
+  if (b) { b.click(); return true; } irParaTela("jogos"); return true;
+`);
+await dormir(600);
+const sub = await js(`
+  const v = document.querySelector("#voltar");
+  const t = document.querySelector(".titulo.com-volta h1");
+  if (!v || !t) return {seta:false};
+  const cx = t.getBoundingClientRect().left + t.getBoundingClientRect().width/2;
+  return {seta:true, rotulo:v.getAttribute("aria-label"),
+          centro: Math.abs(cx - window.innerWidth/2) < 12, tela:S.tela};
+`);
+checar("depois de um atalho a seta aparece", sub.seta === true, `tela=${sub.tela}`);
+checar("e o título fica centrado", sub.centro === true);
+checar("e a seta diz para onde volta", /Voltar para \S/.test(sub.rotulo || ""), sub.rotulo);
+await capturar("subtela-com-voltar");
+
+await js(`document.querySelector("#voltar").click(); return true;`);
+await dormir(500);
+checar("clicar na seta volta para a tela anterior",
+  (await js(`return S.tela`)) === "inicio" &&
+  !(await js(`return !!document.querySelector("#voltar")`)));
+
+/* A barra inferior é movimento lateral: não deixa seta para trás. */
+await js(`irParaTela("jogos"); return true;`); await dormir(400);
+await js(`document.querySelector('[data-secao="analise"]').click(); return true;`);
+await dormir(500);
+checar("a barra inferior limpa a pilha e some com a seta",
+  !(await js(`return !!document.querySelector("#voltar")`)) &&
+  (await js(`return (S.pilha||[]).length`)) === 0);
+
+await irPara("inicio"); await dormir(300);
+
 /* ---------- placar ---------- */
 secao("F2. Placar — faixa do acaso");
 await irPara("placar");

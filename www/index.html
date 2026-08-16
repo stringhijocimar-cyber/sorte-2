@@ -133,6 +133,21 @@ main{padding:14px 16px calc(var(--barra) + 45px + var(--base));
 .titulo{margin-bottom:var(--e3)}
 .titulo p{margin:3px 0 0;font-size:.85rem;color:var(--secundaria);line-height:1.45}
 
+/* Cabeçalho de subtela: seta à esquerda, título centrado. A grade tem uma
+   terceira coluna da mesma largura da seta, vazia — sem ela o título centra
+   no espaço QUE SOBRA e fica visivelmente fora do meio da tela. */
+.titulo.com-volta{display:grid;grid-template-columns:38px 1fr 38px;
+  align-items:center;column-gap:4px}
+.titulo.com-volta h1{grid-column:2;text-align:center;font-size:1.25rem;
+  margin:0;overflow-wrap:anywhere}
+.titulo.com-volta p{grid-column:1 / -1;text-align:center;margin-top:6px}
+.voltar{grid-column:1;justify-self:start;width:38px;height:38px;display:grid;
+  place-items:center;background:none;border:1px solid var(--linha);
+  border-radius:11px;color:var(--tinta);cursor:pointer;padding:0}
+.voltar svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;
+  stroke-linecap:round;stroke-linejoin:round}
+.voltar:hover{border-color:var(--secundaria)}
+
 /* ---------- sino de avisos ---------- */
 .sino{position:relative;background:none;border:1px solid var(--linha);border-radius:11px;
   width:38px;height:38px;display:grid;place-items:center;cursor:pointer;color:var(--tinta)}
@@ -238,6 +253,39 @@ main{padding:14px 16px calc(var(--barra) + 45px + var(--base));
 .item .txt span{display:block;font-size:.78rem;color:var(--secundaria)}
 .item .quando{font-family:var(--mono);font-size:.62rem;color:var(--secundaria);flex:none}
 .nao-lido{background:color-mix(in srgb,var(--acaso) 6%,var(--carta))}
+
+/* ---------- central de atividades: chips e grupos por dia ---------- */
+/* Em 412px os quatro chips cabem; em 390 e 360 a faixa rola. Quando rola, o
+   `mask-image` esmaece a borda direita para o último chip cortado ler como
+   "tem mais, arraste" em vez de "quebrou" — corte seco é indistinguível de
+   defeito de layout.
+
+   O esmaecimento vem da classe `.rola`, posta por medição depois de desenhar,
+   e não sempre: aplicá-lo de forma fixa apagaria a borda de um chip que cabe
+   inteiro, que é o caso justamente da tela mais comum. */
+.chips{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;
+  margin:0 0 14px;padding-bottom:2px}
+.chips.rola{mask-image:linear-gradient(to right,#000 calc(100% - 22px),transparent);
+  -webkit-mask-image:linear-gradient(to right,#000 calc(100% - 22px),transparent)}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;display:inline-flex;align-items:center;gap:5px;
+  background:var(--fundo);color:var(--secundaria);border:1px solid var(--linha);
+  border-radius:99px;padding:7px 8px;font-size:.74rem;font-family:inherit;
+  cursor:pointer;white-space:nowrap}
+.chip i{font-style:normal;font-family:var(--mono);font-size:.62rem;
+  background:var(--trama);color:var(--secundaria);border-radius:99px;
+  padding:1px 4px;min-width:15px;text-align:center}
+.chip[aria-pressed="true"]{background:color-mix(in srgb,var(--acaso) 14%,var(--carta));
+  border-color:color-mix(in srgb,var(--acaso) 52%,transparent);color:var(--tinta)}
+.chip[aria-pressed="true"] i{background:var(--acaso);color:var(--fundo)}
+.dia-avisos{margin-bottom:16px}
+/* O rótulo do dia gruda no topo ao rolar: numa lista longa, saber em que dia
+   se está sem ter de rolar de volta é metade do motivo de agrupar. */
+.dia-rotulo{position:sticky;top:0;z-index:1;display:flex;align-items:baseline;
+  gap:8px;padding:6px 0 8px;background:var(--carta);
+  font-family:var(--mono);font-size:.64rem;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--secundaria)}
+.dia-rotulo span{font-size:.6rem;opacity:.7}
 nav{position:fixed;left:0;right:0;bottom:0;z-index:30;display:grid;
   /* Uma coluna por aba, derivada da quantidade real: um número fixo aqui
      deixa coluna vazia assim que ABAS muda de tamanho. */
@@ -891,7 +939,10 @@ const S = {
      geração, campeão e conclusão. Fica separado de `aprendizado` de propósito
      — são dois inquilinos com ciclos de vida diferentes, e misturá-los faria
      limpar um apagar o outro. */
-  pesquisaAdaptativa:{}, pesquisaAutomatica:true, abaPesquisa:"geral"
+  pesquisaAdaptativa:{}, pesquisaAutomatica:true, abaPesquisa:"geral",
+  /* Pilha de navegação (de onde se veio) e filtro da central de atividades.
+     Nenhum dos dois é gravado: são estado da visita, não preferência. */
+  pilha:[], filtroAvisos:"todas"
 };
 
 /* Persistência tolerante: se o navegador bloquear, o app segue funcionando
@@ -3801,6 +3852,65 @@ function analisarPendentes(aoTerminar){
   return fila.length;
 }
 
+/* ==================== a central de atividades ====================
+
+   A lista era corrida: quarenta avisos em ordem, sem separação e sem filtro.
+   Funciona com cinco; com quarenta, achar "o que aconteceu hoje" vira rolagem.
+
+   Duas divisões, as do mockup:
+
+   * POR DIA — Hoje, Ontem, e depois a data. O agrupamento é por dia de
+     calendário, e não por "24 horas atrás": às 00h30, o que aconteceu às 23h
+     é ontem, e é assim que a pessoa pensa.
+   * POR ASSUNTO — Todas, Análises, Conferências, Sistema.
+
+   `tipo` continua mandando na COR do item (prêmio verde, erro âmbar) e passa a
+   ter um GRUPO separado para o filtro. São duas perguntas diferentes — "que
+   gravidade tem" e "de que assunto é" — e um campo só para as duas obrigaria a
+   escolher qual delas responder errado.                                    */
+
+const GRUPOS_DE_AVISO = {
+  conferencia: {nome:"Conferências", tipos:["premio", "historico", "conferencia"]},
+  analise:     {nome:"Análises",     tipos:["analise", "pesquisa"]},
+  sistema:     {nome:"Sistema",      tipos:["sistema", "erro", "atualizacao"]},
+};
+
+function grupoDoAviso(tipo){
+  for(const [id, g] of Object.entries(GRUPOS_DE_AVISO))
+    if(g.tipos.includes(tipo)) return id;
+  /* Tipo novo cai em Sistema em vez de sumir da tela. Um aviso que o filtro
+     não conhece tem de aparecer em algum lugar — o contrário é perder aviso
+     por ter esquecido de atualizar uma tabela. */
+  return "sistema";
+}
+
+/* Rótulo do dia. Compara DIAS de calendário, não diferença de horas. */
+function diaDoAviso(iso, agora){
+  const d = new Date(iso);
+  if(!Number.isFinite(d.getTime())) return "sem data";
+  const hoje = agora instanceof Date ? new Date(agora) : new Date();
+  const soDia = x => new Date(x.getFullYear(), x.getMonth(), x.getDate());
+  const dif = Math.round((soDia(hoje) - soDia(d)) / 86400000);
+  if(dif === 0) return "Hoje";
+  if(dif === 1) return "Ontem";
+  /* Data no futuro não vira "em 3 dias": o relógio do aparelho pode estar
+     errado, e a lista não é lugar de discutir isso. Mostra a data e pronto. */
+  return d.toLocaleDateString("pt-BR", {day:"2-digit", month:"long"});
+}
+
+/* Agrupa preservando a ordem de chegada (mais recente primeiro), que é a ordem
+   em que `avisar()` insere. Um Map mantém a ordem de inserção das chaves, então
+   os dias saem na ordem certa sem precisar reordenar depois. */
+function avisosPorDia(lista, agora){
+  const dias = new Map();
+  for(const a of lista){
+    const dia = diaDoAviso(a.quando, agora);
+    if(!dias.has(dia)) dias.set(dia, []);
+    dias.get(dia).push(a);
+  }
+  return [...dias.entries()].map(([dia, itens]) => ({dia, itens}));
+}
+
 function avisosNaoLidos(){ return S.avisos.filter(a => !a.lido).length; }
 
 function pintarContaAvisos(){
@@ -3816,22 +3926,65 @@ function pintarAvisos(){
   const perm = (typeof Notification !== "undefined") ? Notification.permission : "indisponível";
   const cabeca = `<div style="display:flex;justify-content:space-between;align-items:center;
       gap:10px;margin-bottom:12px">
-      <h2 style="margin:0">avisos</h2>
+      <h2 style="margin:0">atividades</h2>
       <div class="botoes">
         ${perm === "granted" ? "" :
           `<button class="acao contorno mini" id="a-permitir">permitir notificação</button>`}
         ${S.avisos.length ? `<button class="acao contorno mini" id="a-limpar">limpar</button>` : ""}
       </div></div>`;
+  /* Os chips levam a contagem. "Análises" sem número obriga a tocar para
+     descobrir que está vazio; com número, a pessoa já sabe antes de tocar. */
+  const conta = {todas: S.avisos.length};
+  for(const id of Object.keys(GRUPOS_DE_AVISO)) conta[id] = 0;
+  S.avisos.forEach(a => conta[grupoDoAviso(a.tipo)]++);
+
+  const filtro = S.filtroAvisos && (S.filtroAvisos === "todas" || GRUPOS_DE_AVISO[S.filtroAvisos])
+    ? S.filtroAvisos : "todas";
+  const chips = [["todas", "Todas"], ...Object.entries(GRUPOS_DE_AVISO).map(([id,g]) => [id, g.nome])];
+  const barra = !S.avisos.length ? "" : `<div class="chips" role="group" aria-label="Filtrar avisos">
+    ${chips.map(([id, nome]) => `<button class="chip" data-filtro="${id}"
+      aria-pressed="${id===filtro}">${esc(nome)}<i>${conta[id]}</i></button>`).join("")}</div>`;
+
+  const visiveis = filtro === "todas"
+    ? S.avisos : S.avisos.filter(a => grupoDoAviso(a.tipo) === filtro);
+
+  const item = a => `<div class="item ${a.tipo==="premio"?"ok":a.tipo==="erro"?"aviso":""} ${a.lido?"":"nao-lido"}">
+      <span class="marca-cor"></span>
+      <span class="txt"><b>${esc(a.titulo)}</b><span>${esc(a.texto)}</span></span>
+      <span class="quando">${esc(new Date(a.quando).toLocaleTimeString("pt-BR",
+        {hour:"2-digit", minute:"2-digit"}))}</span>
+    </div>`;
+
   const lista = !S.avisos.length
     ? `<div class="vazio">Nenhum aviso ainda.<br>Eles aparecem quando novos concursos
         entram no histórico e a conferência automática roda.</div>`
-    : `<div class="lista">${S.avisos.map(a=>`
-        <div class="item ${a.tipo==="premio"?"ok":a.tipo==="erro"?"aviso":""} ${a.lido?"":"nao-lido"}">
-          <span class="marca-cor"></span>
-          <span class="txt"><b>${esc(a.titulo)}</b><span>${esc(a.texto)}</span></span>
-          <span class="quando">${esc(new Date(a.quando).toLocaleDateString("pt-BR"))}</span>
-        </div>`).join("")}</div>`;
-  corpo.innerHTML = cabeca + lista;
+    : !visiveis.length
+      /* Filtro vazio não é o mesmo que lista vazia, e a frase precisa dizer
+         qual dos dois é — senão parece que o app perdeu os avisos. */
+      ? `<div class="vazio">Nenhum aviso em
+          <strong>${esc((GRUPOS_DE_AVISO[filtro]||{}).nome || "")}</strong>.<br>
+          Os outros ${inf(S.avisos.length)} continuam em <strong>Todas</strong>.</div>`
+      : avisosPorDia(visiveis).map(g => `<div class="dia-avisos">
+          <div class="dia-rotulo">${esc(g.dia)}<span>${inf(g.itens.length)}</span></div>
+          <div class="lista">${g.itens.map(item).join("")}</div>
+        </div>`).join("");
+
+  corpo.innerHTML = cabeca + barra + lista;
+
+  /* Mede depois de desenhar: só há rolagem se o conteúdo não coube de fato, e
+     isso depende da largura do aparelho e do tamanho de fonte do sistema —
+     nenhum dos dois é conhecido na hora de escrever o CSS. */
+  const faixa = corpo.querySelector(".chips");
+  if(faixa) faixa.classList.toggle("rola", faixa.scrollWidth > faixa.clientWidth + 1);
+
+  document.querySelectorAll("[data-filtro]").forEach(b => b.onclick = () => {
+    S.filtroAvisos = b.dataset.filtro;
+    /* Não grava: o filtro é da visita. Voltar dias depois e encontrar a lista
+       filtrada por um assunto que já se esqueceu de ter escolhido esconde
+       aviso novo sem dizer que está escondendo. */
+    pintarAvisos();
+  });
+
   const lim = $("#a-limpar");
   if(lim) lim.onclick = () => {
     S.avisos = []; Guardar.gravar("avisos", S.avisos); pintarAvisos(); pintarContaAvisos();
@@ -6055,7 +6208,7 @@ function acoesNovas(){
     S.jogos.push(jogo);
     Guardar.gravar("jogos", S.jogos);
     conferenciaAutomatica();
-    S.tela = "jogos"; pintar();
+    irParaTela("jogos");
   };
 
   /* --- resultados --- */
@@ -6393,7 +6546,11 @@ function acoesNovas(){
         `com o concurso ${antes.concurso}.`;
     /* A chave leva o instante: conferir de novo é um ato novo da pessoa, e
        deve aparecer na lista. As chaves de prêmio é que são idempotentes. */
-    avisar("sistema", "Conferência concluída", detalhe, `conf:${Date.now()}`);
+    /* Tipo "conferencia", e não "sistema": o filtro da central separa por
+       assunto, e um item chamado "Conferência concluída" que só aparece em
+       Sistema é o tipo de detalhe que faz a pessoa achar que o filtro não
+       funciona. */
+    avisar("conferencia", "Conferência concluída", detalhe, `conf:${Date.now()}`);
     S.avisoJogos = {modalidade:S.modalidade, texto: r.novas
       ? `${inf(r.novas)} ${r.novas === 1 ? "conferência nova" : "conferências novas"}. ${detalhe}`
       : `Nada de novo para conferir. ${detalhe}`};
@@ -6419,7 +6576,7 @@ function acoes(){
 
   /* --- motor de pesquisa --- */
   document.querySelectorAll("[data-atalho]").forEach(b => b.onclick = () => {
-    S.tela = b.dataset.atalho; window.scrollTo(0,0); pintar();
+    irParaTela(b.dataset.atalho);
   });
 
   document.querySelectorAll("[data-aba-pq]").forEach(b => b.onclick = () => {
@@ -6473,7 +6630,7 @@ function acoes(){
           lote: `S${Date.now().toString(36)}`, conferencias: []};
         S.jogos = S.jogos.concat([jogo]);
         Guardar.gravar("jogos", S.jogos);
-        S.tela = "jogos"; pintar();
+        irParaTela("jogos");
       };
       sgo.disabled = false; sgo.textContent = "Sugerir outro jogo";
     }, 20);
@@ -6524,7 +6681,7 @@ function acoes(){
         $("#g-salvar").onclick = () => {
           S.jogos = S.jogos.concat(S.ultimoLote);
           Guardar.gravar("jogos", S.jogos);
-          S.tela = "jogos"; pintar();
+          irParaTela("jogos");
         };
       }catch(e){
         saida.innerHTML = `<div class="nota atencao">${esc(e.message)}</div>`;
@@ -6772,6 +6929,77 @@ const SECOES = [
 ];
 
 
+/* ==================== voltar ====================
+
+   O app não tinha nenhum tratamento de "voltar". No APK isso significa que o
+   botão do Android FECHAVA o app: quem entrasse em Meus jogos por um atalho da
+   tela inicial e apertasse voltar era jogado para fora, perdendo o lugar.
+
+   A pilha guarda de onde se veio, e só quando "de onde" faz sentido:
+
+   * Atalho ou salto interno (`irParaTela`) EMPILHA — foi um mergulho, e há para
+     onde voltar.
+   * Barra inferior e abas do segmento LIMPAM — são movimentos laterais entre
+     seções irmãs, e voltar de um deles não quer dizer nada.
+
+   Por isso a seta aparece e some: uma seta sempre visível que às vezes não tem
+   destino é pior do que não ter seta. Aqui, se ela está na tela, ela leva a
+   algum lugar de onde a pessoa de fato veio.                              */
+
+function irParaTela(id, opcoes){
+  const empilhar = !(opcoes && opcoes.lateral);
+  if(empilhar && id !== S.tela){
+    S.pilha = (S.pilha || []).concat([S.tela]);
+    /* Teto para o caso de alguém circular entre duas telas por muito tempo:
+       a pilha não pode virar um histórico infinito guardado em memória. */
+    if(S.pilha.length > 20) S.pilha = S.pilha.slice(-20);
+  } else if(!empilhar){
+    S.pilha = [];
+  }
+  S.tela = id;
+  window.scrollTo(0, 0);
+  pintar();
+}
+
+function podeVoltar(){ return !!(S.pilha && S.pilha.length); }
+
+function voltar(){
+  if(!podeVoltar()) return false;
+  S.tela = S.pilha.pop();
+  window.scrollTo(0, 0);
+  pintar();
+  return true;
+}
+
+/* O botão de voltar do Android, que até aqui não era tratado — e portanto
+   fechava o app de qualquer tela.
+
+   A ordem importa e é a que o sistema ensina em todo app Android:
+
+   1. folha de atividades aberta -> fecha a folha
+   2. há para onde voltar        -> volta uma tela
+   3. nada disso                 -> aí sim sai do app
+
+   Sair na primeira tela é comportamento correto e deliberado: prender a pessoa
+   dentro do app é o defeito oposto, e mais irritante. */
+function ligarBotaoVoltarDoAndroid(){
+  let App = null;
+  try{
+    const c = (typeof Capacitor !== "undefined") ? Capacitor : null;
+    App = (c && c.isNativePlatform && c.isNativePlatform() && c.Plugins) ? c.Plugins.App : null;
+  }catch(e){ return false; }
+  if(!App || typeof App.addListener !== "function") return false;
+  try{
+    App.addListener("backButton", () => {
+      const folha = $("#folha-avisos");
+      if(folha && folha.dataset.aberta === "1"){ folha.dataset.aberta = "0"; return; }
+      if(voltar()) return;
+      if(typeof App.exitApp === "function") App.exitApp();
+    });
+    return true;
+  }catch(e){ return false; }
+}
+
 const secaoAtual = () => SECOES.find(s => s.telas.some(t => t.id === S.tela)) || SECOES[0];
 const telaAtual = () => secaoAtual().telas.find(t => t.id === S.tela) || secaoAtual().telas[0];
 
@@ -6783,9 +7011,9 @@ function navegacao(){
   document.querySelectorAll("[data-secao]").forEach(b => b.onclick = () => {
     const s = SECOES.find(x => x.id === b.dataset.secao);
     /* Entrar numa seção leva à primeira tela dela, salvo quando já se está
-       nela — aí o clique é um "voltar ao topo", não uma troca de tela. */
-    if(s.id !== sec.id) S.tela = s.telas[0].id;
-    window.scrollTo(0,0); pintar();
+       nela — aí o clique é um "voltar ao topo", não uma troca de tela.
+       Em qualquer dos casos é movimento LATERAL: zera a pilha. */
+    irParaTela(s.id !== sec.id ? s.telas[0].id : S.tela, {lateral:true});
   });
 }
 
@@ -6814,15 +7042,35 @@ function pintar(){
      montar jogo, ao olhar os jogos e ao conferir. Em Estatísticas ou Entender
      ele seria enfeite roubando o topo da tela. */
   const comProximo = ["gerar","montar","jogos","teimosinha","conferir","resultados"];
-  $("#tela").innerHTML = segmento +
-    `<div class="titulo"><h1>${esc(tela.titulo)}</h1><p>${esc(tela.sub)}</p></div>` +
+  /* Com seta, o título vai para o centro — é o cabeçalho de subtela do mockup.
+     Sem seta, ele fica à esquerda como sempre esteve. A seta ganha rótulo
+     dizendo PARA ONDE volta: "voltar" sozinho obriga a lembrar de onde se veio,
+     e quem chega por notificação não veio de lugar nenhum que se lembre. */
+  const anterior = podeVoltar() ? S.pilha[S.pilha.length - 1] : null;
+  const nomeAnterior = anterior
+    ? ((SECOES.flatMap(s => s.telas).find(t => t.id === anterior) || {}).titulo || "")
+    : "";
+  const cabecalho = podeVoltar()
+    ? `<div class="titulo com-volta">
+         <button class="voltar" id="voltar" aria-label="Voltar para ${esc(nomeAnterior)}">
+           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+         </button>
+         <h1>${esc(tela.titulo)}</h1>
+         <p>${esc(tela.sub)}</p>
+       </div>`
+    : `<div class="titulo"><h1>${esc(tela.titulo)}</h1><p>${esc(tela.sub)}</p></div>`;
+
+  $("#tela").innerHTML = segmento + cabecalho +
     (comProximo.includes(tela.id) ? cartaoProximo(S.modalidade) : "") +
     T[tela.id]() +
     `<div class="aviso-fixo">Nenhum método aumenta a chance de acertar.<br>
      Loteria é gasto de entretenimento, não investimento.</div>`;
+  /* Abas do segmento: telas irmãs da mesma seção. Lateral, como a barra. */
   document.querySelectorAll("[data-tela]").forEach(b => b.onclick = () => {
-    S.tela = b.dataset.tela; window.scrollTo(0,0); pintar();
+    irParaTela(b.dataset.tela, {lateral:true});
   });
+  const seta = $("#voltar");
+  if(seta) seta.onclick = () => voltar();
   navegacao();
   trilhaModalidade();
   pintarContaAvisos();
@@ -6856,10 +7104,15 @@ async function carregarCalibracao(){
   S.ultimaBusca = Guardar.ler("ultimaBusca", {});
   S.modalidade = Guardar.ler("modalidade", S.modalidade);
   document.documentElement.dataset.tema = S.tema;
+  /* A pilha de navegação NÃO é lida do armazenamento, de propósito: abrir o app
+     e encontrar uma seta apontando para uma tela da semana passada não é
+     memória útil, é confusão. Cada abertura começa na raiz. */
+  S.pilha = [];
   /* Conferir na abertura: quem digitou um resultado e fechou o app antes de
      conferir os jogos encontra tudo conferido ao voltar. */
   conferenciaAutomatica();
   pintar();
+  ligarBotaoVoltarDoAndroid();
   /* Análises pendentes na abertura. Sem isto, quem já tinha histórico ficaria
      esperando o próximo concurso para ver a primeira análise — e quem fechou o
      app no meio de uma análise nunca a veria terminar. Roda depois do pintar()
@@ -6874,8 +7127,12 @@ async function carregarCalibracao(){
      que não é redesenhado a cada troca de tela. */
   const folha = $("#folha-avisos");
   $("#btn-avisos").onclick = () => {
-    pintarAvisos();
+    /* Abrir ANTES de desenhar. A folha fica em display:none enquanto fechada, e
+       elemento escondido mede zero — a faixa de chips decide se precisa de
+       rolagem comparando larguras, e com tudo zerado ela decidia sempre que
+       cabia. Ordem invertida, medida certa. */
     folha.dataset.aberta = "1";
+    pintarAvisos();
   };
   folha.addEventListener("click", e => {
     if(!e.target.closest("[data-fechar]")) return;
