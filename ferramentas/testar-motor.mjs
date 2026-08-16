@@ -114,7 +114,11 @@ const contexto = {
     addEventListener() {},
   },
   navigator: { language: "pt-BR" },
-  window: { matchMedia: () => ({ matches: false, addEventListener() {} }) },
+  /* `scrollTo` entrou quando a navegação passou a rolar para o topo ao trocar
+     de tela. Sem ele o arnês estourava — não por defeito do app, mas por o
+     stub não ter uma função que todo navegador tem. */
+  window: { matchMedia: () => ({ matches: false, addEventListener() {} }),
+            scrollTo() {}, addEventListener() {} },
   fetch: () => Promise.reject(new Error("sem rede — proposital")),
   setTimeout, clearTimeout, requestAnimationFrame: (f) => setTimeout(f, 0),
   Math: mathSemeado(), Date, JSON, Number, String, Array, Object, Map, Set, Error, isNaN,
@@ -166,6 +170,7 @@ const EXPOSTOS = [
   "evoluirPendentes", "PRIMITIVOS", "TRANSFORMACOES", "caudaNormal", "MINIMO_PESQUISA",
   "tracoAuc",
   "POPULACAO_PESQUISA",
+  "GRUPOS_DE_AVISO",
 ];
 const epilogo = `\n;globalThis.__motor = {${EXPOSTOS.map((n) => `${n}: typeof ${n} !== "undefined" ? ${n} : undefined`).join(", ")}};\n`;
 vm.runInContext(fonte + epilogo, contexto, { filename: "index.html:script" });
@@ -3265,6 +3270,131 @@ secao("27. Concurso-alvo e conferência sob demanda");
 
   S.jogos = guardaJ; S.resultados = guardaR;
   S.modalidade = guardaM; S.teimosinhas = guardaT; S.avisos = guardaA;
+}
+
+/* ==================================================================
+   28. Central de atividades: agrupamento por dia e filtro por assunto
+   ================================================================== */
+secao("28. Central de atividades");
+
+{
+  const S = motor.S;
+  const guarda = S.avisos;
+
+  /* --- grupos --- */
+  checar("prêmio e concurso novo caem em Conferências",
+    contexto.grupoDoAviso("premio") === "conferencia" &&
+    contexto.grupoDoAviso("historico") === "conferencia" &&
+    contexto.grupoDoAviso("conferencia") === "conferencia");
+  checar("análise e pesquisa caem em Análises",
+    contexto.grupoDoAviso("analise") === "analise" &&
+    contexto.grupoDoAviso("pesquisa") === "analise");
+  checar("erro e atualização caem em Sistema",
+    contexto.grupoDoAviso("erro") === "sistema" &&
+    contexto.grupoDoAviso("atualizacao") === "sistema");
+  /* Um tipo novo tem de aparecer em ALGUM lugar. Sumir da central por não
+     constar numa tabela é perder aviso em silêncio — o pior desfecho. */
+  checar("tipo desconhecido não some: cai em Sistema",
+    contexto.grupoDoAviso("tipo-que-ninguem-criou-ainda") === "sistema");
+  checar("todo tipo realmente usado tem grupo",
+    ["premio","historico","erro","pesquisa","analise","sistema","atualizacao","conferencia"]
+      .every(t => motor.GRUPOS_DE_AVISO[contexto.grupoDoAviso(t)]));
+
+  /* --- dias ---
+     A comparação é por DIA DE CALENDÁRIO, e não por "24 horas atrás". Às 00h30,
+     o que aconteceu às 23h é ontem — e uma conta por diferença de horas diria
+     "hoje", que é o contrário do que a pessoa pensa. */
+  const meiaNoiteEMeia = new Date(2026, 7, 16, 0, 30);
+  const onzeDaNoiteOntem = new Date(2026, 7, 15, 23, 0);
+  checar("23h de ontem é Ontem, mesmo faltando 90 minutos",
+    contexto.diaDoAviso(onzeDaNoiteOntem.toISOString(), meiaNoiteEMeia) === "Ontem",
+    contexto.diaDoAviso(onzeDaNoiteOntem.toISOString(), meiaNoiteEMeia));
+  checar("e 00h10 de hoje é Hoje, com 20 minutos de diferença",
+    contexto.diaDoAviso(new Date(2026,7,16,0,10).toISOString(), meiaNoiteEMeia) === "Hoje");
+  checar("mais de dois dias vira data",
+    /agosto/.test(contexto.diaDoAviso(new Date(2026,7,12,10,0).toISOString(), meiaNoiteEMeia)),
+    contexto.diaDoAviso(new Date(2026,7,12,10,0).toISOString(), meiaNoiteEMeia));
+  checar("data inválida não quebra o agrupamento",
+    contexto.diaDoAviso("nada disso", meiaNoiteEMeia) === "sem data");
+
+  /* --- agrupamento --- */
+  const agora = new Date(2026, 7, 16, 12, 0);
+  const av = (tipo, dia, hora) => ({id:`${tipo}${dia}${hora}`, tipo, titulo:"t", texto:"x",
+    quando:new Date(2026, 7, dia, hora, 0).toISOString(), lido:false});
+  const lista = [av("premio",16,10), av("analise",16,9), av("erro",15,20), av("sistema",12,8)];
+  const grupos = contexto.avisosPorDia(lista, agora);
+  checar("os dias saem na ordem em que os avisos chegaram",
+    grupos.map(g => g.dia).join(" | ") === "Hoje | Ontem | 12 de agosto",
+    grupos.map(g => g.dia).join(" | "));
+  checar("e cada dia leva os seus itens",
+    grupos[0].itens.length === 2 && grupos[1].itens.length === 1 &&
+    grupos[2].itens.length === 1);
+  checar("nenhum aviso se perde no agrupamento",
+    grupos.reduce((n,g) => n + g.itens.length, 0) === lista.length);
+
+  /* Os quatro filtros do mockup existem e cobrem todos os tipos. A RENDERIZAÇÃO
+     da folha é conferida na bateria de interface, num navegador de verdade: o
+     arnês daqui tem um DOM mínimo, e forçá-lo a fingir uma folha inteira
+     testaria o fingimento, não o app. */
+  checar("os quatro filtros do mockup existem",
+    ["Conferências","Análises","Sistema"].every(n =>
+      Object.values(motor.GRUPOS_DE_AVISO).some(g => g.nome === n)));
+
+  S.avisos = guarda; S.filtroAvisos = "todas";
+}
+
+/* ==================================================================
+   29. Voltar: pilha de navegação
+
+   O app não tinha nenhum tratamento de voltar — no APK, o botão do Android
+   fechava o app de qualquer tela. A pilha existe para isso, e a regra que
+   importa é QUANDO empilhar: mergulho sim, movimento lateral não.
+   ================================================================== */
+secao("29. Voltar");
+
+{
+  const S = motor.S;
+  const guardaTela = S.tela, guardaPilha = S.pilha;
+
+  S.pilha = []; S.tela = "inicio";
+  checar("na raiz não há para onde voltar", contexto.podeVoltar() === false);
+  checar("e voltar não faz nada nem quebra", contexto.voltar() === false);
+
+  contexto.irParaTela("jogos");
+  checar("um mergulho empilha a tela de origem",
+    contexto.podeVoltar() && S.tela === "jogos" && S.pilha.join() === "inicio",
+    `pilha=[${S.pilha}]`);
+
+  contexto.irParaTela("resultados");
+  checar("mergulhos encadeados empilham em ordem",
+    S.pilha.join(">") === "inicio>jogos", S.pilha.join(">"));
+
+  contexto.voltar();
+  checar("voltar desempilha um por vez",
+    S.tela === "jogos" && S.pilha.join() === "inicio", `tela=${S.tela} pilha=[${S.pilha}]`);
+  contexto.voltar();
+  checar("até a raiz, e aí a seta some",
+    S.tela === "inicio" && !contexto.podeVoltar());
+
+  /* Movimento lateral não é mergulho: voltar de uma aba irmã para outra não
+     quer dizer nada, e uma seta que aparece ali apontaria para lugar nenhum. */
+  contexto.irParaTela("jogos");
+  contexto.irParaTela("pesquisa", {lateral:true});
+  checar("movimento lateral limpa a pilha",
+    !contexto.podeVoltar(), `pilha=[${S.pilha}]`);
+
+  /* Ir para a tela em que já se está não pode empilhar: repetir o toque na aba
+     atual encheria a pilha de cópias da mesma tela. */
+  S.pilha = []; S.tela = "jogos";
+  contexto.irParaTela("jogos");
+  checar("ir para a tela atual não empilha", S.pilha.length === 0, `pilha=[${S.pilha}]`);
+
+  /* Teto: circular entre duas telas não pode virar histórico infinito. */
+  S.pilha = []; S.tela = "inicio";
+  for(let i = 0; i < 40; i++) contexto.irParaTela(i % 2 ? "jogos" : "resultados");
+  checar("a pilha tem teto", S.pilha.length <= 20, `${S.pilha.length} entradas`);
+
+  S.tela = guardaTela; S.pilha = guardaPilha || [];
 }
 
 /* ---------- saída ---------- */

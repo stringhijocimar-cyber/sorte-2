@@ -104,6 +104,58 @@ do jogo produziria "acertos" que ninguém poderia ter apostado.
 O sino no cabeçalho é a via garantida, porque não depende de permissão. A
 notificação do sistema é adicional e só depois de autorizada.
 
+#### A central de atividades
+
+A lista era corrida: quarenta avisos em ordem, sem separação e sem filtro.
+Funciona com cinco; com quarenta, achar "o que aconteceu hoje" vira rolagem.
+
+Duas divisões, as do mockup:
+
+* **Por dia** — Hoje, Ontem, e depois a data. O agrupamento é por **dia de
+  calendário**, e não por "24 horas atrás": às 00h30, o que aconteceu às 23h é
+  ontem, e é assim que a pessoa pensa. O rótulo do dia gruda no topo ao rolar.
+* **Por assunto** — Todas · Conferências · Análises · Sistema, cada chip com a
+  sua contagem. Um chip sem número obrigaria a tocar para descobrir que está
+  vazio.
+
+`tipo` continua mandando na **cor** do item (prêmio verde, erro âmbar) e ganhou
+um **grupo** separado para o filtro. São duas perguntas diferentes — "que
+gravidade tem" e "de que assunto é" — e um campo só obrigaria a responder uma
+delas errado. Um tipo que ninguém previu cai em Sistema em vez de sumir da tela:
+perder aviso por esquecer de atualizar uma tabela é o pior desfecho possível.
+
+O filtro **não é gravado**. Voltar dias depois e encontrar a lista filtrada por
+um assunto que já se esqueceu de ter escolhido esconde aviso novo sem dizer que
+está escondendo.
+
+### Voltar
+
+O app **não tinha nenhum tratamento de voltar**. No APK isso significa que o
+botão do Android fechava o app: quem entrasse em Meus jogos por um atalho da
+tela inicial e apertasse voltar era jogado para fora.
+
+A pilha guarda de onde se veio, e só quando "de onde" faz sentido:
+
+* Atalho ou salto interno **empilha** — foi um mergulho, e há para onde voltar.
+* Barra inferior e abas do segmento **limpam** — são movimentos laterais entre
+  telas irmãs, e voltar de um deles não quer dizer nada.
+
+Por isso a seta aparece e some. Uma seta sempre visível que às vezes não tem
+destino é pior que não ter seta; aqui, se ela está na tela, leva a um lugar de
+onde a pessoa de fato veio — e o rótulo diz qual, porque quem chega por
+notificação não veio de lugar nenhum que se lembre.
+
+Com seta, o título vai para o centro (o cabeçalho de subtela do mockup). A grade
+tem uma terceira coluna vazia do tamanho da seta: sem ela o título centraria no
+espaço que sobra e ficaria visivelmente fora do meio.
+
+O botão físico do Android segue a ordem que o sistema ensina: fecha a folha de
+atividades, senão volta uma tela, senão sai do app. **Sair na primeira tela é
+deliberado** — prender a pessoa dentro do app é o defeito oposto, e pior.
+
+A pilha não é lida do armazenamento: abrir o app e encontrar uma seta apontando
+para uma tela da semana passada não é memória útil, é confusão.
+
 #### A tela Conferir mostrava o contrário do que o app fazia
 
 Tudo acima já funcionava — e a tela Conferir abria com um formulário vazio
@@ -584,14 +636,14 @@ identificador.
 ### Testes
 
 ```bash
-node ferramentas/testar-motor.mjs             # lógica — 592 testes
+node ferramentas/testar-motor.mjs             # lógica — 620 testes
 python3 ferramentas/conferir-icones.py        # ícones — 34 conferências
 python3 ferramentas/conferir-xml-android.py   # XML do projeto nativo
 
 # A interface precisa de um servidor HTTP: em file:// o service worker não
 # registra, e o teste do modo avião passaria medindo outra coisa.
 python3 -m http.server 8123 &
-node --experimental-websocket ferramentas/testar-interface.mjs   # interface — 58 testes
+node --experimental-websocket ferramentas/testar-interface.mjs   # interface — 71 testes
 ```
 
 O executável do navegador é configurável, porque nem todo ambiente tem
