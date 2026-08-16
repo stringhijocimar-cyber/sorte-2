@@ -89,8 +89,38 @@ header{position:sticky;top:0;z-index:20;
   -webkit-backdrop-filter:saturate(180%) blur(14px);backdrop-filter:saturate(180%) blur(14px);
   padding:calc(var(--topo) + 12px) 16px 10px;border-bottom:1px solid var(--linha)}
 @supports not (backdrop-filter:blur(2px)){header{background:var(--fundo)}}
-.cabeca{display:flex;align-items:center;justify-content:space-between;gap:12px;
+/* Três colunas de larguras iguais nas pontas: sem isso o título centraria no
+   espaço que sobra entre o ☰ e o sino, e como os dois têm o mesmo tamanho a
+   conta só fecha por acidente. Com a grade, fecha por construção. */
+.cabeca{display:grid;grid-template-columns:38px 1fr 38px;align-items:center;gap:12px;
   max-width:var(--coluna);margin:0 auto}
+.marca-titulo{text-align:center;line-height:1.15;min-width:0}
+.marca-titulo b{display:block;font-size:1.35rem;font-weight:700;color:var(--acaso);
+  letter-spacing:-.02em}
+.marca-titulo span{display:block;font-size:.7rem;color:var(--secundaria);margin-top:1px}
+.menu{background:none;border:0;padding:0;width:38px;height:38px;display:grid;
+  place-items:center;cursor:pointer;color:var(--tinta);justify-self:start}
+.menu svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2;
+  stroke-linecap:round}
+
+/* A gaveta entra pela esquerda, e não de baixo como a folha de atividades:
+   são dois objetos diferentes e vindos de lugares diferentes da tela, o que
+   por si só já diz qual é qual antes de ler o conteúdo. */
+.gaveta .corpo{top:0;bottom:0;left:0;right:auto;width:min(84vw,320px);
+  max-height:none;border-radius:0 var(--r) var(--r) 0;
+  transform:translateX(-100%);transition:transform .22s ease}
+.gaveta[data-aberta="1"] .corpo{transform:translateX(0)}
+.gaveta-topo{display:flex;align-items:center;justify-content:space-between;
+  gap:10px;margin-bottom:18px}
+.gaveta-mods{display:grid;gap:6px}
+.gaveta-mods button{text-align:left;background:var(--fundo);color:var(--secundaria);
+  border:1px solid var(--linha);border-radius:11px;padding:11px 12px;
+  font-family:inherit;font-size:.88rem;cursor:pointer}
+.gaveta-mods button[aria-pressed="true"]{
+  background:color-mix(in srgb,var(--acaso) 14%,var(--carta));
+  border-color:color-mix(in srgb,var(--acaso) 52%,transparent);color:var(--tinta);
+  font-weight:600}
+@media (prefers-reduced-motion:reduce){ .gaveta .corpo{transition:none} }
 .marca{display:flex;align-items:center;gap:9px;font-family:var(--mono);font-weight:600;
   font-size:1rem;letter-spacing:-.03em}
 .marca span{color:var(--acaso)}
@@ -278,6 +308,44 @@ main{padding:14px 16px calc(var(--barra) + 45px + var(--base));
 .chip[aria-pressed="true"]{background:color-mix(in srgb,var(--acaso) 14%,var(--carta));
   border-color:color-mix(in srgb,var(--acaso) 52%,transparent);color:var(--tinta)}
 .chip[aria-pressed="true"] i{background:var(--acaso);color:var(--fundo)}
+/* Chips de modalidade na tela Resultados, como no mockup. Reusam `.chip` — é o
+   mesmo objeto com a mesma função, e dar-lhe duas aparências pelo lugar em que
+   aparece seria inventar dialeto. */
+.chips-mod{margin-bottom:10px}
+.acoes-topo{display:flex;justify-content:flex-end;margin-bottom:10px}
+
+/* Cartão de concurso: número e data em cima, bolas no meio, estado embaixo.
+   A faixa de cor na borda esquerda é a mesma gramática da ficha de jogo. */
+.concursos{display:grid;gap:10px}
+.concurso{position:relative;background:var(--carta);border:1px solid var(--linha);
+  border-radius:var(--r);padding:13px 34px 12px 15px;box-shadow:var(--sombra);
+  overflow:hidden;text-align:left;width:100%;font-family:inherit;color:inherit;
+  cursor:default}
+.concurso::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3.5px;
+  background:var(--linha)}
+.concurso.ganhou::before{background:var(--ganhou)}
+.concurso.acumulou::before{background:var(--acumulou)}
+.concurso.ganhou{border-color:color-mix(in srgb,var(--ganhou) 42%,var(--linha));
+  background:color-mix(in srgb,var(--ganhou) 7%,var(--carta))}
+.concurso.acumulou{border-color:color-mix(in srgb,var(--acumulou) 45%,var(--linha));
+  background:color-mix(in srgb,var(--acumulou) 8%,var(--carta))}
+.concurso-topo{display:flex;align-items:baseline;justify-content:space-between;
+  gap:10px;margin-bottom:9px}
+.concurso-topo b{font-size:.98rem}
+.concurso-topo time{font-family:var(--mono);font-size:.7rem;color:var(--secundaria);
+  flex:none}
+.concurso-detalhe{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:9px}
+.concurso .chevron{position:absolute;right:10px;top:50%;transform:translateY(-50%);
+  color:var(--secundaria);display:grid;place-items:center}
+.concurso .chevron svg{width:17px;height:17px;stroke:currentColor;fill:none;
+  stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* Os ajustes de busca saíram do topo e ficam recolhidos no fim da tela. */
+.ajustes{margin-top:16px}
+.ajustes summary{cursor:pointer;padding:11px 13px;border:1px solid var(--linha);
+  border-radius:12px;background:var(--carta);font-size:.86rem;color:var(--secundaria)}
+.ajustes[open] summary{margin-bottom:10px;color:var(--tinta)}
+
 .dia-avisos{margin-bottom:16px}
 /* O rótulo do dia gruda no topo ao rolar: numa lista longa, saber em que dia
    se está sem ter de rolar de volta é metade do motivo de agrupar. */
@@ -419,6 +487,11 @@ button{cursor:pointer}
   padding:13px 10px;text-align:left;display:flex;flex-direction:column;justify-content:space-between
 }
 .quick-icon{width:40px;height:40px;border-radius:13px;display:grid;place-items:center;font-size:19px}
+/* Os atalhos passaram de glifo de texto para SVG: o glifo dependia da fonte do
+   sistema e saía diferente em cada aparelho. O traço herda a cor que o
+   nth-child já dá ao cartao. */
+.quick-icon svg{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width:1.9;
+  stroke-linecap:round;stroke-linejoin:round}
 .quick:nth-child(1){border-color:rgba(36,217,183,.28)}.quick:nth-child(1) .quick-icon{background:rgba(36,217,183,.13);color:var(--teal)}
 .quick:nth-child(2){border-color:rgba(78,114,255,.28)}.quick:nth-child(2) .quick-icon{background:rgba(78,114,255,.14);color:#8aa0ff}
 .quick:nth-child(3){border-color:rgba(147,79,255,.28)}.quick:nth-child(3) .quick-icon{background:rgba(147,79,255,.13);color:#c398ff}
@@ -806,8 +879,32 @@ td{padding:6px 7px;border-bottom:1px solid var(--trama)}
 <body>
 <header>
   <div class="cabeca">
-    <div class="marca">
-      <svg viewBox="0 0 64 64" aria-hidden="true">
+    <button class="menu" id="btn-menu" aria-label="Menu" aria-expanded="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+    </button>
+    <div class="marca-titulo">
+      <b>Sorte 2</b><span>Laboratório Estatístico</span>
+    </div>
+    <button class="sino" id="btn-avisos" aria-label="Avisos">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M18 8a6 6 0 1 0-12 0c0 7-3 8-3 8h18s-3-1-3-8"/>
+        <path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+      <b id="conta-avisos" hidden></b>
+    </button>
+  </div>
+</header>
+
+<!-- Gaveta do ☰. O mockup traz o botão e nunca mostra o conteúdo; aqui ele
+     recolhe o que saiu do cabeçalho — modalidade e tema — para a barra de cima
+     ficar com três elementos, como no desenho. A modalidade continua global:
+     mudou aqui, muda em todas as telas, que é como o app sempre funcionou. -->
+<div class="folha gaveta" id="gaveta" data-aberta="0" role="dialog" aria-modal="true"
+     aria-label="Menu">
+  <div class="fundo" data-fechar="1"></div>
+  <div class="corpo">
+    <div class="gaveta-topo">
+      <div class="marca">
+        <svg viewBox="0 0 64 64" aria-hidden="true">
         <defs>
           <linearGradient id="lf1" x1="0" y1="0" x2="1" y2="1">
             <stop offset="0" stop-color="#1FA090"/><stop offset="1" stop-color="#0E6E62"/></linearGradient>
@@ -828,20 +925,16 @@ td{padding:6px 7px;border-bottom:1px solid var(--trama)}
           <circle r="2.6" fill="#FBF8F1" opacity=".92"/>
         </g>
       </svg>
-      <span style="color:var(--tinta)">loto</span><span>lab</span>
+        <span style="color:var(--tinta)">loto</span><span>lab</span>
+      </div>
+      <button class="acao contorno mini" data-fechar="1">fechar</button>
     </div>
-    <div class="botoes" style="gap:8px">
-      <button class="sino" id="btn-avisos" aria-label="Avisos">
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M18 8a6 6 0 1 0-12 0c0 7-3 8-3 8h18s-3-1-3-8"/>
-          <path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
-        <b id="conta-avisos" hidden></b>
-      </button>
-      <button class="acao contorno mini" id="btn-tema" aria-label="Alternar tema">tema</button>
-    </div>
+    <div class="titulo-painel" style="margin-bottom:8px">modalidade</div>
+    <div class="gaveta-mods" id="gaveta-mods"></div>
+    <div class="titulo-painel" style="margin:16px 0 8px">aparência</div>
+    <button class="acao contorno" id="btn-tema" style="width:100%">alternar tema</button>
   </div>
-  <div class="trilha" id="trilha-mod" role="group" aria-label="Modalidade"></div>
-</header>
+</div>
 
 <main id="tela"></main>
 
@@ -2181,40 +2274,49 @@ T.inicio = () => {
   </section>
 
   <section class="quick-grid">
-    <button class="quick" data-atalho="pesquisa"><div class="quick-icon">▥</div>
+    <button class="quick" data-atalho="pesquisa">
+      <div class="quick-icon"><svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg></div>
       <div><b>Analisar</b><small>IA Adaptativa</small></div></button>
-    <button class="quick" data-atalho="bancada"><div class="quick-icon">⚗</div>
-      <div><b>Experimentos</b><small>Protocolos estatísticos</small></div></button>
-    <button class="quick" data-atalho="resultados"><div class="quick-icon">▣</div>
+    <button class="quick" data-atalho="jogos">
+      <div class="quick-icon"><svg viewBox="0 0 24 24" aria-hidden="true">
+        <rect x="3.5" y="4" width="17" height="17" rx="2.5"/><path d="M8 9.5h8M8 14h5"/></svg></div>
+      <div><b>Meus Jogos</b><small>Conferir e gerenciar</small></div></button>
+    <button class="quick" data-atalho="resultados">
+      <div class="quick-icon"><svg viewBox="0 0 24 24" aria-hidden="true">
+        <rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9.5h18M8 3v3M16 3v3"/></svg></div>
       <div><b>Resultados</b><small>Ver concursos</small></div></button>
   </section>
 
+  ${/* Os quatro números do mockup. Os dois últimos falam do que é DA PESSOA —
+        jogos salvos e prêmios de hoje — e não do motor: quem abre o app quer
+        primeiro saber de si. As medidas do motor têm a tela de Análise
+        inteira para elas. */""}
   <section class="panel">
     <div class="panel-title"><h3>Resumo rápido</h3>
-      <span>${mem && mem.geracao ? "Atualizado agora" : "Aguardando análise"}</span></div>
+      <span>${mem && mem.geracao ? "Atualizado agora há pouco" : "Aguardando análise"}</span></div>
     <div class="kpi-grid">
       <div class="mini-card"><strong>${inf(Object.keys(MODALIDADES).length)}</strong>
         <small>Modalidades ativas</small></div>
       <div class="mini-card"><strong>${inf(concursos)}</strong>
         <small>Concursos analisados</small></div>
-      <div class="mini-card"><strong class="teal">${inf(mem ? (mem.hipotesesTestadas||0) : 0)}</strong>
-        <small>Hipóteses testadas</small></div>
-      <div class="mini-card"><strong class="red">${conc && conc.sobreviveu ? 1 : 0}</strong>
-        <small>Evidência robusta</small></div>
+      <div class="mini-card"><strong class="teal">${inf(S.jogos.length)}</strong>
+        <small>Jogos salvos</small></div>
+      <div class="mini-card"><strong class="${premiosDeHoje() ? "teal" : ""}">${inf(premiosDeHoje())}</strong>
+        <small>Prêmios hoje</small></div>
     </div>
-  </section>
-
-  <section class="panel">
-    <div class="panel-title"><h3>Seus jogos</h3>
-      <span>${S.jogos.length ? "no aparelho" : "nenhum salvo"}</span></div>
-    <div class="kpi-grid">
-      <div class="mini-card"><strong>${inf(S.jogos.length)}</strong><small>Jogos salvos</small></div>
-      <div class="mini-card"><strong>${inf(new Set(S.jogos.map(j=>j.modalidade)).size)}</strong>
-        <small>Modalidades</small></div>
-    </div>
-    <button class="big-action" data-atalho="gerar">Gerar um jogo</button>
   </section>`;
 };
+
+/* "Prêmios hoje" conta os AVISOS de prêmio registrados hoje, e não uma varredura
+   nova das conferências: o aviso é o registro do momento em que o app encontrou
+   o resultado, e é isso que "hoje" quer dizer aqui. Contar conferências daria
+   o número de sempre, todo dia, porque conferência antiga não deixa de existir. */
+function premiosDeHoje(){
+  const hoje = new Date();
+  return (S.avisos || []).filter(a =>
+    a.tipo === "premio" && diaDoAviso(a.quando, hoje) === "Hoje").length;
+}
 
 T.placar = () => {
   const porModalidade = {};
@@ -6005,10 +6107,56 @@ T.resultados = () => {
     .slice().sort((a,b)=> b.concurso - a.concurso);
   const c = MODALIDADES[S.modalidade];
   const temServico = !!SLUG_CAIXA[S.modalidade];
-  return `<div class="carta">
-    <h2>trazer resultados</h2>
+
+  /* O mockup abre esta tela com os CONCURSOS: chips de modalidade e os cartões
+     com as bolas. Os controles de busca e os ajustes automáticos vinham antes
+     e empurravam a lista para fora da primeira tela — quem entra em
+     "Resultados" quer ver resultado, não configurar como buscá-los. Eles
+     continuam aqui, recolhidos num <details> no fim. */
+  const chips = `<div class="chips chips-mod" role="group" aria-label="Modalidade">
+    ${Object.entries(MODALIDADES).map(([k,v]) =>
+      `<button class="chip" data-mod="${k}" aria-pressed="${k===S.modalidade}"
+        >${esc(v.nome)}</button>`).join("")}</div>`;
+
+  const cartoes = !meus.length
+    ? `<div class="vazio">Nenhum resultado desta modalidade ainda.<br>
+        Sem histórico, a bancada e o placar não têm o que medir.</div>`
+    : `<div class="concursos">${meus.slice(0,40).map(r => `
+        <article class="concurso ${ganhadoresDoConcurso(r).estado}"
+          data-abrir-concurso="${esc(r.concurso)}">
+          <div class="concurso-topo">
+            <b>Concurso ${esc(r.concurso)}</b>
+            <time>${esc(r.data || "sem data")}</time>
+          </div>
+          <div class="bolas">${r.dezenas.map(d => `<i class="bola">${pad(d)}</i>`).join("")}</div>
+          ${/* O selo fica SEMPRE visível, e não só com o cartão expandido. A cor
+                do cartão — verde para com ganhador, âmbar para acumulado — não
+                pode ser a única pista: quem não distingue as duas precisa da
+                mesma informação por escrito. Foi a bateria que pegou isto
+                quando tentei escondê-lo atrás do toque. */""}
+          <div class="concurso-detalhe">${seloGanhadores(r, {cidades:false})}
+            <span class="pilula ${r.origem==="caixa"?"oficial":"manual"}"
+              >${esc(r.origem || "manual")}</span></div>
+          <span class="chevron" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></span>
+        </article>`).join("")}</div>
+      ${meus.length > 40 ? `<div class="pe">mostrando os 40 mais recentes</div>` : ""}`;
+
+  return chips + `<div class="acoes-topo">
+      <button class="acao mini" id="r-caixa" ${temServico?"":"disabled"}>
+        atualizar${temServico?"":" (sem serviço)"}</button>
+    </div>
+    <div id="r-saida"></div>` + cartoes + `
+  <details class="ajustes">
+    <summary>Trazer resultados e ajustes</summary>
+    <div class="carta">
+    <!-- "buscar último na Caixa" saiu daqui: virou o botão "atualizar" lá em
+         cima, junto dos concursos. Deixar os dois seria id repetido no
+         documento, e o seletor liga só o primeiro — um deles ficaria mudo, sem
+         nenhum sintoma além de "não faz nada quando eu clico".
+         (Sem crase neste comentário: ele mora dentro de um template literal,
+         e a crase fecharia o literal no meio do HTML.) -->
     <div class="botoes" style="margin:10px 0">
-      <button class="acao mini" id="r-caixa" ${temServico?"":"disabled"}>buscar último na Caixa</button>
       <button class="acao contorno mini" id="r-varios" ${temServico?"":"disabled"}>buscar os 20 últimos</button>
       <button class="acao contorno mini" id="r-tudo" ${temServico?"":"disabled"}>histórico completo</button>
     </div>
@@ -6077,22 +6225,7 @@ T.resultados = () => {
         app não sabe, e não que não houve ganhador. Buscar o histórico de novo
         preenche o que faltar.</div>`;
     })()}
-    ${!meus.length
-      ? `<div class="vazio">Nenhum resultado desta modalidade ainda.<br>
-          Sem histórico, a bancada e o placar não têm o que medir.</div>`
-      : `<div class="lista" style="margin-top:10px">${meus.slice(0,40).map(r=>`
-          <div class="item ${ganhadoresDoConcurso(r).estado}">
-            <span class="marca-cor"></span>
-            <span class="txt"><b>Concurso ${esc(r.concurso)}</b>
-              <span class="bolas">${r.dezenas.map(d=>`<i class="bola">${pad(d)}</i>`).join("")}</span>
-              ${seloGanhadores(r)}
-            </span>
-            <span class="quando">${esc(r.data)}<br>
-              <span class="pilula ${r.origem==="caixa"?"oficial":"manual"}"
-                >${esc(r.origem || "manual")}</span></span>
-          </div>`).join("")}</div>
-        ${meus.length > 40 ? `<div class="pe">mostrando os 40 mais recentes</div>` : ""}`}
-  </div>`;
+  </div></details>`;
 };
 
 T.teimosinha = () => {
@@ -6898,31 +7031,37 @@ const SECOES = [
      {id:"estatisticas", nome:"Estatísticas", titulo:"Estatísticas do histórico",
       sub:"O retrato do que já saiu, sempre ao lado do que o acaso produziria. Descreve o passado; não prevê o próximo."}
    ]},
-  {id:"experimentos", nome:"Experimentos",
-   icone:'<path d="M10 3h4M10 3v6.5L4.5 19a2 2 0 0 0 1.8 3h11.4a2 2 0 0 0 1.8-3L14 9.5V3"/>',
+  /* "Jogos" ocupa o terceiro lugar da barra, como no mockup. Aqui moram as
+     telas que giram em torno do que a pessoa salvou: os jogos, a conferência
+     deles e a teimosinha. */
+  {id:"jogos", nome:"Jogos",
+   icone:'<rect x="3.5" y="4" width="17" height="17" rx="2.5"/><path d="M8 9.5h8M8 14h5"/>',
    telas:[
-     {id:"gerar", nome:"Automático", titulo:"Gerar jogos",
-      sub:"Monta combinações válidas por método. Todos têm a mesma chance de acerto — o que muda é com quantas pessoas você dividiria."},
-     {id:"montar", nome:"Manual", titulo:"Montar à mão",
-      sub:"Marque as dezenas que quiser. O app mostra as características do jogo e como elas se comparam ao esperado do acaso."},
-     {id:"bancada", nome:"Bancada", titulo:"Bancada de testes",
-      sub:"Roda todos os métodos contra o mesmo sorteio e mede se algum se distingue do acaso."}
+     {id:"jogos", nome:"Jogos Salvos", titulo:"Meus Jogos",
+      sub:"Tudo o que você salvou, conferido automaticamente contra os resultados que o app conhece."},
+     {id:"conferir", nome:"Conferência", titulo:"Conferir",
+      sub:"O último sorteio que o app conhece, comparado com os seus jogos salvos. A conferência é automática."},
+     {id:"teimosinha", nome:"Teimosinha", titulo:"Teimosinha",
+      sub:"Repete o mesmo jogo por vários concursos seguidos. O app acompanha o custo total e confere cada concurso sozinho."}
    ]},
   {id:"resultados", nome:"Resultados",
    icone:'<rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9.5h18M8 3v3M16 3v3"/>',
    telas:[
-     {id:"resultados", nome:"Concursos", titulo:"Histórico de resultados",
-      sub:"Os concursos que o app conhece. É esta base que alimenta a análise, a bancada e o aprendizado."},
-     {id:"conferir", nome:"Conferir", titulo:"Conferir",
-      sub:"O último sorteio que o app conhece, comparado com os seus jogos salvos. A conferência é automática."}
+     {id:"resultados", nome:"Concursos", titulo:"Resultados",
+      sub:"Últimos concursos"}
    ]},
+  /* "Mais" recolhe o que saiu da barra: montar jogos, a bancada e o Entender.
+     Nenhuma tela ficou sem porta — é a regra que a bateria de interface cobra
+     a cada push, e reorganizar navegação é exatamente onde recurso some. */
   {id:"mais", nome:"Mais",
    icone:'<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>',
    telas:[
-     {id:"jogos", nome:"Meus jogos", titulo:"Meus jogos",
-      sub:"Tudo o que você salvou, conferido automaticamente contra os resultados que o app conhece."},
-     {id:"teimosinha", nome:"Teimosinha", titulo:"Teimosinha",
-      sub:"Repete o mesmo jogo por vários concursos seguidos. O app acompanha o custo total e confere cada concurso sozinho."},
+     {id:"gerar", nome:"Gerar", titulo:"Gerar jogos",
+      sub:"Monta combinações válidas por método. Todos têm a mesma chance de acerto — o que muda é com quantas pessoas você dividiria."},
+     {id:"montar", nome:"Montar", titulo:"Montar à mão",
+      sub:"Marque as dezenas que quiser. O app mostra as características do jogo e como elas se comparam ao esperado do acaso."},
+     {id:"bancada", nome:"Bancada", titulo:"Bancada de testes",
+      sub:"Roda todos os métodos contra o mesmo sorteio e mede se algum se distingue do acaso."},
      {id:"entender", nome:"Entender", titulo:"Entender",
       sub:"O que este app faz, o que ele não faz, e por quê."}
    ]}
@@ -6991,8 +7130,12 @@ function ligarBotaoVoltarDoAndroid(){
   if(!App || typeof App.addListener !== "function") return false;
   try{
     App.addListener("backButton", () => {
-      const folha = $("#folha-avisos");
-      if(folha && folha.dataset.aberta === "1"){ folha.dataset.aberta = "0"; return; }
+      /* Qualquer camada sobreposta fecha primeiro — folha de atividades ou
+         gaveta. Só depois o voltar mexe na navegação. */
+      for(const id of ["#folha-avisos", "#gaveta"]){
+        const alvo = $(id);
+        if(alvo && alvo.dataset.aberta === "1"){ alvo.dataset.aberta = "0"; return; }
+      }
       if(voltar()) return;
       if(typeof App.exitApp === "function") App.exitApp();
     });
@@ -7017,15 +7160,24 @@ function navegacao(){
   });
 }
 
+/* A modalidade saiu da trilha fixa no topo e passou a viver em dois lugares:
+   a gaveta do ☰ (sempre disponível) e os chips da tela Resultados, onde o
+   mockup os desenha. É a MESMA escolha global — trocar num lugar troca no
+   outro, porque `data-mod` é lido por um só tratador. */
+function trocarModalidade(mod){
+  if(!MODALIDADES[mod] || mod === S.modalidade) return;
+  S.modalidade = mod; S.tamanho = null; REFERENCIA = {};
+  Guardar.gravar("modalidade", S.modalidade);
+  const g = $("#gaveta"); if(g) g.dataset.aberta = "0";
+  pintar();
+}
+
 function trilhaModalidade(){
-  $("#trilha-mod").innerHTML = Object.entries(MODALIDADES).map(([k,v])=>
+  const gav = $("#gaveta-mods");
+  if(gav) gav.innerHTML = Object.entries(MODALIDADES).map(([k,v])=>
     `<button data-mod="${k}" aria-pressed="${k===S.modalidade}">${esc(v.nome)}</button>`).join("");
-  document.querySelectorAll("[data-mod]").forEach(b => b.onclick = () => {
-    if(b.dataset.mod === S.modalidade) return;
-    S.modalidade = b.dataset.mod; S.tamanho = null; REFERENCIA = {};
-    Guardar.gravar("modalidade", S.modalidade);
-    pintar();
-  });
+  document.querySelectorAll("[data-mod]").forEach(b => b.onclick = () =>
+    trocarModalidade(b.dataset.mod));
 }
 
 function pintar(){
@@ -7143,9 +7295,32 @@ async function carregarCalibracao(){
     Guardar.gravar("avisos", S.avisos);
     pintarContaAvisos();
   });
+  /* Gaveta do ☰. Mesmo par abrir/fechar da folha; a diferença é só de onde ela
+     entra na tela. Fechar não marca nada como lido — não há nada para ler. */
+  const gaveta = $("#gaveta"), botaoMenu = $("#btn-menu");
+  if(gaveta && botaoMenu){
+    botaoMenu.onclick = () => {
+      gaveta.dataset.aberta = "1";
+      botaoMenu.setAttribute("aria-expanded", "true");
+      trilhaModalidade();
+    };
+    gaveta.addEventListener("click", e => {
+      if(!e.target.closest("[data-fechar]")) return;
+      gaveta.dataset.aberta = "0";
+      botaoMenu.setAttribute("aria-expanded", "false");
+    });
+  }
+
   document.addEventListener("keydown", e => {
-    if(e.key === "Escape" && folha.dataset.aberta === "1")
-      folha.querySelector("[data-fechar]").click();
+    if(e.key !== "Escape") return;
+    /* Uma só tecla, duas camadas: fecha a que estiver aberta, na ordem em que
+       elas se sobrepõem. Sem isto o Escape fechava só os avisos. */
+    for(const alvo of [folha, gaveta]){
+      if(alvo && alvo.dataset.aberta === "1"){
+        alvo.querySelector("[data-fechar]").click();
+        return;
+      }
+    }
   });
   carregarCalibracao().then(()=>{ if(CALIBRACAO && S.tela==="gerar") pintar(); });
   /* O try/catch e a checagem de objeto não são zelo excessivo: um navegador em
