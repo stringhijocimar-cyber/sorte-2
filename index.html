@@ -171,6 +171,15 @@ main{padding:14px 16px calc(var(--barra) + 45px + var(--base));
 .titulo.com-volta h1{grid-column:2;text-align:center;font-size:1.25rem;
   margin:0;overflow-wrap:anywhere}
 .titulo.com-volta p{grid-column:1 / -1;text-align:center;margin-top:6px}
+/* Ação da tela, na terceira coluna. Mesma caixa da seta, para os dois lados do
+   título pesarem igual — é o que mantém o centro no centro. */
+.acao-tela{grid-column:3;justify-self:end;width:38px;height:38px;display:grid;
+  place-items:center;background:none;border:1px solid var(--linha);
+  border-radius:11px;color:var(--tinta);cursor:pointer;padding:0}
+.acao-tela svg{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:2;
+  stroke-linecap:round;stroke-linejoin:round}
+.acao-tela:hover:not(:disabled){border-color:var(--secundaria)}
+.acao-tela:disabled{opacity:.4;cursor:default}
 .voltar{grid-column:1;justify-self:start;width:38px;height:38px;display:grid;
   place-items:center;background:none;border:1px solid var(--linha);
   border-radius:11px;color:var(--tinta);cursor:pointer;padding:0}
@@ -312,7 +321,6 @@ main{padding:14px 16px calc(var(--barra) + 45px + var(--base));
    mesmo objeto com a mesma função, e dar-lhe duas aparências pelo lugar em que
    aparece seria inventar dialeto. */
 .chips-mod{margin-bottom:10px}
-.acoes-topo{display:flex;justify-content:flex-end;margin-bottom:10px}
 
 /* Cartão de concurso: número e data em cima, bolas no meio, estado embaixo.
    A faixa de cor na borda esquerda é a mesma gramática da ficha de jogo. */
@@ -6409,11 +6417,10 @@ T.resultados = () => {
         </article>`).join("")}</div>
       ${meus.length > 40 ? `<div class="pe">mostrando os 40 mais recentes</div>` : ""}`;
 
-  return chips + `<div class="acoes-topo">
-      <button class="acao mini" id="r-caixa" ${temServico?"":"disabled"}>
-        atualizar${temServico?"":" (sem serviço)"}</button>
-    </div>
-    <div id="r-saida"></div>` + cartoes + `
+  /* O botão "atualizar" saiu daqui: virou o ícone de recarregar no cabeçalho da
+     tela, como no mockup. O id continua "r-caixa", então o tratador não mudou
+     de lugar nem de nome. */
+  return chips + `<div id="r-saida"></div>` + cartoes + `
   <details class="ajustes">
     <summary>Trazer resultados e ajustes</summary>
     <div class="carta">
@@ -7475,12 +7482,38 @@ function pintar(){
   const nomeAnterior = anterior
     ? ((SECOES.flatMap(s => s.telas).find(t => t.id === anterior) || {}).titulo || "")
     : "";
-  const cabecalho = podeVoltar()
+  /* A ação da tela mora na terceira coluna do cabeçalho — a que já existia
+     vazia para o título poder centrar de verdade. É onde o mockup põe o ícone
+     de recarregar em Resultados. Ocupá-la não muda o alinhamento: a coluna
+     tinha a largura da seta desde o começo, justamente para isso.
+
+     Uma tabela e não um `if` espalhado: quando a segunda tela quiser ação, o
+     lugar de acrescentá-la é óbvio, e o cabeçalho continua sendo um só. */
+  const ACOES_DE_TELA = {
+    resultados: {id:"r-caixa", rotulo:"Buscar o resultado mais recente",
+      icone:'<path d="M20 12a8 8 0 1 1-2.6-5.9"/><path d="M20 4v4h-4"/>'},
+  };
+  const acao = ACOES_DE_TELA[tela.id];
+  /* Modalidade sem serviço da Caixa não tem o que recarregar. O botão antigo
+     nascia `disabled` nesse caso; perder isso deixaria um ícone que responde
+     com erro em vez de dizer, antes do toque, que ali não há de onde buscar. */
+  const acaoAtiva = tela.id !== "resultados" || !!SLUG_CAIXA[S.modalidade];
+  const botaoAcao = acao
+    ? `<button class="acao-tela" id="${acao.id}" ${acaoAtiva ? "" : "disabled"}
+         aria-label="${esc(acaoAtiva ? acao.rotulo : "Sem serviço para esta modalidade")}"
+         title="${esc(acaoAtiva ? acao.rotulo : "Sem serviço para esta modalidade")}">
+         <svg viewBox="0 0 24 24" aria-hidden="true">${acao.icone}</svg></button>`
+    : "";
+
+  const cabecalho = (podeVoltar() || acao)
     ? `<div class="titulo com-volta">
-         <button class="voltar" id="voltar" aria-label="Voltar para ${esc(nomeAnterior)}">
-           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
-         </button>
+         ${podeVoltar()
+           ? `<button class="voltar" id="voltar" aria-label="Voltar para ${esc(nomeAnterior)}">
+               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+             </button>`
+           : `<span></span>`}
          <h1>${esc(tela.titulo)}</h1>
+         ${botaoAcao || `<span></span>`}
          <p>${esc(tela.sub)}</p>
        </div>`
     : `<div class="titulo"><h1>${esc(tela.titulo)}</h1><p>${esc(tela.sub)}</p></div>`;
