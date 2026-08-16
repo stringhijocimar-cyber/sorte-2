@@ -379,6 +379,18 @@ main{padding:14px 16px calc(var(--barra) + 45px + var(--base));
   color:var(--secundaria);margin-top:1px}
 .linha-conf .quanto2{text-align:right;color:var(--tinta);flex:none}
 
+/* Histórico de gerações: uma linha por geração, a atual destacada. */
+.geracoes{display:grid;gap:1px;background:var(--linha);border-radius:12px;overflow:hidden}
+.linha-ger{display:grid;grid-template-columns:1.2fr repeat(3,1fr);gap:8px;
+  align-items:center;padding:10px 12px;background:var(--carta)}
+.linha-ger.atual{background:color-mix(in srgb,var(--acaso) 9%,var(--carta))}
+.linha-ger .ger b{display:block;font-size:.86rem}
+.linha-ger .ger small{display:block;font-family:var(--mono);font-size:.6rem;
+  letter-spacing:.08em;text-transform:uppercase;color:var(--acaso);margin-top:1px}
+.linha-ger .med{font-size:.62rem;color:var(--secundaria);line-height:1.3;text-align:right}
+.linha-ger .med b{display:block;font-family:var(--mono);font-size:.88rem;
+  color:var(--tinta);font-variant-numeric:tabular-nums;margin-top:2px}
+
 .dia-avisos{margin-bottom:16px}
 /* O rótulo do dia gruda no topo ao rolar: numa lista longa, saber em que dia
    se está sem ter de rolar de volta é metade do motivo de agrupar. */
@@ -1068,7 +1080,7 @@ const S = {
   pesquisaAdaptativa:{}, pesquisaAutomatica:true, abaPesquisa:"geral",
   /* Pilha de navegação (de onde se veio) e filtro da central de atividades.
      Nenhum dos dois é gravado: são estado da visita, não preferência. */
-  pilha:[], filtroAvisos:"todas"
+  pilha:[], filtroAvisos:"todas", serieEvolucao:"auc"
 };
 
 /* Persistência tolerante: se o navegador bloquear, o app segue funcionando
@@ -3666,7 +3678,7 @@ const Avisos = {
     return Math.abs(h % 2000000000) + 1;
   },
 
-  async agora(titulo, texto, chave){
+  async agora(titulo, texto, chave, destino){
     const p = this.plugin();
     if(p){
       try{
@@ -3676,7 +3688,14 @@ const Avisos = {
              e se essa chamada falhasse o Android 8+ descartaria a notificação
              em silêncio — defeito invisível, que é o pior tipo. */
           id: this.id(chave || titulo), title: titulo, body: texto,
-          smallIcon: "ic_stat_icone"
+          smallIcon: "ic_stat_icone",
+          /* A tela para onde o toque leva. O mockup desenha uma linha de ação
+             ("Ver detalhes", "Ver análise") embaixo de cada notificação; o que
+             ela faz é isto — abrir o app no lugar certo em vez de na tela
+             inicial, que obrigaria a pessoa a procurar o que o aviso já sabia.
+             Vai em `extra` porque é o único campo que volta no evento de
+             toque. */
+          extra: {tela: destino || "inicio"}
         }]});
         return true;
       }catch(e){ /* cai para o navegador */ }
@@ -3725,10 +3744,35 @@ const Avisos = {
   },
 };
 
-function notificarSistema(titulo, texto, chave){
+function notificarSistema(titulo, texto, chave, destino){
   /* Sem await: quem chama está no meio de conferir jogos, e travar essa conta
      esperando o Android responder deixaria a tela parada por nada. */
-  Avisos.agora(titulo, texto, chave);
+  Avisos.agora(titulo, texto, chave, destino);
+}
+
+/* O toque na notificação abre a tela que o aviso trata. Sem isto o app abre no
+   Início e a pessoa procura sozinha o que a notificação já sabia — que é o
+   contrário de avisar.
+
+   Silencioso e defensivo de propósito: se o plugin não expuser o evento, o
+   único efeito é abrir no Início, como antes. Uma exceção aqui derrubaria a
+   inicialização inteira por causa de uma conveniência. */
+function ligarToqueNaNotificacao(){
+  try{
+    const c = (typeof Capacitor !== "undefined") ? Capacitor : null;
+    const p = (c && c.isNativePlatform && c.isNativePlatform() && c.Plugins)
+      ? c.Plugins.LocalNotifications : null;
+    if(!p || typeof p.addListener !== "function") return false;
+    p.addListener("localNotificationActionPerformed", (ev) => {
+      const alvo = ev && ev.notification && ev.notification.extra
+        && ev.notification.extra.tela;
+      /* Só navega para tela que existe. Um destino gravado por uma versão
+         antiga do app não pode deixar a tela em branco depois de atualizar. */
+      const existe = SECOES.some(s => s.telas.some(t => t.id === alvo));
+      if(existe) irParaTela(alvo);
+    });
+    return true;
+  }catch(e){ return false; }
 }
 
 async function pedirPermissaoDeAviso(){
@@ -3862,7 +3906,7 @@ function aoMudarHistorico(quantosConcursos, origem){
       : "Nenhum jogo salvo cobria esses concursos.";
     if(avisar("historico", titulo, `${texto} Origem: ${origem}.`,
               `hist:${origem}:${S.resultados.length}:${Date.now()}`))
-      notificarSistema(titulo, texto);
+      notificarSistema(titulo, texto, null, "resultados");
   }
   /* O aviso do prêmio vem depois e separado do aviso de concurso novo, e diz
      de quanto foi: "seu jogo foi premiado" sem número manda a pessoa abrir o
@@ -3873,7 +3917,7 @@ function aoMudarHistorico(quantosConcursos, origem){
       : "Abra o LotoLab para ver qual jogo e qual concurso.";
     notificarSistema(
       r.premios === 1 ? "Seu jogo foi premiado" : `${r.premios} jogos premiados`,
-      detalhe, `premio:${Date.now()}`);
+      detalhe, `premio:${Date.now()}`, "conferir");
   }
   if(S.autoAnalise !== false) analisarPendentes();
   /* Reagenda o alarme do próximo sorteio: a data mudou agora que entrou
@@ -3999,7 +4043,7 @@ function analisarPendentes(aoTerminar){
           : `${nomes}. ${prontas.length - semSinal} com desvio a revisar — desvio não é sinal, veja a tela.`;
         avisar("analise", titulo, texto,
           `analise:${prontas.map(x => x.modalidade + ":" + x.assinatura).join("|")}`);
-        notificarSistema(titulo, texto);
+        notificarSistema(titulo, texto, null, "aprendizado");
       }
       /* Repinta só se a pessoa estiver olhando a tela que mudou. Repintar
          sempre roubaria a rolagem de quem está em outra aba. */
@@ -5194,6 +5238,16 @@ function rodarGeracao(modalidade, opcoes){
     geracao, melhorAptidao: melhor.valor, medianaAptidao: mediana,
     aucPorRecorte: melhor.porRecorte, descartadas,
     genes: melhor.h.genes.length, origem: melhor.h.origem,
+    /* O funil desta geração fica na linha do histórico também, e não só na
+       memória atual: a tabela do mockup mostra uma linha POR GERAÇÃO, e sem
+       isto ela só saberia falar da última. */
+    acimaDoAcaso, mesmoSentido,
+    /* AUC médio do campeão nos recortes de DESENVOLVIMENTO. É o que existe por
+       geração — o AUC fora da amostra e o p-valor saem do julgamento, que roda
+       uma vez e aparece na Visão Geral. Confundir os dois seria vender medida
+       de treino como medida de teste. */
+    aucMelhor: melhor.porRecorte && melhor.porRecorte.length
+      ? melhor.porRecorte.reduce((s,v) => s+v, 0) / melhor.porRecorte.length : 0.5,
   };
   const historico = (memoria.historico || []).concat([linhaHistorico])
     .slice(-HISTORICO_GERACOES);
@@ -5977,17 +6031,31 @@ function anelGeracao(geracao, fracao){
    O eixo é apertado de propósito — de 0,45 a 0,55 — porque é nessa faixa que
    tudo acontece: num eixo de 0 a 1 as gerações viram uma reta e o gráfico não
    diz nada. A linha tracejada em 0,5 é a referência que dá sentido ao resto. */
-function graficoEvolucao(historico){
+/* `serie` escolhe o que a linha desenha: "auc" (padrão) ou "aptidao". A escala
+   muda junto — aptidão vive perto de zero e AUC perto de 0,5, e usar o mesmo
+   eixo para as duas deixaria uma delas colada numa borda. */
+function graficoEvolucao(historico, serie){
+  const usaAptidao = serie === "aptidao";
   const pontos = (historico || []).map(l => ({
     g: l.geracao,
-    auc: (l.aucPorRecorte && l.aucPorRecorte.length)
-      ? l.aucPorRecorte.reduce((a,b)=>a+b,0) / l.aucPorRecorte.length : 0.5,
+    auc: usaAptidao
+      ? (Number.isFinite(l.melhorAptidao) ? l.melhorAptidao : 0)
+      : ((l.aucPorRecorte && l.aucPorRecorte.length)
+          ? l.aucPorRecorte.reduce((a,b)=>a+b,0) / l.aucPorRecorte.length : 0.5),
   }));
   if(pontos.length < 2) return `<div class="nota">O gráfico aparece a partir da
     segunda geração — com um ponto só não há evolução para mostrar.</div>`;
 
   const L = 300, A = 132, mx = 34, my = 14;
-  const baixo = 0.45, alto = 0.55;
+  /* Na aptidão o eixo se ajusta aos dados, com um mínimo de faixa para uma
+     série quase plana não virar serra por causa de ruído na terceira casa. */
+  let baixo = 0.45, alto = 0.55;
+  if(usaAptidao){
+    const vs = pontos.map(p => p.auc);
+    const lo = Math.min(...vs), hi = Math.max(...vs);
+    const folga = Math.max((hi - lo) * 0.25, 0.004);
+    baixo = lo - folga; alto = hi + folga;
+  }
   const px = i => mx + (L - mx - 8) * (pontos.length === 1 ? 0 : i / (pontos.length - 1));
   const py = v => my + (A - my*2) * (1 - (Math.max(baixo, Math.min(alto, v)) - baixo) / (alto - baixo));
   const linha = pontos.map((p,i)=>`${i?"L":"M"}${px(i).toFixed(1)},${py(p.auc).toFixed(1)}`).join("");
@@ -5999,11 +6067,27 @@ function graficoEvolucao(historico){
       <stop offset="0" stop-color="var(--acaso)" stop-opacity=".22"/>
       <stop offset="1" stop-color="var(--acaso)" stop-opacity="0"/>
     </linearGradient></defs>
-    ${[0.45,0.50,0.55].map(v=>`
+    ${/* As marcas seguem a escala. Deixá-las fixas em 0,45/0,50/0,55 com o eixo
+          da aptidão — que vive perto de zero — imprimiria três rótulos fora do
+          desenho e uma linha tracejada em lugar nenhum. A tracejada só aparece
+          onde o "não distingue nada" de fato cai: 0,5 no AUC, 0 na aptidão. */""}
+    ${[baixo, (baixo+alto)/2, alto].map(v=>{
+      const neutro = usaAptidao ? 0 : 0.5;
+      const eNeutro = Math.abs(v - neutro) < (alto - baixo) * 0.02;
+      return `
       <line x1="${mx}" y1="${py(v)}" x2="${L-8}" y2="${py(v)}"
-        stroke="var(--linha)" stroke-width="1" ${v===0.5?'stroke-dasharray="4 4"':""}/>
+        stroke="var(--linha)" stroke-width="1" ${eNeutro?'stroke-dasharray="4 4"':""}/>
       <text x="${mx-6}" y="${py(v)+3.5}" text-anchor="end" fill="var(--secundaria)"
-        font-family="var(--mono)" font-size="9">${nf(v,2)}</text>`).join("")}
+        font-family="var(--mono)" font-size="9">${nf(v, usaAptidao ? 3 : 2)}</text>`;
+    }).join("")}
+    ${(() => {
+      /* A linha do neutro, quando ela cai dentro da faixa mas não coincide com
+         nenhuma das três marcas — é a referência que dá sentido ao gráfico. */
+      const neutro = usaAptidao ? 0 : 0.5;
+      if(neutro < baixo || neutro > alto) return "";
+      return `<line x1="${mx}" y1="${py(neutro)}" x2="${L-8}" y2="${py(neutro)}"
+        stroke="var(--secundaria)" stroke-width="1" stroke-dasharray="4 4" opacity=".7"/>`;
+    })()}
     <path d="${area}" fill="url(#ev)"/>
     <path d="${linha}" fill="none" stroke="var(--acaso)" stroke-width="2"
       stroke-linejoin="round" stroke-linecap="round"/>
@@ -6198,33 +6282,51 @@ T.pesquisa = () => {
     </div>
   </div>`);
 
-  const grafico = (mem.historico || []).length >= 2 ? `
-  <div class="carta" style="margin-top:12px">
+  /* Alternador do mockup. As duas opções são medidas que EXISTEM por geração:
+     o AUC do campeão nos recortes de desenvolvimento e a aptidão, que é o que
+     a busca de fato otimiza. O desenho trazia "p-value mínimo" como segunda
+     opção — o p-valor sai do julgamento e existe uma vez, não por geração;
+     desenhar uma linha dele seria inventar uma série. */
+  const serie = S.serieEvolucao === "aptidao" ? "aptidao" : "auc";
+  const alternador = `<div class="segmento" role="tablist" style="margin-top:12px">
+    <button role="tab" data-serie="auc" aria-selected="${serie==="auc"}"
+      >AUC (desenvolvimento)</button>
+    <button role="tab" data-serie="aptidao" aria-selected="${serie==="aptidao"}"
+      >Aptidão do melhor</button>
+  </div>`;
+
+  const grafico = (mem.historico || []).length >= 2 ? alternador + `
+  <div class="carta" style="margin-top:10px">
     <div class="contador"><span>evolução da busca</span>
-      <b style="font-family:var(--mono);font-size:.78rem">AUC médio por geração</b></div>
-    ${graficoEvolucao(mem.historico)}
-    <div class="nota">A linha tracejada é 0,5 — "não distingue nada". Subir aqui é
-    esperado: a busca sempre encontra algo que parece melhor dentro do próprio recorte
-    em que procurou. O que decide é o julgamento fora da amostra, acima.</div>
+      <b style="font-family:var(--mono);font-size:.78rem">${
+        serie === "auc" ? "AUC do melhor, por geração" : "aptidão do melhor, por geração"}</b></div>
+    ${graficoEvolucao(mem.historico, serie)}
+    <div class="nota">${serie === "auc"
+      ? `A linha tracejada é 0,5 — "não distingue nada". Isto é medido DENTRO do que a
+         busca já viu; o que decide é o julgamento fora da amostra, na Visão Geral.`
+      : `Aptidão é o afastamento de 0,5 no <em>pior</em> recorte, menos a punição por
+         complexidade. Subir aqui é esperado: a busca sempre encontra algo que parece
+         melhor no próprio recorte em que procurou.`}</div>
   </div>` : "";
 
+  /* "Histórico de gerações" do mockup: uma linha por geração, a mais recente
+     marcada como Atual. Cada coluna é medida por geração — nenhuma delas é o
+     julgamento fora da amostra, que roda uma vez e mora na Visão Geral. */
   const tabela = linhasHist.length ? `
   <div class="carta" style="margin-top:12px">
-    <h3 style="margin:0 0 8px">Gerações recentes</h3>
-    <div class="rolagem"><table>
-      <thead><tr><th>ger.</th><th>aptidão do melhor</th><th>mediana</th>
-        <th>descartadas</th><th>origem</th></tr></thead>
-      <tbody>${linhasHist.map(l=>`<tr>
-        <td>${inf(l.geracao)}</td>
-        <td style="text-align:right">${nf(l.melhorAptidao,4)}</td>
-        <td style="text-align:right">${nf(l.medianaAptidao,4)}</td>
-        <td style="text-align:right">${inf(l.descartadas)}</td>
-        <td>${esc(l.origem)}</td></tr>`).join("")}</tbody>
-    </table></div>
-    <div class="nota">A aptidão é o afastamento de 0,5 no <em>pior</em> recorte, menos uma
-    punição por complexidade. Subir aqui é esperado — a busca sempre encontra algo que
-    parece melhor dentro do próprio recorte em que procurou. É por isso que o julgamento
-    acontece em outro lugar.</div>
+    <div class="panel-title"><h3>Histórico de gerações</h3>
+      <span>${inf(linhasHist.length)} registradas</span></div>
+    <div class="geracoes">${linhasHist.slice().reverse().map((l, i) => `
+      <div class="linha-ger ${i === 0 ? "atual" : ""}">
+        <span class="ger"><b>Geração ${inf(l.geracao)}</b>${i === 0 ? "<small>Atual</small>" : ""}</span>
+        <span class="med">AUC dev<br><b>${nf(l.aucMelhor != null ? l.aucMelhor : 0.5, 3)}</b></span>
+        <span class="med">acima do acaso<br><b>${inf(l.acimaDoAcaso != null ? l.acimaDoAcaso : 0)}</b></span>
+        <span class="med">mesmo sentido<br><b>${inf(l.mesmoSentido != null ? l.mesmoSentido : 0)}</b></span>
+      </div>`).join("")}</div>
+    <div class="nota">Tudo aqui é medido <strong>dentro</strong> do que a busca já viu.
+    Subir nesta tabela é esperado: a busca sempre encontra algo que parece melhor no
+    próprio recorte em que procurou. O AUC fora da amostra e o p-valor saem do
+    julgamento, na aba <strong>Visão Geral</strong> — e são eles que decidem.</div>
   </div>` : "";
 
   /* Abas internas do mockup: Visão Geral · Evolução · Estratégias · Detalhes.
@@ -6881,6 +6983,12 @@ function acoes(){
     S.abaPesquisa = b.dataset.abaPq; pintar();
   });
 
+  /* Alternador do gráfico de evolução. Não é gravado: é como se está olhando
+     agora, não uma preferência. */
+  document.querySelectorAll("[data-serie]").forEach(b => b.onclick = () => {
+    S.serieEvolucao = b.dataset.serie; pintar();
+  });
+
   const pqauto = $("#pq-auto");
   if(pqauto) pqauto.onchange = e => {
     S.pesquisaAutomatica = e.target.checked;
@@ -7430,6 +7538,7 @@ async function carregarCalibracao(){
   conferenciaAutomatica();
   pintar();
   ligarBotaoVoltarDoAndroid();
+  ligarToqueNaNotificacao();
   /* Análises pendentes na abertura. Sem isto, quem já tinha histórico ficaria
      esperando o próximo concurso para ver a primeira análise — e quem fechou o
      app no meio de uma análise nunca a veria terminar. Roda depois do pintar()
