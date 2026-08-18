@@ -1,16 +1,16 @@
 <!DOCTYPE html>
-<html lang="pt-BR" data-tema="claro">
+<html lang="pt-BR" data-tema="escuro">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#061522">
+<meta name="theme-color" content="#061521">
 <meta name="description" content="Gerador e conferidor de jogos das loterias brasileiras, com comparação honesta contra o acaso.">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icone.svg" type="image/svg+xml">
 <!-- apple-touch-icon não aceita SVG: o iOS ignora e fica sem ícone na tela de
      início. Aqui vai o PNG, gerado do mesmo icone.svg. -->
 <link rel="apple-touch-icon" href="icone-192.png">
-<title>LotoLab — jogos e conferência</title>
+<title>Sorte 2 — Laboratório Estatístico</title>
 <style>
 /* ------------------------------------------------------------------
    Direção visual: ficha de conferência, não cassino.
@@ -928,6 +928,7 @@ td{padding:6px 7px;border-bottom:1px solid var(--trama)}
   @keyframes sobe{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
 }
 </style>
+<link rel="stylesheet" href="ui/sorte2-ui-final.css?v=3.0.0" data-sorte2-visual-final="3.0.0">
 </head>
 <body>
 <header>
@@ -7857,5 +7858,6 @@ async function carregarCalibracao(){
   }catch(e){ /* sem service worker: o app funciona igual, só não guarda casca */ }
 })();
 </script>
+<script src="ui/sorte2-ui-final.js?v=3.0.0" data-sorte2-visual-final="3.0.0"></script>
 </body>
 </html>

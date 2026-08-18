@@ -128,7 +128,7 @@ await cmd("Page.navigate", { url: ENDERECO });
 await dormir(2500);
 
 secao("A. Carregamento");
-checar("página carregou", (await js("return document.title")).includes("LotoLab"),
+checar("página carregou", (await js("return document.title")).match(/LotoLab|Sorte 2/),
   await js("return document.title"));
 /* ATENÇÃO: este teste passou anos verde sem testar nada do que o nome promete.
    Ele lia só `Log.entryAdded`, e exceção de JavaScript NÃO chega por aí — o
@@ -832,7 +832,7 @@ const offline = await js(`
   return { titulo: document.title, texto: document.body.innerText.trim().length,
            online: navigator.onLine };
 `);
-checar("app abre sem rede", offline.titulo.includes("LotoLab") && offline.texto > 200,
+checar("app abre sem rede", offline.titulo.match(/LotoLab|Sorte 2/) && offline.texto > 200,
   `offline=${!offline.online}, ${offline.texto} caracteres`);
 const abasOffline = await js(`
   const t = document.body.innerText.toLowerCase();

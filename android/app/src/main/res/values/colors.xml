@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Fundo do app. Acompanha o tema escuro do LotoLab (#061522), que é o
+    <!-- Fundo do app. Acompanha o tema escuro do LotoLab (#061521), que é o
          padrão desde a virada visual. A splash usa esta cor: se ela ficasse na
          antiga, o app abriria num azul e trocaria para outro meio segundo
          depois — um salto que se vê e não se explica. -->
-    <color name="naval">#061522</color>
+    <color name="naval">#061521</color>
 
     <!-- O fundo do ÍCONE fica onde estava, de propósito. A arte do trevo foi
          desenhada e conferida sobre este tom, e mudá-lo junto alteraria o
@@ -12,7 +12,7 @@
          pedido. Cor de app e cor de ícone são duas decisões, não uma. -->
     <color name="ic_launcher_background">#0F1E2E</color>
 
-    <color name="colorPrimary">#061522</color>
+    <color name="colorPrimary">#061521</color>
     <color name="colorPrimaryDark">#030D16</color>
     <!-- Teal do pacote premium, o mesmo tom da variável "acaso" do tema escuro.
 
