@@ -1,4 +1,4 @@
-// Visual Final V3 — deterministic CSS-only installer used by GitHub Actions.
+// LotoLab Visual Final V3 — deterministic CSS-only installer used by GitHub Actions.
 import { readFileSync, writeFileSync, copyFileSync, mkdirSync, existsSync } from "node:fs";
 import { join } from "node:path";
 
@@ -9,7 +9,7 @@ const rootSw = join(repo, "sw.js");
 const wwwSw = join(repo, "www", "sw.js");
 
 function fail(message){
-  console.error(`VISUAL FINAL V3: ${message}`);
+  console.error(`LOTO LAB VISUAL FINAL V3: ${message}`);
   process.exit(1);
 }
 
@@ -23,7 +23,7 @@ for(const marker of ["T.inicio = () =>","T.resultados = () =>","pintarAvisos","g
 
 html = html.replace(/<html lang="pt-BR" data-tema="(?:claro|escuro)">/, '<html lang="pt-BR" data-tema="escuro">');
 html = html.replace(/<meta name="theme-color" content="[^"]*">/, '<meta name="theme-color" content="#061521">');
-html = html.replace(/<title>[\s\S]*?<\/title>/, '<title>Sorte 2 — Laboratório Estatístico</title>');
+html = html.replace(/<title>[\s\S]*?<\/title>/, '<title>LotoLab — Laboratório Estatístico</title>');
 
 /* Idempotência: remove qualquer instalação anterior. A versão final não injeta
    JavaScript extra — o motor do app continua sendo o único script da página. */
@@ -47,7 +47,6 @@ for(const name of ["sorte2-ui-final.css","brain-network.svg"]){
 if(existsSync(rootSw)){
   let sw=readFileSync(rootSw,"utf8");
   sw=sw.replace(/const VERSAO = "\d+";/,'const VERSAO = "6";');
-  /* Limpa eventual referência antiga ao hook JS e mantém somente assets visuais. */
   sw=sw.replace(/,\s*"\.\/ui\/sorte2-ui-final\.js"/g,"");
   if(!sw.includes("./ui/sorte2-ui-final.css")){
     sw=sw.replace(/const CASCA = \[([^\]]*)\];/,(all,inside)=>{
@@ -66,4 +65,4 @@ if(existsSync(colors)){
   writeFileSync(colors,xml);
 }
 
-console.log("VISUAL FINAL V3: aplicado com sucesso (CSS-only)");
+console.log("LOTO LAB VISUAL FINAL V3: aplicado com sucesso (CSS-only)");
