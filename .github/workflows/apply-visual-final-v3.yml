@@ -45,7 +45,13 @@ jobs:
 
       - name: Run existing interface tests
         run: |
-          if [ -f ferramentas/testar-interface.mjs ]; then node ferramentas/testar-interface.mjs; fi
+          if [ -f ferramentas/testar-interface.mjs ]; then
+            python3 -m http.server 8123 >/tmp/sorte2-http.log 2>&1 &
+            SERVER_PID=$!
+            trap 'kill $SERVER_PID 2>/dev/null || true' EXIT
+            sleep 1
+            node ferramentas/testar-interface.mjs
+          fi
 
       - name: Commit generated integration
         run: |
