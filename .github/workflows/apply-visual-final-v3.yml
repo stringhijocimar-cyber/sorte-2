@@ -8,15 +8,21 @@ on:
       - 'ui/**'
       - 'ferramentas/aplicar-visual-final-v3.mjs'
       - '.github/workflows/apply-visual-final-v3.yml'
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
   apply:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout branch
+      - name: Checkout visual branch
         uses: actions/checkout@v4
         with:
           ref: agent/visual-final-v3
