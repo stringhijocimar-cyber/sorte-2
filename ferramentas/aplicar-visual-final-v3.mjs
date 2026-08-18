@@ -1,4 +1,4 @@
-// Visual Final V3 — deterministic installer used by GitHub Actions.
+// Visual Final V3 — deterministic CSS-only installer used by GitHub Actions.
 import { readFileSync, writeFileSync, copyFileSync, mkdirSync, existsSync } from "node:fs";
 import { join } from "node:path";
 
@@ -25,21 +25,20 @@ html = html.replace(/<html lang="pt-BR" data-tema="(?:claro|escuro)">/, '<html l
 html = html.replace(/<meta name="theme-color" content="[^"]*">/, '<meta name="theme-color" content="#061521">');
 html = html.replace(/<title>[\s\S]*?<\/title>/, '<title>Sorte 2 — Laboratório Estatístico</title>');
 
+/* Idempotência: remove qualquer instalação anterior. A versão final não injeta
+   JavaScript extra — o motor do app continua sendo o único script da página. */
 html = html.replace(/\n?\s*<link[^>]+data-sorte2-visual-final="[^"]+"[^>]*>\s*/g,"\n");
 html = html.replace(/\n?\s*<script[^>]+data-sorte2-visual-final="[^"]+"[^>]*><\/script>\s*/g,"\n");
 
 const link = '<link rel="stylesheet" href="ui/sorte2-ui-final.css?v=3.0.0" data-sorte2-visual-final="3.0.0">';
-const script = '<script src="ui/sorte2-ui-final.js?v=3.0.0" data-sorte2-visual-final="3.0.0"></script>';
 if(!html.includes("</head>")) fail("</head> ausente");
-if(!html.includes("</body>")) fail("</body> ausente");
 html = html.replace("</head>", `${link}\n</head>`);
-html = html.replace("</body>", `${script}\n</body>`);
 
 writeFileSync(rootIndex,html);
 writeFileSync(wwwIndex,html);
 
 mkdirSync(join(repo,"www","ui"),{recursive:true});
-for(const name of ["sorte2-ui-final.css","sorte2-ui-final.js","brain-network.svg"]){
+for(const name of ["sorte2-ui-final.css","brain-network.svg"]){
   const src=join(repo,"ui",name), dst=join(repo,"www","ui",name);
   if(!existsSync(src)) fail(`asset ausente: ui/${name}`);
   copyFileSync(src,dst);
@@ -48,10 +47,12 @@ for(const name of ["sorte2-ui-final.css","sorte2-ui-final.js","brain-network.svg
 if(existsSync(rootSw)){
   let sw=readFileSync(rootSw,"utf8");
   sw=sw.replace(/const VERSAO = "\d+";/,'const VERSAO = "6";');
+  /* Limpa eventual referência antiga ao hook JS e mantém somente assets visuais. */
+  sw=sw.replace(/,\s*"\.\/ui\/sorte2-ui-final\.js"/g,"");
   if(!sw.includes("./ui/sorte2-ui-final.css")){
     sw=sw.replace(/const CASCA = \[([^\]]*)\];/,(all,inside)=>{
       const clean=inside.trim().replace(/,\s*$/,'');
-      return `const CASCA = [${clean}, "./ui/sorte2-ui-final.css", "./ui/sorte2-ui-final.js", "./ui/brain-network.svg"];`;
+      return `const CASCA = [${clean}, "./ui/sorte2-ui-final.css", "./ui/brain-network.svg"];`;
     });
   }
   writeFileSync(rootSw,sw);
@@ -65,4 +66,4 @@ if(existsSync(colors)){
   writeFileSync(colors,xml);
 }
 
-console.log("VISUAL FINAL V3: aplicado com sucesso");
+console.log("VISUAL FINAL V3: aplicado com sucesso (CSS-only)");
