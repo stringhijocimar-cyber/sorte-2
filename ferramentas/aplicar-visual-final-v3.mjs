@@ -1,3 +1,4 @@
+// Visual Final V3 — deterministic installer used by GitHub Actions.
 import { readFileSync, writeFileSync, copyFileSync, mkdirSync, existsSync } from "node:fs";
 import { join } from "node:path";
 
