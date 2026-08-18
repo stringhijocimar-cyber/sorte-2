@@ -72,5 +72,6 @@ jobs:
             echo 'Nothing to commit'
           else
             git commit -m 'feat(ui): integrate visual final v3 into app shell'
+            git pull --rebase origin agent/visual-final-v3
             git push origin HEAD:agent/visual-final-v3
           fi
