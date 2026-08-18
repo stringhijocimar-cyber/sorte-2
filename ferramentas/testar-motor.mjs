@@ -170,7 +170,7 @@ const EXPOSTOS = [
   "evoluirPendentes", "PRIMITIVOS", "TRANSFORMACOES", "caudaNormal", "MINIMO_PESQUISA",
   "tracoAuc",
   "POPULACAO_PESQUISA",
-  "GRUPOS_DE_AVISO",
+  "GRUPOS_DE_AVISO", "resultadosDe", "proximasDatasDeSorteio", "idadeDoHistorico",
 ];
 const epilogo = `\n;globalThis.__motor = {${EXPOSTOS.map((n) => `${n}: typeof ${n} !== "undefined" ? ${n} : undefined`).join(", ")}};\n`;
 vm.runInContext(fonte + epilogo, contexto, { filename: "index.html:script" });
@@ -3596,6 +3596,103 @@ secao("32. Aviso de histórico atrasado");
     !/pode estar\s+atrasado/.test(contexto.T.resultados()));
 
   S.resultados = guardaRes; S.modalidade = guardaMod;
+}
+
+/* ==================================================================
+   33. Demora da conferência e fila de lembretes
+
+   Duas queixas, medidas em vez de supostas:
+   "a conferência demora" e "só recebo aviso quando abro o app".
+   ================================================================== */
+secao("33. Conferência rápida e avisos que chegam sozinhos");
+
+{
+  const S = motor.S;
+  const g = {j:S.jogos, t:S.teimosinhas, r:S.resultados, a:S.avisos, m:S.modalidade};
+  S.modalidade = "lotofacil";
+
+  /* ---- gravações no armazenamento ----
+     `avisar()` gravava a lista inteira a cada chamada. Com duzentos jogos foram
+     1002 gravações medidas — no celular, cada uma serializa um vetor que só
+     cresce, com a tela parada. Agora a conferência é um lote só. */
+  let gravacoes = 0;
+  const gravarOriginal = motor.Guardar.gravar;
+  motor.Guardar.gravar = function(...args){ gravacoes++; return gravarOriginal.apply(this, args); };
+
+  S.resultados = historicoSemeado("lotofacil", 25, 15, 300, 11)
+    .map((r, i) => Object.assign(r, {data: `2026-0${1 + (i % 8)}-0${1 + (i % 9)}`}));
+  S.jogos = Array.from({length: 40}, (_, i) => ({
+    id: "p" + i, dezenas: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],
+    modalidade: "lotofacil", metodo: "m", data: "2026-01-01", lote: "L", conferencias: [],
+  }));
+  S.teimosinhas = []; S.avisos = [];
+
+  const r = contexto.conferenciaAutomatica();
+  checar("a conferência de 40 jogos acontece", r.novas > 0, `${r.novas} conferências`);
+  /* O número exato não importa; a ORDEM DE GRANDEZA importa. Uma gravação por
+     prêmio encontrado seria proporcional ao trabalho; um lote é constante. */
+  checar("e grava um punhado de vezes, não uma por prêmio",
+    gravacoes <= 5, `${gravacoes} gravações para ${r.premios} prêmios`);
+  motor.Guardar.gravar = gravarOriginal;
+
+  /* ---- índice por modalidade ----
+     Cada jogo varria os concursos de TODAS as loterias. O índice devolve só a
+     da modalidade — e não pode devolver concurso de outra. */
+  S.resultados = S.resultados.concat(
+    historicoSemeado("mega-sena", 60, 6, 50, 3).map(x => ({...x, data:"2026-05-01"})));
+  const soLotofacil = contexto.resultadosDe("lotofacil");
+  checar("o índice separa por modalidade",
+    soLotofacil.length > 0 && soLotofacil.every(x => x.modalidade === "lotofacil"),
+    `${soLotofacil.length} concursos`);
+  checar("e enxerga concurso acrescentado depois",
+    contexto.resultadosDe("mega-sena").length === 50,
+    `${contexto.resultadosDe("mega-sena").length}`);
+  /* Substituir o vetor inteiro tem de invalidar o índice: um índice que
+     sobrevive a isso devolve histórico velho, pior que índice nenhum. */
+  S.resultados = historicoSemeado("quina", 80, 5, 7, 5).map(x => ({...x, data:"2026-06-01"}));
+  checar("trocar o histórico inteiro invalida o índice",
+    contexto.resultadosDe("lotofacil").length === 0 &&
+    contexto.resultadosDe("quina").length === 7);
+
+  /* ---- fila de lembretes ----
+     O defeito: agendava UM alarme por modalidade. Ele tocava e o aparelho
+     ficava mudo até alguém abrir o app — a queixa literal. */
+  S.resultados = [
+    {concurso:3760, data:"2026-08-12", modalidade:"lotofacil", dezenas:[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]},
+    {concurso:3761, data:"2026-08-13", modalidade:"lotofacil", dezenas:[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]},
+    {concurso:3762, data:"2026-08-14", modalidade:"lotofacil", dezenas:[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],
+     dataProximo:"2099-01-02", concursoProximo:3763},
+  ];
+  const fila = contexto.proximasDatasDeSorteio("lotofacil", 12);
+  checar("a fila tem vários sorteios à frente, não um só",
+    fila.length === 12, `${fila.length} datas`);
+  checar("e os concursos são consecutivos",
+    fila[0].numero === 3763 && fila[11].numero === 3774,
+    `${fila[0].numero}…${fila[11].numero}`);
+  checar("as datas avançam no ritmo medido",
+    fila[1].data > fila[0].data);
+
+  /* Sem `dataProximo` — o caso que o espelho produz — antes zerava os avisos em
+     silêncio. Agora a projeção assume. */
+  S.resultados[2] = {concurso:3762, data:"2099-08-14", modalidade:"lotofacil",
+    dezenas:[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]};
+  const semProximo = contexto.proximasDatasDeSorteio("lotofacil", 12);
+  checar("sem dataProximo, a fila ainda é montada pelo ritmo",
+    semProximo.length > 0, `${semProximo.length} datas`);
+
+  /* Data no passado não vira alarme: o Android descarta na hora e a fila
+     ficaria vazia de novo, que é o defeito de origem. */
+  S.resultados = [
+    {concurso:1, data:"2020-01-01", modalidade:"lotofacil", dezenas:[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]},
+    {concurso:2, data:"2020-01-02", modalidade:"lotofacil", dezenas:[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],
+     dataProximo:"2020-01-03", concursoProximo:3},
+  ];
+  checar("datas no passado não entram na fila",
+    contexto.proximasDatasDeSorteio("lotofacil", 12).every(x => x.data >= "2026-01-01"),
+    JSON.stringify(contexto.proximasDatasDeSorteio("lotofacil", 3)));
+
+  S.jogos = g.j; S.teimosinhas = g.t; S.resultados = g.r;
+  S.avisos = g.a; S.modalidade = g.m;
 }
 
 /* ---------- saída ---------- */

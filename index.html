@@ -3644,17 +3644,60 @@ const legendaCartela = `<div class="legenda-cartela">
 
 const AVISO_MAX = 200;
 
+/* ==================== gravação adiada ====================
+
+   `avisar()` gravava a lista inteira no armazenamento a CADA chamada. Numa
+   conferência com duzentos jogos isso deu mil e duas gravações — medidas, não
+   estimadas. No computador cada uma custa nada; no celular cada uma serializa
+   um vetor que só cresce e escreve no disco, com a interface parada esperando.
+   Era essa a demora.
+
+   Agora a gravação pode ser adiada: quem faz um lote abre `Avisos.lote()`,
+   avisa à vontade e fecha uma vez. Fora de lote o comportamento é o de sempre,
+   porque um aviso avulso tem de sobreviver ao app ser fechado no segundo
+   seguinte. */
+let _avisosAdiados = 0, _avisosSujos = false;
+function comLoteDeAvisos(fn){
+  _avisosAdiados++;
+  try { return fn(); }
+  finally {
+    _avisosAdiados--;
+    if(_avisosAdiados === 0 && _avisosSujos){
+      _avisosSujos = false;
+      Guardar.gravar("avisos", S.avisos);
+    }
+  }
+}
+
 function avisar(tipo, titulo, texto, chave){
-  /* `chave` torna o aviso idempotente: o mesmo fato não avisa duas vezes. */
-  if(chave && S.avisos.some(a => a.chave === chave)) return false;
+  /* `chave` torna o aviso idempotente: o mesmo fato não avisa duas vezes.
+     A busca era linear na lista inteira a cada chamada — com duzentos avisos e
+     mil chamadas, quarenta mil comparações de string. O conjunto abaixo é
+     reconstruído só quando a lista muda de tamanho por fora. */
+  if(chave){
+    if(!_chavesDeAviso || _chavesDeAviso.tamanhoNaMontagem !== S.avisos.length){
+      _chavesDeAviso = new Set(S.avisos.map(a => a.chave).filter(Boolean));
+      _chavesDeAviso.tamanhoNaMontagem = S.avisos.length;
+    }
+    if(_chavesDeAviso.has(chave)) return false;
+  }
   S.avisos.unshift({
     id:`${Date.now().toString(36)}-${Math.random().toString(36).slice(2,6)}`,
     tipo, titulo, texto, chave, quando:new Date().toISOString(), lido:false
   });
-  if(S.avisos.length > AVISO_MAX) S.avisos.length = AVISO_MAX;
-  Guardar.gravar("avisos", S.avisos);
+  if(chave && _chavesDeAviso){
+    _chavesDeAviso.add(chave);
+    _chavesDeAviso.tamanhoNaMontagem = S.avisos.length;
+  }
+  if(S.avisos.length > AVISO_MAX){
+    S.avisos.length = AVISO_MAX;
+    _chavesDeAviso = null;   /* cortou a cauda: o conjunto não vale mais */
+  }
+  if(_avisosAdiados > 0) _avisosSujos = true;
+  else Guardar.gravar("avisos", S.avisos);
   return true;
 }
+let _chavesDeAviso = null;
 
 /* ==================== avisos no celular ====================
 
@@ -3843,6 +3886,57 @@ function momentoDoAviso(dataISO){
 /* Reagenda os lembretes das modalidades que a pessoa acompanha. Chamado depois
    de cada busca: a data do próximo concurso muda a cada sorteio, e um lembrete
    marcado para a data velha nunca mais tocaria. */
+/* Quantos sorteios à frente o app deixa alarme montado. Doze cobre duas semanas
+   de uma loteria diária e mais de um mês das outras — tempo de sobra para o app
+   ser aberto de novo e a fila ser reabastecida. */
+const LEMBRETES_A_FRENTE = 12;
+
+/* As próximas datas de sorteio desta modalidade.
+
+   A primeira vem de `dataProximo`, que a Caixa informa junto do resultado. As
+   seguintes são PROJETADAS pelo ritmo medido do próprio histórico — a mesma
+   mediana que a tela usa para dizer se os dados estão velhos.
+
+   Projetar é aproximado e é de propósito: o alarme diz "o sorteio saiu, abra
+   para conferir", e chegar meia hora fora do ponto não muda nada. O que a
+   projeção resolve é o defeito real — sem ela havia UM alarme montado por vez,
+   ele tocava, e o app ficava mudo até alguém abri-lo. */
+function proximasDatasDeSorteio(modalidade, quantas){
+  const ultimo = ultimoResultado(modalidade);
+  if(!ultimo) return [];
+  const idade = idadeDoHistorico(modalidade);
+  const passo = (idade.avaliavel && idade.tipico > 0) ? idade.tipico : null;
+
+  const datas = [];
+  let base = null;
+  if(ultimo.dataProximo && /^\d{4}-\d{2}-\d{2}$/.test(ultimo.dataProximo)){
+    base = ultimo.dataProximo;
+  } else if(passo && ultimo.data){
+    /* Sem `dataProximo` — acontece quando o resultado veio de um espelho que
+       não traz esse campo. Antes disto, essa ausência zerava os avisos em
+       silêncio; agora ela só custa precisão. */
+    const d = new Date(Date.parse(ultimo.data));
+    d.setDate(d.getDate() + passo);
+    base = d.toISOString().slice(0, 10);
+  }
+  if(!base) return [];
+
+  let numero = ultimo.concursoProximo || (Number(ultimo.concurso) + 1);
+  let quando = new Date(Date.parse(base));
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  for(let i = 0; i < quantas; i++){
+    /* Não agenda para o passado: um `dataProximo` velho — o app ficou dias sem
+       abrir — geraria alarmes que o Android descarta na hora, e o resultado
+       seria a fila vazia de novo. Avança até alcançar hoje. */
+    if(quando >= hoje) datas.push({data: quando.toISOString().slice(0,10), numero});
+    if(!passo) break;
+    quando = new Date(quando.getTime());
+    quando.setDate(quando.getDate() + passo);
+    numero++;
+  }
+  return datas;
+}
+
 async function reagendarLembretes(){
   if(S.avisarSorteio === false) return {agendados:0, motivo:"desligado"};
   if(!Avisos.plugin()) return {agendados:0, motivo:"sem plugin nativo"};
@@ -3850,18 +3944,19 @@ async function reagendarLembretes(){
   const modalidades = [...new Set(S.jogos.map(j => j.modalidade))];
   let agendados = 0;
   for(const mod of modalidades){
-    const ultimo = ultimoResultado(mod);
-    if(!ultimo || !ultimo.dataProximo) continue;
-    const quando = momentoDoAviso(ultimo.dataProximo);
-    if(!quando) continue;
-    const numero = ultimo.concursoProximo || (Number(ultimo.concurso) + 1);
-    const chave = `sorteio:${mod}:${numero}`;
     const quantos = S.jogos.filter(j => j.modalidade === mod).length;
-    const ok = await Avisos.agendar(quando,
-      `${MODALIDADES[mod].nome} — concurso ${numero}`,
-      `O sorteio já saiu. Abra para conferir ${quantos === 1 ? "seu jogo" : `seus ${quantos} jogos`}.`,
-      chave);
-    if(ok) agendados++;
+    /* Uma FILA de alarmes, e não um só. Este era o defeito: com um alarme por
+       vez, ele tocava e o aparelho ficava mudo até alguém abrir o app — que é
+       exatamente a queixa de "só recebo aviso quando abro". */
+    for(const alvo of proximasDatasDeSorteio(mod, LEMBRETES_A_FRENTE)){
+      const quando = momentoDoAviso(alvo.data);
+      if(!quando) continue;
+      const ok = await Avisos.agendar(quando,
+        `${MODALIDADES[mod].nome} — concurso ${alvo.numero}`,
+        `O sorteio já saiu. Abra para conferir ${quantos === 1 ? "seu jogo" : `seus ${quantos} jogos`}.`,
+        `sorteio:${mod}:${alvo.numero}`);
+      if(ok) agendados++;
+    }
   }
   return {agendados, modalidades: modalidades.length};
 }
@@ -3890,27 +3985,65 @@ function faixaAtingida(modalidade, acertos){
    mandando no terceiro caso, que é o automático — ali ninguém declarou nada, e
    assumir cobertura para trás inventaria acerto em sorteio anterior ao dia em
    que o jogo existiu. */
+/* Índice por modalidade, memoizado.
+
+   `concursosDoJogo` varria os 21.672 concursos de TODAS as modalidades para
+   cada jogo — com duzentos jogos são quatro milhões de comparações, das quais
+   95% descartam um concurso de outra loteria logo na primeira condição. O
+   índice separa uma vez e cada jogo passa a ver só a sua loteria (os 3.279 da
+   Lotofácil, por exemplo).
+
+   A validade é decidida pelo tamanho da lista e pela identidade do vetor: as
+   duas formas de `S.resultados` mudar neste app são receber concursos novos e
+   ser substituída inteira. Um índice que sobrevive a uma dessas devolve
+   histórico velho, que é pior que índice nenhum. */
+let _indiceResultados = null;
+function resultadosDe(modalidade){
+  if(!_indiceResultados || _indiceResultados.vetor !== S.resultados ||
+     _indiceResultados.tamanho !== S.resultados.length){
+    const porMod = new Map();
+    for(const r of S.resultados){
+      let lista = porMod.get(r.modalidade);
+      if(!lista) porMod.set(r.modalidade, lista = []);
+      lista.push(r);
+    }
+    _indiceResultados = {porMod, vetor: S.resultados, tamanho: S.resultados.length};
+  }
+  return _indiceResultados.porMod.get(modalidade) || [];
+}
+
 function concursosDoJogo(j){
+  const daModalidade = resultadosDe(j.modalidade);
   if(Number.isFinite(j.concursoAlvo))
-    return S.resultados.filter(r =>
-      r.modalidade === j.modalidade && r.concurso === j.concursoAlvo);
-  return S.resultados.filter(r =>
-    r.modalidade === j.modalidade &&
-    (j.deConcurso
-      ? r.concurso >= j.deConcurso && r.concurso <= j.deConcurso + (j.concursos||1) - 1
-      : String(r.data || "") >= String(j.data || "")));
+    return daModalidade.filter(r => r.concurso === j.concursoAlvo);
+  if(j.deConcurso){
+    const fim = j.deConcurso + (j.concursos||1) - 1;
+    return daModalidade.filter(r => r.concurso >= j.deConcurso && r.concurso <= fim);
+  }
+  const desde = String(j.data || "");
+  return daModalidade.filter(r => String(r.data || "") >= desde);
 }
 
 function conferenciaAutomatica(){
+ /* Tudo num lote só: sem isto cada prêmio encontrado gravava a lista inteira de
+    avisos no armazenamento, e uma conferência grande fazia mais de mil
+    gravações com a tela parada. Agora grava uma vez, no fim. */
+ return comLoteDeAvisos(() => {
   let novas = 0, premios = 0;
   let melhor = null;
   const todos = S.jogos.concat(S.teimosinhas || []);
   todos.forEach(j => {
     j.conferencias = j.conferencias || [];
     const jaFeitas = new Set(j.conferencias.map(cf => cf.concurso));
+    /* As dezenas do jogo viram conjunto UMA vez por jogo. Antes era
+       `filter(d => r.dezenas.includes(d))` a cada concurso: uma varredura
+       dentro da outra, repetida para os milhares de concursos que o jogo
+       cobre. */
+    const minhas = new Set(j.dezenas);
     concursosDoJogo(j).forEach(r => {
       if(jaFeitas.has(r.concurso)) return;
-      const acertos = j.dezenas.filter(d => r.dezenas.includes(d)).length;
+      let acertos = 0;
+      for(const d of r.dezenas) if(minhas.has(d)) acertos++;
       j.conferencias.push({concurso:r.concurso, data:r.data, dezenas:r.dezenas, acertos});
       novas++;
       const faixa = faixaAtingida(j.modalidade, acertos);
@@ -3932,6 +4065,7 @@ function conferenciaAutomatica(){
     Guardar.gravar("teimosinhas", S.teimosinhas);
   }
   return {novas, premios, melhor};
+ });
 }
 
 /* Chamado sempre que o histórico muda: confere, avisa quantos concursos
