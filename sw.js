@@ -22,11 +22,11 @@
 /* 5: trevo novo nos ícones. Sem subir esta versão, quem já tem o app instalado
    continuaria vendo o ícone antigo para sempre — os PNGs são servidos pelo
    cache primeiro, e cache primeiro nunca vai conferir se mudou. */
-const VERSAO = "5";
+const VERSAO = "6";
 const CACHE = `lotolab-v${VERSAO}`;
 
 //: A casca mínima para o app abrir offline.
-const CASCA = ["./", "./index.html", "./manifest.webmanifest", "./icone.svg"];
+const CASCA = ["./", "./index.html", "./manifest.webmanifest", "./icone.svg", "./ui/sorte2-ui-final.css", "./ui/brain-network.svg"];
 
 //: Recursos que praticamente não mudam. Ícone novo sai com versão nova.
 const IMUTAVEIS = /\.(png|svg|webmanifest)$/i;

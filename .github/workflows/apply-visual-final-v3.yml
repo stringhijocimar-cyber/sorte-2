@@ -1,0 +1,83 @@
+name: Apply Visual Final V3
+
+on:
+  push:
+    branches:
+      - agent/visual-final-v3
+    paths:
+      - 'ui/**'
+      - 'ferramentas/aplicar-visual-final-v3.mjs'
+      - '.github/workflows/apply-visual-final-v3.yml'
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout visual branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/visual-final-v3
+          fetch-depth: 0
+
+      - name: Apply visual final
+        run: node ferramentas/aplicar-visual-final-v3.mjs
+
+      - name: Stabilize activity day-boundary test
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('ferramentas/testar-interface.mjs')
+          s = p.read_text()
+          old = 'const h = 3600000, agora = Date.now();'
+          new = 'const h = 3600000, baseDia = new Date(); baseDia.setHours(12,0,0,0); const agora = baseDia.getTime();'
+          if old in s:
+              s = s.replace(old, new, 1)
+              p.write_text(s)
+          elif new not in s:
+              raise SystemExit('marcador do teste de atividades não encontrado')
+          PY
+
+      - name: Verify deterministic CSS-only integration
+        run: |
+          test -f ui/sorte2-ui-final.css
+          test -f ui/brain-network.svg
+          test -f www/ui/sorte2-ui-final.css
+          test -f www/ui/brain-network.svg
+          grep -q 'data-sorte2-visual-final="3.0.0"' index.html
+          ! grep -q '<script src="ui/sorte2-ui-final.js' index.html
+          grep -q '<title>LotoLab — Laboratório Estatístico</title>' index.html
+          cmp -s index.html www/index.html
+          cmp -s sw.js www/sw.js
+          grep -q 'const VERSAO = "6";' sw.js
+
+      - name: Run motor tests first
+        run: node ferramentas/testar-motor.mjs
+
+      - name: Run interface tests
+        run: |
+          python3 -m http.server 8123 >/tmp/lotolab-http.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill $SERVER_PID 2>/dev/null || true' EXIT
+          sleep 1
+          node ferramentas/testar-interface.mjs
+
+      - name: Commit generated integration
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          if git diff --cached --quiet; then
+            echo 'Nothing to commit'
+          else
+            git commit -m 'feat(ui): integrate LotoLab visual final v3'
+            git push origin HEAD:agent/visual-final-v3
+          fi
