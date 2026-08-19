@@ -26,7 +26,7 @@ const VERSAO = "6";
 const CACHE = `lotolab-v${VERSAO}`;
 
 //: A casca mínima para o app abrir offline.
-const CASCA = ["./", "./index.html", "./manifest.webmanifest", "./icone.svg", "./ui/sorte2-ui-final.css", "./ui/sorte2-ui-final.js", "./ui/brain-network.svg"];
+const CASCA = ["./", "./index.html", "./manifest.webmanifest", "./icone.svg", "./ui/sorte2-ui-final.css", "./ui/brain-network.svg"];
 
 //: Recursos que praticamente não mudam. Ícone novo sai com versão nova.
 const IMUTAVEIS = /\.(png|svg|webmanifest)$/i;

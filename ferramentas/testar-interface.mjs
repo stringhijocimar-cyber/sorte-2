@@ -594,7 +594,7 @@ secao("F5. Central de atividades — dias e filtros");
 
 const guardaAvisos = await js(`return JSON.stringify(S.avisos || [])`);
 await js(`
-  const h = 3600000, agora = Date.now();
+  const h = 3600000, baseDia = new Date(); baseDia.setHours(12,0,0,0); const agora = baseDia.getTime();
   const mk = (tipo, titulo, quandoMs) => ({id: tipo + quandoMs, tipo, titulo,
     texto: "detalhe", quando: new Date(quandoMs).toISOString(), lido: false});
   S.avisos = [
