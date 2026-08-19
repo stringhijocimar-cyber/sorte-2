@@ -50,7 +50,11 @@ for(const name of ["sorte2-ui-final.css","brain-network.svg"]){
 
 if(existsSync(rootSw)){
   let sw=readFileSync(rootSw,"utf8");
-  sw=sw.replace(/const VERSAO = "\d+";/,'const VERSAO = "7";');
+  /* NÃO mexe em VERSAO. Esta linha já fixava "7" e, com isso, desfazia em
+     silêncio qualquer subida de versão feita depois — inclusive a que existe
+     justamente para expulsar cache velho do aparelho de quem já instalou.
+     Integrar CSS e versionar cache são duas decisões; só a primeira é deste
+     instalador. */
   sw=sw.replace(/,\s*"\.\/ui\/sorte2-ui-final\.js"/g,"");
   if(!sw.includes("./ui/sorte2-ui-final.css")){
     sw=sw.replace(/const CASCA = \[([^\]]*)\];/,(all,inside)=>{
@@ -67,6 +71,15 @@ if(existsSync(colors)){
   let xml=readFileSync(colors,"utf8");
   xml=xml.replace(/#061522/g,"#061521");
   writeFileSync(colors,xml);
+}
+
+/* O manifesto também carrega a cor, e ficou de fora quando a V4 passou: o app
+   já abria no tom novo enquanto a tela de partida do app instalado seguia no
+   antigo. Normalizar num lugar só e esquecer o outro é como a divergência
+   nasce, então os dois saem daqui juntos. */
+for(const manifesto of [join(repo,"manifest.webmanifest"), join(repo,"www","manifest.webmanifest")]){
+  if(!existsSync(manifesto)) continue;
+  writeFileSync(manifesto, readFileSync(manifesto,"utf8").replace(/#061522/g,"#061521"));
 }
 
 console.log("LOTOLAB MOCKUP FIDELITY V4: aplicado com sucesso (CSS-only)");

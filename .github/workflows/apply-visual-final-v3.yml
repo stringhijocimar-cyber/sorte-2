@@ -49,7 +49,12 @@ jobs:
           cmp -s index.html www/index.html
           cmp -s sw.js www/sw.js
           cmp -s ui/sorte2-ui-final.css www/ui/sorte2-ui-final.css
-          grep -q 'const VERSAO = "7";' sw.js
+          # Confere que a casca da V4 está registrada no service worker, sem
+          # fixar o número: prender a versão faz o cheque falhar exatamente
+          # quando ele deveria passar — numa entrega que sobe a versão de
+          # propósito para expulsar o cache antigo.
+          grep -qE 'const VERSAO = "[0-9]+";' sw.js
+          grep -q './ui/sorte2-ui-final.css' sw.js
 
       - name: Run motor tests
         run: node ferramentas/testar-motor.mjs

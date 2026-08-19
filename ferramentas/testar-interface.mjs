@@ -128,7 +128,11 @@ await cmd("Page.navigate", { url: ENDERECO });
 await dormir(2500);
 
 secao("A. Carregamento");
-checar("página carregou", (await js("return document.title")).match(/LotoLab|Sorte 2/),
+/* O nome é cobrado inteiro, e de propósito. Esta linha já aceitou
+   /LotoLab|Sorte 2/ — um "ou" que deixava o teste verde exatamente no caso que
+   ele existe para pegar: a marca antiga voltando. Alternativa em teste de
+   identidade não afrouxa o teste, desliga. */
+checar("página carregou", (await js("return document.title")) === "LotoLab — Laboratório Estatístico",
   await js("return document.title"));
 /* ATENÇÃO: este teste passou anos verde sem testar nada do que o nome promete.
    Ele lia só `Log.entryAdded`, e exceção de JavaScript NÃO chega por aí — o
@@ -160,7 +164,18 @@ for (const e of eventos) {
     problemasJS.push(`[console.error] ${e.params.args.map((a) =>
       a.description ?? a.value ?? a.type).join(" ")}`);
   } else if (e.method === "Log.entryAdded" && e.params.entry.level === "error" &&
-             e.params.entry.source !== "network") {
+             e.params.entry.source !== "network" &&
+             /* Falha de rede com outro carimbo. O Chrome arquiva o download do
+                ícone do manifesto como source "other", não "network", e aborta
+                essa busca sozinho de vez em quando no headless — medido: o
+                icone.svg responde 200 com image/svg+xml em toda tentativa,
+                pela rede e pelo service worker, e mesmo assim a mensagem
+                aparece em cerca de uma execução a cada três. É ruído de
+                ambiente entrando por uma porta que o filtro de rede não cobre,
+                e teste que falha sozinho um terço das vezes deixa de ser lido.
+                A exclusão é só desta mensagem: qualquer outro "other" continua
+                derrubando a bateria. */
+             !/icon from the Manifest/.test(e.params.entry.text)) {
     problemasJS.push(`[${e.params.entry.source}] ${e.params.entry.text}`);
   }
 }
@@ -303,7 +318,12 @@ const sobreviveu = await js(`
   const texto = document.body.innerText;
   return { guardados: j.length,
            naTela: /57/.test(texto) && /35/.test(texto),
-           daOutraModalidade: /\b18\b/.test(texto) && /\b25\b/.test(texto) };
+           /* \\b escapado em dobro de propósito: este trecho viaja para o
+              navegador dentro de um template literal, e ali \b vira só "b".
+              Escrito com uma barra só, o teste procurava /b18b/ — que não
+              casa com nada — e o "NÃO aparece junto" passava sempre, mesmo
+              se a outra modalidade estivesse na tela. */
+           daOutraModalidade: /\\b18\\b/.test(texto) && /\\b25\\b/.test(texto) };
 `);
 checar("jogo continua guardado após recarregar", sobreviveu.guardados === 2,
   `${sobreviveu.guardados} jogos`);
@@ -832,7 +852,7 @@ const offline = await js(`
   return { titulo: document.title, texto: document.body.innerText.trim().length,
            online: navigator.onLine };
 `);
-checar("app abre sem rede", offline.titulo.match(/LotoLab|Sorte 2/) && offline.texto > 200,
+checar("app abre sem rede", offline.titulo === "LotoLab — Laboratório Estatístico" && offline.texto > 200,
   `offline=${!offline.online}, ${offline.texto} caracteres`);
 const abasOffline = await js(`
   const t = document.body.innerText.toLowerCase();
@@ -854,6 +874,114 @@ await cmd("Emulation.setDeviceMetricsOverride", {
 await cmd("Network.emulateNetworkConditions", {
   offline: false, latency: 0, downloadThroughput: -1, uploadThroughput: -1,
 });
+
+/* ---------- F8. Identidade da V4 ----------
+   A virada de marca e a camada visual da V4 vieram por caminhos separados
+   (um instalador de CSS, um sync de metadados, edições à mão) e nenhum teste
+   cobrava o resultado combinado. O que já escapou por essa fresta: o
+   manifesto ficou com o fundo da versão anterior enquanto o app já abria no
+   novo, e o teste de título aceitava a marca antiga como resposta válida.
+   Esta seção cobra a identidade onde ela é visível, não onde foi escrita. */
+secao("F8. Identidade da V4");
+
+/* Antes de medir, volta ao estado limpo: a seção anterior derruba a rede e
+   recarrega, e o manifesto precisa ser buscado com rede de pé. */
+await cmd("Page.navigate", { url: ENDERECO });
+await dormir(2500);
+
+const identidade = await js(`
+  const l = document.querySelector('link[href*="sorte2-ui-final.css"]');
+  return {
+    titulo: document.title,
+    marca: document.querySelector('.marca-titulo b')?.textContent || "",
+    tema: document.documentElement.getAttribute('data-tema'),
+    themeColor: document.querySelector('meta[name=theme-color]')?.content || "",
+    temLink: !!l,
+    /* cssRules só é legível se a folha carregou de verdade: um 404 deixa
+       sheet nulo ou sem regra nenhuma, e aí "o link existe" não prova nada. */
+    regrasDaFolha: l && l.sheet ? l.sheet.cssRules.length : 0,
+    fundoHtml: getComputedStyle(document.documentElement).backgroundColor,
+  };
+`);
+
+checar("título é o da V4", identidade.titulo === "LotoLab — Laboratório Estatístico",
+  identidade.titulo);
+checar("marca no cabeçalho é LotoLab", identidade.marca === "LotoLab", identidade.marca);
+checar("tema escuro é o padrão", identidade.tema === "escuro", String(identidade.tema));
+checar("a folha da V4 carregou e tem regras", identidade.temLink && identidade.regrasDaFolha > 100,
+  `${identidade.regrasDaFolha} regras`);
+
+/* Não basta a folha carregar: as regras precisam VALER — e "valer" se mede no
+   valor computado do elemento vivo, não no texto da regra.
+
+   A primeira versão deste teste varria as regras da folha e comparava o texto
+   autoral com o computado. Deu falha honesta em código são: o navegador
+   normaliza (`saturate(145%)` vira `saturate(1.45)`, `1fr` vira pixel, cor em
+   hex vira rgb). Comparação de string ali mede a normalização do Chrome, não
+   a V4. Então a lista abaixo é curta, escolhida à mão, e cada linha diz o
+   valor computado que se espera de fato. */
+const VALORES_DA_V4 = [
+  { o_que: "fundo da página",        js: `getComputedStyle(document.documentElement).backgroundColor`, espera: "rgb(2, 10, 16)" },
+  { o_que: "cor-base da V4",         js: `getComputedStyle(document.documentElement).getPropertyValue('--s2-bg').trim()`, espera: "#061521" },
+  { o_que: "largura do botão menu",  js: `getComputedStyle(document.querySelector('.menu')).width`, espera: "40px" },
+  { o_que: "ícone do menu",          js: `getComputedStyle(document.querySelector('.menu svg')).width`, espera: "22px" },
+  { o_que: "corpo em 14px",          js: `getComputedStyle(document.body).fontSize`, espera: "14px" },
+  { o_que: "barra de rolagem fina",  js: `getComputedStyle(document.body).scrollbarWidth`, espera: "thin" },
+];
+for (const v of VALORES_DA_V4) {
+  const obtido = await js(`return String(${v.js})`);
+  checar(`regra da V4 vale: ${v.o_que}`, obtido === v.espera,
+    obtido === v.espera ? obtido : `esperado ${v.espera}, obtido ${obtido}`);
+}
+
+/* Prova de que é a FOLHA que manda, e não uma coincidência com o CSS embutido:
+   desligada a folha, o fundo tem de deixar de ser o da V4. Um teste que só
+   confere o valor final passaria igual se o <link> não existisse. */
+const semAFolha = await js(`
+  const l = document.querySelector('link[href*="sorte2-ui-final.css"]');
+  l.sheet.disabled = true;
+  const cor = getComputedStyle(document.documentElement).backgroundColor;
+  l.sheet.disabled = false;
+  return { desligada: cor, religada: getComputedStyle(document.documentElement).backgroundColor };
+`);
+checar("o fundo vem da folha da V4, não do CSS embutido",
+  semAFolha.desligada !== "rgb(2, 10, 16)" && semAFolha.religada === "rgb(2, 10, 16)",
+  `sem a folha: ${semAFolha.desligada} · com a folha: ${semAFolha.religada}`);
+
+/* A cor do manifesto é a tela de partida do app instalado. Divergir da
+   theme-color faz o app abrir num tom e trocar para outro meio segundo
+   depois — o mesmo salto que já foi corrigido no Android. */
+/* Devolve promessa em vez de usar await: o auxiliar js() embrulha a expressão
+   numa arrow comum, e `await` ali dentro é erro de sintaxe. Quem resolve a
+   promessa é o awaitPromise do próprio DevTools. */
+const corDoManifesto = await js(`
+  return fetch('manifest.webmanifest', { cache: 'no-store' })
+    .then(r => r.json())
+    .then(m => ({ nome: m.name, curto: m.short_name,
+                  fundo: m.background_color, tema: m.theme_color }));
+`);
+checar("manifesto usa a cor da V4",
+  corDoManifesto.fundo === identidade.themeColor &&
+  corDoManifesto.tema === identidade.themeColor,
+  `manifesto ${corDoManifesto.fundo}/${corDoManifesto.tema} vs meta ${identidade.themeColor}`);
+checar("manifesto leva o nome LotoLab",
+  corDoManifesto.curto === "LotoLab" && corDoManifesto.nome.includes("LotoLab"),
+  `${corDoManifesto.nome} / ${corDoManifesto.curto}`);
+
+/* Varredura da marca antiga no que a pessoa lê. Percorre as treze telas em
+   vez de olhar só a inicial: renomeação parcial é o defeito típico aqui. */
+const marcaAntiga = await js(`
+  const achados = [];
+  const telas = SECOES.flatMap(s => s.telas.map(t => t.id));
+  for(const id of telas){
+    try { irParaTela(id, {lateral:true}); } catch(e) { continue; }
+    const texto = document.body.innerText;
+    if(/sorte\\s*2/i.test(texto)) achados.push(id);
+  }
+  return achados;
+`);
+checar("nenhuma tela mostra a marca antiga", marcaAntiga.length === 0,
+  marcaAntiga.join(", "));
 
 /* ---------- fim ---------- */
 console.log(linhas.join("\n"));
