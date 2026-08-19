@@ -22,7 +22,7 @@
 /* 5: trevo novo nos ícones. Sem subir esta versão, quem já tem o app instalado
    continuaria vendo o ícone antigo para sempre — os PNGs são servidos pelo
    cache primeiro, e cache primeiro nunca vai conferir se mudou. */
-const VERSAO = "6";
+const VERSAO = "7";
 const CACHE = `lotolab-v${VERSAO}`;
 
 //: A casca mínima para o app abrir offline.
