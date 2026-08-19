@@ -74,15 +74,10 @@ jobs:
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add index.html www/index.html sw.js www/sw.js www/ui android/app/src/main/res/values/colors.xml ferramentas/testar-interface.mjs
+          git add -A
           if git diff --cached --quiet; then
             echo 'Nothing to commit'
           else
             git commit -m 'feat(ui): integrate LotoLab visual final v3'
-            for attempt in 1 2 3; do
-              git pull --rebase origin agent/visual-final-v3 && git push origin HEAD:agent/visual-final-v3 && exit 0
-              echo "push retry $attempt"
-              sleep 2
-            done
-            exit 1
+            git push origin HEAD:agent/visual-final-v3
           fi
