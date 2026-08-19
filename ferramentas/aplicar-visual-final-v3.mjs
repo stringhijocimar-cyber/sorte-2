@@ -1,4 +1,4 @@
-// LotoLab Visual Final V3 — deterministic CSS-only installer used by GitHub Actions.
+// LotoLab Mockup Fidelity V4 — deterministic CSS-only installer used by GitHub Actions.
 import { readFileSync, writeFileSync, copyFileSync, mkdirSync, existsSync } from "node:fs";
 import { join } from "node:path";
 
@@ -9,7 +9,7 @@ const rootSw = join(repo, "sw.js");
 const wwwSw = join(repo, "www", "sw.js");
 
 function fail(message){
-  console.error(`LOTO LAB VISUAL FINAL V3: ${message}`);
+  console.error(`LOTOLAB MOCKUP FIDELITY V4: ${message}`);
   process.exit(1);
 }
 
@@ -25,12 +25,16 @@ html = html.replace(/<html lang="pt-BR" data-tema="(?:claro|escuro)">/, '<html l
 html = html.replace(/<meta name="theme-color" content="[^"]*">/, '<meta name="theme-color" content="#061521">');
 html = html.replace(/<title>[\s\S]*?<\/title>/, '<title>LotoLab — Laboratório Estatístico</title>');
 
-/* Idempotência: remove qualquer instalação anterior. A versão final não injeta
-   JavaScript extra — o motor do app continua sendo o único script da página. */
+// A marca visível também precisa ser LotoLab. Antes só o <title> tinha mudado.
+html = html.replace('<b>Sorte 2</b><span>Laboratório Estatístico</span>', '<b>LotoLab</b><span>Laboratório Estatístico</span>');
+html = html.replace('titulo:"Sorte 2",\n      sub:"Laboratório Estatístico. O motor de pesquisa, seus jogos e os concursos."',
+                    'titulo:"LotoLab",\n      sub:"Laboratório Estatístico. O motor de pesquisa, seus jogos e os concursos."');
+
+/* Idempotência: uma única folha visual externa e nenhum JavaScript visual. */
 html = html.replace(/\n?\s*<link[^>]+data-sorte2-visual-final="[^"]+"[^>]*>\s*/g,"\n");
 html = html.replace(/\n?\s*<script[^>]+data-sorte2-visual-final="[^"]+"[^>]*><\/script>\s*/g,"\n");
 
-const link = '<link rel="stylesheet" href="ui/sorte2-ui-final.css?v=3.0.0" data-sorte2-visual-final="3.0.0">';
+const link = '<link rel="stylesheet" href="ui/sorte2-ui-final.css?v=4.0.0" data-sorte2-visual-final="4.0.0">';
 if(!html.includes("</head>")) fail("</head> ausente");
 html = html.replace("</head>", `${link}\n</head>`);
 
@@ -46,7 +50,7 @@ for(const name of ["sorte2-ui-final.css","brain-network.svg"]){
 
 if(existsSync(rootSw)){
   let sw=readFileSync(rootSw,"utf8");
-  sw=sw.replace(/const VERSAO = "\d+";/,'const VERSAO = "6";');
+  sw=sw.replace(/const VERSAO = "\d+";/,'const VERSAO = "7";');
   sw=sw.replace(/,\s*"\.\/ui\/sorte2-ui-final\.js"/g,"");
   if(!sw.includes("./ui/sorte2-ui-final.css")){
     sw=sw.replace(/const CASCA = \[([^\]]*)\];/,(all,inside)=>{
@@ -65,4 +69,4 @@ if(existsSync(colors)){
   writeFileSync(colors,xml);
 }
 
-console.log("LOTO LAB VISUAL FINAL V3: aplicado com sucesso (CSS-only)");
+console.log("LOTOLAB MOCKUP FIDELITY V4: aplicado com sucesso (CSS-only)");
