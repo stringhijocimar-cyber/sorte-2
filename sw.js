@@ -21,8 +21,13 @@
 
 /* 5: trevo novo nos ícones. Sem subir esta versão, quem já tem o app instalado
    continuaria vendo o ícone antigo para sempre — os PNGs são servidos pelo
-   cache primeiro, e cache primeiro nunca vai conferir se mudou. */
-const VERSAO = "7";
+   cache primeiro, e cache primeiro nunca vai conferir se mudou.
+
+   8: o manifesto passou a declarar o fundo da V4 (#061521). O manifesto casa
+   com IMUTAVEIS, ou seja, é servido do cache sem nunca perguntar se mudou:
+   sem subir a versão aqui, quem já instalou continuaria abrindo a tela de
+   partida no azul antigo para sempre, enquanto o app já abre no novo. */
+const VERSAO = "8";
 const CACHE = `lotolab-v${VERSAO}`;
 
 //: A casca mínima para o app abrir offline.

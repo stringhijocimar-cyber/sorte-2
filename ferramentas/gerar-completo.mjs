@@ -8,7 +8,7 @@
  * Este arquivo não depende de nada. Baixa e abre — funciona de file://, sem
  * rede, sem instalar. É a versão que sempre dá para conferir.
  */
-import { readFileSync, writeFileSync, readdirSync } from "node:fs";
+import { readFileSync, writeFileSync, readdirSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -63,6 +63,28 @@ html = html.replace(
       }));
     Guardar.gravar("resultados", S.resultados);
   }`);
+
+/* A camada visual da V4 entrou no app como folha EXTERNA. Aqui ela precisa
+   virar folha embutida, senão este arquivo — que existe justamente para
+   funcionar sozinho, de file://, sem nada ao lado — abriria sem o visual da
+   V4: o <link> apontaria para uma pasta ui/ que não viajou junto.
+
+   Foi assim que a V4 deixou de chegar nesta via de entrega sem ninguém
+   perceber: a virada visual mexeu no index.html e o gerador continuou
+   copiando o <link> como texto. */
+const folha = join(RAIZ, "ui", "sorte2-ui-final.css");
+if (!existsSync(folha)) {
+  console.error("ui/sorte2-ui-final.css não encontrado: o arquivo único sairia sem o visual da V4.");
+  process.exit(1);
+}
+const css = readFileSync(folha, "utf8");
+const antes = html;
+html = html.replace(/<link rel="stylesheet" href="ui\/sorte2-ui-final\.css[^"]*"[^>]*>/,
+  `<style data-sorte2-visual-final="embutido">\n${css}\n</style>`);
+if (html === antes) {
+  console.error("não achei o <link> da folha da V4 no index.html — o arquivo único sairia sem o visual.");
+  process.exit(1);
+}
 
 /* Sem service worker neste arquivo: de file:// ele não registra, e num
    servidor ele reintroduziria justamente o cache que congelou o app. */
