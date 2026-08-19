@@ -1,0 +1,69 @@
+name: Sync V4 version metadata
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/sync-version-v4.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Synchronize 4.0.0 metadata
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import json
+
+          version = '4.0.0'
+
+          package = Path('package.json')
+          data = json.loads(package.read_text())
+          data['version'] = version
+          package.write_text(json.dumps(data, ensure_ascii=False, indent=2) + '\n')
+
+          lock = Path('package-lock.json')
+          data = json.loads(lock.read_text())
+          data['version'] = version
+          if '' in data.get('packages', {}):
+              data['packages']['']['version'] = version
+          lock.write_text(json.dumps(data, ensure_ascii=False, indent=2) + '\n')
+
+          Path('VERSION').write_text(version + '\n')
+
+          gradle = Path('android/app/build.gradle')
+          text = gradle.read_text()
+          import re
+          text = re.sub(r'versionCode\s+\d+', 'versionCode 4', text, count=1)
+          text = re.sub(r'versionName\s+"[^"]+"', 'versionName "4.0.0"', text, count=1)
+          gradle.write_text(text)
+          PY
+
+      - name: Verify metadata
+        run: |
+          test "$(cat VERSION)" = "4.0.0"
+          node -e "const p=require('./package.json'); const l=require('./package-lock.json'); if(p.version!=='4.0.0'||l.version!=='4.0.0'||l.packages[''].version!=='4.0.0') process.exit(1)"
+          grep -q 'versionCode 4' android/app/build.gradle
+          grep -q 'versionName "4.0.0"' android/app/build.gradle
+
+      - name: Commit synchronization
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add VERSION package.json package-lock.json android/app/build.gradle
+          if git diff --cached --quiet; then
+            echo 'Version metadata already synchronized.'
+          else
+            git commit -m 'chore(release): synchronize LotoLab 4.0.0 metadata'
+            git push origin main
+          fi
