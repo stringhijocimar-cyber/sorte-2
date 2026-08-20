@@ -1,0 +1,279 @@
+/* LotoLab — LAB UI POLISH V4.1
+   Neutral presentation refinement for dashboard, analytics, history and app shell.
+   No statistical engine or wagering logic is changed here. */
+
+:root{
+  --ll-bg:#05131F;
+  --ll-bg-2:#071925;
+  --ll-panel:#0A1E2B;
+  --ll-panel-2:#0C2433;
+  --ll-line:#1A3B4C;
+  --ll-line-soft:rgba(83,132,151,.22);
+  --ll-text:#F5FBFD;
+  --ll-muted:#9CB0B9;
+  --ll-teal:#2BE0C1;
+  --ll-blue:#7B93FF;
+  --ll-purple:#B892FF;
+  --ll-radius-lg:20px;
+  --ll-radius-md:14px;
+  --ll-shadow:0 14px 38px rgba(0,0,0,.18);
+}
+
+html[data-tema="escuro"] body{
+  background:
+    radial-gradient(520px 280px at 100% -8%,rgba(43,224,193,.08),transparent 68%),
+    radial-gradient(380px 260px at -10% 36%,rgba(123,147,255,.05),transparent 72%),
+    linear-gradient(180deg,var(--ll-bg) 0%,#030D15 100%)!important;
+  color:var(--ll-text)!important;
+  text-rendering:optimizeLegibility;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* App shell */
+html[data-tema="escuro"] header{
+  background:linear-gradient(180deg,rgba(5,19,31,.985),rgba(5,19,31,.94))!important;
+  border-bottom:1px solid var(--ll-line-soft)!important;
+  box-shadow:0 10px 30px rgba(0,0,0,.12)!important;
+}
+.cabeca{max-width:440px!important}
+.marca-titulo b{
+  font-size:1.52rem!important;
+  letter-spacing:-.045em!important;
+  color:var(--ll-teal)!important;
+}
+.marca-titulo span{
+  font-size:.66rem!important;
+  color:#AFC0C7!important;
+  letter-spacing:.025em!important;
+}
+.menu,.sino,.voltar,.acao-tela,.back,.filter-btn{
+  min-width:42px!important;
+  min-height:42px!important;
+}
+.sino{
+  background:linear-gradient(180deg,#0A2230,#071924)!important;
+  border-color:rgba(78,126,146,.34)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.025)!important;
+}
+
+main{
+  max-width:440px!important;
+  padding-top:14px!important;
+  padding-left:13px!important;
+  padding-right:13px!important;
+}
+
+nav{
+  width:min(440px,100vw)!important;
+  background:rgba(3,13,21,.975)!important;
+  border-top:1px solid rgba(79,127,146,.30)!important;
+  box-shadow:0 -18px 38px rgba(0,0,0,.22)!important;
+}
+nav button{
+  min-height:52px!important;
+  border-radius:12px!important;
+  transition:background-color .18s ease,color .18s ease,transform .18s ease;
+}
+nav button[aria-current="page"]{
+  background:linear-gradient(180deg,rgba(43,224,193,.105),rgba(43,224,193,.035))!important;
+  color:var(--ll-teal)!important;
+}
+nav button[aria-current="page"] svg{filter:drop-shadow(0 0 8px rgba(43,224,193,.18))}
+
+/* Cards and section rhythm */
+.carta,.panel,.kpi,.ficha,.draw-card,.activity-item,.item,.mini-card,.chart-card,.pq-grafico{
+  border-color:rgba(72,118,138,.34)!important;
+}
+.carta,.panel,.ficha,.draw-card,.chart-card,.pq-grafico{
+  border-radius:var(--ll-radius-lg)!important;
+  background:
+    linear-gradient(180deg,rgba(13,37,51,.97),rgba(7,24,36,.98))!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.025),0 12px 32px rgba(0,0,0,.10)!important;
+}
+.carta,.panel{padding:16px!important;margin-bottom:13px!important}
+.panel-title{margin-bottom:13px!important}
+.panel-title h3{
+  font-size:.92rem!important;
+  font-weight:760!important;
+  letter-spacing:-.015em!important;
+}
+.panel-title span{font-size:.62rem!important;color:var(--ll-muted)!important}
+
+/* Page titles */
+.titulo.com-volta,.page-head{min-height:52px!important;margin-bottom:13px!important}
+.titulo.com-volta h1,.page-head h1{
+  font-size:1.18rem!important;
+  font-weight:790!important;
+  letter-spacing:-.035em!important;
+}
+.titulo.com-volta p,.page-head small{font-size:.66rem!important;color:#9EB2BB!important}
+
+/* Segmented controls for analysis/history */
+.segmento,.tabs{
+  padding:4px!important;
+  gap:3px!important;
+  border-radius:13px!important;
+  border-color:rgba(75,122,141,.32)!important;
+  background:#061823!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.02)!important;
+}
+.segmento button,.tabs button{
+  min-height:38px!important;
+  border-radius:10px!important;
+  font-size:.62rem!important;
+  transition:background-color .18s ease,color .18s ease;
+}
+.segmento button[aria-selected="true"],.tabs button.active{
+  color:#F8FDFE!important;
+  background:linear-gradient(180deg,rgba(43,224,193,.16),rgba(43,224,193,.055))!important;
+  box-shadow:inset 0 0 0 1px rgba(43,224,193,.12),inset 0 -2px 0 var(--ll-teal)!important;
+}
+
+/* Analytics hero */
+.pq-hero,.analysis-card{
+  position:relative!important;
+  overflow:hidden!important;
+  padding:17px!important;
+  border-radius:20px!important;
+  border-color:rgba(43,224,193,.22)!important;
+  background:
+    radial-gradient(190px 140px at 88% 12%,rgba(43,224,193,.12),transparent 70%),
+    radial-gradient(150px 120px at 0% 100%,rgba(123,147,255,.06),transparent 72%),
+    linear-gradient(145deg,#0A2130,#071925)!important;
+  box-shadow:var(--ll-shadow)!important;
+}
+.pq-hero::after,.analysis-card::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  background:linear-gradient(110deg,rgba(255,255,255,.025),transparent 32% 70%,rgba(43,224,193,.018));
+}
+.pq-hero h2{font-size:1.16rem!important;letter-spacing:-.025em!important}
+.pq-hero p{font-size:.69rem!important;line-height:1.52!important;color:#A9BBC3!important}
+.pq-selo{
+  padding:5px 9px!important;
+  font-size:.51rem!important;
+  background:rgba(43,224,193,.095)!important;
+  border-color:rgba(43,224,193,.26)!important;
+}
+.pq-orbe{
+  width:64px!important;height:64px!important;
+  box-shadow:0 0 0 7px rgba(43,224,193,.05),0 18px 34px rgba(43,224,193,.14)!important;
+}
+
+.analysis-top,.geracao-linha{
+  grid-template-columns:126px minmax(0,1fr)!important;
+  gap:15px!important;
+}
+.donut{width:112px!important;height:112px!important}
+.donut:before{inset:14px!important}
+
+/* KPI and measurement blocks */
+.metrics{gap:9px!important}
+.metric,.kpi,.mini-card{
+  border-radius:14px!important;
+  border-color:rgba(72,118,138,.32)!important;
+  background:linear-gradient(180deg,#0B2232,#081B29)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.025)!important;
+}
+.metric{padding:13px!important}
+.metric span,.kpi .rot{font-size:.56rem!important;color:#9FB1B9!important}
+.metric b,.kpi .val{font-size:1.34rem!important;letter-spacing:-.035em!important;color:var(--ll-teal)!important}
+.metric small,.kpi .sub{font-size:.54rem!important;line-height:1.35!important}
+
+/* Evolution / charts */
+.chart-card,.pq-grafico{
+  padding:15px!important;
+  border-radius:18px!important;
+  background:linear-gradient(180deg,#081C2A,#061722)!important;
+}
+.chart-card svg{height:224px!important}
+.grid,.grade-grafico{stroke:#153548!important;stroke-opacity:.9!important}
+.baseline,.linha-acaso{stroke:#8FA5AE!important;stroke-dasharray:4 6!important;stroke-width:1!important}
+.curve,.linha-evolucao{stroke:var(--ll-teal)!important;stroke-width:2.5!important}
+.dot,.ponto-evolucao{fill:var(--ll-teal)!important;filter:drop-shadow(0 0 4px rgba(43,224,193,.36))}
+.gen-row,.linha-geracao{
+  padding:11px 12px!important;
+  border-radius:13px!important;
+  border-color:rgba(72,118,138,.30)!important;
+  background:linear-gradient(180deg,#091E2D,#071A27)!important;
+}
+
+/* Historical results cards */
+.mode-tabs{gap:7px!important;margin-bottom:12px!important}
+.mode-tabs button{
+  min-height:38px!important;
+  padding:8px 11px!important;
+  border-radius:11px!important;
+  border-color:rgba(72,118,138,.31)!important;
+  background:#071B29!important;
+  color:#8EA3AD!important;
+}
+.mode-tabs .active,.mode-tabs button[aria-pressed="true"]{
+  color:#F7FCFD!important;
+  border-color:rgba(43,224,193,.52)!important;
+  background:rgba(43,224,193,.095)!important;
+  box-shadow:inset 0 0 0 1px rgba(43,224,193,.06)!important;
+}
+.draws{gap:10px!important}
+.draw-card{
+  padding:14px!important;
+  border-radius:17px!important;
+}
+.draw-top b{font-size:.75rem!important}
+.draw-top time{font-size:.57rem!important;color:#91A7B0!important}
+.bolas,.balls{gap:7px!important;margin-top:11px!important}
+.bola,.ball{
+  min-width:32px!important;width:32px!important;height:32px!important;
+  font-size:.67rem!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 5px 12px rgba(0,0,0,.12)!important;
+}
+
+/* Activities / system history */
+.activity-sheet,.folha .corpo{
+  background:
+    radial-gradient(400px 220px at 90% 0%,rgba(43,224,193,.055),transparent 70%),
+    linear-gradient(180deg,#061521,#03101A)!important;
+}
+.activity-head h2,#corpo-avisos h2{font-size:1.18rem!important;letter-spacing:-.035em!important}
+.activity-tabs,.chips{
+  padding:4px!important;
+  border-radius:12px!important;
+  border-color:rgba(72,118,138,.30)!important;
+}
+.activity-item,.lista .item,.item{
+  padding:12px!important;
+  border-radius:14px!important;
+  border-color:rgba(72,118,138,.30)!important;
+  background:linear-gradient(180deg,#091E2C,#071925)!important;
+}
+.activity-icon,.ic-aviso{width:42px!important;height:42px!important;border-radius:12px!important}
+.activity-top b,.item .txt b{font-size:.68rem!important}
+.activity-item p,.item .txt span{font-size:.57rem!important;line-height:1.42!important}
+
+/* Form controls used by neutral filters/search */
+select,input[type=number],input[type=text],input[type=date],.search{
+  min-height:44px!important;
+  border-radius:12px!important;
+  border-color:rgba(72,118,138,.35)!important;
+  background:#061925!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.02)!important;
+}
+select:focus,input:focus,.search:focus-within{
+  outline:none!important;
+  border-color:rgba(43,224,193,.60)!important;
+  box-shadow:0 0 0 3px rgba(43,224,193,.08)!important;
+}
+
+@media (max-width:390px){
+  main{padding-left:11px!important;padding-right:11px!important}
+  .analysis-top,.geracao-linha{grid-template-columns:112px minmax(0,1fr)!important;gap:10px!important}
+  .donut{width:100px!important;height:100px!important}
+  .pq-hero,.analysis-card{padding:15px!important}
+  .chart-card svg{height:206px!important}
+}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}
+}
