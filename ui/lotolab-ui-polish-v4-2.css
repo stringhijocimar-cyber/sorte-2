@@ -1,0 +1,138 @@
+/* LotoLab — UI POLISH V4.2
+   Presentation-only refinement for historical results and modality context.
+   Semantic rule: green = contest had winner; yellow = accumulated/no winner.
+   Modality colors identify context only and never replace the text labels. */
+
+:root{
+  --ll-mod:#24D9B7;
+  --ll-mod-soft:rgba(36,217,183,.12);
+  --ll-mod-border:rgba(36,217,183,.42);
+  --ll-mod-text:#A7F4E5;
+}
+
+/* Each modality gets a ticket-inspired accent. The button text remains visible,
+   so color is an extra cue rather than the only cue. */
+[data-mod="mega-sena"]{--ll-chip:#35B86B}
+[data-mod="lotofacil"]{--ll-chip:#C06BE3}
+[data-mod="quina"]{--ll-chip:#5B91FF}
+[data-mod="lotomania"]{--ll-chip:#FF8B4D}
+[data-mod="dupla-sena"]{--ll-chip:#FF6876}
+[data-mod="dia-de-sorte"]{--ll-chip:#E7B64C}
+[data-mod="timemania"]{--ll-chip:#B9CF45}
+[data-mod="mais-milionaria"]{--ll-chip:#8C76FF}
+
+/* Global accent follows the selected modality without touching application logic. */
+body:has([data-mod="mega-sena"][aria-pressed="true"]){
+  --ll-mod:#35B86B;--ll-mod-soft:rgba(53,184,107,.13);--ll-mod-border:rgba(53,184,107,.48);--ll-mod-text:#A9EFC1;
+}
+body:has([data-mod="lotofacil"][aria-pressed="true"]){
+  --ll-mod:#C06BE3;--ll-mod-soft:rgba(192,107,227,.13);--ll-mod-border:rgba(192,107,227,.48);--ll-mod-text:#E9C2F8;
+}
+body:has([data-mod="quina"][aria-pressed="true"]){
+  --ll-mod:#5B91FF;--ll-mod-soft:rgba(91,145,255,.13);--ll-mod-border:rgba(91,145,255,.48);--ll-mod-text:#C3D5FF;
+}
+body:has([data-mod="lotomania"][aria-pressed="true"]){
+  --ll-mod:#FF8B4D;--ll-mod-soft:rgba(255,139,77,.13);--ll-mod-border:rgba(255,139,77,.50);--ll-mod-text:#FFD2B9;
+}
+body:has([data-mod="dupla-sena"][aria-pressed="true"]){
+  --ll-mod:#FF6876;--ll-mod-soft:rgba(255,104,118,.13);--ll-mod-border:rgba(255,104,118,.50);--ll-mod-text:#FFC4C9;
+}
+body:has([data-mod="dia-de-sorte"][aria-pressed="true"]){
+  --ll-mod:#E7B64C;--ll-mod-soft:rgba(231,182,76,.13);--ll-mod-border:rgba(231,182,76,.50);--ll-mod-text:#F8DFA3;
+}
+body:has([data-mod="timemania"][aria-pressed="true"]){
+  --ll-mod:#B9CF45;--ll-mod-soft:rgba(185,207,69,.12);--ll-mod-border:rgba(185,207,69,.48);--ll-mod-text:#E4EEA7;
+}
+body:has([data-mod="mais-milionaria"][aria-pressed="true"]){
+  --ll-mod:#8C76FF;--ll-mod-soft:rgba(140,118,255,.13);--ll-mod-border:rgba(140,118,255,.48);--ll-mod-text:#CEC5FF;
+}
+
+/* Modality picker: colored dot + stronger selected state. */
+[data-mod]{position:relative!important}
+[data-mod]::before{
+  content:"";
+  display:inline-block;
+  width:7px;height:7px;border-radius:50%;
+  margin-right:7px;vertical-align:1px;
+  background:var(--ll-chip,#24D9B7);
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--ll-chip,#24D9B7) 12%,transparent);
+}
+[data-mod][aria-pressed="true"]{
+  color:var(--ll-chip,#24D9B7)!important;
+  border-color:color-mix(in srgb,var(--ll-chip,#24D9B7) 62%,transparent)!important;
+  background:color-mix(in srgb,var(--ll-chip,#24D9B7) 12%,#071925)!important;
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--ll-chip,#24D9B7) 10%,transparent),0 7px 18px rgba(0,0,0,.10)!important;
+  font-weight:760!important;
+}
+
+/* Current modality is visible through the content hierarchy as well. */
+body:has([data-mod][aria-pressed="true"]) .titulo.com-volta h1,
+body:has([data-mod][aria-pressed="true"]) .page-head h1{
+  text-shadow:0 0 22px color-mix(in srgb,var(--ll-mod) 13%,transparent);
+}
+body:has([data-mod][aria-pressed="true"]) .titulo.com-volta::after,
+body:has([data-mod][aria-pressed="true"]) .page-head::after{
+  content:"";
+  grid-column:2;
+  justify-self:center;
+  width:34px;height:2px;border-radius:99px;
+  margin-top:7px;
+  background:linear-gradient(90deg,transparent,var(--ll-mod),transparent);
+  opacity:.82;
+}
+
+.segmento button[aria-selected="true"],.tabs button.active{
+  box-shadow:inset 0 -2px 0 var(--ll-mod)!important;
+  border-color:var(--ll-mod-border)!important;
+}
+
+/* Drawn-number circles inherit the current modality, making the context obvious
+   while result status remains independently green/yellow on the card itself. */
+.bola,.ball,.dz.sorteada{
+  color:var(--ll-mod)!important;
+  border-color:color-mix(in srgb,var(--ll-mod) 48%,transparent)!important;
+  background:color-mix(in srgb,var(--ll-mod) 11%,transparent)!important;
+}
+
+/* Historical result status: stronger whole-card treatment.
+   Green = had winner; yellow = accumulated/no winner. Text badge remains. */
+.item.ganhou,.concurso.ganhou,.carta.ganhou,.nota.ganhou{
+  border-color:color-mix(in srgb,var(--ganhou) 58%,var(--linha))!important;
+  background:linear-gradient(180deg,color-mix(in srgb,var(--ganhou) 11%,var(--carta)),color-mix(in srgb,var(--ganhou) 5%,var(--carta)))!important;
+  box-shadow:inset 3px 0 0 var(--ganhou),0 10px 28px rgba(0,0,0,.08)!important;
+}
+.item.acumulou,.concurso.acumulou,.carta.acumulou,.nota.acumulou{
+  border-color:color-mix(in srgb,var(--acumulou) 60%,var(--linha))!important;
+  background:linear-gradient(180deg,color-mix(in srgb,var(--acumulou) 12%,var(--carta)),color-mix(in srgb,var(--acumulou) 5%,var(--carta)))!important;
+  box-shadow:inset 3px 0 0 var(--acumulou),0 10px 28px rgba(0,0,0,.08)!important;
+}
+.item.ganhou .txt b,.concurso.ganhou .concurso-topo b{color:var(--ganhou-tinta)!important}
+.item.acumulou .txt b,.concurso.acumulou .concurso-topo b{color:var(--acumulou-tinta)!important}
+.selo-ganho.ganhou{font-weight:760!important;letter-spacing:.055em!important}
+.selo-ganho.acumulou{font-weight:760!important;letter-spacing:.055em!important}
+
+/* Premium depth without turning the interface into a casino aesthetic. */
+.carta,.panel,.ficha,.concurso,.draw-card,.activity-item,.item{
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.025),0 12px 28px rgba(0,0,0,.08)!important;
+}
+.panel-title h3{letter-spacing:-.018em!important}
+.panel-title span{opacity:.9}
+
+/* Results cards: modality context appears in number chips, status in the card. */
+.concurso-topo time,.draw-top time{opacity:.82}
+.bolas,.balls{gap:7px!important}
+
+/* Drawer gets a compact legend-like rhythm from the colored modality dots. */
+.gaveta-mods{gap:7px!important}
+.gaveta-mods button{min-height:43px!important;border-radius:12px!important}
+
+@media(max-width:390px){
+  [data-mod]::before{width:6px;height:6px;margin-right:5px}
+  .bola,.ball{width:31px!important;height:31px!important}
+}
+
+@media(prefers-reduced-motion:reduce){
+  [data-mod],.item,.concurso,.carta,.nota{transition:none!important}
+}
+
+/* V4.2 validation trigger — no visual effect. */

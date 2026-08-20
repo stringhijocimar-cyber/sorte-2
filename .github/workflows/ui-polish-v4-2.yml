@@ -1,0 +1,88 @@
+name: Validate LotoLab UI V4.2
+
+on:
+  push:
+    branches:
+      - agent/ui-polish-v4-2
+    paths:
+      - 'ui/sorte2-ui-final.css'
+      - 'www/ui/sorte2-ui-final.css'
+      - '.github/workflows/ui-polish-v4-2.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: lotolab-ui-polish-v4-2
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout V4.2 branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/ui-polish-v4-2
+          fetch-depth: 0
+
+      - name: Verify V4.2 visual layer
+        run: |
+          cmp -s ui/sorte2-ui-final.css www/ui/sorte2-ui-final.css
+          grep -q 'V4.2 — modality identity' ui/sorte2-ui-final.css
+          grep -q 'data-mod="lotofacil"' ui/sorte2-ui-final.css
+          grep -q 'data-mod="mega-sena"' ui/sorte2-ui-final.css
+          grep -q '.concurso.ganhou' ui/sorte2-ui-final.css
+          grep -q '.concurso.acumulou' ui/sorte2-ui-final.css
+
+      - name: Run motor tests
+        run: |
+          set +e
+          node ferramentas/testar-motor.mjs > /tmp/v42-motor.log 2>&1
+          echo $? > /tmp/v42-motor.code
+          exit 0
+
+      - name: Run interface tests
+        run: |
+          python3 -m http.server 8123 >/tmp/lotolab-http.log 2>&1 &
+          SERVER_PID=$!
+          for i in $(seq 1 30); do
+            curl -sf http://127.0.0.1:8123/index.html >/dev/null && break
+            sleep 0.5
+          done
+          set +e
+          node ferramentas/testar-interface.mjs > /tmp/v42-interface.log 2>&1
+          echo $? > /tmp/v42-interface.code
+          kill $SERVER_PID 2>/dev/null || true
+          exit 0
+
+      - name: Write validation report
+        run: |
+          MOTOR_CODE=$(cat /tmp/v42-motor.code)
+          UI_CODE=$(cat /tmp/v42-interface.code)
+          MOTOR_SUMMARY=$(grep -E '[0-9]+ passaram, [0-9]+ falharam' /tmp/v42-motor.log | tail -1 | sed 's/^ *//')
+          UI_SUMMARY=$(grep -E '[0-9]+ passaram, [0-9]+ falharam' /tmp/v42-interface.log | tail -1 | sed 's/^ *//')
+          if [ "$MOTOR_CODE" = "0" ] && [ "$UI_CODE" = "0" ]; then STATUS=PASS; else STATUS=FAIL; fi
+          cat > V42_TEST_RESULT.md <<EOF
+          # LotoLab UI V4.2 validation
+          Status: $STATUS
+          Motor: ${MOTOR_SUMMARY:-summary unavailable}
+          Interface: ${UI_SUMMARY:-summary unavailable}
+          Source commit: $GITHUB_SHA
+          EOF
+
+      - name: Commit validation report
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add V42_TEST_RESULT.md
+          if ! git diff --cached --quiet; then
+            git commit -m 'test(ui): record V4.2 validation result'
+            git push origin HEAD:agent/ui-polish-v4-2
+          fi
+
+      - name: Enforce validation result
+        run: |
+          test "$(cat /tmp/v42-motor.code)" = "0"
+          test "$(cat /tmp/v42-interface.code)" = "0"
