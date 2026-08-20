@@ -1,6 +1,6 @@
 {
   "appId": "app.lotolab.jogos",
-  "appName": "LotoLab",
+  "appName": "LotoLab Estatístico",
   "webDir": "www",
   "android": {
     "allowMixedContent": false,

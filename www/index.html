@@ -10,7 +10,7 @@
 <!-- apple-touch-icon não aceita SVG: o iOS ignora e fica sem ícone na tela de
      início. Aqui vai o PNG, gerado do mesmo icone.svg. -->
 <link rel="apple-touch-icon" href="icone-192.png">
-<title>LotoLab — Laboratório Estatístico</title>
+<title>LotoLab Estatístico — Laboratório de Loterias</title>
 <style>
 /* ------------------------------------------------------------------
    Direção visual: ficha de conferência, não cassino.
@@ -937,7 +937,7 @@ td{padding:6px 7px;border-bottom:1px solid var(--trama)}
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
     </button>
     <div class="marca-titulo">
-      <b>LotoLab</b><span>Laboratório Estatístico</span>
+      <b>LotoLab Estatístico</b><span>Laboratório de Loterias</span>
     </div>
     <button class="sino" id="btn-avisos" aria-label="Avisos">
       <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -1112,7 +1112,7 @@ const esc = s => String(s ?? "").replace(/[&<>"']/g, c =>
 const nf = (v,d=2) => Number(v).toLocaleString("pt-BR",
   {minimumFractionDigits:d, maximumFractionDigits:d});
 const inf = v => Number(v).toLocaleString("pt-BR");
-/*<aposta>*/const brl = v => Number(v).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});/*</aposta>*/
+
 const pad = n => String(n).padStart(2,"0");
 const hoje = () => new Date().toISOString().slice(0,10);
 
@@ -1694,9 +1694,7 @@ T.gerar = () => {
     <div class="kpi"><div class="rot">chance por jogo</div>
       <div class="val" style="font-size:1.05rem">1 em ${inf(Math.round(total/Math.max(cobertas,1)))}</div>
       <div class="sub">igual para toda combinação</div></div>
-${/*<aposta>*/""}    <div class="kpi"><div class="rot">custo de ${S.quantidade} jogo${S.quantidade>1?"s":""}</div>
-      <div class="val" style="font-size:1.05rem">${brl(custoUnit*S.quantidade)}</div>
-      <div class="sub">${nf(c.preco,2)} × ${inf(cobertas)} × ${S.quantidade}</div></div>${/*</aposta>*/""}
+
   </div>
 
   <div class="carta">
@@ -2313,9 +2311,7 @@ function blocoDaModalidade(codigo, conf){
       <div class="kpi"><div class="rot">jogos conferidos</div>
         <div class="val" style="font-size:1.15rem">${inf(total)}</div>
         <div class="sub">em ${inf(new Set(conf.map(x=>x.concurso)).size)} concursos</div></div>
-${/*<aposta>*/""}      <div class="kpi"><div class="rot">em faixa de prêmio</div>
-        <div class="val" style="font-size:1.15rem">${inf(premiados)}</div>
-        <div class="sub">de ${inf(total)}</div></div>${/*</aposta>*/""}
+
     </div>
     ${faixaAcaso(media, esperado, Math.max(dp,0.02))}
     <div class="nota ${dentro?"":"atencao"}">
@@ -2360,8 +2356,7 @@ function resumoGeral(){
     ${cartao("jogos salvos", jogos, "no aparelho")}
     ${cartao("modalidades", mods, "com jogo salvo")}
     ${cartao("concursos", concursos, "no histórico")}
-    ${/*<aposta>*/""}${cartao("premiados", premios, premios ? "confira no volante" : "nenhum ainda",
-             premios ? "var(--ganhou)" : "var(--secundaria)")}${/*</aposta>*/""}
+    
   </div>
   ${aConferir ? `<div class="nota" style="margin-top:10px">
     <strong>${inf(aConferir)} conferência${aConferir>1?"s":""}</strong> pendente${aConferir>1?"s":""}.
@@ -2434,8 +2429,7 @@ T.inicio = () => {
         <small>Concursos analisados</small></div>
       <div class="mini-card"><strong class="teal">${inf(S.jogos.length)}</strong>
         <small>Jogos salvos</small></div>
-      ${/*<aposta>*/""}<div class="mini-card"><strong class="${premiosDeHoje() ? "teal" : ""}">${inf(premiosDeHoje())}</strong>
-        <small>Prêmios hoje</small></div>${/*</aposta>*/""}
+      
     </div>
   </section>`;
 };
@@ -2479,22 +2473,8 @@ T.placar = () => {
     ${nf(esperadoAcertos("lotofacil", 15),1)} na Lotofácil. A única coisa somável
     entre elas é o dinheiro.</div>`;
 
-/*<aposta>*/
-  const totalGasto = `<div class="carta">
-    <div class="rot" style="font-size:.62rem;text-transform:uppercase;letter-spacing:.1em;
-      color:var(--secundaria);font-weight:600">gasto somado, todas as loterias</div>
-    <div class="val num" style="font-size:1.9rem;font-weight:650;margin-top:2px">${brl(gasto)}</div>
-    <div class="sub" style="font-size:.7rem;color:var(--secundaria);font-family:var(--mono)">
-      ${codigos.length} modalidade${codigos.length>1?"s":""} · preço atual, aposta simples</div>
-    <div class="nota" style="margin-bottom:0">Aproximado: o app não guarda o preço pago
-      no dia de cada aposta, então usa o preço vigente da modalidade. Loteria é gasto de
-      entretenimento — este é o número que importa acompanhar.</div>
-  </div>`;
 
-  /* Resumo e atalhos no topo: é a primeira coisa que a pessoa quer saber ao
-     abrir a análise, e antes ela precisava rolar até achar. */
-/*</aposta>*/
-  return resumoGeral() + atalhos() + cabeca + /*<aposta>*/totalGasto +/*</aposta>*/
+  return resumoGeral() + atalhos() + cabeca + 
     codigos.sort((a,b)=> porModalidade[b].length - porModalidade[a].length)
       .map(k => blocoDaModalidade(k, porModalidade[k])).join("");
 };
@@ -2540,7 +2520,7 @@ function tabelaBancada(r, titulo, umConcursoSo){
       <td style="color:${Math.abs(l.z)>3?"var(--alerta)":"var(--secundaria)"}">${l.z>=0?"+":""}${nf(l.z,2)}</td>
       <td style="color:${l.popularidade===menorPop?"var(--acaso)":"inherit"}">${nf(l.popularidade,3)}</td>
       <td style="color:${l.sobreposicao===menorSobre?"var(--acaso)":"inherit"}">${nf(l.sobreposicao,2)}</td>
-      ${/*<aposta>*/""}<td>${brl(l.custo)}</td>${/*</aposta>*/""}
+      
     </tr>`).join("")}</tbody></table></div>
   <div class="nota ${v.ok?"":"atencao"}">
     <strong>Acertos:</strong> ${esc(v.texto)}
@@ -2585,12 +2565,10 @@ T.entender = () => `<div class="prosa">
     <li><strong>Fechamento.</strong> Combinatória de cobertura: garante um piso de acertos
     <em>caso</em> um número mínimo das suas dezenas seja sorteado. O app verifica cada
     garantia testando todos os cenários — e recusa a mostrar piso que não conseguiu provar.</li>
-    ${/*<aposta>*/""}<li><strong>Custo e cobertura.</strong> Marcar mais dezenas aumenta a cobertura e o custo
-    na mesma proporção. A chance por real gasto é idêntica em qualquer tamanho de aposta.
-    O que muda é a variância: você ganha mais vezes, valores menores.</li>${/*</aposta>*/""}
-    ${/*<estatistica><li><strong>Cobertura.</strong> Marcar mais dezenas cobre mais
+    
+    <li><strong>Cobertura.</strong> Marcar mais dezenas cobre mais
     combinações, na mesma proporção. A chance por combinação é idêntica em qualquer
-    tamanho de conjunto. O que muda é a variância: acertos mais frequentes e menores.</li></estatistica>*/""}
+    tamanho de conjunto. O que muda é a variância: acertos mais frequentes e menores.</li>
   </ul>
 
   <h3 style="margin-top:20px">Por que o placar existe</h3>
@@ -3496,10 +3474,7 @@ function seloGanhadores(r, opcoes){
   const o = Object.assign({premio:true, cidades:true}, opcoes||{});
   const g = ganhadoresDoConcurso(r);
   const partes = [`<span class="selo-ganho ${g.estado}" title="${esc(g.ajuda||"")}">${esc(g.rotulo)}</span>`];
-/*<aposta>*/
-  if(o.premio && g.estado === "ganhou" && Number.isFinite(g.premio) && g.premio > 0)
-    partes.push(`<span class="ganho-premio">${brl(g.premio)} cada</span>`);
-/*</aposta>*/
+
   if(o.cidades && g.estado === "ganhou" && r.cidades && r.cidades.length)
     partes.push(`<span class="ganho-cidades">${r.cidades.slice(0,4).map(c =>
       esc(`${c.municipio}/${c.uf}${c.ganhadores>1?` (${c.ganhadores})`:""}`)).join(" · ")}${
@@ -3543,7 +3518,7 @@ function cartaoProximo(modalidade){
     ${dias === null || dias < 0 ? "" : `<div class="contagem">
       <b>${dias}</b><span>${dias === 1 ? "dia" : "dias"}</span></div>`}
     <div class="rot">${esc(c.nome)} · concurso ${esc(p.concurso)}</div>
-${/*<aposta>*/""}    <div class="valor">${p.estimativa ? brl(p.estimativa) : "prêmio não informado"}</div>${/*</aposta>*/""}
+
     <div class="quando">${p.data ? esc(new Date(p.data + "T12:00:00")
       .toLocaleDateString("pt-BR", {weekday:"long", day:"2-digit", month:"long"}))
       : "data não informada"}${quando ? ` · ${quando}` : ""}</div>
@@ -4061,12 +4036,7 @@ function conferenciaAutomatica(){
            QUANTO foi. Melhor = mais acertos; empate fica com o primeiro. */
         if(!melhor || acertos > melhor.acertos)
           melhor = {acertos, modalidade:j.modalidade, concurso:r.concurso, jogo:j.id};
-        /*<aposta>*/
-        const nome = MODALIDADES[j.modalidade].nome;
-        avisar("premio", `${nome}: ${faixa} acerto${faixa===1?"":"s"}`,
-          `Concurso ${r.concurso} — o jogo ${j.dezenas.map(pad).join(" ")} está numa faixa de prêmio. Confira no volante oficial antes de comemorar.`,
-          `premio:${j.id}:${r.concurso}`);
-        /*</aposta>*/
+        
       }
     });
   });
@@ -4086,7 +4056,7 @@ function aoMudarHistorico(quantosConcursos, origem){
     const titulo = `${quantosConcursos} concurso${quantosConcursos===1?"":"s"} novo${quantosConcursos===1?"":"s"}`;
     const texto = r.novas
       ? `${r.novas} conferência${r.novas===1?"":"s"} feita${r.novas===1?"":"s"} automaticamente`
-        /*<aposta>*/+ (r.premios ? `, ${r.premios} em faixa de prêmio.` : ", nenhuma em faixa de prêmio.")/*</aposta>*/
+        
       : "Nenhum jogo salvo cobria esses concursos.";
     if(avisar("historico", titulo, `${texto} Origem: ${origem}.`,
               `hist:${origem}:${S.resultados.length}:${Date.now()}`))
@@ -4095,16 +4065,7 @@ function aoMudarHistorico(quantosConcursos, origem){
   /* O aviso do prêmio vem depois e separado do aviso de concurso novo, e diz
      de quanto foi: "seu jogo foi premiado" sem número manda a pessoa abrir o
      app para descobrir que acertou 11 na Lotofácil. */
-/*<aposta>*/
-  if(r.premios){
-    const detalhe = r.melhor
-      ? `${r.melhor.acertos} acertos na ${MODALIDADES[r.melhor.modalidade].nome}, concurso ${r.melhor.concurso}.`
-      : "Abra o LotoLab para ver qual jogo e qual concurso.";
-    notificarSistema(
-      r.premios === 1 ? "Seu jogo foi premiado" : `${r.premios} jogos premiados`,
-      detalhe, `premio:${Date.now()}`, "conferir");
-  }
-/*</aposta>*/
+
   if(S.autoAnalise !== false) analisarPendentes();
   /* Reagenda o alarme do próximo sorteio: a data mudou agora que entrou
      concurso novo, e o lembrete antigo apontava para uma data que já passou. */
@@ -5892,7 +5853,7 @@ T.montar = () => {
   const dez = marcadasDe(S.modalidade).slice().sort((a,b)=>a-b);
   const valido = dez.length >= c.min && dez.length <= c.max;
   const cobertas = valido ? combinacoes(dez.length, c.k) : 0;
-/*<aposta>*/ const custo = cobertas * c.preco; /*</aposta>*/
+
   const obs = dez.length >= c.k ? observacoes(dez, S.modalidade) : [];
   const ultimo = ultimoResultado(S.modalidade);
 
@@ -5902,7 +5863,7 @@ T.montar = () => {
         <span>${dez.length < c.min
           ? `faltam ${c.min - dez.length}`
           : dez.length > c.max ? `${dez.length - c.max} a mais` : "aposta válida"}</span>
-        ${/*<aposta>*/""}<span>${valido ? brl(custo) : "—"}</span>${/*</aposta>*/""}</div>`}) +
+        </div>`}) +
     `<div class="contador">
       <span>marcadas <b>${dez.length}</b> de ${c.min}${c.max>c.min?` a ${c.max}`:""}</span>
       <span>${valido ? `${inf(cobertas)} aposta${cobertas>1?"s":""} simples` : "aposta incompleta"}</span>
@@ -5938,14 +5899,7 @@ T.montar = () => {
           <div class="kpi"><div class="rot">típico nesta loteria</div>
             <div class="val">${g.mediana === null ? "—" : inf(g.mediana)}</div>
             <div class="sub">mediana do histórico</div></div>
-          ${/*<aposta>*/""}${esperado === null ? "" : `
-          <div class="kpi"><div class="rot">seu prêmio esperado</div>
-            <div class="val" style="font-size:1.05rem;color:${
-              melhor?"var(--acaso)":"var(--tinta)"}">${brl(esperado)}</div>
-            <div class="sub">de ${brl(premio)} estimados</div></div>
-          <div class="kpi"><div class="rot">com jogo típico</div>
-            <div class="val" style="font-size:1.05rem">${brl(esperadoTipico)}</div>
-            <div class="sub">diferença: ${brl(esperado - esperadoTipico)}</div></div>`}${/*</aposta>*/""}
+          
         </div>
         <div class="nota ${melhor?"":"atencao"}">
           ${melhor
@@ -5979,30 +5933,15 @@ T.montar = () => {
         <p style="font-size:.85rem;color:var(--secundaria);margin:6px 0 10px">
           Concursos ${r.de} a ${r.ate}, com o preço de hoje.</p>
         <div class="kpis">
-          ${/*<aposta>*/""}<div class="kpi"><div class="rot">teria custado</div>
-            <div class="val" style="font-size:1.15rem">${brl(r.custo)}</div>
-            <div class="sub">${inf(r.n)} concursos × ${brl(r.custoPorConcurso)}</div></div>
-          <div class="kpi"><div class="rot">teria voltado</div>
-            <div class="val" style="font-size:1.15rem">${brl(r.retorno)}</div>
-            <div class="sub">${r.premiados} vez${r.premiados===1?"":"es"} em faixa</div></div>
-          <div class="kpi"><div class="rot">resultado</div>
-            <div class="val" style="font-size:1.15rem;color:${
-              r.liquido>=0?"var(--acaso)":"var(--alerta)"}">${brl(r.liquido)}</div>
-            <div class="sub">ROI ${nf(100*r.roi,1)}%</div></div>${/*</aposta>*/""}
+          
           <div class="kpi"><div class="rot">acertos médios</div>
             <div class="val">${nf(media,2)}</div>
             <div class="sub">acaso: ${nf(r.esperado,2)}</div></div>
         </div>
         <h2 style="margin:14px 0 6px">quantas vezes deu cada resultado</h2>
         ${histograma(Object.fromEntries(chaves.map(k=>[k, r.distribuicao[k]])), r.n)}
-        ${/*<aposta>*/""}${r.melhor ? `<div class="nota">Melhor momento: concurso
-          ${esc(r.melhor.concurso)}, ${r.melhor.acertos} acertos,
-          <strong>${brl(r.melhor.premio)}</strong>.</div>` : ""}${/*</aposta>*/""}
-        ${/*<aposta>*/""}${r.semRateio ? `<div class="nota atencao">${r.semRateio} concurso${
-          r.semRateio===1?"":"s"} em faixa de prêmio ${r.semRateio===1?"ficou":"ficaram"}
-          fora do retorno porque o histórico não trouxe o rateio. O valor acima é
-          um piso, não uma estimativa — prefiro faltar dinheiro na conta a
-          inventar.</div>` : ""}${/*</aposta>*/""}
+        
+        
         <div class="nota atencao"><strong>Isto é o passado, e o passado não se
           repete.</strong> Este extrato não diz o que o jogo fará: diz o que
           teria feito, o que é uma pergunta diferente. Nenhuma combinação tem
@@ -6723,11 +6662,9 @@ T.teimosinha = () => {
           `<option value="${v}">${v}</option>`).join("")}</select></label>
     </div>
     <button class="acao mini" id="t-criar" ${podeCriar?"":"disabled"}>criar teimosinha</button>
-    ${/*<aposta>*/""}<div class="nota">O custo é multiplicado pelo número de concursos e sai inteiro no ato,
-      como na lotérica. Repetir o mesmo jogo não muda a chance de nenhum sorteio: cada
-      concurso é independente do anterior.</div>${/*</aposta>*/""}
-    ${/*<estatistica><div class="nota">Repetir o mesmo conjunto não muda a chance de
-      nenhum sorteio: cada concurso é independente do anterior.</div></estatistica>*/""}
+    
+    <div class="nota">Repetir o mesmo conjunto não muda a chance de
+      nenhum sorteio: cada concurso é independente do anterior.</div>
     <div id="t-saida"></div>
   </div>
   ${!minhas.length ? `<div class="vazio">Nenhuma teimosinha nesta modalidade.</div>`
@@ -6745,9 +6682,7 @@ T.teimosinha = () => {
             sorteadas: conf.length ? conf[conf.length-1].dezenas : null,
             selo:`${t.dezenas.length} dezenas`})}
           <div class="kpis">
-            ${/*<aposta>*/""}<div class="kpi"><div class="rot">custo total</div>
-              <div class="val" style="font-size:1.15rem">${brl(t.custo)}</div>
-              <div class="sub">${t.concursos} concursos</div></div>${/*</aposta>*/""}
+            
             <div class="kpi"><div class="rot">melhor resultado</div>
               <div class="val">${melhor === null ? "—" : melhor}</div>
               <div class="sub">${conf.length} conferido${conf.length===1?"":"s"}</div></div>
@@ -7270,9 +7205,7 @@ function acoes(){
             <div class="kpi"><div class="rot">garantia verificada</div>
               <div class="val">${r.garantiaVerificada}</div>
               <div class="sub">se ${S.jFechamento} das suas saírem</div></div>
-            ${/*<aposta>*/""}<div class="kpi"><div class="rot">custo</div>
-              <div class="val" style="font-size:1.05rem">${brl(jogos.length*c.preco)}</div>
-              <div class="sub">${jogos.length} jogos, volante inteiro: ${inf(combinacoes(dez.length,c.k))}</div></div>${/*</aposta>*/""}
+            
           </div>`;
         } else {
           jogos = gerarPor(S.metodo, S.modalidade, S.quantidade, t);
@@ -7506,7 +7439,7 @@ const SECOES = [
   {id:"inicio", nome:"Início",
    icone:'<path d="M3 10.5 12 3l9 7.5"/><path d="M5.5 9.5V20h13V9.5"/>',
    telas:[
-     {id:"inicio", nome:"Início", titulo:"LotoLab",
+     {id:"inicio", nome:"Início", titulo:"LotoLab Estatístico",
       sub:"Laboratório Estatístico. O motor de pesquisa, seus jogos e os concursos."}
    ]},
   {id:"analise", nome:"Análise",
@@ -7532,7 +7465,7 @@ const SECOES = [
      {id:"conferir", nome:"Conferência", titulo:"Conferir",
       sub:"O último sorteio que o app conhece, comparado com os seus jogos salvos. A conferência é automática."},
      {id:"teimosinha", nome:"Teimosinha", titulo:"Teimosinha",
-      sub:"Repete o mesmo jogo por vários concursos seguidos. O app acompanha o custo total e confere cada concurso sozinho."}
+      sub:"Repete o mesmo conjunto por vários concursos seguidos e confere cada um sozinho, medindo o desempenho contra o acaso."}
    ]},
   {id:"resultados", nome:"Resultados",
    icone:'<rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9.5h18M8 3v3M16 3v3"/>',
