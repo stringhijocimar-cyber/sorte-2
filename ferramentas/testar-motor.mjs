@@ -15,6 +15,25 @@ import vm from "node:vm";
 
 const RAIZ = join(dirname(fileURLToPath(import.meta.url)), "..");
 const html = readFileSync(join(RAIZ, "index.html"), "utf8");
+
+/* Qual edição está sendo testada.
+
+   A edição estatística é gerada removendo de verdade os fluxos de aposta, e
+   com eles somem os indicadores financeiros. Cinco testes desta bateria
+   existem para cobrar que esses indicadores ESTÃO lá — o que é certo na
+   edição completa e errado na estatística.
+  
+   A saída errada seria afrouxar os cinco para "aceita os dois casos": isso
+   deixaria de cobrar a presença na edição completa E a ausência na
+   estatística, ou seja, deixaria de testar as duas coisas ao mesmo tempo.
+   Então a bateria descobre em qual edição está e inverte a asserção.
+  
+   O sinal é a fonte marcada: só a edição completa carrega o marcador de
+   aposta, porque na estatística ele sai junto com o bloco. O nome do marcador
+   é montado por concatenação logo abaixo, e não escrito inteiro: escrevê-lo
+   aqui fecharia este próprio comentário no meio da frase. */
+const EDICAO_COMPLETA = html.includes("/*<" + "aposta>*/");
+const ondeCabe = (completa, estatistica) => EDICAO_COMPLETA ? completa : estatistica;
 const fonte = html.slice(html.indexOf("<script>") + 8, html.lastIndexOf("</script>"));
 
 /* ---------- DOM mínimo: o suficiente para o script carregar ---------- */
@@ -990,13 +1009,16 @@ secao("10. Placar — cada loteria com o seu próprio placar");
     `${esperadoMega.toFixed(2)} vs ${esperadoFacil.toFixed(2)}`);
 
   /* 13 de 15 na Lotofácil é faixa de prêmio; 2 de 6 na Mega não é. */
-  checar("conta faixa de prêmio pela regra da modalidade certa",
-    /em faixa de pr/i.test(facil) && facil.includes(">1<"),
-    "Lotofácil com 13 acertos premia");
+  checar(ondeCabe("conta faixa de prêmio pela regra da modalidade certa",
+                  "a edição estatística não conta faixa de prêmio"),
+    ondeCabe(/em faixa de pr/i.test(facil) && facil.includes(">1<"),
+             !/em faixa de pr/i.test(facil)),
+    ondeCabe("Lotofácil com 13 acertos premia", "indicador removido de verdade"));
 
   /* O dinheiro continua somado, porque real é real. */
-  checar("o gasto somado aparece uma vez só",
-    (tela.match(/gasto somado/g) || []).length === 1);
+  checar(ondeCabe("o gasto somado aparece uma vez só",
+                  "a edição estatística não soma gasto"),
+    (tela.match(/gasto somado/g) || []).length === ondeCabe(1, 0));
 
   /* Com uma modalidade só, o aviso de separação não faz sentido e some. */
   motor.S.jogos = [motor.S.jogos[0]];
@@ -1688,8 +1710,10 @@ secao("16. Próximo concurso");
   checar("o próximo concurso é lido do último resultado",
     p2.concurso === 101 && p2.estimativa === 75000000 && p2.acumulou === true);
   const cartao = contexto.cartaoProximo("mega-sena");
-  checar("o cartão mostra a estimativa formatada em reais",
-    /75\.000\.000/.test(cartao), cartao.slice(0, 80));
+  checar(ondeCabe("o cartão mostra a estimativa formatada em reais",
+                  "a edição estatística não anuncia prêmio de concurso futuro"),
+    ondeCabe(/75\.000\.000/.test(cartao), !/75\.000\.000/.test(cartao)),
+    cartao.slice(0, 80));
   checar("o cartão conta os dias que faltam", /<b>3<\/b>/.test(cartao));
   checar("o cartão marca que acumulou", /acumulou/.test(cartao));
 
@@ -2324,7 +2348,8 @@ secao("23. Teve ganhador?");
 
   const selo1 = contexto.seloGanhadores(comGanhador);
   checar("o selo diz quantos ganhadores", /3 ganhadores/.test(selo1), "");
-  checar("e o prêmio de cada um", /R\$/.test(selo1));
+  checar(ondeCabe("e o prêmio de cada um", "sem valor em reais na edição estatística"),
+    ondeCabe(/R\$/.test(selo1), !/R\$/.test(selo1)));
   checar("e as cidades, quando a Caixa informou",
     /BELO HORIZONTE\/MG \(2\)/.test(selo1) && /RECIFE\/PE/.test(selo1));
   checar("um ganhador só não vira 'ganhadores'",
@@ -3268,8 +3293,10 @@ secao("27. Concurso-alvo e conferência sob demanda");
     /* A exceção declarada continua de pé. Sem isto, "limpar o carimbo" poderia
        ir longe demais numa próxima varredura e apagar o indicador do Placar,
        que foi decisão consciente de manter. */
-    checar("mas o Placar mantém o indicador que foi decidido manter",
-      /em faixa de prêmio/.test(contexto.T.placar()));
+    checar(ondeCabe("mas o Placar mantém o indicador que foi decidido manter",
+                    "e na edição estatística o indicador sai junto"),
+      ondeCabe(/em faixa de prêmio/.test(contexto.T.placar()),
+               !/em faixa de prêmio/.test(contexto.T.placar())));
 
     S.jogos = guardaTela; S.teimosinhas = guardaTeim2;
   }

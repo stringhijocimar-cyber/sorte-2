@@ -34,7 +34,14 @@ html = html.replace('titulo:"Sorte 2",\n      sub:"Laboratório Estatístico. O 
 html = html.replace(/\n?\s*<link[^>]+data-sorte2-visual-final="[^"]+"[^>]*>\s*/g,"\n");
 html = html.replace(/\n?\s*<script[^>]+data-sorte2-visual-final="[^"]+"[^>]*><\/script>\s*/g,"\n");
 
-const link = '<link rel="stylesheet" href="ui/sorte2-ui-final.css?v=4.0.0" data-sorte2-visual-final="4.0.0">';
+/* A versão vem do arquivo VERSION, e não escrita aqui dentro.
+   Com '4.0.0' cravado, o rótulo da folha ficou parado enquanto o produto
+   chegava à 4.2.0: o app anunciava uma camada visual de duas versões atrás.
+   Pior, o parâmetro ?v= é o que faz o navegador buscar a folha nova em vez da
+   do cache — um número que não muda quando o CSS muda entrega estilo velho a
+   quem já visitou. */
+const versaoDoProduto = readFileSync(join(repo, "VERSION"), "utf8").trim();
+const link = `<link rel="stylesheet" href="ui/sorte2-ui-final.css?v=${versaoDoProduto}" data-sorte2-visual-final="${versaoDoProduto}">`;
 if(!html.includes("</head>")) fail("</head> ausente");
 html = html.replace("</head>", `${link}\n</head>`);
 
