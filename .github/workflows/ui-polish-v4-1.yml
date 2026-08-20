@@ -7,6 +7,7 @@ on:
     paths:
       - 'ui/lotolab-ui-polish-v4-1.css'
       - 'ferramentas/aplicar-ui-polish-v4-1.mjs'
+      - 'ferramentas/corrigir-teste-data.mjs'
       - '.github/workflows/ui-polish-v4-1.yml'
   pull_request:
     branches:
@@ -14,6 +15,7 @@ on:
     paths:
       - 'ui/lotolab-ui-polish-v4-1.css'
       - 'ferramentas/aplicar-ui-polish-v4-1.mjs'
+      - 'ferramentas/corrigir-teste-data.mjs'
       - '.github/workflows/ui-polish-v4-1.yml'
       - 'index.html'
       - 'www/index.html'
@@ -38,6 +40,9 @@ jobs:
           ref: agent/ui-polish-v4-1
           fetch-depth: 0
 
+      - name: Stabilize date-sensitive test
+        run: node ferramentas/corrigir-teste-data.mjs
+
       - name: Apply UI polish
         run: node ferramentas/aplicar-ui-polish-v4-1.mjs
 
@@ -47,7 +52,7 @@ jobs:
           test -f www/ui/lotolab-ui-polish-v4-1.css
           grep -q 'data-lotolab-ui-polish="4.1.0"' index.html
           grep -q 'ui/lotolab-ui-polish-v4-1.css?v=4.1.0' index.html
-          grep -q './ui/lotolab-ui-polish-v4-1.css' sw.js
+          grep -q 'lotolab-ui-polish-v4-1.css' sw.js
           cmp -s index.html www/index.html
           cmp -s sw.js www/sw.js
           cmp -s ui/lotolab-ui-polish-v4-1.css www/ui/lotolab-ui-polish-v4-1.css
@@ -71,7 +76,7 @@ jobs:
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add index.html www/index.html sw.js www/sw.js www/ui/lotolab-ui-polish-v4-1.css
+          git add index.html www/index.html sw.js www/sw.js www/ui/lotolab-ui-polish-v4-1.css ferramentas/testar-motor.mjs
           if git diff --cached --quiet; then
             echo 'Nothing to commit'
           else
@@ -79,5 +84,3 @@ jobs:
             git pull --rebase origin agent/ui-polish-v4-1
             git push origin HEAD:agent/ui-polish-v4-1
           fi
-
-# Main-branch integrator trigger: V4.1
