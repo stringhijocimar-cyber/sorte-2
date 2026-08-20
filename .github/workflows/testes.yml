@@ -35,7 +35,18 @@ jobs:
         # O erro clássico deste projeto: editar index.html e esquecer de copiar
         # para www/. Os testes passam (rodam sobre a raiz) e o APK sai sem a
         # mudança — o usuário instala e conclui, com razão, que nada mudou.
-        run: cmp index.html www/index.html
+        #
+        # A pasta ui/ entrou nesta conferência depois de divergir de verdade:
+        # a auditoria da 4.2.0 achou lotolab-ui-polish-v4-2.css com conteúdo
+        # diferente dos dois lados. As regras eram equivalentes e o visual não
+        # quebrou, mas era sorte — quem edita um lado e esquece o outro só
+        # descobre quando o APK sai com a folha antiga. cmp cobria só o
+        # index.html e deixava toda a camada visual de fora.
+        run: |
+          cmp index.html www/index.html
+          cmp sw.js www/sw.js
+          cmp manifest.webmanifest www/manifest.webmanifest
+          diff -r ui www/ui
 
       - name: Testes do motor
         run: node ferramentas/testar-motor.mjs

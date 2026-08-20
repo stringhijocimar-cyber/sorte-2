@@ -52,7 +52,11 @@ jobs:
           test -f ui/brain-network.svg
           test -f www/ui/sorte2-ui-final.css
           test -f www/ui/brain-network.svg
-          grep -q 'data-sorte2-visual-final="4.0.0"' index.html
+          # Sem fixar o número: prender a versão aqui faz o cheque falhar
+          # exatamente quando ele deveria passar, numa entrega que sobe a
+          # versão de propósito. O que importa é o rótulo existir e bater com
+          # o arquivo VERSION.
+          grep -q "data-sorte2-visual-final=\"$(cat VERSION)\"" index.html
           grep -q '<b>LotoLab</b><span>Laboratório Estatístico</span>' index.html
           ! grep -q '<b>Sorte 2</b><span>Laboratório Estatístico</span>' index.html
           ! grep -q '<script src="ui/sorte2-ui-final.js' index.html
