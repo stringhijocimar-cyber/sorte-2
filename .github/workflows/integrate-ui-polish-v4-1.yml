@@ -1,0 +1,68 @@
+name: Integrate LotoLab UI Polish V4.1
+
+on:
+  push:
+    branches:
+      - agent/ui-polish-v4-1
+    paths:
+      - 'ui/lotolab-ui-polish-v4-1.css'
+      - 'ferramentas/aplicar-ui-polish-v4-1.mjs'
+      - '.github/workflows/ui-polish-v4-1.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: integrate-lotolab-ui-polish-v4-1
+  cancel-in-progress: true
+
+jobs:
+  integrate-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout UI branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/ui-polish-v4-1
+          fetch-depth: 0
+
+      - name: Apply V4.1 presentation layer
+        run: node ferramentas/aplicar-ui-polish-v4-1.mjs
+
+      - name: Verify integration
+        run: |
+          test -f ui/lotolab-ui-polish-v4-1.css
+          test -f www/ui/lotolab-ui-polish-v4-1.css
+          grep -q 'data-lotolab-ui-polish="4.1.0"' index.html
+          grep -q 'ui/lotolab-ui-polish-v4-1.css?v=4.1.0' index.html
+          grep -q './ui/lotolab-ui-polish-v4-1.css' sw.js
+          cmp -s index.html www/index.html
+          cmp -s sw.js www/sw.js
+          cmp -s ui/lotolab-ui-polish-v4-1.css www/ui/lotolab-ui-polish-v4-1.css
+
+      - name: Run motor tests
+        run: node ferramentas/testar-motor.mjs
+
+      - name: Run interface tests
+        run: |
+          python3 -m http.server 8123 >/tmp/lotolab-http.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill $SERVER_PID 2>/dev/null || true' EXIT
+          for i in $(seq 1 30); do
+            curl -sf http://127.0.0.1:8123/index.html >/dev/null && break
+            sleep 0.5
+          done
+          node ferramentas/testar-interface.mjs
+
+      - name: Commit generated integration
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html www/index.html sw.js www/sw.js www/ui/lotolab-ui-polish-v4-1.css
+          if git diff --cached --quiet; then
+            echo 'Nothing to commit'
+          else
+            git commit -m 'feat(ui): integrate LotoLab UI polish v4.1'
+            git pull --rebase origin agent/ui-polish-v4-1
+            git push origin HEAD:agent/ui-polish-v4-1
+          fi
