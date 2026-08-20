@@ -27,7 +27,10 @@
    com IMUTAVEIS, ou seja, é servido do cache sem nunca perguntar se mudou:
    sem subir a versão aqui, quem já instalou continuaria abrindo a tela de
    partida no azul antigo para sempre, enquanto o app já abre no novo. */
-const VERSAO = "8";
+/* 9: a conferência passou a guardar o número do concurso como número, e a
+   abertura junta as duplicatas que a versão anterior deixou gravadas. Quem
+   usa pelo navegador precisa receber o index.html novo, não o do cache. */
+const VERSAO = "9";
 const CACHE = `lotolab-v${VERSAO}`;
 
 //: A casca mínima para o app abrir offline.

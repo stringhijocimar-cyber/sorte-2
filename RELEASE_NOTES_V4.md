@@ -1,7 +1,79 @@
-# LotoLab 4.0.0 — notas da versão
+# LotoLab — notas das versões V4
 
-**Versão:** 4.0.0 · **Rótulo:** V4 · **Android:** versionCode 4 / versionName 4.0.0
+**Versão atual:** 4.0.1 · **Android:** versionCode 5 / versionName 4.0.1
 **Fonte da verdade:** branch `main` · **Manifesto:** `RELEASE_MANIFEST_V4.json`
+
+---
+
+# 4.0.1 — a conferência para de duplicar
+
+Versão de correção. Um defeito relatado por quem usa, e dois que apareceram no
+caminho de investigá-lo.
+
+## O defeito relatado
+
+**A conferência dos jogos já criados duplicava o mesmo concurso.**
+
+O formulário de conferir à mão é um `<input>`, e input devolve **texto**. O
+resto do app trata concurso como **número** — é assim que ele chega dos
+arquivos de dados — e todas as comparações são estritas. `"3765"` nunca casava
+com `3765`.
+
+Na prática: você conferia um concurso à mão, depois a busca trazia o mesmo
+concurso, e a conferência automática não reconhecia que aquele sorteio já
+tinha sido conferido. Ele entrava de novo na ficha do jogo. Daí em diante
+"jogos conferidos" contava dobrado e a média do placar era puxada por
+conferências repetidas do mesmo sorteio.
+
+Corrigido em duas frentes, porque arrumar só o formulário não desfaria o
+estrago de quem já tinha usado o app:
+
+- o formulário passa a guardar número, e a validação recusa o que não for
+  número em vez de aceitar texto que nunca vai casar;
+- a abertura do app normaliza o que já está gravado e junta as duplicatas,
+  ficando a conferência mais recente de cada concurso — a que carrega rateio e
+  cidades, porque a busca costuma chegar depois da digitação. A junção é por
+  modalidade **mais** concurso, então o mesmo número em loterias diferentes
+  continua sendo dois. É idempotente: rodar de novo não mexe em nada.
+
+## Os dois que apareceram no caminho
+
+**O cron diário de resultados caía sozinho.** Um teste do motor comparava datas
+fixas com o relógio real. Enquanto o dia corrente esteve perto das datas
+semeadas o cenário continuou válido; quando passou do limite, o teste caiu sem
+ninguém ter tocado no código — e levou junto o cron, que roda a bateria antes
+de gravar. Data fixa comparada com "agora" não é determinismo, é pavio. As
+datas passaram a ser ancoradas no dia corrente.
+
+**Um check de CI dava veredito sobre código que não lia.** O job `apply` baixa
+um branch fixo e testa aquele branch, mas rodava em todo PR para o `main`.
+Errou nas duas direções: verde num PR sem relação com ele, e vermelho no PR
+que consertava justamente o teste que estava falhando. Deixou de rodar em
+pull request; segue rodando no próprio branch e à mão.
+
+**Um workflow podia reverter a versão.** O sincronizador de metadados trazia
+`4.0.0` cravado no código e **empurra direto para o `main`**: dispará-lo depois
+de uma entrega nova reescreveria tudo de volta, sem revisão. Agora ele lê o
+arquivo `VERSION` em vez de impor um número morto, e não reescreve mais o
+`versionCode`, que é um inteiro que só cresce.
+
+## Testes
+
+| Bateria | Resultado |
+|---|---|
+| Motor | 668/668 |
+| Interface, Chrome de verdade | 92/92 |
+| Atualizador | 18/18 |
+| XML do Android | 11 ok |
+| Referência dourada | idêntica — motor intacto |
+
+Um teste de interface estava escrito **em cima do defeito**: procurava o
+concurso como texto entre aspas e por isso passava junto com o bug, dando a
+impressão de cobri-lo. Agora cobra o tipo explicitamente.
+
+---
+
+# 4.0.0 — a virada de identidade
 
 A V4 é a virada de identidade: o app passou a se chamar **LotoLab**, o tema
 escuro virou o padrão e a camada visual do mockup entrou por uma folha de

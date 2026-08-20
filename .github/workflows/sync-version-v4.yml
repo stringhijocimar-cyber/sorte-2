@@ -1,4 +1,4 @@
-name: Sync V4 version metadata
+name: Sync version metadata
 
 on:
   push:
@@ -19,13 +19,24 @@ jobs:
         with:
           ref: main
 
-      - name: Synchronize 4.0.0 metadata
+      - name: Synchronize version metadata from VERSION
         run: |
           python3 - <<'PY'
           from pathlib import Path
           import json
 
-          version = '4.0.0'
+          # Lê o número do arquivo VERSION em vez de trazê-lo escrito aqui.
+          #
+          # Enquanto '4.0.0' estava cravado nesta linha, este workflow era um
+          # botão de reverter versão: bastava alguém dispará-lo depois de uma
+          # entrega nova para ele reescrever os quatro arquivos de volta e
+          # EMPURRAR PARA O MAIN, sem revisão e sem ninguém pedir. O mesmo
+          # defeito do instalador visual, que fixava a versão do service
+          # worker e desfazia em silêncio as subidas seguintes.
+          #
+          # Lendo o VERSION, ele volta a ser o que o nome promete: sincroniza
+          # os outros arquivos com a fonte, em vez de impor um número morto.
+          version = Path('VERSION').read_text().strip()
 
           package = Path('package.json')
           data = json.loads(package.read_text())
@@ -44,17 +55,18 @@ jobs:
           gradle = Path('android/app/build.gradle')
           text = gradle.read_text()
           import re
-          text = re.sub(r'versionCode\s+\d+', 'versionCode 4', text, count=1)
-          text = re.sub(r'versionName\s+"[^"]+"', 'versionName "4.0.0"', text, count=1)
+          # O versionCode não é derivável do nome da versão: é um inteiro que
+          # só cresce, e o Android recusa instalar por cima de um maior. Então
+          # aqui ele é preservado, nunca reescrito para um valor fixo.
+          text = re.sub(r'versionName\s+"[^"]+"', f'versionName "{version}"', text, count=1)
           gradle.write_text(text)
           PY
 
       - name: Verify metadata
         run: |
-          test "$(cat VERSION)" = "4.0.0"
-          node -e "const p=require('./package.json'); const l=require('./package-lock.json'); if(p.version!=='4.0.0'||l.version!=='4.0.0'||l.packages[''].version!=='4.0.0') process.exit(1)"
-          grep -q 'versionCode 4' android/app/build.gradle
-          grep -q 'versionName "4.0.0"' android/app/build.gradle
+          v=$(cat VERSION)
+          node -e "const v=require('fs').readFileSync('VERSION','utf8').trim(); const p=require('./package.json'); const l=require('./package-lock.json'); if(p.version!==v||l.version!==v||l.packages[''].version!==v) process.exit(1)"
+          grep -q "versionName \"$v\"" android/app/build.gradle
 
       - name: Commit synchronization
         run: |
@@ -64,6 +76,6 @@ jobs:
           if git diff --cached --quiet; then
             echo 'Version metadata already synchronized.'
           else
-            git commit -m 'chore(release): synchronize LotoLab 4.0.0 metadata'
+            git commit -m "chore(release): synchronize LotoLab $(cat VERSION) metadata"
             git push origin main
           fi
