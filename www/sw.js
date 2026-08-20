@@ -1,48 +1,35 @@
 /* LotoLab — service worker
 
-   ATENÇÃO ao histórico deste arquivo, porque o defeito custou caro: a versão
-   anterior era cache-first para TUDO, com um nome de cache fixo em "lotolab-v1".
-   O resultado é que o app, uma vez instalado, servia para sempre o mesmo
-   index.html — nenhuma atualização chegava a quem já tinha aberto. E como a
-   regra valia para toda requisição GET, ela também congelava os dados/*.json,
-   então os resultados dos concursos parariam no tempo junto com o app.
+   Estratégia por tipo de recurso:
+   * app e dados -> REDE PRIMEIRO, cache como reserva;
+   * ícones e manifesto -> cache primeiro;
+   * CSS principal -> V4 base + camada visual V4.1, compostas pelo worker.
 
-   A estratégia agora é por tipo de recurso, porque uma só não serve para os
-   três casos:
+   O nome do cache carrega a versão. Trocar VERSAO invalida a casca anterior. */
 
-   * app e dados  -> REDE PRIMEIRO, cache como reserva. Atualização chega
-     sempre que houver rede; sem rede, o app abre com a última versão boa.
-   * ícones e manifesto -> cache primeiro. São imutáveis na prática e não vale
-     gastar rede com eles.
-
-   O nome do cache carrega a versão. Trocar VERSAO invalida tudo o que ficou
-   para trás — é a única forma de expulsar um cache envenenado do aparelho de
-   quem já instalou.                                                        */
-
-/* 5: trevo novo nos ícones. Sem subir esta versão, quem já tem o app instalado
-   continuaria vendo o ícone antigo para sempre — os PNGs são servidos pelo
-   cache primeiro, e cache primeiro nunca vai conferir se mudou.
-
-   8: o manifesto passou a declarar o fundo da V4 (#061521). O manifesto casa
-   com IMUTAVEIS, ou seja, é servido do cache sem nunca perguntar se mudou:
-   sem subir a versão aqui, quem já instalou continuaria abrindo a tela de
-   partida no azul antigo para sempre, enquanto o app já abre no novo. */
-const VERSAO = "8";
+/* 9: adiciona a camada visual neutra V4.1 e força renovação do CSS. */
+const VERSAO = "9";
 const CACHE = `lotolab-v${VERSAO}`;
+const POLISH_CSS = "./ui/lotolab-ui-polish-v4-1.css";
 
-//: A casca mínima para o app abrir offline.
-const CASCA = ["./", "./index.html", "./manifest.webmanifest", "./icone.svg", "./ui/sorte2-ui-final.css", "./ui/brain-network.svg"];
+// Casca mínima para o app abrir offline.
+const CASCA = [
+  "./",
+  "./index.html",
+  "./manifest.webmanifest",
+  "./icone.svg",
+  "./ui/sorte2-ui-final.css",
+  POLISH_CSS,
+  "./ui/brain-network.svg"
+];
 
-//: Recursos que praticamente não mudam. Ícone novo sai com versão nova.
+// Recursos que praticamente não mudam. Ícone novo sai com versão nova.
 const IMUTAVEIS = /\.(png|svg|webmanifest)$/i;
 
 self.addEventListener("install", ev => {
   ev.waitUntil(
     caches.open(CACHE)
       .then(c => c.addAll(CASCA))
-      /* skipWaiting sem esperar a aba fechar: sem isso, a versão nova só
-         assumiria depois que a pessoa fechasse TODAS as abas do app, o que
-         quase nunca acontece num celular. */
       .then(() => self.skipWaiting())
       .catch(() => self.skipWaiting())
   );
@@ -57,8 +44,7 @@ self.addEventListener("activate", ev => {
   );
 });
 
-/* Rede primeiro, cache como rede de segurança. Grava a resposta boa para o
-   próximo carregamento offline. */
+// Rede primeiro, cache como rede de segurança.
 async function redePrimeiro(req){
   try{
     const rede = await fetch(req);
@@ -70,8 +56,6 @@ async function redePrimeiro(req){
   }catch(e){
     const guardado = await caches.match(req);
     if(guardado) return guardado;
-    /* Navegação sem rede e sem cache do endereço exato: devolve a casca, para
-       o app abrir em vez de mostrar erro do navegador. */
     if(req.mode === "navigate"){
       const casca = await caches.match("./index.html");
       if(casca) return casca;
@@ -91,30 +75,62 @@ async function cachePrimeiro(req){
   return rede;
 }
 
+function respostaCss(texto, headersOriginais){
+  const headers = new Headers(headersOriginais || {});
+  headers.set("content-type", "text/css; charset=utf-8");
+  headers.delete("content-length");
+  return new Response(texto, { status: 200, headers });
+}
+
+/* Mantém a V4 como base e aplica o polish V4.1 depois dela. O HTML não precisa
+   ser reescrito e o motor do aplicativo permanece intocado. */
+async function cssPrincipalComPolish(req){
+  let base = null;
+  let polish = null;
+
+  try{
+    [base, polish] = await Promise.all([
+      fetch(req),
+      fetch(POLISH_CSS, { cache: "no-store" })
+    ]);
+  }catch(e){
+    // O fallback offline é tratado logo abaixo.
+  }
+
+  if(!base || !base.ok) base = await caches.match(req);
+  if(!polish || !polish.ok) polish = await caches.match(POLISH_CSS);
+
+  if(base && polish){
+    const [baseTexto, polishTexto] = await Promise.all([base.text(), polish.text()]);
+    const composto = baseTexto.includes("LotoLab — LAB UI POLISH V4.1")
+      ? baseTexto
+      : `${baseTexto}\n\n${polishTexto}`;
+    const resposta = respostaCss(composto, base.headers);
+    caches.open(CACHE).then(c => c.put(req, resposta.clone())).catch(() => {});
+    return resposta;
+  }
+
+  return redePrimeiro(req);
+}
+
 self.addEventListener("fetch", ev => {
   if(ev.request.method !== "GET") return;
   const url = new URL(ev.request.url);
 
-  /* Requisição para outro domínio — os dados/*.json vindos do GitHub, por
-     exemplo — passa direto, sem o worker no meio.
-
-     Motivo: o worker interceptando uma busca entre domínios acrescenta uma
-     camada que só pode atrapalhar. Se ele erra o CORS, ou guarda uma resposta
-     opaca, ou fica com um JSON velho, o app quebra de um jeito que ninguém
-     consegue depurar de fora — e este arquivo já congelou o app inteiro uma
-     vez por excesso de zelo com cache. Deixar passar é mais previsível, e o
-     custo é nenhum: o app já guarda os resultados no aparelho por conta
-     própria, então não é o worker que dá o funcionamento offline deles. */
+  // Recursos de outro domínio passam direto.
   if(url.origin !== self.location.origin) return;
 
-  /* Ícones e manifesto podem vir do cache; o app tenta a rede antes, senão
-     volta o congelamento que este arquivo causou. */
+  // A apresentação V4.1 é composta somente para o CSS principal.
+  if(url.pathname.endsWith("/ui/sorte2-ui-final.css")){
+    ev.respondWith(cssPrincipalComPolish(ev.request));
+    return;
+  }
+
   ev.respondWith(IMUTAVEIS.test(url.pathname)
     ? cachePrimeiro(ev.request)
     : redePrimeiro(ev.request));
 });
 
-/* Permite a página forçar a troca imediata, sem esperar o ciclo do navegador. */
 self.addEventListener("message", ev => {
   if(ev.data === "atualizar-agora") self.skipWaiting();
 });
