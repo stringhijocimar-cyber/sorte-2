@@ -583,3 +583,36 @@ select,input[type=number],input[type=text],input[type=date],.search{
   .mini-card strong,.resumo .kpi .val{font-size:1.22rem!important}
   .segmento button,.tabs button{font-size:.56rem!important}
 }
+
+/* ===== V4.2 — modality identity + result semantics ===== */
+:root{--ll-mod:#24D9B7;--ll-mod-border:rgba(36,217,183,.42)}
+[data-mod="mega-sena"]{--ll-chip:#35B86B}
+[data-mod="lotofacil"]{--ll-chip:#C06BE3}
+[data-mod="quina"]{--ll-chip:#5B91FF}
+[data-mod="lotomania"]{--ll-chip:#FF8B4D}
+[data-mod="dupla-sena"]{--ll-chip:#FF6876}
+[data-mod="dia-de-sorte"]{--ll-chip:#E7B64C}
+[data-mod="timemania"]{--ll-chip:#B9CF45}
+[data-mod="mais-milionaria"]{--ll-chip:#8C76FF}
+body:has([data-mod="mega-sena"][aria-pressed="true"]){--ll-mod:#35B86B;--ll-mod-border:rgba(53,184,107,.48)}
+body:has([data-mod="lotofacil"][aria-pressed="true"]){--ll-mod:#C06BE3;--ll-mod-border:rgba(192,107,227,.48)}
+body:has([data-mod="quina"][aria-pressed="true"]){--ll-mod:#5B91FF;--ll-mod-border:rgba(91,145,255,.48)}
+body:has([data-mod="lotomania"][aria-pressed="true"]){--ll-mod:#FF8B4D;--ll-mod-border:rgba(255,139,77,.50)}
+body:has([data-mod="dupla-sena"][aria-pressed="true"]){--ll-mod:#FF6876;--ll-mod-border:rgba(255,104,118,.50)}
+body:has([data-mod="dia-de-sorte"][aria-pressed="true"]){--ll-mod:#E7B64C;--ll-mod-border:rgba(231,182,76,.50)}
+body:has([data-mod="timemania"][aria-pressed="true"]){--ll-mod:#B9CF45;--ll-mod-border:rgba(185,207,69,.48)}
+body:has([data-mod="mais-milionaria"][aria-pressed="true"]){--ll-mod:#8C76FF;--ll-mod-border:rgba(140,118,255,.48)}
+[data-mod]{position:relative!important}
+[data-mod]::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:7px;vertical-align:1px;background:var(--ll-chip,#24D9B7);box-shadow:0 0 0 3px color-mix(in srgb,var(--ll-chip,#24D9B7) 12%,transparent)}
+[data-mod][aria-pressed="true"]{color:var(--ll-chip,#24D9B7)!important;border-color:color-mix(in srgb,var(--ll-chip,#24D9B7) 62%,transparent)!important;background:color-mix(in srgb,var(--ll-chip,#24D9B7) 12%,#071925)!important;font-weight:760!important}
+body:has([data-mod][aria-pressed="true"]) .titulo.com-volta h1,body:has([data-mod][aria-pressed="true"]) .page-head h1{text-shadow:0 0 22px color-mix(in srgb,var(--ll-mod) 13%,transparent)}
+.segmento button[aria-selected="true"],.tabs button.active{box-shadow:inset 0 -2px 0 var(--ll-mod)!important;border-color:var(--ll-mod-border)!important}
+body:has([data-mod][aria-pressed="true"]) .bola,body:has([data-mod][aria-pressed="true"]) .ball,body:has([data-mod][aria-pressed="true"]) .dz.sorteada{color:var(--ll-mod)!important;border:1.5px solid color-mix(in srgb,var(--ll-mod) 48%,transparent)!important;background:color-mix(in srgb,var(--ll-mod) 12%,transparent)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 5px 12px color-mix(in srgb,var(--ll-mod) 12%,transparent)!important}
+.item.ganhou,.concurso.ganhou,.carta.ganhou,.nota.ganhou{border-color:color-mix(in srgb,var(--ganhou) 58%,var(--linha))!important;background:linear-gradient(180deg,color-mix(in srgb,var(--ganhou) 11%,var(--carta)),color-mix(in srgb,var(--ganhou) 5%,var(--carta)))!important;box-shadow:inset 3px 0 0 var(--ganhou),0 10px 28px rgba(0,0,0,.08)!important}
+.item.acumulou,.concurso.acumulou,.carta.acumulou,.nota.acumulou{border-color:color-mix(in srgb,var(--acumulou) 60%,var(--linha))!important;background:linear-gradient(180deg,color-mix(in srgb,var(--acumulou) 12%,var(--carta)),color-mix(in srgb,var(--acumulou) 5%,var(--carta)))!important;box-shadow:inset 3px 0 0 var(--acumulou),0 10px 28px rgba(0,0,0,.08)!important}
+.item.ganhou .txt b,.concurso.ganhou .concurso-topo b{color:var(--ganhou-tinta)!important}
+.item.acumulou .txt b,.concurso.acumulou .concurso-topo b{color:var(--acumulou-tinta)!important}
+.selo-ganho.ganhou,.selo-ganho.acumulou{font-weight:760!important;letter-spacing:.055em!important}
+.carta,.panel,.ficha,.concurso,.draw-card,.activity-item,.item{box-shadow:inset 0 1px 0 rgba(255,255,255,.025),0 12px 28px rgba(0,0,0,.08)!important}
+.gaveta-mods{gap:7px!important}.gaveta-mods button{min-height:43px!important;border-radius:12px!important}
+@media(max-width:390px){[data-mod]::before{width:6px;height:6px;margin-right:5px}}
