@@ -1,7 +1,108 @@
 # LotoLab — notas das versões V4
 
-**Versão atual:** 4.0.1 · **Android:** versionCode 5 / versionName 4.0.1
+**Versão atual:** 4.2.0 · **Android:** versionCode 6 / versionName 4.2.0
 **Fonte da verdade:** branch `main` · **Manifesto:** `RELEASE_MANIFEST_V4.json`
+
+Duas edições são publicadas a partir do mesmo código:
+
+| Edição | O que é | Tag |
+|---|---|---|
+| **LotoLab 4.2.0** | edição completa | `v4.2.0` |
+| **LotoLab Estatístico 4.2.0** | sem os fluxos de aposta | `v4.2.0-stat` |
+
+---
+
+# 4.2.0 — identidade por modalidade e a edição estatística
+
+## Camada visual V4.2
+
+**Cor por modalidade.** Cada loteria passa a ter um acento próprio, aplicado ao
+seletor e ao acento global da tela quando ela está selecionada:
+
+| Modalidade | Cor | |
+|---|---|---|
+| Mega-Sena | verde | `#35B86B` |
+| Lotofácil | lilás | `#C06BE3` |
+| Quina | azul | `#5B91FF` |
+| Lotomania | laranja | `#FF8B4D` |
+| Dupla Sena | coral | `#FF6876` |
+| Dia de Sorte | dourado | `#E7B64C` |
+| Timemania | verde-amarelado | `#B9CF45` |
+| +Milionária | violeta | `#8C76FF` |
+
+**As duas escalas de cor continuam separadas, e isso é deliberado.** A cor da
+modalidade diz apenas de que loteria se trata. O estado do concurso tem a sua
+própria escala e não se confunde com ela:
+
+- **verde** — concurso com ganhador;
+- **amarelo** — concurso sem ganhador, acumulado.
+
+Misturar as duas faria a Mega-Sena parecer premiada por ser verde. Por isso o
+estado do concurso nunca é comunicado só pela cor: o selo também traz o texto
+("teve ganhador" / "acumulou"), que é o que sobrevive a daltonismo, tela ruim e
+luz do sol.
+
+**Hierarquia e legibilidade.** Corpo em 14px com entrelinha 1.42, títulos com
+peso maior, cartões com profundidade discreta, seletor de modalidade com ponto
+colorido e estado selecionado mais firme, e barra de rolagem fina. O acento não
+é o único sinal de seleção — `aria-pressed` acompanha, para quem navega por
+leitor de tela.
+
+## Edição LotoLab Estatístico
+
+Uma segunda edição, gerada do mesmo código, **sem os fluxos que existem para
+operar aposta**: dinheiro, prêmio, custo, retorno, ROI, faixa de prêmio e
+qualquer anúncio de prêmio de concurso futuro.
+
+**A remoção é real, não cosmética.** O conteúdo não chega ao arquivo publicado:
+não está escondido por CSS, não volta com o inspetor aberto, e a própria função
+de formatar moeda não existe nessa edição. Isso é cobrado por teste que varre o
+texto renderizado das treze telas e, além disso, procura conteúdo financeiro em
+elementos ocultos no DOM — porque `display:none` passaria por qualquer
+varredura de código-fonte.
+
+O que a edição estatística preserva, inteiro: layout V4.2, histórico de
+concursos e sua atualização, dashboards, gráficos, estatística descritiva,
+simulações, Monte Carlo, backtesting de desempenho, comparação com o acaso,
+análises de independência, evolução do motor, IA/análises, comparação neutra de
+conjuntos de números com concursos históricos, PWA e Android, identidade visual
+por modalidade, e as atividades e notificações técnicas.
+
+O motor estatístico **não foi tocado** para acomodar nada disso: a referência
+dourada de `caracteristicas()` continua batendo dígito por dígito.
+
+## Correções desde a 4.0.1
+
+- **Rótulo da folha visual parado em 4.0.0.** O `<link>` anunciava
+  `?v=4.0.0` num produto em 4.2.0. Não é só etiqueta errada: esse parâmetro é o
+  que faz o navegador buscar a folha nova em vez da do cache. Passou a ser lido
+  do arquivo `VERSION`.
+- **`ui/` e `www/ui/` haviam divergido.** As regras eram equivalentes e o visual
+  não quebrou, mas por sorte. A conferência de sincronia cobria só o
+  `index.html`; agora cobre `sw.js`, o manifesto e a pasta `ui/` inteira.
+- **Um workflow podia reverter a versão** — trazia o número cravado e empurra
+  direto para o `main`. Passou a ler o `VERSION`.
+- **Um check de CI dava veredito sobre código que não lia** — testava um branch
+  fixo e mesmo assim carimbava resultado nos PRs. Deixou de rodar em pull
+  request.
+
+## Testes
+
+| Bateria | Edição completa | Edição estatística |
+|---|---|---|
+| Motor | 668/668 | 668/668 |
+| Interface, Chrome de verdade | 95/95 | 96/96 |
+| Atualizador | 18/18 | 18/18 |
+| XML do Android | 11 ok | 11 ok |
+| Ícones | 34 ok | 34 ok |
+| Referência dourada | idêntica | idêntica |
+| Paridade `index.html` / `www/` | ok | ok |
+| Paridade `ui/` / `www/ui/` | ok | ok |
+
+As cinco asserções que cobram indicadores financeiros rodam **nas duas
+edições com o sinal trocado**: presença na completa, ausência na estatística.
+Afrouxá-las para aceitar os dois casos teria desligado as duas verificações ao
+mesmo tempo.
 
 ---
 

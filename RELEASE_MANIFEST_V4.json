@@ -15,5 +15,22 @@
     "android/app/build.gradle"
   ],
   "releaseState": "source-ready",
-  "notes": "Manifesto canônico da versão atual do código. A V4.2 inclui refinamento visual, cores de contexto por modalidade e status verde/amarelo dos resultados históricos."
+  "notes": "Manifesto canônico da versão atual do código. A V4.2 inclui refinamento visual, cores de contexto por modalidade e status verde/amarelo dos resultados históricos. Duas edições saem do mesmo código: a completa e a estatística.",
+  "editions": [
+    {
+      "name": "LotoLab 4.2.0",
+      "id": "completa",
+      "tag": "v4.2.0",
+      "source": "main",
+      "description": "Edição completa."
+    },
+    {
+      "name": "LotoLab Estatístico 4.2.0",
+      "id": "estatistica",
+      "tag": "v4.2.0-stat",
+      "source": "edicao/estatistica",
+      "generatedBy": "ferramentas/gerar-edicao-estatistica.mjs",
+      "description": "Sem os fluxos de aposta: dinheiro, prêmio, custo, retorno e anúncio de prêmio de concurso futuro são removidos do arquivo publicado, e não escondidos por CSS."
+    }
+  ]
 }
