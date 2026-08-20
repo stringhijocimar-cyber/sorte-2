@@ -79,3 +79,5 @@ jobs:
             git pull --rebase origin agent/ui-polish-v4-1
             git push origin HEAD:agent/ui-polish-v4-1
           fi
+
+# Main-branch integrator trigger: V4.1
