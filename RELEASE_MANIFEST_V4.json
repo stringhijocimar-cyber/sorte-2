@@ -1,12 +1,12 @@
 {
   "product": "LotoLab",
-  "version": "4.0.1",
-  "versionLabel": "V4",
+  "version": "4.2.0",
+  "versionLabel": "V4.2",
   "sourceBranch": "main",
-  "visualLayer": "Mockup Fidelity V4",
+  "visualLayer": "Mockup Fidelity V4 + UI V4.2 modality identity",
   "android": {
-    "versionCode": 5,
-    "versionName": "4.0.1"
+    "versionCode": 6,
+    "versionName": "4.2.0"
   },
   "versionFiles": [
     "VERSION",
@@ -15,5 +15,5 @@
     "android/app/build.gradle"
   ],
   "releaseState": "source-ready",
-  "notes": "Manifesto canônico da versão atual do código. A publicação/distribuição de binário não é executada por este assistente."
+  "notes": "Manifesto canônico da versão atual do código. A V4.2 inclui refinamento visual, cores de contexto por modalidade e status verde/amarelo dos resultados históricos."
 }
