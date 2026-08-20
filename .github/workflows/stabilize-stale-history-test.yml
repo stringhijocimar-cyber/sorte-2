@@ -1,0 +1,40 @@
+name: Stabilize stale-history date test
+
+on:
+  push:
+    branches:
+      - agent/ui-polish-v4-1
+    paths:
+      - 'ferramentas/corrigir-teste-data.mjs'
+
+permissions:
+  contents: write
+
+jobs:
+  stabilize:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout UI branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/ui-polish-v4-1
+          fetch-depth: 0
+
+      - name: Make stale-history test date-independent
+        run: node ferramentas/corrigir-teste-data.mjs
+
+      - name: Verify motor suite
+        run: node ferramentas/testar-motor.mjs
+
+      - name: Commit deterministic test fix
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add ferramentas/testar-motor.mjs
+          if git diff --cached --quiet; then
+            echo 'Nothing to commit'
+          else
+            git commit -m 'test: make stale-history check date-independent'
+            git pull --rebase origin agent/ui-polish-v4-1
+            git push origin HEAD:agent/ui-polish-v4-1
+          fi
