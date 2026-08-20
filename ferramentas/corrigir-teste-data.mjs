@@ -24,11 +24,10 @@ const trocas = [
 ];
 
 for (const [antes, depois] of trocas) {
+  if (src.includes(depois)) continue;
   if (!src.includes(antes)) throw new Error(`Trecho esperado não encontrado: ${antes}`);
   src = src.replace(antes, depois);
 }
 
 fs.writeFileSync(arquivo, src);
 console.log('Teste de histórico atrasado estabilizado com datas relativas.');
-
-// Trigger do workflow ativo no main.
