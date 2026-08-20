@@ -30,3 +30,5 @@ for (const [antes, depois] of trocas) {
 
 fs.writeFileSync(arquivo, src);
 console.log('Teste de histórico atrasado estabilizado com datas relativas.');
+
+// Trigger do workflow ativo no main.
