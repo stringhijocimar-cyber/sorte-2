@@ -134,3 +134,5 @@ body:has([data-mod][aria-pressed="true"]) .page-head::after{
 @media(prefers-reduced-motion:reduce){
   [data-mod],.item,.concurso,.carta,.nota{transition:none!important}
 }
+
+/* V4.2 validation trigger — no visual effect. */
