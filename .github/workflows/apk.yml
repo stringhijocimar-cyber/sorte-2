@@ -79,9 +79,34 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          # --target no COMMIT que foi compilado, e não no branch padrão.
+          #
+          # Sem isto, `gh release create` cria a tag apontando para o branch
+          # padrão do repositório quando a tag ainda não existe. Numa build
+          # disparada de outro branch, o resultado é uma release cujo APK veio
+          # de um código e cujo código-fonte anexado é outro — foi exatamente o
+          # que aconteceu com a primeira v4.2.0-stat: o binário era a edição
+          # estatística e a tag apontava para o main, a edição completa.
+          #
+          # Quem baixa o zip da release e quem baixa o .apk levava coisas
+          # diferentes, sem nada na página avisando.
+          #
+          # O nome sai do appName do capacitor.config.json em vez de ser fixo,
+          # porque cada edição tem o seu: assim a release nasce chamando o que
+          # ela é, sem depender de alguém lembrar de renomear depois.
+          nome=$(node -p "require('./capacitor.config.json').appName")
+          # A versão do PRODUTO vem do arquivo VERSION. O parâmetro `versao`
+          # serve à tag e ao nome do arquivo, onde o sufixo de edição precisa
+          # aparecer para não colidir — mas "LotoLab Estatístico 4.2.0-stat"
+          # não é o nome de nada: a edição já está no nome do app.
+          versaoDoProduto=$(cat VERSION)
+          # Repetível: se a tag já existe de uma tentativa anterior, ela é
+          # removida antes. Release meio publicada é pior que nenhuma.
+          gh release delete "v${{ inputs.versao }}" --yes --cleanup-tag 2>/dev/null || true
           gh release create "v${{ inputs.versao }}" \
             "LotoLab-v${{ inputs.versao }}.apk" \
-            --title "LotoLab v${{ inputs.versao }}" \
+            --target "$GITHUB_SHA" \
+            --title "$nome $versaoDoProduto" \
             --notes "APK de depuração, para instalar no celular.
 
           Baixe o arquivo .apk abaixo e toque nele. O Android vai pedir para
