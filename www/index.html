@@ -2360,8 +2360,8 @@ function resumoGeral(){
     ${cartao("jogos salvos", jogos, "no aparelho")}
     ${cartao("modalidades", mods, "com jogo salvo")}
     ${cartao("concursos", concursos, "no histórico")}
-    ${cartao("premiados", premios, premios ? "confira no volante" : "nenhum ainda",
-             premios ? "var(--ganhou)" : "var(--secundaria)")}
+    ${/*<aposta>*/""}${cartao("premiados", premios, premios ? "confira no volante" : "nenhum ainda",
+             premios ? "var(--ganhou)" : "var(--secundaria)")}${/*</aposta>*/""}
   </div>
   ${aConferir ? `<div class="nota" style="margin-top:10px">
     <strong>${inf(aConferir)} conferência${aConferir>1?"s":""}</strong> pendente${aConferir>1?"s":""}.
@@ -2540,7 +2540,7 @@ function tabelaBancada(r, titulo, umConcursoSo){
       <td style="color:${Math.abs(l.z)>3?"var(--alerta)":"var(--secundaria)"}">${l.z>=0?"+":""}${nf(l.z,2)}</td>
       <td style="color:${l.popularidade===menorPop?"var(--acaso)":"inherit"}">${nf(l.popularidade,3)}</td>
       <td style="color:${l.sobreposicao===menorSobre?"var(--acaso)":"inherit"}">${nf(l.sobreposicao,2)}</td>
-      <td>${brl(l.custo)}</td>
+      ${/*<aposta>*/""}<td>${brl(l.custo)}</td>${/*</aposta>*/""}
     </tr>`).join("")}</tbody></table></div>
   <div class="nota ${v.ok?"":"atencao"}">
     <strong>Acertos:</strong> ${esc(v.texto)}
@@ -4082,8 +4082,8 @@ function aoMudarHistorico(quantosConcursos, origem){
   if(quantosConcursos > 0){
     const titulo = `${quantosConcursos} concurso${quantosConcursos===1?"":"s"} novo${quantosConcursos===1?"":"s"}`;
     const texto = r.novas
-      ? `${r.novas} conferência${r.novas===1?"":"s"} feita${r.novas===1?"":"s"} automaticamente` +
-        /*<aposta>*/(r.premios ? `, ${r.premios} em faixa de prêmio.` : ", nenhuma em faixa de prêmio.")/*</aposta>*/
+      ? `${r.novas} conferência${r.novas===1?"":"s"} feita${r.novas===1?"":"s"} automaticamente`
+        /*<aposta>*/+ (r.premios ? `, ${r.premios} em faixa de prêmio.` : ", nenhuma em faixa de prêmio.")/*</aposta>*/
       : "Nenhum jogo salvo cobria esses concursos.";
     if(avisar("historico", titulo, `${texto} Origem: ${origem}.`,
               `hist:${origem}:${S.resultados.length}:${Date.now()}`))
@@ -5995,11 +5995,11 @@ T.montar = () => {
         ${/*<aposta>*/""}${r.melhor ? `<div class="nota">Melhor momento: concurso
           ${esc(r.melhor.concurso)}, ${r.melhor.acertos} acertos,
           <strong>${brl(r.melhor.premio)}</strong>.</div>` : ""}${/*</aposta>*/""}
-        ${r.semRateio ? `<div class="nota atencao">${r.semRateio} concurso${
+        ${/*<aposta>*/""}${r.semRateio ? `<div class="nota atencao">${r.semRateio} concurso${
           r.semRateio===1?"":"s"} em faixa de prêmio ${r.semRateio===1?"ficou":"ficaram"}
           fora do retorno porque o histórico não trouxe o rateio. O valor acima é
           um piso, não uma estimativa — prefiro faltar dinheiro na conta a
-          inventar.</div>` : ""}
+          inventar.</div>` : ""}${/*</aposta>*/""}
         <div class="nota atencao"><strong>Isto é o passado, e o passado não se
           repete.</strong> Este extrato não diz o que o jogo fará: diz o que
           teria feito, o que é uma pergunta diferente. Nenhuma combinação tem
