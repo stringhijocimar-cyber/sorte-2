@@ -171,6 +171,7 @@ const EXPOSTOS = [
   "tracoAuc",
   "POPULACAO_PESQUISA",
   "GRUPOS_DE_AVISO", "resultadosDe", "proximasDatasDeSorteio", "idadeDoHistorico",
+  "normalizarConcursos", "conferenciaAutomatica",
 ];
 const epilogo = `\n;globalThis.__motor = {${EXPOSTOS.map((n) => `${n}: typeof ${n} !== "undefined" ? ${n} : undefined`).join(", ")}};\n`;
 vm.runInContext(fonte + epilogo, contexto, { filename: "index.html:script" });
@@ -3615,6 +3616,105 @@ secao("32. Aviso de histórico atrasado");
     !/pode estar\s+atrasado/.test(contexto.T.resultados()));
 
   S.resultados = guardaRes; S.modalidade = guardaMod;
+}
+
+/* ==================================================================
+   34. O número do concurso é número em todo caminho
+
+   A queixa era "a conferência dos jogos já criados é confusa, não funciona".
+   Era isto: o formulário de conferir à mão é um <input>, e input devolve
+   texto. O resto do app trata concurso como número — é como ele chega dos
+   arquivos de dados — e todas as comparações são estritas.
+
+   Quem conferia um concurso à mão e depois deixava a busca trazer o MESMO
+   concurso ficava com o sorteio duas vezes na ficha do jogo: a automática não
+   reconhecia a manual, porque "3765" !== 3765. Daí "jogos conferidos"
+   contando dobrado e a média do placar puxada por conferências repetidas.
+
+   Medido no navegador antes de mexer, e conferido de novo depois.
+   ================================================================== */
+secao("34. Concurso é número, em todo caminho");
+
+{
+  const S = motor.S;
+  const g = {j:S.jogos, r:S.resultados, m:S.modalidade};
+  S.modalidade = "lotofacil";
+
+  const dezenas = [1,2,3,4,5,6,7,8,9,10,11,12,13,20,21];
+  const jogo = () => ({
+    id:"n1", modalidade:"lotofacil", metodo:"manual", data:"2026-08-01",
+    dezenas:[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15], conferencias:[],
+  });
+
+  /* O estrago, reproduzido: conferência gravada como texto e o mesmo concurso
+     chegando depois como número. */
+  S.jogos = [jogo()];
+  S.jogos[0].conferencias.push({concurso:"3765", data:"2026-08-18", dezenas, acertos:13});
+  S.resultados = [{concurso:3765, data:"2026-08-18", modalidade:"lotofacil", dezenas}];
+  motor.conferenciaAutomatica();
+  checar("sem normalizar, o mesmo concurso entraria duas vezes",
+    S.jogos[0].conferencias.length === 2,
+    `${S.jogos[0].conferencias.length} conferências — é o defeito que motivou isto`);
+
+  /* A cura: junta as duplicatas e deixa tudo numérico. */
+  const ajustes = motor.normalizarConcursos();
+  checar("a normalização junta o concurso repetido",
+    S.jogos[0].conferencias.length === 1,
+    `${S.jogos[0].conferencias.length} conferência`);
+  checar("e o que sobra é número",
+    typeof S.jogos[0].conferencias[0].concurso === "number",
+    typeof S.jogos[0].conferencias[0].concurso);
+  checar("a normalização relata que mexeu", ajustes > 0, `${ajustes} ajustes`);
+
+  /* Depois de curado, a automática não duplica mais. */
+  motor.conferenciaAutomatica();
+  checar("e a conferência automática para de duplicar",
+    S.jogos[0].conferencias.length === 1,
+    `${S.jogos[0].conferencias.length} conferência`);
+
+  /* Idempotência: rodar de novo não pode mexer em nada. Uma migração que
+     "conserta" toda abertura é uma migração que ainda está quebrando algo. */
+  const antes = JSON.stringify(S.jogos) + JSON.stringify(S.resultados);
+  const segunda = motor.normalizarConcursos();
+  checar("rodar a normalização de novo não muda nada",
+    segunda === 0 && JSON.stringify(S.jogos) + JSON.stringify(S.resultados) === antes,
+    `${segunda} ajustes na segunda passada`);
+
+  /* Resultados repetidos entre texto e número também se juntam. */
+  S.jogos = [jogo()];
+  S.resultados = [
+    {concurso:"3765", data:"2026-08-18", modalidade:"lotofacil", dezenas},
+    {concurso:3765, data:"2026-08-18", modalidade:"lotofacil", dezenas, rateio:"tinha rateio"},
+  ];
+  motor.normalizarConcursos();
+  checar("resultado duplicado entre texto e número vira um só",
+    S.resultados.length === 1, `${S.resultados.length} resultado`);
+  checar("e sobrevive o mais recente, que é o que traz rateio",
+    S.resultados[0].rateio === "tinha rateio",
+    String(S.resultados[0].rateio));
+
+  /* Concursos de modalidades diferentes NÃO podem se fundir só por ter o
+     mesmo número — a chave é modalidade mais concurso. */
+  S.resultados = [
+    {concurso:3765, data:"2026-08-18", modalidade:"lotofacil", dezenas},
+    {concurso:3765, data:"2026-08-18", modalidade:"quina", dezenas:[1,2,3,4,5]},
+  ];
+  motor.normalizarConcursos();
+  checar("mesmo número em modalidades diferentes continua sendo dois",
+    S.resultados.length === 2, `${S.resultados.length} resultados`);
+
+  /* O alvo do jogo também é comparado de forma estrita em concursosDoJogo. */
+  S.jogos = [Object.assign(jogo(), {concursoAlvo:"3765"})];
+  S.resultados = [{concurso:3765, data:"2026-08-18", modalidade:"lotofacil", dezenas}];
+  motor.normalizarConcursos();
+  checar("o concurso-alvo do jogo também vira número",
+    typeof S.jogos[0].concursoAlvo === "number", typeof S.jogos[0].concursoAlvo);
+  motor.conferenciaAutomatica();
+  checar("e por isso o jogo com alvo passa a ser conferido",
+    S.jogos[0].conferencias.length === 1,
+    `${S.jogos[0].conferencias.length} conferência`);
+
+  S.jogos = g.j; S.resultados = g.r; S.modalidade = g.m;
 }
 
 /* ==================================================================

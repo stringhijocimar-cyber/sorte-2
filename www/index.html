@@ -7378,7 +7378,14 @@ function acoes(){
     const saida = $("#c-saida");
     const c = MODALIDADES[S.modalidade];
     const dezenas = ($("#c-dez").value||"").split(/[\s,;-]+/).filter(Boolean).map(Number);
-    const concurso = $("#c-num").value.trim();
+    /* NÚMERO, não texto.
+       Este campo é um <input>, e input devolve string. O resto do app trata
+       concurso como número — é assim que ele chega dos arquivos de dados — e
+       todas as comparações são estritas. Guardando "3765" aqui, a conferência
+       feita à mão nunca casava com a mesma feita pela busca: o app conferia o
+       concurso DE NOVO e o jogo ficava com o mesmo sorteio duas vezes na
+       ficha, inflando "jogos conferidos" e a média do placar junto. */
+    const concurso = Number($("#c-num").value.trim());
     const data = $("#c-data").value;
     if(dezenas.length !== c.k){
       saida.innerHTML = `<div class="nota atencao">A ${esc(c.nome)} sorteia ${c.k} dezenas;
@@ -7392,7 +7399,7 @@ function acoes(){
       saida.innerHTML = `<div class="nota atencao">Fora do intervalo permitido: ${fora.join(", ")}.</div>`;
       return;
     }
-    if(!concurso){
+    if(!Number.isFinite(concurso) || concurso <= 0){
       saida.innerHTML = `<div class="nota atencao">Informe o número do concurso.</div>`; return;
     }
 
@@ -7734,9 +7741,52 @@ async function carregarCalibracao(){
   }catch(e){ /* sem arquivo: seguem as hipóteses declaradas */ }
 }
 
+/* Conserta no aparelho o estrago que o campo de texto fez.
+
+   Enquanto a conferência à mão guardou o concurso como texto, quem usou os
+   dois caminhos — digitar o resultado e depois deixar a busca trazer o mesmo
+   concurso — ficou com o sorteio duas vezes na ficha do jogo. Corrigir só o
+   formulário não desfaz isso: os dados errados já estão no celular da pessoa,
+   e "jogos conferidos" e a média do placar seguem contando dobrado.
+
+   Então a leitura normaliza e junta as duplicatas. Fica a conferência mais
+   recente de cada concurso, que é a que carrega a informação mais rica —
+   rateio e cidades vêm da busca, e a busca costuma chegar depois. */
+function normalizarConcursos(){
+  const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : v; };
+  let ajustes = 0;
+
+  const porConcurso = (lista, chave) => {
+    const vistos = new Map();
+    for(const item of lista){
+      const antes = item.concurso;
+      item.concurso = num(item.concurso);
+      if(antes !== item.concurso) ajustes++;
+      vistos.set(chave(item), item);   // o último vence
+    }
+    return [...vistos.values()];
+  };
+
+  S.resultados = porConcurso(S.resultados, r => `${r.modalidade}:${r.concurso}`);
+  for(const j of S.jogos){
+    if(!Array.isArray(j.conferencias)) continue;
+    const antes = j.conferencias.length;
+    j.conferencias = porConcurso(j.conferencias, cf => String(cf.concurso));
+    if(j.conferencias.length !== antes) ajustes++;
+    if(j.concursoAlvo != null) j.concursoAlvo = num(j.concursoAlvo);
+    if(j.deConcurso != null) j.deConcurso = num(j.deConcurso);
+  }
+  if(ajustes){
+    Guardar.gravar("jogos", S.jogos);
+    Guardar.gravar("resultados", S.resultados);
+  }
+  return ajustes;
+}
+
 (function iniciar(){
   S.jogos = Guardar.ler("jogos", []);
   S.resultados = Guardar.ler("resultados", []);
+  normalizarConcursos();
   S.tema = Guardar.ler("tema", "escuro");
   S.avisos = Guardar.ler("avisos", []);
   S.teimosinhas = Guardar.ler("teimosinhas", []);
