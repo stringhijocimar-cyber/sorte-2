@@ -3561,10 +3561,29 @@ secao("32. Aviso de histórico atrasado");
     concurso: 3000 + i, data: d, modalidade: "lotofacil",
     dezenas: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],
   }));
-  const agora = new Date(2026, 7, 16);
 
-  /* Diária em dia: um dia de atraso, limite 4. */
-  S.resultados = serie(["2026-08-11","2026-08-12","2026-08-13","2026-08-14","2026-08-15"]);
+  /* As datas são ancoradas no dia de hoje, e não escritas à mão.
+
+     Antes eram fixas ("2026-08-11" e vizinhas) com um `agora` fingido de
+     16/08. Só que quem desenha a tela é `T.resultados()`, e ela chama
+     `idadeDoHistorico(S.modalidade)` SEM o segundo argumento — ou seja, mede
+     contra o relógio de verdade. Enquanto o dia real esteve a até quatro dias
+     do último concurso semeado, o cenário "diária em dia" continuou valendo e
+     o teste passou. No quinto dia o alerta apareceu de verdade e o teste caiu
+     sozinho, sem ninguém ter tocado no código — derrubando o cron diário de
+     resultados, que roda esta bateria antes de gravar.
+
+     Data fixa em teste que compara com "agora" não é determinismo: é uma
+     bomba-relógio com pavio do tamanho do limite. Ancorando no dia corrente,
+     "um dia de atraso" quer dizer um dia de atraso em qualquer data em que a
+     bateria rode. */
+  const DIA = 86400000;
+  const hoje = new Date();
+  const agora = hoje;
+  const diasAtras = (n) => new Date(hoje - n * DIA).toISOString().slice(0, 10);
+
+  /* Diária em dia: último concurso ontem, limite 4. */
+  S.resultados = serie([diasAtras(5), diasAtras(4), diasAtras(3), diasAtras(2), diasAtras(1)]);
   const emDia = contexto.idadeDoHistorico("lotofacil", agora);
   checar("o ritmo é medido do próprio histórico", emDia.tipico === 1,
     `tipico=${emDia.tipico}`);
@@ -3573,13 +3592,13 @@ secao("32. Aviso de histórico atrasado");
   checar("e a tela não mostra alerta", !/pode estar\s+atrasado/.test(contexto.T.resultados()));
 
   /* Diária parada há onze dias. */
-  S.resultados = serie(["2026-08-01","2026-08-02","2026-08-03","2026-08-04","2026-08-05"]);
+  S.resultados = serie([diasAtras(15), diasAtras(14), diasAtras(13), diasAtras(12), diasAtras(11)]);
   const parada = contexto.idadeDoHistorico("lotofacil", agora);
   checar("uma diária parada há onze dias é acusada", parada.parado === true,
     `atraso=${parada.atraso} limite=${parada.limite}`);
 
   /* O limite acompanha o ritmo: a mesma folga numa semanal não é alarme. */
-  S.resultados = serie(["2026-07-05","2026-07-12","2026-07-19","2026-07-26","2026-08-05"]);
+  S.resultados = serie([diasAtras(39), diasAtras(32), diasAtras(25), diasAtras(18), diasAtras(11)]);
   const semanal = contexto.idadeDoHistorico("lotofacil", agora);
   checar("numa semanal, onze dias ainda não é parada", semanal.parado === false,
     `tipico=${semanal.tipico} atraso=${semanal.atraso} limite=${semanal.limite}`);
@@ -3589,7 +3608,7 @@ secao("32. Aviso de histórico atrasado");
   S.resultados = [];
   checar("histórico vazio não é avaliável",
     contexto.idadeDoHistorico("lotofacil", agora).avaliavel === false);
-  S.resultados = serie(["2026-08-14"]);
+  S.resultados = serie([diasAtras(2)]);
   checar("um concurso só não inventa ritmo",
     contexto.idadeDoHistorico("lotofacil", agora).avaliavel === false);
   checar("e nenhum dos dois casos mostra alerta",
