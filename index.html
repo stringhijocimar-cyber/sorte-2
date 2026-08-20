@@ -1112,7 +1112,7 @@ const esc = s => String(s ?? "").replace(/[&<>"']/g, c =>
 const nf = (v,d=2) => Number(v).toLocaleString("pt-BR",
   {minimumFractionDigits:d, maximumFractionDigits:d});
 const inf = v => Number(v).toLocaleString("pt-BR");
-const brl = v => Number(v).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+/*<aposta>*/const brl = v => Number(v).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});/*</aposta>*/
 const pad = n => String(n).padStart(2,"0");
 const hoje = () => new Date().toISOString().slice(0,10);
 
@@ -2585,9 +2585,12 @@ T.entender = () => `<div class="prosa">
     <li><strong>Fechamento.</strong> Combinatória de cobertura: garante um piso de acertos
     <em>caso</em> um número mínimo das suas dezenas seja sorteado. O app verifica cada
     garantia testando todos os cenários — e recusa a mostrar piso que não conseguiu provar.</li>
-    <li><strong>Custo e cobertura.</strong> Marcar mais dezenas aumenta a cobertura e o custo
+    ${/*<aposta>*/""}<li><strong>Custo e cobertura.</strong> Marcar mais dezenas aumenta a cobertura e o custo
     na mesma proporção. A chance por real gasto é idêntica em qualquer tamanho de aposta.
-    O que muda é a variância: você ganha mais vezes, valores menores.</li>
+    O que muda é a variância: você ganha mais vezes, valores menores.</li>${/*</aposta>*/""}
+    ${/*<estatistica><li><strong>Cobertura.</strong> Marcar mais dezenas cobre mais
+    combinações, na mesma proporção. A chance por combinação é idêntica em qualquer
+    tamanho de conjunto. O que muda é a variância: acertos mais frequentes e menores.</li></estatistica>*/""}
   </ul>
 
   <h3 style="margin-top:20px">Por que o placar existe</h3>
@@ -6720,9 +6723,11 @@ T.teimosinha = () => {
           `<option value="${v}">${v}</option>`).join("")}</select></label>
     </div>
     <button class="acao mini" id="t-criar" ${podeCriar?"":"disabled"}>criar teimosinha</button>
-    <div class="nota">O custo é multiplicado pelo número de concursos e sai inteiro no ato,
+    ${/*<aposta>*/""}<div class="nota">O custo é multiplicado pelo número de concursos e sai inteiro no ato,
       como na lotérica. Repetir o mesmo jogo não muda a chance de nenhum sorteio: cada
-      concurso é independente do anterior.</div>
+      concurso é independente do anterior.</div>${/*</aposta>*/""}
+    ${/*<estatistica><div class="nota">Repetir o mesmo conjunto não muda a chance de
+      nenhum sorteio: cada concurso é independente do anterior.</div></estatistica>*/""}
     <div id="t-saida"></div>
   </div>
   ${!minhas.length ? `<div class="vazio">Nenhuma teimosinha nesta modalidade.</div>`

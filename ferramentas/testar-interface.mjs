@@ -19,7 +19,7 @@
  * Ajuste com LOTOLAB_URL (endereço) e LOTOLAB_CHROME (executável).
  */
 import { spawn } from "node:child_process";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -29,6 +29,30 @@ const ENDERECO = process.env.LOTOLAB_URL || "http://127.0.0.1:8123/index.html";
 const LARGURA = 412, ALTURA = 915; // proporção de celular comum
 
 mkdirSync(CAPTURAS, { recursive: true });
+
+/* Qual edição está sendo servida.
+
+   São duas, e cada uma tem UMA identidade exata. A tentação aqui seria fazer
+   os testes de nome aceitarem "LotoLab ou LotoLab Estatístico" — e isso
+   desligaria justamente o que eles existem para pegar. Já aconteceu nesta
+   bateria: o teste de título aceitava a marca antiga como resposta válida e
+   por isso ficava verde no único caso que importava.
+
+   Então a edição é descoberta antes, pela fonte no disco, e a partir daí cada
+   asserção cobra a identidade daquela edição inteira, com igualdade estrita.
+   O sinal é o marcador de aposta, que só a edição completa carrega — na
+   estatística ele sai junto com o bloco que ele delimita. */
+const FONTE = readFileSync(join(RAIZ, "index.html"), "utf8");
+const EDICAO = FONTE.includes("/*<" + "aposta>*/")
+  ? { nome:"completa",
+      titulo:"LotoLab — Laboratório Estatístico",
+      marca:"LotoLab",
+      curto:"LotoLab" }
+  : { nome:"estatística",
+      titulo:"LotoLab Estatístico — Laboratório de Loterias",
+      marca:"LotoLab Estatístico",
+      curto:"LotoLab Estat." };
+console.log(`Edição sob teste: ${EDICAO.nome} — ${EDICAO.titulo}`);
 
 /* ---------- sobe o Chrome ----------
    O executável é configurável porque nem todo ambiente tem `google-chrome` no
@@ -132,7 +156,7 @@ secao("A. Carregamento");
    /LotoLab|Sorte 2/ — um "ou" que deixava o teste verde exatamente no caso que
    ele existe para pegar: a marca antiga voltando. Alternativa em teste de
    identidade não afrouxa o teste, desliga. */
-checar("página carregou", (await js("return document.title")) === "LotoLab — Laboratório Estatístico",
+checar("página carregou", (await js("return document.title")) === EDICAO.titulo,
   await js("return document.title"));
 /* ATENÇÃO: este teste passou anos verde sem testar nada do que o nome promete.
    Ele lia só `Log.entryAdded`, e exceção de JavaScript NÃO chega por aí — o
@@ -861,7 +885,7 @@ const offline = await js(`
   return { titulo: document.title, texto: document.body.innerText.trim().length,
            online: navigator.onLine };
 `);
-checar("app abre sem rede", offline.titulo === "LotoLab — Laboratório Estatístico" && offline.texto > 200,
+checar("app abre sem rede", offline.titulo === EDICAO.titulo && offline.texto > 200,
   `offline=${!offline.online}, ${offline.texto} caracteres`);
 const abasOffline = await js(`
   const t = document.body.innerText.toLowerCase();
@@ -913,9 +937,8 @@ const identidade = await js(`
   };
 `);
 
-checar("título é o da V4", identidade.titulo === "LotoLab — Laboratório Estatístico",
-  identidade.titulo);
-checar("marca no cabeçalho é LotoLab", identidade.marca === "LotoLab", identidade.marca);
+checar("título é o da edição", identidade.titulo === EDICAO.titulo, identidade.titulo);
+checar("marca no cabeçalho é a da edição", identidade.marca === EDICAO.marca, identidade.marca);
 checar("tema escuro é o padrão", identidade.tema === "escuro", String(identidade.tema));
 checar("a folha da V4 carregou e tem regras", identidade.temLink && identidade.regrasDaFolha > 100,
   `${identidade.regrasDaFolha} regras`);
@@ -973,8 +996,8 @@ checar("manifesto usa a cor da V4",
   corDoManifesto.fundo === identidade.themeColor &&
   corDoManifesto.tema === identidade.themeColor,
   `manifesto ${corDoManifesto.fundo}/${corDoManifesto.tema} vs meta ${identidade.themeColor}`);
-checar("manifesto leva o nome LotoLab",
-  corDoManifesto.curto === "LotoLab" && corDoManifesto.nome.includes("LotoLab"),
+checar("manifesto leva o nome da edição",
+  corDoManifesto.curto === EDICAO.curto && corDoManifesto.nome.includes("LotoLab"),
   `${corDoManifesto.nome} / ${corDoManifesto.curto}`);
 
 /* Varredura da marca antiga no que a pessoa lê. Percorre as treze telas em
@@ -991,6 +1014,85 @@ const marcaAntiga = await js(`
 `);
 checar("nenhuma tela mostra a marca antiga", marcaAntiga.length === 0,
   marcaAntiga.join(", "));
+
+/* ---------- F9. A edição estatística não expõe fluxo de aposta ----------
+
+   Esta seção é a que separa "removido" de "escondido". Um display:none
+   passaria em qualquer varredura de código-fonte e continuaria entregando o
+   conteúdo para quem abrisse o inspetor — ou para um leitor de tela, que não
+   obedece a CSS de layout do mesmo jeito que o olho.
+
+   Então a cobrança é feita no texto RENDERIZADO das treze telas, que é o que
+   de fato chega à pessoa. E é feita nas duas edições, com o sinal trocado: na
+   completa esses indicadores TÊM de aparecer, senão a remoção vazou para o
+   lado errado e a edição completa perdeu recurso em silêncio. */
+secao("F9. Fluxo de aposta por edição");
+
+await cmd("Page.navigate", { url: ENDERECO });
+await dormir(2500);
+
+const varredura = await js(`
+  const PADROES = {
+    "dinheiro": /R\\$\\s?\\d/,
+    "faixa de prêmio": /faixa de pr[êe]mio/i,
+    "custo": /\\bcusto\\b/i,
+    "prêmio esperado": /pr[êe]mio esperado/i,
+    "ROI": /\\bROI\\b/,
+  };
+  const achados = {};
+  for(const id of SECOES.flatMap(s => s.telas.map(t => t.id))){
+    try { irParaTela(id, {lateral:true}); } catch(e) { continue; }
+    const texto = document.body.innerText;
+    for(const [nome, re] of Object.entries(PADROES))
+      if(re.test(texto)) (achados[nome] = achados[nome] || []).push(id);
+  }
+  return achados;
+`);
+
+const nomes = Object.keys(varredura);
+if (EDICAO.nome === "estatística") {
+  checar("nenhuma das treze telas mostra dinheiro, custo ou prêmio",
+    nomes.length === 0,
+    nomes.map(n => `${n}: ${varredura[n].join(", ")}`).join(" · ") || "varredura limpa");
+
+  /* Não basta o texto sumir: o conteúdo não pode estar no DOM invisível. É
+     exatamente o que um "esconde com CSS" deixaria para trás. */
+  const escondido = await js(`
+    /* Só elementos de INTERFACE. A primeira versão varria querySelectorAll('*'),
+       que traz HEAD, STYLE e SCRIPT — e o textContent deles é o código-fonte da
+       página inteira, comentários inclusive. O teste acusava três "elementos
+       ocultos com conteúdo financeiro" que eram a folha de estilo e o próprio
+       script do app. Varrer o documento não é varrer a tela. */
+    const IGNORAR = new Set(["HEAD","STYLE","SCRIPT","TITLE","META","LINK","TEMPLATE"]);
+    const suspeitos = [...document.body.querySelectorAll('*')].filter(e => {
+      if(IGNORAR.has(e.tagName)) return false;
+      const s = getComputedStyle(e);
+      if(s.display !== 'none' && s.visibility !== 'hidden' && s.opacity !== '0') return false;
+      return /R\\$\\s?\\d|faixa de pr[êe]mio|pr[êe]mio esperado/i.test(e.textContent || "");
+    });
+    return suspeitos.length;
+  `);
+  checar("e nada disso ficou no DOM apenas escondido por CSS", escondido === 0,
+    `${escondido} elementos ocultos com conteúdo financeiro`);
+
+  checar("a função de moeda não sobreviveu na edição estatística",
+    (await js(`return typeof brl`)) === "undefined",
+    await js(`return typeof brl`));
+} else {
+  checar("a edição completa mantém os indicadores financeiros",
+    nomes.length > 0, nomes.join(", ") || "NENHUM — a remoção vazou para a edição errada");
+  checar("e a função de moeda continua existindo",
+    (await js(`return typeof brl`)) === "function", await js(`return typeof brl`));
+}
+
+/* Em qualquer edição: a Teimosinha continua alcançável. Ela repete um
+   conjunto por vários concursos e mede o desempenho — isso é análise, e some
+   junto com o custo só se alguém cortar demais. */
+checar("a Teimosinha continua alcançável nas duas edições",
+  await js(`
+    try { irParaTela("teimosinha", {lateral:true});
+          return document.body.innerText.length > 200; } catch(e) { return false; }
+  `));
 
 /* ---------- fim ---------- */
 console.log(linhas.join("\n"));

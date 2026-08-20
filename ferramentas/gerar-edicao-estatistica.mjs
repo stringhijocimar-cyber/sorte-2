@@ -48,6 +48,24 @@ export function removerAposta(html){
 
 /* A identidade muda porque a edição é outra. Quem abre precisa saber qual das
    duas tem na mão sem ter de procurar num menu. */
+/* Alguns trechos não somem: mudam de texto. Uma nota que explica como o custo
+   é cobrado na lotérica é orientação de aposta e sai; a frase seguinte, sobre
+   os concursos serem independentes, é estatística e tem de ficar. Cortar o
+   parágrafo inteiro levaria a segunda junto.
+
+   Então o substituto viaja DENTRO do comentário, entre <estatistica> e o
+   fechamento correspondente: assim ele não rende nada na edição completa —
+   comentário não é conteúdo — e é reinserido aqui, na geração. Escrever o
+   substituto fora do comentário faria as duas edições mostrarem as duas
+   versões do mesmo parágrafo, uma embaixo da outra. */
+export function trocarPelaVersaoEstatistica(html){
+  /* Montado com RegExp e não com literal: o padrão precisa conter uma barra
+     (a de abrir comentário), e num literal ela fecharia a própria expressão. */
+  const SUBSTITUTO = new RegExp(
+    String.raw`\$\{/\*<estatistica>([\s\S]*?)</estatistica>\*/""\}`, "g");
+  return html.replace(SUBSTITUTO, (_, conteudo) => conteudo);
+}
+
 export function renomear(html){
   return html
     .replace("<title>LotoLab — Laboratório Estatístico</title>",
@@ -89,7 +107,7 @@ function principal(){
     process.exit(1);
   }
 
-  const html = renomear(semAposta);
+  const html = renomear(trocarPelaVersaoEstatistica(semAposta));
 
   /* Trava de saída: se qualquer uma destas aparecer no arquivo publicado, a
      remoção não aconteceu e a edição estaria mentindo sobre o que é. */
