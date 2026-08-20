@@ -1,5 +1,20 @@
 name: Apply LotoLab Mockup Fidelity V4
 
+# NÃO roda em pull_request para o main, e isso é o conserto de um defeito.
+#
+# O primeiro passo deste job é "Checkout fidelity branch": ele baixa
+# agent/mockup-fidelity-v4 e testa AQUELE branch, aconteça o que acontecer no
+# PR. Enquanto o gatilho incluía pull_request, todo PR para o main recebia um
+# check chamado "apply" que dava veredito sobre código que nunca tinha olhado.
+#
+# Isso não é ruído inofensivo. Já aconteceu das duas formas: um "apply" verde
+# num PR sem nada a ver com ele, e um "apply" VERMELHO no PR que consertava
+# justamente o teste que estava falhando — porque o branch de fidelidade está
+# parado atrás do main e ainda carrega o defeito. Check que mente nas duas
+# direções é pior que check ausente: ensina a ignorar o vermelho.
+#
+# Continua rodando quando o próprio branch de fidelidade recebe push, e à mão
+# por workflow_dispatch. Nesses dois casos ele testa o que diz testar.
 on:
   push:
     branches:
@@ -8,10 +23,6 @@ on:
       - 'ui/**'
       - 'ferramentas/aplicar-visual-final-v3.mjs'
       - '.github/workflows/apply-visual-final-v3.yml'
-  pull_request:
-    branches:
-      - main
-    types: [opened, synchronize, reopened]
   workflow_dispatch:
 
 permissions:

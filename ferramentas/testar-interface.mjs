@@ -413,13 +413,22 @@ await preencherConferencia("1 2 3 4 40 41", "3001");
 const dupl = await js(`
   const res = JSON.parse(localStorage.getItem('lotolab:resultados')||'[]');
   const jogos = JSON.parse(localStorage.getItem('lotolab:jogos')||'[]');
-  const conf3001 = jogos.map(j => (j.conferencias||[]).filter(c => c.concurso === '3001').length);
-  return { registros: res.length, porJogo: conf3001 };
+  /* NÚMERO, não texto. Esta linha já procurou '3001' entre aspas — e assim
+     media o defeito em vez do conserto: o formulário guardava o concurso como
+     texto porque <input> devolve texto, e o resto do app compara com número
+     de forma estrita. Enquanto o teste procurava texto, ele passava junto com
+     o defeito e ainda dava a impressão de cobri-lo. */
+  const conf3001 = jogos.map(j => (j.conferencias||[]).filter(c => c.concurso === 3001).length);
+  const tipos = [...new Set(jogos.flatMap(j => (j.conferencias||[]).map(c => typeof c.concurso)))];
+  return { registros: res.length, porJogo: conf3001, tipos };
 `);
 checar("mesmo concurso conferido 2× não duplica o resultado",
   dupl.registros === 1, `${dupl.registros} registro`);
 checar("mesmo concurso conferido 2× não duplica na ficha do jogo",
-  dupl.porJogo.every((n) => n === 1), `conferências por jogo: [${dupl.porJogo}]`);
+  dupl.porJogo.length > 0 && dupl.porJogo.every((n) => n === 1),
+  `conferências por jogo: [${dupl.porJogo}]`);
+checar("o concurso é guardado como número, e não como texto do formulário",
+  dupl.tipos.length === 1 && dupl.tipos[0] === "number", dupl.tipos.join(", "));
 
 // F6 — concurso diferente é somado
 await preencherConferencia("5 6 7 8 9 10", "3002");

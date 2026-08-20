@@ -171,6 +171,7 @@ const EXPOSTOS = [
   "tracoAuc",
   "POPULACAO_PESQUISA",
   "GRUPOS_DE_AVISO", "resultadosDe", "proximasDatasDeSorteio", "idadeDoHistorico",
+  "normalizarConcursos", "conferenciaAutomatica",
 ];
 const epilogo = `\n;globalThis.__motor = {${EXPOSTOS.map((n) => `${n}: typeof ${n} !== "undefined" ? ${n} : undefined`).join(", ")}};\n`;
 vm.runInContext(fonte + epilogo, contexto, { filename: "index.html:script" });
@@ -3561,10 +3562,29 @@ secao("32. Aviso de histórico atrasado");
     concurso: 3000 + i, data: d, modalidade: "lotofacil",
     dezenas: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],
   }));
-  const agora = new Date(2026, 7, 16);
 
-  /* Diária em dia: um dia de atraso, limite 4. */
-  S.resultados = serie(["2026-08-11","2026-08-12","2026-08-13","2026-08-14","2026-08-15"]);
+  /* As datas são ancoradas no dia de hoje, e não escritas à mão.
+
+     Antes eram fixas ("2026-08-11" e vizinhas) com um `agora` fingido de
+     16/08. Só que quem desenha a tela é `T.resultados()`, e ela chama
+     `idadeDoHistorico(S.modalidade)` SEM o segundo argumento — ou seja, mede
+     contra o relógio de verdade. Enquanto o dia real esteve a até quatro dias
+     do último concurso semeado, o cenário "diária em dia" continuou valendo e
+     o teste passou. No quinto dia o alerta apareceu de verdade e o teste caiu
+     sozinho, sem ninguém ter tocado no código — derrubando o cron diário de
+     resultados, que roda esta bateria antes de gravar.
+
+     Data fixa em teste que compara com "agora" não é determinismo: é uma
+     bomba-relógio com pavio do tamanho do limite. Ancorando no dia corrente,
+     "um dia de atraso" quer dizer um dia de atraso em qualquer data em que a
+     bateria rode. */
+  const DIA = 86400000;
+  const hoje = new Date();
+  const agora = hoje;
+  const diasAtras = (n) => new Date(hoje - n * DIA).toISOString().slice(0, 10);
+
+  /* Diária em dia: último concurso ontem, limite 4. */
+  S.resultados = serie([diasAtras(5), diasAtras(4), diasAtras(3), diasAtras(2), diasAtras(1)]);
   const emDia = contexto.idadeDoHistorico("lotofacil", agora);
   checar("o ritmo é medido do próprio histórico", emDia.tipico === 1,
     `tipico=${emDia.tipico}`);
@@ -3573,13 +3593,13 @@ secao("32. Aviso de histórico atrasado");
   checar("e a tela não mostra alerta", !/pode estar\s+atrasado/.test(contexto.T.resultados()));
 
   /* Diária parada há onze dias. */
-  S.resultados = serie(["2026-08-01","2026-08-02","2026-08-03","2026-08-04","2026-08-05"]);
+  S.resultados = serie([diasAtras(15), diasAtras(14), diasAtras(13), diasAtras(12), diasAtras(11)]);
   const parada = contexto.idadeDoHistorico("lotofacil", agora);
   checar("uma diária parada há onze dias é acusada", parada.parado === true,
     `atraso=${parada.atraso} limite=${parada.limite}`);
 
   /* O limite acompanha o ritmo: a mesma folga numa semanal não é alarme. */
-  S.resultados = serie(["2026-07-05","2026-07-12","2026-07-19","2026-07-26","2026-08-05"]);
+  S.resultados = serie([diasAtras(39), diasAtras(32), diasAtras(25), diasAtras(18), diasAtras(11)]);
   const semanal = contexto.idadeDoHistorico("lotofacil", agora);
   checar("numa semanal, onze dias ainda não é parada", semanal.parado === false,
     `tipico=${semanal.tipico} atraso=${semanal.atraso} limite=${semanal.limite}`);
@@ -3589,13 +3609,112 @@ secao("32. Aviso de histórico atrasado");
   S.resultados = [];
   checar("histórico vazio não é avaliável",
     contexto.idadeDoHistorico("lotofacil", agora).avaliavel === false);
-  S.resultados = serie(["2026-08-14"]);
+  S.resultados = serie([diasAtras(2)]);
   checar("um concurso só não inventa ritmo",
     contexto.idadeDoHistorico("lotofacil", agora).avaliavel === false);
   checar("e nenhum dos dois casos mostra alerta",
     !/pode estar\s+atrasado/.test(contexto.T.resultados()));
 
   S.resultados = guardaRes; S.modalidade = guardaMod;
+}
+
+/* ==================================================================
+   34. O número do concurso é número em todo caminho
+
+   A queixa era "a conferência dos jogos já criados é confusa, não funciona".
+   Era isto: o formulário de conferir à mão é um <input>, e input devolve
+   texto. O resto do app trata concurso como número — é como ele chega dos
+   arquivos de dados — e todas as comparações são estritas.
+
+   Quem conferia um concurso à mão e depois deixava a busca trazer o MESMO
+   concurso ficava com o sorteio duas vezes na ficha do jogo: a automática não
+   reconhecia a manual, porque "3765" !== 3765. Daí "jogos conferidos"
+   contando dobrado e a média do placar puxada por conferências repetidas.
+
+   Medido no navegador antes de mexer, e conferido de novo depois.
+   ================================================================== */
+secao("34. Concurso é número, em todo caminho");
+
+{
+  const S = motor.S;
+  const g = {j:S.jogos, r:S.resultados, m:S.modalidade};
+  S.modalidade = "lotofacil";
+
+  const dezenas = [1,2,3,4,5,6,7,8,9,10,11,12,13,20,21];
+  const jogo = () => ({
+    id:"n1", modalidade:"lotofacil", metodo:"manual", data:"2026-08-01",
+    dezenas:[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15], conferencias:[],
+  });
+
+  /* O estrago, reproduzido: conferência gravada como texto e o mesmo concurso
+     chegando depois como número. */
+  S.jogos = [jogo()];
+  S.jogos[0].conferencias.push({concurso:"3765", data:"2026-08-18", dezenas, acertos:13});
+  S.resultados = [{concurso:3765, data:"2026-08-18", modalidade:"lotofacil", dezenas}];
+  motor.conferenciaAutomatica();
+  checar("sem normalizar, o mesmo concurso entraria duas vezes",
+    S.jogos[0].conferencias.length === 2,
+    `${S.jogos[0].conferencias.length} conferências — é o defeito que motivou isto`);
+
+  /* A cura: junta as duplicatas e deixa tudo numérico. */
+  const ajustes = motor.normalizarConcursos();
+  checar("a normalização junta o concurso repetido",
+    S.jogos[0].conferencias.length === 1,
+    `${S.jogos[0].conferencias.length} conferência`);
+  checar("e o que sobra é número",
+    typeof S.jogos[0].conferencias[0].concurso === "number",
+    typeof S.jogos[0].conferencias[0].concurso);
+  checar("a normalização relata que mexeu", ajustes > 0, `${ajustes} ajustes`);
+
+  /* Depois de curado, a automática não duplica mais. */
+  motor.conferenciaAutomatica();
+  checar("e a conferência automática para de duplicar",
+    S.jogos[0].conferencias.length === 1,
+    `${S.jogos[0].conferencias.length} conferência`);
+
+  /* Idempotência: rodar de novo não pode mexer em nada. Uma migração que
+     "conserta" toda abertura é uma migração que ainda está quebrando algo. */
+  const antes = JSON.stringify(S.jogos) + JSON.stringify(S.resultados);
+  const segunda = motor.normalizarConcursos();
+  checar("rodar a normalização de novo não muda nada",
+    segunda === 0 && JSON.stringify(S.jogos) + JSON.stringify(S.resultados) === antes,
+    `${segunda} ajustes na segunda passada`);
+
+  /* Resultados repetidos entre texto e número também se juntam. */
+  S.jogos = [jogo()];
+  S.resultados = [
+    {concurso:"3765", data:"2026-08-18", modalidade:"lotofacil", dezenas},
+    {concurso:3765, data:"2026-08-18", modalidade:"lotofacil", dezenas, rateio:"tinha rateio"},
+  ];
+  motor.normalizarConcursos();
+  checar("resultado duplicado entre texto e número vira um só",
+    S.resultados.length === 1, `${S.resultados.length} resultado`);
+  checar("e sobrevive o mais recente, que é o que traz rateio",
+    S.resultados[0].rateio === "tinha rateio",
+    String(S.resultados[0].rateio));
+
+  /* Concursos de modalidades diferentes NÃO podem se fundir só por ter o
+     mesmo número — a chave é modalidade mais concurso. */
+  S.resultados = [
+    {concurso:3765, data:"2026-08-18", modalidade:"lotofacil", dezenas},
+    {concurso:3765, data:"2026-08-18", modalidade:"quina", dezenas:[1,2,3,4,5]},
+  ];
+  motor.normalizarConcursos();
+  checar("mesmo número em modalidades diferentes continua sendo dois",
+    S.resultados.length === 2, `${S.resultados.length} resultados`);
+
+  /* O alvo do jogo também é comparado de forma estrita em concursosDoJogo. */
+  S.jogos = [Object.assign(jogo(), {concursoAlvo:"3765"})];
+  S.resultados = [{concurso:3765, data:"2026-08-18", modalidade:"lotofacil", dezenas}];
+  motor.normalizarConcursos();
+  checar("o concurso-alvo do jogo também vira número",
+    typeof S.jogos[0].concursoAlvo === "number", typeof S.jogos[0].concursoAlvo);
+  motor.conferenciaAutomatica();
+  checar("e por isso o jogo com alvo passa a ser conferido",
+    S.jogos[0].conferencias.length === 1,
+    `${S.jogos[0].conferencias.length} conferência`);
+
+  S.jogos = g.j; S.resultados = g.r; S.modalidade = g.m;
 }
 
 /* ==================================================================
