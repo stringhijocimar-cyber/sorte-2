@@ -40,3 +40,4 @@ fs.writeFileSync(swPath, sw);
 fs.writeFileSync(wwwSwPath, sw);
 
 console.log(`LotoLab V4.3 integrada. Service worker ${atual} -> ${alvo}.`);
+// Integration trigger: approved visual V4.3.
