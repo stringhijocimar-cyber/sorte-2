@@ -1,0 +1,162 @@
+/* LotoLab — APPROVED MOCKUP V4.3
+   Camada puramente visual. Não altera motor, dados ou fluxos funcionais. */
+:root{
+  --ll43-purple:#8B5CF6;
+  --ll43-purple-2:#6D3ED2;
+  --ll43-purple-soft:rgba(139,92,246,.14);
+  --ll43-ink:#F7F7FC;
+  --ll43-muted:#9CA3B5;
+  --ll43-bg:#050A12;
+  --ll43-surface:#0B111B;
+  --ll43-surface-2:#101824;
+  --ll43-line:#242C3A;
+  --ll43-winner:#47C965;
+  --ll43-rollover:#E7B325;
+}
+html[data-tema="escuro"] body{
+  background:
+    radial-gradient(520px 260px at 82% -80px,rgba(139,92,246,.11),transparent 70%),
+    linear-gradient(180deg,#050A12 0%,#07101A 48%,#050A12 100%)!important;
+}
+html[data-tema="escuro"] header{
+  background:rgba(5,10,18,.94)!important;
+  border-bottom:1px solid rgba(139,92,246,.16)!important;
+  box-shadow:0 10px 32px rgba(0,0,0,.22)!important;
+}
+.marca-titulo b{
+  color:#fff!important;
+  background:linear-gradient(90deg,#FFFFFF 0 54%,#B889FF 67%,#8958E8 100%);
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+  font-size:1.52rem!important;font-weight:850!important;letter-spacing:-.055em!important;
+}
+.marca-titulo span{letter-spacing:.20em!important;text-transform:uppercase!important;font-size:.55rem!important;color:#B2B5C2!important}
+.menu,.sino{background:#0B111B!important;border:1px solid #242C3A!important}
+.menu:hover,.sino:hover{border-color:rgba(139,92,246,.48)!important;background:#101824!important}
+main{padding-top:14px!important}
+
+/* Navegação — aparência do mockup aprovado */
+nav{
+  background:rgba(7,10,16,.985)!important;
+  border-top:1px solid #242C3A!important;
+  box-shadow:0 -14px 34px rgba(0,0,0,.34)!important;
+}
+nav button{color:#777F8F!important;font-size:.56rem!important}
+nav button[aria-current="page"]{color:#A97CFF!important;font-weight:750!important}
+nav button[aria-current="page"] svg{filter:drop-shadow(0 0 7px rgba(139,92,246,.30))}
+nav button[aria-current="page"]::after{content:"";display:block;width:20px;height:2px;border-radius:99px;background:#8B5CF6;margin:1px auto -2px}
+
+/* Gaveta lateral mais próxima do mockup */
+.gaveta .corpo{
+  width:min(86vw,330px)!important;
+  background:linear-gradient(180deg,#080E17 0%,#050A12 100%)!important;
+  border-right:1px solid #262D3A!important;
+  box-shadow:22px 0 60px rgba(0,0,0,.42)!important;
+}
+.gaveta-topo{padding-bottom:12px!important;border-bottom:1px solid #202735!important}
+.gaveta-mods button{
+  min-height:45px!important;border-radius:10px!important;
+  background:#0C131E!important;border:1px solid #222B38!important;
+  color:#B6BDC8!important;font-weight:650!important;
+}
+.gaveta-mods button[aria-pressed="true"]{
+  background:linear-gradient(90deg,rgba(139,92,246,.35),rgba(109,62,210,.78))!important;
+  border-color:rgba(170,124,255,.65)!important;color:#fff!important;
+  box-shadow:inset 3px 0 0 #C5A2FF,0 7px 18px rgba(0,0,0,.16)!important;
+}
+
+/* Superfícies e hierarquia */
+.carta,.panel,.ficha,.kpi,.mini-card,.draw-card,.concurso,.item,.activity-item,.metric,.sum-card,.chart-card,.pq-grafico{
+  border-color:#242C3A!important;
+  background:linear-gradient(180deg,#101824 0%,#0A111B 100%)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.025),0 10px 26px rgba(0,0,0,.18)!important;
+}
+.carta,.panel,.draw-card,.concurso{border-radius:15px!important}
+.panel-title h3,h3{color:#F7F7FC!important;font-weight:760!important}
+.panel-title span,.titulo p,.page-head small{color:#929AAA!important}
+.titulo.com-volta h1,.page-head h1{font-weight:790!important;color:#F8F8FC!important}
+
+/* Segmentos e abas: roxo como identidade global */
+.segmento,.tabs,.activity-tabs,.chips{background:#090F18!important;border-color:#222A38!important}
+.segmento button,.tabs button,.activity-tabs button,.chip{color:#858E9E!important}
+.segmento button[aria-selected="true"],.tabs button.active,.activity-tabs .active,.chip[aria-pressed="true"]{
+  color:#fff!important;
+  background:linear-gradient(180deg,rgba(139,92,246,.78),rgba(109,62,210,.66))!important;
+  box-shadow:inset 0 0 0 1px rgba(199,168,255,.25),0 6px 14px rgba(54,30,105,.20)!important;
+  border-color:rgba(171,127,255,.48)!important;
+}
+
+/* Contexto por modalidade continua independente do status do concurso */
+[data-mod="mega-sena"]{--ll-chip:#35B86B!important}
+[data-mod="lotofacil"]{--ll-chip:#A451D1!important}
+[data-mod="quina"]{--ll-chip:#446BE3!important}
+[data-mod="lotomania"]{--ll-chip:#EF7617!important}
+[data-mod="dupla-sena"]{--ll-chip:#D83B37!important}
+[data-mod="dia-de-sorte"]{--ll-chip:#D7A108!important}
+[data-mod="timemania"]{--ll-chip:#85B92F!important}
+[data-mod="mais-milionaria"]{--ll-chip:#6F35C7!important}
+[data-mod]::before{box-shadow:none!important;width:8px!important;height:8px!important}
+[data-mod][aria-pressed="true"]{box-shadow:inset 3px 0 0 var(--ll-chip)!important}
+
+/* Resultado: cor semântica domina o cartão; modalidade colore apenas as bolas */
+.item.ganhou,.concurso.ganhou,.carta.ganhou,.nota.ganhou{
+  background:linear-gradient(180deg,rgba(28,88,48,.55),rgba(12,34,24,.92))!important;
+  border-color:rgba(71,201,101,.58)!important;
+  box-shadow:inset 4px 0 0 var(--ll43-winner),0 10px 26px rgba(0,0,0,.16)!important;
+}
+.item.acumulou,.concurso.acumulou,.carta.acumulou,.nota.acumulou{
+  background:linear-gradient(180deg,rgba(109,78,8,.62),rgba(43,32,8,.94))!important;
+  border-color:rgba(231,179,37,.56)!important;
+  box-shadow:inset 4px 0 0 var(--ll43-rollover),0 10px 26px rgba(0,0,0,.16)!important;
+}
+.selo-ganho.ganhou{background:rgba(71,201,101,.18)!important;border-color:rgba(71,201,101,.55)!important;color:#99F0AC!important}
+.selo-ganho.acumulou{background:rgba(231,179,37,.18)!important;border-color:rgba(231,179,37,.58)!important;color:#FFE18A!important}
+.item.ganhou .txt b,.concurso.ganhou .concurso-topo b{color:#A9F1B8!important}
+.item.acumulou .txt b,.concurso.acumulou .concurso-topo b{color:#FFE08A!important}
+
+/* Bolas sorteadas: identidade da modalidade, como no bilhete */
+body:has([data-mod][aria-pressed="true"]) .bola,
+body:has([data-mod][aria-pressed="true"]) .ball,
+body:has([data-mod][aria-pressed="true"]) .dz.sorteada{
+  color:#fff!important;
+  background:linear-gradient(180deg,color-mix(in srgb,var(--ll-mod) 92%,white 8%),color-mix(in srgb,var(--ll-mod) 78%,black 22%))!important;
+  border:1px solid color-mix(in srgb,var(--ll-mod) 72%,white 10%)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.20),0 5px 12px color-mix(in srgb,var(--ll-mod) 22%,transparent)!important;
+  font-weight:800!important;
+}
+
+/* Análises: painel visual forte, sem alterar cálculos */
+.pq-hero,.analysis-card{
+  border-color:rgba(139,92,246,.36)!important;
+  background:radial-gradient(190px 130px at 92% 5%,rgba(139,92,246,.17),transparent 70%),linear-gradient(145deg,#111827,#0A111C)!important;
+}
+.pq-selo{color:#C8A7FF!important;background:rgba(139,92,246,.12)!important;border-color:rgba(139,92,246,.35)!important}
+.pq-orbe{background:radial-gradient(circle at 34% 28%,#D5BEFF,#9A68F5 36%,#51299C 100%)!important;box-shadow:0 0 0 7px rgba(139,92,246,.06),0 14px 30px rgba(80,41,155,.25)!important}
+.metric b,.kpi .val{color:#B891FF!important}
+.curve,.linha-evolucao{stroke:#9A68F5!important}.dot,.ponto-evolucao{fill:#B891FF!important}
+.good-banner{border-color:rgba(139,92,246,.34)!important;background:rgba(92,55,165,.20)!important;color:#D5C0FF!important}
+
+/* Listas de resultados mais densas e legíveis */
+.draws,.lista{gap:9px!important}
+.draw-card,.concurso{padding:13px!important}
+.concurso-topo b,.draw-top b{font-size:.76rem!important;font-weight:760!important}
+.concurso-topo time,.draw-top time{color:#8D96A6!important}
+.bolas,.balls{gap:7px!important;margin-top:10px!important}
+.bola,.ball{width:32px!important;height:32px!important;font-size:.68rem!important}
+
+/* Controles */
+select,input[type=number],input[type=text],input[type=date],.search{
+  background:#0A111B!important;border-color:#283141!important;color:#F6F7FA!important;
+}
+select:focus,input:focus{border-color:rgba(139,92,246,.72)!important;box-shadow:0 0 0 3px rgba(139,92,246,.10)!important}
+
+/* Atividades */
+.activity-sheet,.folha .corpo{background:linear-gradient(180deg,#070C14,#050A12)!important}
+.activity-item.analysis .activity-icon,.ic-aviso{background:rgba(139,92,246,.14)!important;color:#B78CFF!important}
+.ponto-lido.novo{background:#9A68F5!important;box-shadow:0 0 0 3px rgba(139,92,246,.11)!important}
+
+@media(max-width:390px){
+  .marca-titulo b{font-size:1.44rem!important}
+  .gaveta .corpo{width:min(88vw,320px)!important}
+  .bola,.ball{width:31px!important;height:31px!important}
+}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
