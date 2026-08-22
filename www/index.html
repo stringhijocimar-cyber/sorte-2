@@ -4061,12 +4061,10 @@ function conferenciaAutomatica(){
            QUANTO foi. Melhor = mais acertos; empate fica com o primeiro. */
         if(!melhor || acertos > melhor.acertos)
           melhor = {acertos, modalidade:j.modalidade, concurso:r.concurso, jogo:j.id};
-        /*<aposta>*/
         const nome = MODALIDADES[j.modalidade].nome;
-        avisar("premio", `${nome}: ${faixa} acerto${faixa===1?"":"s"}`,
-          `Concurso ${r.concurso} — o jogo ${j.dezenas.map(pad).join(" ")} está numa faixa de prêmio. Confira no volante oficial antes de comemorar.`,
-          `premio:${j.id}:${r.concurso}`);
-        /*</aposta>*/
+        avisar("premio", `${nome}: ${faixa} coincidência${faixa===1?"":"s"}`,
+          `Concurso ${r.concurso} — o jogo ${j.dezenas.map(pad).join(" ")} coincidiu em ${faixa} dezena${faixa===1?"":"s"}.${/*<aposta>*/""} É uma faixa de prêmio: confira no volante oficial antes de comemorar.${/*</aposta>*/""}`,
+          `coincidencia:${j.id}:${r.concurso}`);
       }
     });
   });
@@ -4095,16 +4093,25 @@ function aoMudarHistorico(quantosConcursos, origem){
   /* O aviso do prêmio vem depois e separado do aviso de concurso novo, e diz
      de quanto foi: "seu jogo foi premiado" sem número manda a pessoa abrir o
      app para descobrir que acertou 11 na Lotofácil. */
-/*<aposta>*/
+  /* Esta notificação é COMPARAÇÃO, não prêmio, e por isso vive nas duas
+     edições. Chegou a sair da edição estatística junto com os blocos de
+     aposta — erro meu de recorte: "seu conjunto coincidiu em 13 dezenas no
+     concurso 3765" é medida, e medida é o que aquela edição existe para
+     mostrar. O que não pode aparecer ali é faixa e dinheiro.
+
+     O texto também deixou de dizer "premiado" na edição completa. O app não
+     sabe se a pessoa comprou o bilhete — ele compara conjuntos guardados com
+     concursos publicados. Anunciar prêmio a partir disso afirma o que não foi
+     medido, e o texto antigo já se contradizia pedindo para conferir no
+     volante antes de comemorar. */
   if(r.premios){
     const detalhe = r.melhor
-      ? `${r.melhor.acertos} acertos na ${MODALIDADES[r.melhor.modalidade].nome}, concurso ${r.melhor.concurso}.`
+      ? `${r.melhor.acertos} coincidências na ${MODALIDADES[r.melhor.modalidade].nome}, concurso ${r.melhor.concurso}.`
       : "Abra o LotoLab para ver qual jogo e qual concurso.";
     notificarSistema(
-      r.premios === 1 ? "Seu jogo foi premiado" : `${r.premios} jogos premiados`,
-      detalhe, `premio:${Date.now()}`, "conferir");
+      r.premios === 1 ? "Um jogo seu coincidiu" : `${r.premios} jogos seus coincidiram`,
+      detalhe, `coincidencia:${Date.now()}`, "conferir");
   }
-/*</aposta>*/
   if(S.autoAnalise !== false) analisarPendentes();
   /* Reagenda o alarme do próximo sorteio: a data mudou agora que entrou
      concurso novo, e o lembrete antigo apontava para uma data que já passou. */
