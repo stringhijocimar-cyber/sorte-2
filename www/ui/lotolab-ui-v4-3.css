@@ -160,3 +160,109 @@ select:focus,input:focus{border-color:rgba(139,92,246,.72)!important;box-shadow:
   .bola,.ball{width:31px!important;height:31px!important}
 }
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+
+/* ====================================================================
+   V4.3 — refino
+   Quatro defeitos medidos na interface real, aos 360, 390 e 430px.
+   Nada aqui toca motor, dados ou fluxo: é folha de estilo.
+   ==================================================================== */
+
+/* 1. O ROXO VOLTA A SER A IDENTIDADE GLOBAL.
+
+   Medido: `--ll-mod`, que pinta acentos por toda a interface, nascia teal
+   (#24D9B7) e passava a valer a cor da modalidade escolhida — verde inteiro na
+   Mega-Sena, lilás inteiro na Lotofácil. Era a regra da V4.2, quando a cor da
+   modalidade era a identidade.
+
+   Na V4.3 a identidade é o roxo, e a cor da modalidade é contexto. Então o
+   acento global passa a ser roxo em qualquer modalidade, e a cor da modalidade
+   segue viva onde ela informa: no indicador, nas dezenas dos resultados e no
+   estado selecionado. É por isso que `--ll-chip` NÃO é tocado aqui. */
+:root,
+body:has([data-mod][aria-pressed="true"]){
+  --ll-mod:var(--ll43-purple)!important;
+  --ll-mod-soft:var(--ll43-purple-soft)!important;
+  --ll-mod-border:rgba(139,92,246,.46)!important;
+  --ll-mod-text:#CDB4FF!important;
+}
+
+/* 2. FOCO DE TECLADO VISÍVEL.
+
+   Medido: botão com foco devolvia `outline: none 0px` e `box-shadow: none` —
+   quem navega por teclado não tinha como saber onde estava. A bateria já
+   cobrava que o foco ALCANÇA os controles; não cobrava que ele APARECE.
+
+   :focus-visible, e não :focus, para o anel não piscar a cada toque no celular. */
+:where(button,a[href],input,select,textarea,[tabindex]):focus-visible{
+  outline:2px solid var(--ll43-purple)!important;
+  outline-offset:2px!important;
+  border-radius:10px;
+}
+
+/* 3. ALVO DE TOQUE DE 44px.
+
+   Medido nas três larguras: abas de segmento 34px, chips 33px, ".acao mini"
+   37px, ".acao-tela" 38px. Todos abaixo do mínimo confortável para o dedo.
+
+   min-height em vez de height: o conteúdo manda quando for maior, e nada
+   encolhe. Onde o elemento é pequeno por desenho — o ícone do cabeçalho —, o
+   alvo cresce sem o desenho crescer. */
+/* Classe repetida de propósito. A camada anterior fixa
+   `.primary-btn,.hero-card .primary-btn{min-height:37px!important}`, e o botão
+   da tela inicial FICA dentro de .hero-card — ou seja, o seletor que vale ali
+   tem especificidade (0,2,0) e ganha do meu (0,1,0), mesmo eu vindo depois e
+   também com !important. Repetir a classe empata a especificidade e a ordem
+   decide, que é o comportamento que eu esperava desde o começo.
+
+   Medido antes de escrever: o computado continuava 37px com a regra simples. */
+.acao.acao,.chip.chip,.primary-btn.primary-btn,
+.segmento button,.abas-seg button,.filtros button{
+  min-height:44px!important;
+}
+.acao-tela.acao-tela{min-width:44px!important;min-height:44px!important}
+
+/* Os dois ícones do cabeçalho ficavam em 40px porque a coluna da grade tem
+   42px. Subir só o botão o faria transbordar a coluna, então sobem juntos.
+   A 360px isto deixa 272px para o título, que continua sobrando. */
+.cabeca{grid-template-columns:44px 1fr 44px!important}
+.menu.menu,.sino.sino{width:44px!important;height:44px!important}
+.chip{padding-top:0!important;padding-bottom:0!important;display:inline-flex!important;
+  align-items:center!important}
+
+/* 4. RAIO DE BORDA COM ESCALA ÚNICA.
+
+   Medido: 11, 12, 15 e 17px convivendo em elementos do mesmo peso visual.
+   Quatro valores para a mesma família é ruído que se vê sem saber nomear.
+
+   Duas medidas, e só: 14px para superfície (cartão, painel, nota, ficha) e
+   10px para controle (campo, chip, botão pequeno). */
+:root{--ll43-r-superficie:14px;--ll43-r-controle:10px}
+.carta,.panel,.painel,.nota,.ficha,.kpi,.card,.activity-item,.item,
+.draw-card,.concurso,
+/* .hero-card vinha com 17px e .mini-card com 12px — os dois últimos fora da
+   escala, medidos na tela inicial. São superfície como as outras. */
+.hero-card.hero-card,.mini-card.mini-card,
+/* `.resumo .kpi` (0,2,0) fixa 12px e ganharia de um `.kpi` solto. Só aparece
+   no Placar quando há jogo salvo — a varredura da tela vazia não o via, e foi
+   o teste novo, rodando depois das seções que criam dados, que o pegou. */
+.resumo .kpi{border-radius:var(--ll43-r-superficie)!important}
+select,input[type=number],input[type=text],input[type=date],.search,
+.acao.mini,.chip{border-radius:var(--ll43-r-controle)!important}
+
+/* 5. O ESTADO DO RESULTADO NÃO DEPENDE DE COR.
+
+   O selo já traz o texto ("com ganhador" / "sem ganhador — acumulou"), e é
+   isso que sustenta a leitura de quem não distingue verde de amarelo. Aqui a
+   cor só reforça, com os tons da V4.3, e o peso extra separa os dois estados
+   também pela forma. */
+.selo-ganho.ganhou{
+  color:var(--ll43-winner)!important;
+  border-color:color-mix(in srgb,var(--ll43-winner) 46%,transparent)!important;
+  background:color-mix(in srgb,var(--ll43-winner) 13%,transparent)!important;
+}
+.selo-ganho.acumulou{
+  color:var(--ll43-rollover)!important;
+  border-color:color-mix(in srgb,var(--ll43-rollover) 48%,transparent)!important;
+  background:color-mix(in srgb,var(--ll43-rollover) 14%,transparent)!important;
+}
+.selo-ganho.desconhecido{font-style:italic!important}

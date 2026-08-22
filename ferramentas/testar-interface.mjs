@@ -955,7 +955,13 @@ checar("a folha da V4 carregou e tem regras", identidade.temLink && identidade.r
 const VALORES_DA_V4 = [
   { o_que: "fundo da página",        js: `getComputedStyle(document.documentElement).backgroundColor`, espera: "rgb(2, 10, 16)" },
   { o_que: "cor-base da V4",         js: `getComputedStyle(document.documentElement).getPropertyValue('--s2-bg').trim()`, espera: "#061521" },
-  { o_que: "largura do botão menu",  js: `getComputedStyle(document.querySelector('.menu')).width`, espera: "40px" },
+  /* 44px, e não os 40px de antes: a V4.3 subiu os dois ícones do cabeçalho
+     para o mínimo de alvo de toque. A expectativa muda aqui porque a mudança
+     foi intencional e medida — não para o teste parar de reclamar. E, para
+     este valor não voltar a ser um número solto que alguém ajusta de novo, a
+     seção F9 abaixo passou a cobrar a REGRA (nenhum alvo abaixo de 44px) em
+     vez de só esta amostra. */
+  { o_que: "largura do botão menu",  js: `getComputedStyle(document.querySelector('.menu')).width`, espera: "44px" },
   { o_que: "ícone do menu",          js: `getComputedStyle(document.querySelector('.menu svg')).width`, espera: "22px" },
   { o_que: "corpo em 14px",          js: `getComputedStyle(document.body).fontSize`, espera: "14px" },
   { o_que: "barra de rolagem fina",  js: `getComputedStyle(document.body).scrollbarWidth`, espera: "thin" },
@@ -1093,6 +1099,107 @@ checar("a Teimosinha continua alcançável nas duas edições",
     try { irParaTela("teimosinha", {lateral:true});
           return document.body.innerText.length > 200; } catch(e) { return false; }
   `));
+
+/* ---------- F10. Alvo de toque e escala de raio ----------
+   As duas coisas que a V4.3 pediu e que só se veem medindo.
+
+   O alvo de toque estava entre 33 e 39px em abas de segmento, chips e botões
+   pequenos — abaixo do que o dedo acerta com confiança. E o raio de borda
+   tinha quatro valores convivendo (11, 12, 15 e 17px) em elementos do mesmo
+   peso visual: ruído que se vê sem saber nomear.
+
+   Cobrado como REGRA, e nas três larguras que o prompt nomeia. Uma amostra
+   solta ("o menu tem 40px") documenta um número; a regra impede a volta do
+   defeito em qualquer componente novo. */
+secao("F10. Alvo de toque e escala de raio");
+
+for (const larguraTela of [360, 390, 430]) {
+  await cmd("Emulation.setDeviceMetricsOverride", {
+    width: larguraTela, height: 900, deviceScaleFactor: 2, mobile: true });
+  await dormir(350);
+
+  const medida = await js(`
+    const pequenos = [], raios = {};
+    for(const id of SECOES.flatMap(s => s.telas.map(t => t.id))){
+      try { irParaTela(id, {lateral:true}); } catch(e) { continue; }
+      for(const el of document.querySelectorAll('button, a[href]')){
+        const b = el.getBoundingClientRect();
+        if(b.height === 0 || b.width === 0) continue;
+        if(b.height < 44 || b.width < 44)
+          pequenos.push(id + ' ' + (el.className||el.tagName).toString().slice(0,22) +
+                        ' ' + Math.round(b.width) + 'x' + Math.round(b.height));
+      }
+      const main = document.querySelector('main') || document.body;
+      for(const el of main.querySelectorAll('*')){
+        const cl = (el.className||'').toString();
+        if(!/carta|kpi|card|nota|ficha|item|painel/.test(cl)) continue;
+        const b = el.getBoundingClientRect();
+        if(!b.width || !b.height) continue;
+        const rd = getComputedStyle(el).borderRadius.split(' ')[0];
+        if(rd && rd !== '0px') raios[rd] = (raios[rd]||0) + 1;
+      }
+    }
+    return { pequenos: [...new Set(pequenos)].slice(0,8),
+             raios, larguraDoc: document.documentElement.scrollWidth };
+  `);
+
+  checar(`${larguraTela}px: todo alvo de toque tem ao menos 44px`,
+    medida.pequenos.length === 0, medida.pequenos.join(" · "));
+  checar(`${larguraTela}px: superfícies usam uma escala única de raio`,
+    Object.keys(medida.raios).length === 1, JSON.stringify(medida.raios));
+  checar(`${larguraTela}px: nada estoura na horizontal`,
+    medida.larguraDoc <= larguraTela + 1, `documento ${medida.larguraDoc}px`);
+}
+
+/* O roxo é a identidade global da V4.3: a cor da modalidade informa contexto,
+   mas não pode repintar a interface inteira como fazia na V4.2. */
+const acentos = await js(`
+  const fora = [];
+  for(const el of document.querySelectorAll('[data-mod]')){
+    el.click();
+    const acento = getComputedStyle(document.body).getPropertyValue('--ll-mod').trim();
+    if(acento.toUpperCase() !== '#8B5CF6') fora.push(el.dataset.mod + '=' + acento);
+  }
+  return fora;
+`);
+checar("o acento global é o roxo em qualquer modalidade", acentos.length === 0,
+  acentos.join(", "));
+
+/* A cor da modalidade continua viva onde ela informa. Se esta checagem cair
+   junto com a de cima, foi porque o roxo comeu o contexto — que é o outro
+   jeito de errar o mesmo ajuste. */
+const contexto = await js(`
+  const cores = new Set();
+  for(const el of document.querySelectorAll('[data-mod]'))
+    cores.add(getComputedStyle(el).getPropertyValue('--ll-chip').trim().toUpperCase());
+  return [...cores];
+`);
+checar("cada modalidade mantém a sua cor de contexto", contexto.length === 8,
+  `${contexto.length} cores distintas`);
+
+/* Foco de teclado VISÍVEL. A bateria já cobrava que o foco alcança os
+   controles; não cobrava que ele aparece — e ele não aparecia.
+
+   Tab de verdade pelo protocolo: `el.focus()` por script não aciona
+   :focus-visible no Chrome, e mediria "sem anel" com o anel funcionando. */
+await cmd("Emulation.setDeviceMetricsOverride", {
+  width: LARGURA, height: ALTURA, deviceScaleFactor: 2, mobile: true });
+await irPara("inicio");
+const tecla = (tipo) => cmd("Input.dispatchKeyEvent", {
+  type: tipo, key: "Tab", code: "Tab", windowsVirtualKeyCode: 9, nativeVirtualKeyCode: 9 });
+const aneis = [];
+for (let i = 0; i < 5; i++) {
+  await tecla("rawKeyDown"); await tecla("keyUp"); await dormir(90);
+  const a = await js(`
+    const el = document.activeElement;
+    if(!el || el === document.body) return null;
+    const cs = getComputedStyle(el);
+    return cs.outlineStyle !== 'none' && parseFloat(cs.outlineWidth) >= 2;
+  `);
+  if (a !== null) aneis.push(a);
+}
+checar("o foco de teclado é visível", aneis.length > 0 && aneis.every(Boolean),
+  `${aneis.filter(Boolean).length} de ${aneis.length} controles com anel`);
 
 /* ---------- fim ---------- */
 console.log(linhas.join("\n"));
