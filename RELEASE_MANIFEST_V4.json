@@ -1,12 +1,12 @@
 {
   "product": "LotoLab",
-  "version": "4.2.0",
-  "versionLabel": "V4.2",
+  "version": "4.3.0",
+  "versionLabel": "V4.3",
   "sourceBranch": "main",
-  "visualLayer": "Mockup Fidelity V4 + UI V4.2 modality identity",
+  "visualLayer": "Mockup Fidelity V4 + approved mockup UI V4.3",
   "android": {
-    "versionCode": 6,
-    "versionName": "4.2.0"
+    "versionCode": 7,
+    "versionName": "4.3.0"
   },
   "versionFiles": [
     "VERSION",
@@ -15,22 +15,22 @@
     "android/app/build.gradle"
   ],
   "releaseState": "source-ready",
-  "notes": "Manifesto canônico da versão atual do código. A V4.2 inclui refinamento visual, cores de contexto por modalidade e status verde/amarelo dos resultados históricos. Duas edições saem do mesmo código: a completa e a estatística.",
+  "notes": "Manifesto canônico da versão atual do código. A V4.3 aplica ao app real o visual aprovado, com identidade escura/roxa, cores de contexto por modalidade e status verde/amarelo dos resultados históricos.",
   "editions": [
     {
-      "name": "LotoLab 4.2.0",
+      "name": "LotoLab 4.3.0",
       "id": "completa",
-      "tag": "v4.2.0",
+      "tag": "v4.3.0",
       "source": "main",
-      "description": "Edição completa."
+      "description": "Edição completa do código-fonte."
     },
     {
-      "name": "LotoLab Estatístico 4.2.0",
+      "name": "LotoLab Estatístico 4.3.0",
       "id": "estatistica",
-      "tag": "v4.2.0-stat",
+      "tag": "v4.3.0-stat",
       "source": "edicao/estatistica",
       "generatedBy": "ferramentas/gerar-edicao-estatistica.mjs",
-      "description": "Sem os fluxos de aposta: dinheiro, prêmio, custo, retorno e anúncio de prêmio de concurso futuro são removidos do arquivo publicado, e não escondidos por CSS."
+      "description": "Edição estatística sem fluxos operacionais de aposta."
     }
   ]
 }
