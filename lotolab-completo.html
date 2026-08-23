@@ -5528,6 +5528,19 @@ const FONTES = [
   {
     id: "espelho-guidi",
     nome: "espelho loteriascaixa",
+    /* Endereço atual do projeto. O anterior era loteriascaixa-api.herokuapp.com,
+       e o plano gratuito do Heroku foi encerrado no fim de 2022 — aquele host
+       provavelmente só custava uma tentativa perdida. */
+    url: (slug, concurso) =>
+      `https://api.guidi.dev.br/loteria/${slug}/` + (concurso || "ultimo"),
+    converter: normalizarEspelho
+  },
+  {
+    id: "espelho-heroku",
+    nome: "espelho loteriascaixa (endereço antigo)",
+    /* Mantido depois do endereço novo, e não no lugar dele: se o projeto
+       voltar ao ar por aqui, é mais uma chance; se estiver morto, custa uma
+       tentativa que agora tem tempo-limite. */
     url: (slug, concurso) =>
       `https://loteriascaixa-api.herokuapp.com/api/${slug}/` + (concurso || "latest"),
     converter: normalizarEspelho
@@ -5535,16 +5548,46 @@ const FONTES = [
   {
     id: "proxy",
     nome: "Caixa via proxy de CORS",
-    /* Último recurso: um proxy público reenvia a resposta da Caixa com o
-       cabeçalho que falta. O dado continua sendo o oficial; o que muda é
-       quem o entrega. Fica por último porque depende de um terceiro que pode
-       sair do ar ou ficar lento. */
+    /* Um proxy público reenvia a resposta da Caixa com o cabeçalho que falta.
+       O dado continua sendo o oficial; o que muda é quem o entrega. Fica
+       depois das fontes diretas porque depende de um terceiro que pode sair
+       do ar ou ficar lento. */
     url: (slug, concurso) => "https://api.allorigins.win/raw?url=" +
+      encodeURIComponent(`https://servicebus2.caixa.gov.br/portaldeloterias/api/${slug}` +
+        (concurso ? `/${concurso}` : "")),
+    converter: normalizarCaixa
+  },
+  {
+    id: "proxy-codetabs",
+    nome: "Caixa via segundo proxy",
+    /* Segundo proxy, de operador diferente do primeiro. Dois proxies do mesmo
+       dono cairiam juntos e não seriam duas chances. */
+    url: (slug, concurso) => "https://api.codetabs.com/v1/proxy?quest=" +
       encodeURIComponent(`https://servicebus2.caixa.gov.br/portaldeloterias/api/${slug}` +
         (concurso ? `/${concurso}` : "")),
     converter: normalizarCaixa
   }
 ];
+
+/* Sem tempo-limite, uma fonte que aceita a conexão e depois não responde
+   segura a fila inteira: as fontes seguintes nunca chegam a ser tentadas e a
+   tela fica parada, sem erro e sem resultado. O padrão do fetch é esperar
+   indefinidamente, então o corte precisa ser explícito. */
+const TEMPO_LIMITE_FONTE = 8000;
+
+async function buscarComLimite(url, ms){
+  const opcoes = {cache:"no-cache", headers:{Accept:"application/json"}};
+  /* WebView antiga pode não ter AbortController. Sem ele a busca continua
+     funcionando — só perde o corte, que é melhor que não buscar. */
+  if(typeof AbortController !== "function") return fetch(url, opcoes);
+  const controle = new AbortController();
+  const relogio = setTimeout(() => controle.abort(), ms);
+  try{
+    return await fetch(url, Object.assign({}, opcoes, {signal: controle.signal}));
+  }finally{
+    clearTimeout(relogio);
+  }
+}
 
 //: Fonte que respondeu por último. Tentar a que já funcionou antes economiza
 //: duas requisições falhas em cada busca seguinte.
@@ -5596,15 +5639,20 @@ async function buscarNaCaixa(modalidade, concurso){
   const falhas = [];
   for(const fonte of ordem){
     try{
-      const resp = await fetch(fonte.url(slug, concurso, modalidade),
-        {cache:"no-cache", headers:{Accept:"application/json"}});
+      const resp = await buscarComLimite(
+        fonte.url(slug, concurso, modalidade), TEMPO_LIMITE_FONTE);
       if(!resp.ok) throw new Error(`respondeu ${resp.status}`);
       const r = fonte.converter(await resp.json(), modalidade, concurso);
       r.fonte = fonte.id;
       FONTE_PREFERIDA = fonte.id;
       return r;
     }catch(e){
-      falhas.push(`${fonte.nome}: ${e.message}`);
+      /* "AbortError" não diz nada a quem lê. O que aconteceu foi que a fonte
+         passou do tempo — e é isso que precisa aparecer. */
+      const motivo = (e && (e.name === "AbortError" || e.name === "TimeoutError"))
+        ? `não respondeu em ${Math.round(TEMPO_LIMITE_FONTE/1000)}s`
+        : e.message;
+      falhas.push(`${fonte.nome}: ${motivo}`);
     }
   }
   /* Erro que nomeia cada tentativa. "Failed to fetch" sozinho não diz se o

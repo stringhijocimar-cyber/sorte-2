@@ -139,6 +139,7 @@ const contexto = {
   window: { matchMedia: () => ({ matches: false, addEventListener() {} }),
             scrollTo() {}, addEventListener() {} },
   fetch: () => Promise.reject(new Error("sem rede — proposital")),
+  AbortController,
   setTimeout, clearTimeout, requestAnimationFrame: (f) => setTimeout(f, 0),
   Math: mathSemeado(), Date, JSON, Number, String, Array, Object, Map, Set, Error, isNaN,
   parseInt, parseFloat, Promise, Intl,
@@ -194,7 +195,7 @@ const EXPOSTOS = [
   "porDezena", "vereditoDasDezenas", "convergenciaDoPlacar",
   "panoramaDoLaboratorio", "tiraDeAprendizado", "registrarAnalise",
   "TETO_HISTORICO_APRENDIZADO",
-  "ordemDeFontes", "FONTES", "buscarNaCaixa",
+  "ordemDeFontes", "FONTES", "buscarNaCaixa", "buscarComLimite", "TEMPO_LIMITE_FONTE",
 ];
 const epilogo = `\n;globalThis.__motor = {${EXPOSTOS.map((n) => `${n}: typeof ${n} !== "undefined" ? ${n} : undefined`).join(", ")}};\n`;
 vm.runInContext(fonte + epilogo, contexto, { filename: "index.html:script" });
@@ -4295,6 +4296,118 @@ secao("40. Pedir o último resultado não pode ir a um retrato");
       agora.fonte === "caixa", agora.fonte);
     checar("e traz o sorteio do dia, não o de dois dias antes",
       agora.concurso === 3048, `concurso ${agora.concurso}`);
+  })();
+
+  contexto.fetch = guardaFetch;
+}
+
+/* ==================================================================
+   41. Se uma fonte não deixa ver, tem de haver outra
+
+   Duas coisas separadas: a fila precisa ter alternativas de operadores
+   diferentes, e nenhuma delas pode segurar as outras.
+   ================================================================== */
+secao("41. Se uma fonte não deixa ver, tem de haver outra");
+{
+  const F = contexto.FONTES;
+  const aoVivo = F.filter(f => f.id !== "repositorio");
+
+  checar("há mais de uma alternativa à Caixa", aoVivo.length >= 4,
+    `${aoVivo.length} fontes ao vivo`);
+
+  /* Alternativas do mesmo dono cairiam juntas e não seriam alternativas. */
+  const hosts = aoVivo.map(f => {
+    const u = f.url("megasena", null, "mega-sena");
+    return (u.match(/^https:\/\/([^/?]+)/) || [,"?"])[1];
+  });
+  checar("cada fonte ao vivo está num host diferente",
+    new Set(hosts).size === hosts.length, hosts.join(", "));
+
+  /* O espelho antigo do Heroku continua na fila, mas não pode ser o único
+     espelho: o plano gratuito do Heroku acabou em 2022. */
+  checar("o espelho tem endereço atual, e não só o do Heroku",
+    hosts.some(h => h.includes("guidi.dev.br")), hosts.join(", "));
+  checar("e existe um segundo proxy, de outro operador",
+    aoVivo.filter(f => /proxy/.test(f.id)).length >= 2);
+
+  /* Toda fonte precisa saber pedir tanto o último quanto um concurso dado. */
+  const semUltimo = aoVivo.filter(f =>
+    f.url("megasena", null, "mega-sena") === f.url("megasena", 3048, "mega-sena"));
+  checar("pedir o último e pedir um concurso dão URLs diferentes em toda fonte",
+    semUltimo.length === 0, semUltimo.map(f => f.id).join(", ") || "todas distinguem");
+
+  /* ---- o tempo-limite ---- */
+  const guardaFetch = contexto.fetch;
+
+  /* Uma fonte que aceita a conexão e nunca responde por conta própria — só o
+     aborto a encerra, como faz o fetch de verdade. Um stub que ignorasse o
+     sinal penduraria a própria bateria, e foi o que aconteceu na primeira
+     escrita deste teste: o arnês parou com "unsettled top-level await". */
+  const pendura = (url, opcoes) => new Promise((_, rej) => {
+    if(opcoes && opcoes.signal)
+      opcoes.signal.addEventListener("abort", () => {
+        const e = new Error("The operation was aborted"); e.name = "AbortError"; rej(e);
+      });
+  });
+
+  await (async () => {
+    contexto.fetch = pendura;
+    const t0 = Date.now();
+    let erro = null;
+    /* Limite curto só neste teste: esperar 8s de verdade tornaria a bateria
+       lenta sem medir nada a mais. */
+    try {
+      await contexto.buscarComLimite("https://exemplo.invalido/x", 120);
+    } catch (e) { erro = e; }
+    const levou = Date.now() - t0;
+    checar("uma fonte pendurada é cortada, não esperada para sempre",
+      !!erro && levou < 2000, `${levou} ms, ${erro && erro.name}`);
+    checar("e o corte se identifica como aborto",
+      !!erro && erro.name === "AbortError", erro && erro.name);
+  })();
+
+  await (async () => {
+    /* Na cadeia inteira: a primeira pendura, a segunda responde. O resultado
+       tem de vir da segunda — prova de que a fila não travou. */
+    let chamadas = 0;
+    contexto.fetch = (url, opcoes) => {
+      chamadas++;
+      if(String(url).includes("servicebus2") && !String(url).includes("proxy"))
+        return new Promise((_, rej) => {
+          /* imita o abort real: rejeita quando o sinal dispara */
+          if(opcoes && opcoes.signal)
+            opcoes.signal.addEventListener("abort", () => {
+              const e = new Error("abortado"); e.name = "AbortError"; rej(e);
+            });
+        });
+      return Promise.resolve({ok:true, json: async () => ({
+        concurso: 3048, data: "23/08/2026",
+        dezenas: ["01","02","03","04","05","06"], premiacoes: [],
+      })});
+    };
+    const r = await contexto.buscarNaCaixa("mega-sena", null);
+    checar("com a primeira fonte pendurada, a seguinte entrega o resultado",
+      r && r.concurso === 3048, r && `${r.fonte} → concurso ${r.concurso}`);
+    checar("e mais de uma fonte chegou a ser tentada", chamadas >= 2,
+      `${chamadas} tentativas`);
+  })();
+
+  await (async () => {
+    /* A mensagem de erro precisa dizer "não respondeu em Ns", e não
+       "AbortError", que não significa nada para quem lê a tela. */
+    contexto.fetch = (url, opcoes) => new Promise((_, rej) => {
+      if(opcoes && opcoes.signal)
+        opcoes.signal.addEventListener("abort", () => {
+          const e = new Error("The operation was aborted"); e.name = "AbortError"; rej(e);
+        });
+      else rej(new Error("sem sinal"));
+    });
+    let erro = null;
+    try { await contexto.buscarNaCaixa("mega-sena", null); } catch (e) { erro = e; }
+    checar("o erro diz que a fonte não respondeu, e não 'AbortError'",
+      !!erro && /não respondeu em \d+s/.test(erro.message) &&
+      !/AbortError/.test(erro.message),
+      erro && erro.message.slice(0, 90));
   })();
 
   contexto.fetch = guardaFetch;
