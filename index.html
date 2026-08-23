@@ -4923,14 +4923,48 @@ const FONTES = [
 //: duas requisições falhas em cada busca seguinte.
 let FONTE_PREFERIDA = null;
 
+/* A ordem das fontes depende do que se está pedindo, e essa distinção é o
+   conserto de um defeito que fazia o app nunca mostrar o sorteio do dia.
+
+   O repositório do app é um RETRATO: um cron o atualiza duas vezes por dia.
+   Perguntar a ele "qual foi o último resultado?" devolve o último que ESTAVA
+   no arquivo — que numa noite de domingo é o de sexta. A resposta chega com
+   status 200, o laço para satisfeito, a Caixa nunca é consultada, e
+   FONTE_PREFERIDA passa a apontar para o retrato: da segunda busca em diante
+   nem a primeira tentativa sai do arquivo velho.
+
+   Não era lentidão nem falta de sinal. Pedir o último resultado a um retrato
+   tirado de manhã não pode dar o resultado da noite, por mais rápida que
+   seja a rede.
+
+   Então: pedido do ÚLTIMO resultado vai primeiro às fontes ao vivo, e o
+   repositório fica por último, como rede de segurança para quem está sem
+   internet — e nesse caso a tela nomeia a fonte, para ninguém confundir um
+   retrato com o sorteio de agora.
+
+   Pedido de um concurso ESPECÍFICO e passado continua indo primeiro ao
+   repositório: aquele número não muda mais, o arquivo responde na hora e
+   poupa uma chamada à Caixa. */
+function ordemDeFontes(concurso){
+  const porId = id => FONTES.find(f => f.id === id);
+  const repositorio = porId("repositorio");
+  const aoVivo = FONTES.filter(f => f.id !== "repositorio");
+
+  if(concurso) return [repositorio, ...aoVivo].filter(Boolean);
+
+  /* A preferência só vale entre as fontes ao vivo. Promover o repositório
+     aqui reintroduziria exatamente o defeito. */
+  const preferida = FONTE_PREFERIDA && FONTE_PREFERIDA !== "repositorio"
+    ? [porId(FONTE_PREFERIDA), ...aoVivo.filter(f => f.id !== FONTE_PREFERIDA)]
+    : aoVivo;
+  return [...preferida, repositorio].filter(Boolean);
+}
+
 async function buscarNaCaixa(modalidade, concurso){
   const slug = SLUG_CAIXA[modalidade];
   if(!slug) throw new Error("modalidade sem serviço público conhecido");
 
-  const ordem = FONTE_PREFERIDA
-    ? [FONTES.find(f => f.id === FONTE_PREFERIDA), ...FONTES.filter(f => f.id !== FONTE_PREFERIDA)]
-        .filter(Boolean)
-    : FONTES;
+  const ordem = ordemDeFontes(concurso);
 
   const falhas = [];
   for(const fonte of ordem){

@@ -194,6 +194,7 @@ const EXPOSTOS = [
   "porDezena", "vereditoDasDezenas", "convergenciaDoPlacar",
   "panoramaDoLaboratorio", "tiraDeAprendizado", "registrarAnalise",
   "TETO_HISTORICO_APRENDIZADO",
+  "ordemDeFontes", "FONTES", "buscarNaCaixa",
 ];
 const epilogo = `\n;globalThis.__motor = {${EXPOSTOS.map((n) => `${n}: typeof ${n} !== "undefined" ? ${n} : undefined`).join(", ")}};\n`;
 vm.runInContext(fonte + epilogo, contexto, { filename: "index.html:script" });
@@ -4202,6 +4203,101 @@ secao("33. Conferência rápida e avisos que chegam sozinhos");
 
   S.jogos = g.j; S.teimosinhas = g.t; S.resultados = g.r;
   S.avisos = g.a; S.modalidade = g.m;
+}
+
+/* ==================================================================
+   40. Pedir o último resultado não pode ir a um retrato
+
+   O defeito: o repositório do app era a PRIMEIRA fonte consultada, inclusive
+   quando se pedia "o último resultado". Esse arquivo é atualizado por um cron
+   duas vezes por dia; num domingo à noite ele ainda tem o sorteio de sexta.
+   Ele respondia 200, o laço parava satisfeito, a Caixa nunca era chamada — e
+   FONTE_PREFERIDA passava a apontar para o retrato, travando também as buscas
+   seguintes.
+
+   Do lado de quem usa: o sorteio do dia simplesmente nunca aparecia.
+   ================================================================== */
+secao("40. Pedir o último resultado não pode ir a um retrato");
+{
+  const ids = ordem => ordem.map(f => f.id);
+
+  /* Pedido do ÚLTIMO: fontes ao vivo primeiro. */
+  const ultimo = ids(contexto.ordemDeFontes(null));
+  checar("pedir o último resultado não começa pelo repositório",
+    ultimo[0] !== "repositorio", ultimo.join(" → "));
+  checar("a Caixa oficial é a primeira tentativa",
+    ultimo[0] === "caixa", ultimo[0]);
+
+  /* Mas o retrato não é jogado fora: sem internet, é o que sobra. */
+  checar("o repositório continua na fila, como rede de segurança offline",
+    ultimo[ultimo.length - 1] === "repositorio", ultimo.join(" → "));
+
+  /* Nenhuma fonte pode sumir nem aparecer duas vezes: a ordenação é uma
+     permutação, e um erro aqui removeria silenciosamente uma alternativa. */
+  checar("a ordem é uma permutação das fontes — nada some, nada duplica",
+    ultimo.length === contexto.FONTES.length &&
+    new Set(ultimo).size === contexto.FONTES.length,
+    `${ultimo.length} de ${contexto.FONTES.length}`);
+
+  /* Pedido de um concurso ESPECÍFICO e passado: aquele número não muda mais,
+     então o arquivo local responde na hora e poupa a chamada à Caixa. */
+  const especifico = ids(contexto.ordemDeFontes(3040));
+  checar("concurso específico continua indo primeiro ao repositório",
+    especifico[0] === "repositorio", especifico.join(" → "));
+  checar("e também aqui a ordem é uma permutação",
+    new Set(especifico).size === contexto.FONTES.length);
+
+  /* A trava do defeito: mesmo que o repositório tenha respondido por último,
+     ele NÃO pode ser promovido num pedido de último resultado. Era essa
+     promoção que tornava o defeito permanente depois da primeira busca. */
+  const guardaFetch = contexto.fetch;
+
+  const respostaCaixa = {
+    ok: true,
+    json: async () => ({
+      numero: 3048, dataApuracao: "23/08/2026",
+      listaDezenas: ["01","02","03","04","05","06"],
+      listaRateioPremio: [], acumulado: false,
+    }),
+  };
+  /* O repositório devolve o retrato antigo — sexta, concurso 3047. */
+  const respostaRepositorio = {
+    ok: true,
+    json: async () => ({ concursos: [
+      {concurso: 3046, data: "2026-08-18", dezenas: [7,8,9,10,11,12]},
+      {concurso: 3047, data: "2026-08-20", dezenas: [1,2,3,4,5,6]},
+    ]}),
+  };
+
+  await (async () => {
+    /* Primeiro, força o repositório a ser a fonte que respondeu: só ele
+       funciona, todo o resto cai. */
+    contexto.fetch = (url) => String(url).includes("dados")
+      || String(url).includes(".json") && !String(url).includes("caixa")
+      ? Promise.resolve(respostaRepositorio)
+      : Promise.reject(new Error("fora do ar"));
+
+    let doRetrato = null;
+    try { doRetrato = await contexto.buscarNaCaixa("mega-sena", null); }
+    catch (e) { doRetrato = {erro: e.message}; }
+    checar("sem a Caixa, o retrato ainda responde — ninguém fica sem nada",
+      doRetrato && doRetrato.fonte === "repositorio",
+      doRetrato && (doRetrato.fonte || doRetrato.erro));
+
+    /* Agora a Caixa volta. Se o defeito tivesse voltado, a preferência
+       gravada no passo anterior mandaria direto ao retrato de novo. */
+    contexto.fetch = (url) => String(url).includes("servicebus2")
+      ? Promise.resolve(respostaCaixa)
+      : Promise.resolve(respostaRepositorio);
+
+    const agora = await contexto.buscarNaCaixa("mega-sena", null);
+    checar("com a Caixa de pé, a busca seguinte NÃO fica presa no retrato",
+      agora.fonte === "caixa", agora.fonte);
+    checar("e traz o sorteio do dia, não o de dois dias antes",
+      agora.concurso === 3048, `concurso ${agora.concurso}`);
+  })();
+
+  contexto.fetch = guardaFetch;
 }
 
 /* ---------- saída ---------- */
