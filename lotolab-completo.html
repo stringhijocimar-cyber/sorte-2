@@ -3787,6 +3787,9 @@ function preverGanhadores(dezenas, modalidade){
 //: vez por dia por modalidade; buscar de hora em hora só gastaria bateria e
 //: bateria alheia.
 const INTERVALO_BUSCA = 12 * 60 * 60 * 1000;
+/* Quando há sorteio esperando, procurar de doze em doze horas é o mesmo que
+   não procurar. */
+const INTERVALO_BUSCA_PENDENTE = 20 * 60 * 1000;
 
 /* Busca do fim para trás, parando no primeiro erro. Devolver o que já veio é
    melhor que devolver nada: um histórico de 400 concursos ainda calibra e
@@ -3899,21 +3902,94 @@ function diasAte(iso){
 
 /* Busca diária: roda na abertura, uma vez por modalidade que já tem histórico.
    Só o último concurso — quem quer o histórico inteiro pede explicitamente. */
+/* A partir de que hora o resultado do dia já pode existir. O sorteio é às 20h
+   de Brasília e a Caixa publica minutos depois; 21h dá folga sem empurrar a
+   procura para o dia seguinte. */
+const HORA_DE_PUBLICACAO = 21;
+
+/* Data local, e não toISOString(): às 21h de Brasília já é o dia seguinte em
+   UTC, e o app perguntaria pelo sorteio de amanhã justamente na hora em que o
+   de hoje acabou de sair. */
+function dataLocalIso(d){
+  const p = n => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
+/* Mesmo critério de dia da semana que diasDeSorteio() usa, para os dois
+   falarem da mesma coisa: o dia do calendário, sem fuso no meio. */
+const diaDaSemanaIso = (iso) => new Date(iso + "T00:00:00Z").getUTCDay();
+
+function somarDias(iso, n){
+  const d = new Date(iso + "T00:00:00Z");
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+
+/* A data do último sorteio que já deveria ter saído. Sem isto o app não tem
+   como saber se está faltando alguma coisa — e sem saber disso, só resta
+   perguntar de tempos em tempos e torcer. */
+function ultimoSorteioEsperado(modalidade, agora){
+  const dias = diasDeSorteio(modalidade);
+  if(!dias.size) return null;
+  const d = new Date(agora);
+  let cursor = dataLocalIso(d);
+  /* Antes da hora de publicação, o sorteio de hoje ainda não conta. */
+  if(d.getHours() < HORA_DE_PUBLICACAO) cursor = somarDias(cursor, -1);
+  for(let i = 0; i < 14; i++){
+    if(dias.has(diaDaSemanaIso(cursor))) return cursor;
+    cursor = somarDias(cursor, -1);
+  }
+  return null;
+}
+
+/* Há sorteio publicado que o aparelho ainda não tem? */
+function sorteioPendente(modalidade, agora){
+  const esperado = ultimoSorteioEsperado(modalidade, agora);
+  if(!esperado) return false;
+  const hist = historicoDe(modalidade);
+  if(!hist.length) return false;
+  const ultima = String(hist[hist.length - 1].data || "").slice(0, 10);
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(ultima)) return false;
+  return ultima < esperado;
+}
+
 async function buscaDiaria(){
   if(S.buscaAutomatica === false) return {tentadas:0, novos:0};
   const agora = Date.now();
   const marcas = S.ultimaBusca || {};
-  const alvos = Object.keys(MODALIDADES).filter(k =>
-    SLUG_CAIXA[k] &&
-    historicoDe(k).length > 0 &&
-    agora - (marcas[k] || 0) > INTERVALO_BUSCA);
+  /* O intervalo deixa de ser fixo. Doze horas entre buscas parece prudente até
+     alguém abrir o app às 19h — o carimbo é gravado, o sorteio sai às 20h, e
+     às 21h a busca se recusa a acontecer porque "ainda não deu o intervalo".
+     O resultado do dia só entraria no dia seguinte.
+
+     Com o calendário na mão dá para separar os dois casos: quando não há nada
+     esperando, doze horas; quando há sorteio publicado que o aparelho não tem,
+     vinte minutos. */
+  const alvos = Object.keys(MODALIDADES).filter(k => {
+    if(!SLUG_CAIXA[k] || !historicoDe(k).length) return false;
+    const desde = agora - (marcas[k] || 0);
+    return desde > (sorteioPendente(k, agora)
+      ? INTERVALO_BUSCA_PENDENTE : INTERVALO_BUSCA);
+  });
   if(!alvos.length) return {tentadas:0, novos:0};
 
   let novos = 0, falhas = 0;
   for(const k of alvos){
     try{
       const r = await buscarNaCaixa(k, null);
-      novos += guardarResultados([r]);
+      /* Guardar só o último perde sorteio: quem passa três dias sem abrir o
+         app tinha o mais recente gravado e os do meio simplesmente sumiam.
+         Desce do mais novo até emendar com o que já está no aparelho. */
+      const hist = historicoDe(k);
+      const jaTem = hist.length ? Number(hist[hist.length - 1].concurso) : 0;
+      const lote = [r];
+      for(let n = Number(r.concurso) - 1; n > jaTem; n--){
+        if(lote.length >= MAXIMO_A_EMENDAR) break;
+        try{ lote.push(await buscarNaCaixa(k, n)); }
+        catch(e){ break; }
+      }
+      lote.sort((a, b) => Number(a.concurso) - Number(b.concurso));
+      novos += guardarResultados(lote);
       marcas[k] = agora;
     }catch(e){ falhas++; }
   }
@@ -9128,6 +9204,18 @@ function normalizarConcursos(){
      falha: sem sinal é o caso comum, e um aviso a cada abertura offline
      treinaria a pessoa a ignorar o sino. */
   buscaDiaria().then(r => { if(r.novos) pintar(); }).catch(()=>{});
+
+  /* E de novo toda vez que o app volta ao primeiro plano. Rodar só na abertura
+     significa que quem deixa o app aberto durante a noite não recebe o sorteio
+     das 20h — o app estava lá, ligado, e não olhou. Voltar ao primeiro plano é
+     o momento natural: é quando a pessoa quer ver.
+
+     Sem risco de martelar o serviço: buscaDiaria() já decide sozinha se está
+     na hora, e responde {tentadas:0} quando não está. */
+  document.addEventListener("visibilitychange", () => {
+    if(document.visibilityState !== "visible") return;
+    buscaDiaria().then(r => { if(r.novos) pintar(); }).catch(()=>{});
+  });
 
   /* Sino e folha de avisos. Ficam fora de pintar() porque vivem no cabeçalho,
      que não é redesenhado a cada troca de tela. */

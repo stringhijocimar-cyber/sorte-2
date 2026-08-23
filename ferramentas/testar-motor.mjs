@@ -197,6 +197,8 @@ const EXPOSTOS = [
   "TETO_HISTORICO_APRENDIZADO",
   "ordemDeFontes", "FONTES", "buscarNaCaixa", "buscarComLimite", "TEMPO_LIMITE_FONTE",
   "buscarHistorico", "completarAPonta", "MAXIMO_A_EMENDAR",
+  "buscaDiaria", "sorteioPendente", "ultimoSorteioEsperado",
+  "INTERVALO_BUSCA", "INTERVALO_BUSCA_PENDENTE", "HORA_DE_PUBLICACAO",
 ];
 const epilogo = `\n;globalThis.__motor = {${EXPOSTOS.map((n) => `${n}: typeof ${n} !== "undefined" ? ${n} : undefined`).join(", ")}};\n`;
 vm.runInContext(fonte + epilogo, contexto, { filename: "index.html:script" });
@@ -4528,6 +4530,147 @@ secao("42. O histórico em massa também precisa da ponta");
   })();
 
   contexto.fetch = guardaFetch;
+}
+
+/* ==================================================================
+   43. Atualizar sozinho todos os sorteios novos
+
+   Três defeitos separados faziam o app não se atualizar sozinho:
+
+   1. Intervalo fixo de 12h. Abrir o app às 19h gravava o carimbo; o sorteio
+      saía às 20h; às 21h a busca se recusava a acontecer porque "ainda não
+      deu o intervalo". O resultado do dia só entrava no dia seguinte.
+   2. Guardava só o último concurso. Quem passasse três dias sem abrir o app
+      recebia o mais recente e perdia os do meio, sem aviso.
+   3. Rodava só na abertura. App aberto a noite inteira não via o sorteio das
+      20h — estava ligado e não olhou.
+   ================================================================== */
+secao("43. Atualizar sozinho todos os sorteios novos");
+{
+  const S = motor.S;
+  const g = {r: S.resultados, m: S.modalidade, u: S.ultimaBusca, b: S.buscaAutomatica};
+  const guardaFetch = contexto.fetch;
+
+  /* Histórico de domingos e quintas (o calendário atual da Mega-Sena), para
+     diasDeSorteio() ter o que medir. */
+  const montarHistorico = (ateIso, ateConcurso) => {
+    const saida = [];
+    let iso = ateIso, n = ateConcurso;
+    for(let i = 0; i < 20; i++){
+      saida.unshift({concurso: n, data: iso, modalidade: "mega-sena",
+                     dezenas: [1,2,3,4,5,6]});
+      /* volta ao dia de sorteio anterior: dom → qui → ter → dom */
+      const d = new Date(iso + "T00:00:00Z");
+      do { d.setUTCDate(d.getUTCDate() - 1); }
+      while(![0,2,4].includes(d.getUTCDay()));
+      iso = d.toISOString().slice(0,10);
+      n--;
+    }
+    return saida;
+  };
+
+  /* Domingo 2026-08-23, com histórico terminando na quinta 2026-08-20. */
+  S.resultados = montarHistorico("2026-08-20", 3047);
+  const dom19h = new Date(2026, 7, 23, 19, 0, 0).getTime();
+  const dom21h = new Date(2026, 7, 23, 21, 30, 0).getTime();
+
+  checar("às 19h o sorteio de hoje ainda não é esperado",
+    contexto.ultimoSorteioEsperado("mega-sena", dom19h) !== "2026-08-23",
+    String(contexto.ultimoSorteioEsperado("mega-sena", dom19h)));
+  checar("às 21h30 ele passa a ser esperado",
+    contexto.ultimoSorteioEsperado("mega-sena", dom21h) === "2026-08-23",
+    String(contexto.ultimoSorteioEsperado("mega-sena", dom21h)));
+  checar("e com o histórico parado na quinta, o domingo fica pendente",
+    contexto.sorteioPendente("mega-sena", dom21h) === true);
+  checar("às 19h nada está pendente — não havia sorteio ainda",
+    contexto.sorteioPendente("mega-sena", dom19h) === false);
+
+  /* O sábado não pode ser esperado: não há sorteio nesse dia. */
+  const sab = new Date(2026, 7, 22, 22, 0, 0).getTime();
+  checar("sábado não é dia de sorteio, então não gera pendência",
+    contexto.ultimoSorteioEsperado("mega-sena", sab) !== "2026-08-22",
+    String(contexto.ultimoSorteioEsperado("mega-sena", sab)));
+
+  /* O intervalo curto só vale quando há o que esperar. */
+  checar("com pendência, o intervalo é de minutos, não de meio dia",
+    contexto.INTERVALO_BUSCA_PENDENTE < contexto.INTERVALO_BUSCA / 10,
+    `${contexto.INTERVALO_BUSCA_PENDENTE/60000} min contra ` +
+    `${contexto.INTERVALO_BUSCA/3600000} h`);
+
+  /* ---- o caso das 19h, de ponta a ponta ---- */
+  await (async () => {
+    const responder = (numero) => (url) => {
+      const u = String(url);
+      if(u.includes("raw.githubusercontent")) return Promise.reject(new Error("sem arquivo"));
+      if(u.includes("servicebus2")){
+        const m = u.match(/megasena\/(\d+)/);
+        const pedido = m ? Number(m[1]) : numero;
+        if(pedido > numero) return Promise.resolve({ok:false, status:404});
+        return Promise.resolve({ok:true, json: async () => ({
+          numero: pedido, dataApuracao: "23/08/2026",
+          listaDezenas: ["01","02","03","04","05","06"],
+          listaRateioPremio: [], acumulado: true,
+        })});
+      }
+      return Promise.reject(new Error("fora do ar"));
+    };
+
+    /* Alguém abre o app às 19h: nada pendente, mas o carimbo é gravado. */
+    S.resultados = montarHistorico("2026-08-20", 3047);
+    S.ultimaBusca = {"mega-sena": dom19h};
+    S.buscaAutomatica = true;
+    contexto.fetch = responder(3048);
+
+    /* Duas horas depois o sorteio saiu. Antes, o intervalo de 12h barrava. */
+    const antes = historicoTem(3048);
+    const r = await contexto.buscaDiaria();
+    checar("depois do sorteio, a busca acontece mesmo com o carimbo recente",
+      r.tentadas > 0, `${r.tentadas} modalidade(s) tentada(s)`);
+    checar("e o concurso do dia entra no aparelho",
+      historicoTem(3048) && !antes, `novos: ${r.novos}`);
+  })();
+
+  function historicoTem(n){
+    return motor.S.resultados.some(x => x.modalidade === "mega-sena" &&
+      Number(x.concurso) === n);
+  }
+
+  /* ---- sorteios perdidos: três dias sem abrir o app ---- */
+  await (async () => {
+    S.resultados = montarHistorico("2026-08-20", 3047);
+    S.ultimaBusca = {};
+    contexto.fetch = (url) => {
+      const u = String(url);
+      if(u.includes("raw.githubusercontent")) return Promise.reject(new Error("sem arquivo"));
+      if(u.includes("servicebus2")){
+        const m = u.match(/megasena\/(\d+)/);
+        const pedido = m ? Number(m[1]) : 3050;
+        if(pedido > 3050) return Promise.resolve({ok:false, status:404});
+        return Promise.resolve({ok:true, json: async () => ({
+          numero: pedido, dataApuracao: "23/08/2026",
+          listaDezenas: ["01","02","03","04","05","06"],
+          listaRateioPremio: [], acumulado: true,
+        })});
+      }
+      return Promise.reject(new Error("fora do ar"));
+    };
+    await contexto.buscaDiaria();
+    checar("três sorteios desde a última abertura: nenhum se perde",
+      [3048, 3049, 3050].every(historicoTem),
+      [3048,3049,3050].filter(historicoTem).join(", ") || "nenhum");
+  })();
+
+  /* ---- o desligamento continua sendo respeitado ---- */
+  await (async () => {
+    S.buscaAutomatica = false;
+    const r = await contexto.buscaDiaria();
+    checar("quem desliga a busca automática continua desligado",
+      r.tentadas === 0);
+  })();
+
+  contexto.fetch = guardaFetch;
+  S.resultados = g.r; S.modalidade = g.m;
+  S.ultimaBusca = g.u; S.buscaAutomatica = g.b;
 }
 
 /* ---------- saída ---------- */
