@@ -3916,34 +3916,116 @@ function proximasDatasDeSorteio(modalidade, quantas){
   const idade = idadeDoHistorico(modalidade);
   const passo = (idade.avaliavel && idade.tipico > 0) ? idade.tipico : null;
 
+  const dias = diasDeSorteio(modalidade);
   const datas = [];
-  let base = null;
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+
+  /* Ponto de partida. `dataProximo` vem da Caixa e é a melhor informação
+     disponível — MAS só vale se cair num dia em que esta modalidade sorteia.
+
+     Foi preciso conferir isso: em agosto/2026 o calendário mudou, o sábado
+     saiu e o domingo entrou, e o `dataProximo` guardado ainda apontava para um
+     sábado. Uma data que o próprio histórico desmente não é informação, é
+     resíduo. */
+  let quando = null;
   if(ultimo.dataProximo && /^\d{4}-\d{2}-\d{2}$/.test(ultimo.dataProximo)){
-    base = ultimo.dataProximo;
-  } else if(passo && ultimo.data){
-    /* Sem `dataProximo` — acontece quando o resultado veio de um espelho que
-       não traz esse campo. Antes disto, essa ausência zerava os avisos em
-       silêncio; agora ela só custa precisão. */
-    const d = new Date(Date.parse(ultimo.data));
-    d.setDate(d.getDate() + passo);
-    base = d.toISOString().slice(0, 10);
+    const d = new Date(Date.parse(ultimo.dataProximo));
+    if(!dias.size || dias.has(d.getUTCDay())) quando = d;
   }
-  if(!base) return [];
+  if(!quando && ultimo.data) quando = new Date(Date.parse(ultimo.data));
+  if(!quando) return [];
 
   let numero = ultimo.concursoProximo || (Number(ultimo.concurso) + 1);
-  let quando = new Date(Date.parse(base));
-  const hoje = new Date(); hoje.setHours(0,0,0,0);
+
+  if(dias.size){
+    /* Anda DIA A DIA e só aceita os dias da semana em que esta modalidade de
+       fato sorteia. Antes o passo era o intervalo típico — a mediana — e isso
+       ignora o calendário: numa loteria diária de segunda a sexta mais
+       domingo, a mediana é 1 dia, e o app agendava lembrete para o sábado, dia
+       em que não há sorteio. Alarme em dia vazio ensina a ignorar o alarme.
+
+       Os dias saem do próprio histórico, e não de uma tabela escrita à mão:
+       quando a Caixa mexer no calendário de novo, o app acompanha sozinho —
+       que é exatamente o que não aconteceu desta vez. */
+    let cursor = new Date(quando.getTime());
+    if(ultimo.dataProximo && quando.getTime() === Date.parse(ultimo.dataProximo)) cursor.setUTCDate(cursor.getUTCDate() - 1);
+    let guarda = 0;
+    while(datas.length < quantas && guarda++ < 400){
+      cursor.setUTCDate(cursor.getUTCDate() + 1);
+      if(!dias.has(cursor.getUTCDay())) continue;
+      /* Não agenda para o passado: alarme com data vencida o Android descarta
+         na hora, e a fila voltaria a ficar vazia. */
+      if(cursor >= hoje) datas.push({data: cursor.toISOString().slice(0,10), numero});
+      numero++;
+    }
+    return datas;
+  }
+
+  /* Sem padrão reconhecível — histórico curto ou irregular — cai no ritmo
+     medido, que é o comportamento anterior. */
+  if(!passo) return quando >= hoje ? [{data: quando.toISOString().slice(0,10), numero}] : [];
   for(let i = 0; i < quantas; i++){
-    /* Não agenda para o passado: um `dataProximo` velho — o app ficou dias sem
-       abrir — geraria alarmes que o Android descarta na hora, e o resultado
-       seria a fila vazia de novo. Avança até alcançar hoje. */
     if(quando >= hoje) datas.push({data: quando.toISOString().slice(0,10), numero});
-    if(!passo) break;
     quando = new Date(quando.getTime());
-    quando.setDate(quando.getDate() + passo);
+    quando.setUTCDate(quando.getUTCDate() + passo);
     numero++;
   }
   return datas;
+}
+
+/* Em que dias da semana ESTA modalidade sorteia, lido do próprio histórico.
+
+   Existe porque o app vinha projetando os próximos sorteios pela mediana dos
+   intervalos, e mediana não sabe de calendário. O caso que expôs isso: a
+   Lotofácil sorteia de segunda a sexta e no domingo; a mediana dá 1 dia, e o
+   app agendava lembrete para o sábado.
+
+   A janela é curta de propósito — os sorteios mais recentes — porque o
+   calendário MUDA, e um dia que saiu há dois meses não pode continuar votando.
+   O corte exige que o dia apareça em pelo menos um terço das semanas
+   observadas: assim um sorteio especial isolado não vira dia fixo, e um dia
+   recém-abolido sai da lista sozinho depois de algumas semanas. */
+/* Seis semanas. Medido no caso que motivou tudo: o último sábado da
+   Mega-Sena foi o concurso 3030, em 11/07/2026, e depois disso o dia virou
+   domingo. Com oito semanas a janela ainda alcançava três daqueles sábados e
+   os dava como dia de sorteio; com seis, sobra um só, abaixo do corte.
+
+   Curta o bastante para uma mudança de calendário sair de vista em poucas
+   semanas, longa o bastante para a +Milionária — duas por semana — ainda
+   render uma dúzia de extrações. */
+const JANELA_DE_CALENDARIO = 42;   /* dias, e não concursos */
+function diasDeSorteio(modalidade){
+  /* A janela é por TEMPO, e não por quantidade de concursos. Medido: com as
+     últimas 40 extrações, a Mega-Sena ainda enxergava sábados de meses atrás e
+     os dava como dia de sorteio — e aí o próximo concurso saía numerado um a
+     mais, porque a fila contava um sorteio que não existiu.
+
+     Contar concursos faz a janela render tempos diferentes em cada
+     modalidade: 40 extrações são seis semanas numa diária e quatro meses numa
+     de três por semana. É justamente na de três por semana que o calendário
+     mudou. Oito semanas de calendário são oito semanas em todas. */
+  const todos = resultadosDe(modalidade)
+    .filter(r => /^\d{4}-\d{2}-\d{2}$/.test(String(r.data || "")));
+  if(!todos.length) return new Set();
+  const fim = Date.parse(todos[todos.length - 1].data);
+  const hist = todos.filter(r => (fim - Date.parse(r.data)) / 86400000 <= JANELA_DE_CALENDARIO);
+  if(hist.length < 8) return new Set();
+
+  const conta = new Map();
+  for(const r of hist){
+    const d = new Date(Date.parse(r.data)).getUTCDay();
+    conta.set(d, (conta.get(d) || 0) + 1);
+  }
+  const dias = Math.round(
+    (Date.parse(hist[hist.length-1].data) - Date.parse(hist[0].data)) / 86400000);
+  const semanas = Math.max(1, dias / 7);
+  const corte = Math.max(2, semanas / 3);
+
+  const set = new Set();
+  for(const [dia, n] of conta) if(n >= corte) set.add(dia);
+  /* Se o corte derrubar tudo, é sinal de histórico irregular demais para
+     afirmar um calendário — devolve vazio e quem chama usa o ritmo medido. */
+  return set.size ? set : new Set();
 }
 
 async function reagendarLembretes(){

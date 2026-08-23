@@ -190,7 +190,7 @@ const EXPOSTOS = [
   "tracoAuc",
   "POPULACAO_PESQUISA",
   "GRUPOS_DE_AVISO", "resultadosDe", "proximasDatasDeSorteio", "idadeDoHistorico",
-  "normalizarConcursos", "conferenciaAutomatica",
+  "normalizarConcursos", "conferenciaAutomatica", "diasDeSorteio",
 ];
 const epilogo = `\n;globalThis.__motor = {${EXPOSTOS.map((n) => `${n}: typeof ${n} !== "undefined" ? ${n} : undefined`).join(", ")}};\n`;
 vm.runInContext(fonte + epilogo, contexto, { filename: "index.html:script" });
@@ -3643,6 +3643,86 @@ secao("32. Aviso de histórico atrasado");
     !/pode estar\s+atrasado/.test(contexto.T.resultados()));
 
   S.resultados = guardaRes; S.modalidade = guardaMod;
+}
+
+/* ==================================================================
+   35. O lembrete respeita o calendário, e não a média
+
+   Relatado por quem usa, com razão: "não tem mais sorteio no sábado, somente
+   domingo — leia o calendário de sorteios".
+
+   O app projetava os próximos sorteios pela MEDIANA dos intervalos. Numa
+   loteria que sorteia de segunda a sexta e no domingo, a mediana é 1 dia — e
+   o app agendava lembrete para o sábado, dia em que não há sorteio. Alarme em
+   dia vazio ensina a ignorar o alarme.
+
+   Medido no histórico real: o último sábado da Mega-Sena foi o concurso 3030,
+   em 11/07/2026. Depois disso, domingo. O app seguiu projetando sábado.
+
+   Os dias saem do próprio histórico, e não de uma tabela escrita à mão: é o
+   que permite acompanhar a próxima mudança sem ninguém editar código.
+   ================================================================== */
+secao("35. O lembrete respeita o calendário");
+
+{
+  const S = motor.S;
+  const g = {r:S.resultados, m:S.modalidade};
+  S.modalidade = "mega-sena";
+
+  /* Calendário atual da Mega-Sena: terça, quinta e domingo. Seis semanas. */
+  const DIAS_ATUAIS = [0, 2, 4];   // dom, ter, qui
+  const serie = [];
+  let n = 3000;
+  const d = new Date(Date.UTC(2026, 6, 14));   // 14/07/2026, terça
+  for(let i = 0; i < 60; i++){
+    if(DIAS_ATUAIS.includes(d.getUTCDay()))
+      serie.push({concurso:n++, data:d.toISOString().slice(0,10), modalidade:"mega-sena",
+                  dezenas:[1,2,3,4,5,6]});
+    d.setUTCDate(d.getUTCDate() + 1);
+  }
+  S.resultados = serie;
+
+  const dias = motor.diasDeSorteio("mega-sena");
+  checar("os dias de sorteio saem do histórico",
+    dias.size === 3 && dias.has(0) && dias.has(2) && dias.has(4),
+    [...dias].sort().join(","));
+  checar("e o sábado NÃO está entre eles", !dias.has(6));
+
+  const fila = motor.proximasDatasDeSorteio("mega-sena", 8);
+  const diasDaFila = fila.map(x => new Date(Date.parse(x.data)).getUTCDay());
+  checar("nenhum lembrete cai em dia sem sorteio",
+    diasDaFila.every(w => DIAS_ATUAIS.includes(w)),
+    fila.map(x => x.data).join(" "));
+  checar("e os concursos da fila são consecutivos",
+    fila.every((x, i) => i === 0 || x.numero === fila[i-1].numero + 1),
+    fila.map(x => x.numero).join(","));
+
+  /* A mudança de calendário: sábados até meados de julho, domingos depois.
+     O dia abolido tem de sumir da lista — é o caso real deste relato. */
+  const comSabados = [];
+  let m = 2900;
+  const d2 = new Date(Date.UTC(2026, 4, 1));   // 01/05
+  for(let i = 0; i < 130; i++){
+    const w = d2.getUTCDay();
+    const antigo = d2 < new Date(Date.UTC(2026, 6, 12));
+    const vale = antigo ? [2,4,6].includes(w) : [0,2,4].includes(w);
+    if(vale) comSabados.push({concurso:m++, data:d2.toISOString().slice(0,10),
+                              modalidade:"mega-sena", dezenas:[1,2,3,4,5,6]});
+    d2.setUTCDate(d2.getUTCDate() + 1);
+  }
+  S.resultados = comSabados;
+  const depois = motor.diasDeSorteio("mega-sena");
+  checar("depois da virada, o sábado sai da lista sozinho", !depois.has(6),
+    [...depois].sort().join(","));
+  checar("e o domingo entra", depois.has(0));
+
+  /* Histórico curto demais não inventa calendário: quem chama cai no ritmo
+     medido, que é o comportamento anterior. */
+  S.resultados = serie.slice(0, 4);
+  checar("histórico curto não afirma calendário",
+    motor.diasDeSorteio("mega-sena").size === 0);
+
+  S.resultados = g.r; S.modalidade = g.m;
 }
 
 /* ==================================================================
