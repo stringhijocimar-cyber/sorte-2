@@ -191,7 +191,7 @@ const EXPOSTOS = [
   "POPULACAO_PESQUISA",
   "GRUPOS_DE_AVISO", "resultadosDe", "proximasDatasDeSorteio", "idadeDoHistorico",
   "normalizarConcursos", "conferenciaAutomatica", "diasDeSorteio",
-  "porDezena", "vereditoDasDezenas",
+  "porDezena", "vereditoDasDezenas", "convergenciaDoPlacar",
 ];
 const epilogo = `\n;globalThis.__motor = {${EXPOSTOS.map((n) => `${n}: typeof ${n} !== "undefined" ? ${n} : undefined`).join(", ")}};\n`;
 vm.runInContext(fonte + epilogo, contexto, { filename: "index.html:script" });
@@ -997,14 +997,23 @@ secao("10. Placar — cada loteria com o seu próprio placar");
     { concurso: 20, acertos: 13, tamanho: 15, metodo: "uniforme" }]);
   const esperadoMega = contexto.esperadoAcertos("mega-sena", 6);
   const esperadoFacil = contexto.esperadoAcertos("lotofacil", 15);
+  /* Cobra o VALOR, não o número de casas decimais.
+     A versão anterior exigia exatamente três casas, e por isso caiu quando a
+     tela passou a mostrar duas — mudança deliberada: com estas conferências o
+     erro padrão fica na primeira casa, e o terceiro dígito era ruído impresso
+     com ar de medida. O que o teste existe para provar é que cada modalidade
+     compara contra o acaso DELA, e isso não depende da formatação. */
+  const mostraEsperado = (html, valor) =>
+    [2, 3].some(casas => html.includes(valor.toLocaleString("pt-BR",
+      { minimumFractionDigits: casas, maximumFractionDigits: casas })));
   checar("Mega-Sena compara contra o acaso da Mega-Sena",
-    mega.includes(esperadoMega.toLocaleString("pt-BR",
-      { minimumFractionDigits: 3, maximumFractionDigits: 3 })),
-    `esperado ${esperadoMega.toFixed(3)}`);
+    mostraEsperado(mega, esperadoMega), `esperado ${esperadoMega.toFixed(3)}`);
   checar("Lotofácil compara contra o acaso da Lotofácil",
-    facil.includes(esperadoFacil.toLocaleString("pt-BR",
-      { minimumFractionDigits: 3, maximumFractionDigits: 3 })),
-    `esperado ${esperadoFacil.toFixed(3)}`);
+    mostraEsperado(facil, esperadoFacil), `esperado ${esperadoFacil.toFixed(3)}`);
+  /* E o valor da OUTRA modalidade não pode aparecer no bloco desta — senão
+     "compara contra o acaso" passaria com o esperado errado impresso. */
+  checar("e não mostra o esperado da outra modalidade",
+    !mostraEsperado(mega, esperadoFacil) && !mostraEsperado(facil, esperadoMega));
   checar("os dois esperados são mesmo diferentes (senão o teste não prova nada)",
     Math.abs(esperadoMega - esperadoFacil) > 1,
     `${esperadoMega.toFixed(2)} vs ${esperadoFacil.toFixed(2)}`);
@@ -3644,6 +3653,73 @@ secao("32. Aviso de histórico atrasado");
     !/pode estar\s+atrasado/.test(contexto.T.resultados()));
 
   S.resultados = guardaRes; S.modalidade = guardaMod;
+}
+
+/* ==================================================================
+   37. O Placar mostra o caminho, e não só o destino
+
+   O Placar mostrava apenas o agregado: uma média, uma faixa, um melhor
+   resultado. Com dezenas de concursos conferidos isso joga fora a informação
+   mais útil que existe ali — o caminho. Uma média dentro da faixa pode ser um
+   resultado que oscilou e assentou, ou um que está saindo agora; o número
+   final é o mesmo nos dois casos.
+
+   A faixa do gráfico ESTREITA conforme as conferências somam. É a forma
+   visual do que a estatística diz, e é o que ensina por que "tive sorte nas
+   três primeiras" não é resultado nenhum.
+   ================================================================== */
+secao("37. O caminho do Placar");
+
+{
+  const conf = (n, acertos) => Array.from({length:n}, (_, i) => ({
+    concurso: 1000 + i, acertos: typeof acertos === "function" ? acertos(i) : acertos,
+    tamanho: 15, metodo: "uniforme",
+  }));
+
+  /* Poucas conferências: não desenha, e diz por quê. Desenhar uma faixa larga
+     demais sugeriria precisão que não existe. */
+  const curto = motor.convergenciaDoPlacar(conf(5, 9), "lotofacil");
+  checar("com menos de oito conferências não desenha", !/svg/.test(curto));
+  checar("e explica que a faixa seria larga demais", /larga demais/.test(curto));
+
+  const html = motor.convergenciaDoPlacar(conf(60, 9), "lotofacil");
+  checar("com volume, desenha o gráfico", /<svg/.test(html));
+  checar("e não imprime NaN em coordenada nenhuma", !/NaN|undefined/.test(html),
+    (html.match(/NaN|undefined/g)||[]).join(","));
+  checar("o rótulo acessível conta o que o gráfico mostra",
+    /aria-label="[^"]*acumulada[^"]*acaso/.test(html));
+
+  /* As três camadas: faixa, linha do acaso, linha do usuário. Sem a do acaso
+     o gráfico vira desempenho absoluto, que é a leitura errada. */
+  const caminhos = (html.match(/<path/g) || []).length;
+  checar("desenha faixa, linha do acaso e linha do resultado", caminhos === 3,
+    `${caminhos} caminhos`);
+
+  /* A faixa precisa ESTREITAR: é a única coisa que o gráfico afirma além dos
+     números, e se ela não estreitar o desenho está mentindo. */
+  const ep = (n) => {
+    const dp = motor.desvioAcertos("lotofacil", 15);
+    return dp / Math.sqrt(n);
+  };
+  checar("a faixa estreita conforme as conferências somam", ep(60) < ep(8),
+    `${ep(8).toFixed(3)} com 8 -> ${ep(60).toFixed(3)} com 60`);
+
+  /* Um resultado colado no acaso tem de ser declarado dentro da faixa; um
+     absurdo, fora. Se os dois derem a mesma leitura, o veredito não mede. */
+  const noAcaso = motor.convergenciaDoPlacar(conf(60, 9), "lotofacil");
+  const absurdo = motor.convergenciaDoPlacar(conf(60, 15), "lotofacil");
+  checar("resultado colado no acaso é declarado dentro",
+    /dentro da faixa/.test(noAcaso));
+  checar("e um resultado impossível é declarado fora",
+    /fora da faixa/.test(absurdo));
+
+  /* Ordem: o gráfico é por concurso, então conferências fora de ordem não
+     podem produzir um caminho diferente. */
+  const baralhado = conf(60, i => 8 + (i % 3)).slice().reverse();
+  const emOrdem = conf(60, i => 8 + (i % 3));
+  checar("a ordem de entrada não muda o caminho",
+    motor.convergenciaDoPlacar(baralhado, "lotofacil") ===
+    motor.convergenciaDoPlacar(emOrdem, "lotofacil"));
 }
 
 /* ==================================================================

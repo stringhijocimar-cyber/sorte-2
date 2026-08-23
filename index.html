@@ -2314,9 +2314,13 @@ function blocoDaModalidade(codigo, conf){
       <span class="selo ${dentro?"ok":"seu"}">${dentro?"dentro do acaso":"fora da faixa"}</span>
     </div>
     <div class="kpis">
+      ${/* Duas casas, e a incerteza ao lado. Três casas numa média de acertos
+            é precisão que o dado não tem: com estas conferências o erro padrão
+            fica na primeira casa decimal, então o terceiro dígito é ruído
+            impresso com ar de medida. */""}
       <div class="kpi"><div class="rot">acertos médios</div>
-        <div class="val">${nf(media,3)}</div>
-        <div class="sub">acaso: ${nf(esperado,3)}</div></div>
+        <div class="val">${nf(media,2)}</div>
+        <div class="sub">acaso: ${nf(esperado,2)} · ±${nf(2*Math.max(dp,1e-9),2)}</div></div>
       <div class="kpi"><div class="rot">melhor resultado</div>
         <div class="val">${melhor.acertos}</div>
         <div class="sub">concurso ${esc(melhor.concurso)}</div></div>
@@ -2328,6 +2332,7 @@ ${/*<aposta>*/""}      <div class="kpi"><div class="rot">em faixa de prêmio</di
         <div class="sub">de ${inf(total)}</div></div>${/*</aposta>*/""}
     </div>
     ${faixaAcaso(media, esperado, Math.max(dp,0.02))}
+    ${convergenciaDoPlacar(conf, codigo)}
     <div class="nota ${dentro?"":"atencao"}">
       ${dentro
         ? `Dentro da faixa do acaso nesta modalidade. É o resultado esperado: num sorteio honesto nenhum método muda essa média.`
@@ -2504,10 +2509,100 @@ T.placar = () => {
   /* Resumo e atalhos no topo: é a primeira coisa que a pessoa quer saber ao
      abrir a análise, e antes ela precisava rolar até achar. */
 /*</aposta>*/
-  return resumoGeral() + atalhos() + cabeca + /*<aposta>*/totalGasto +/*</aposta>*/
+  /* O placar vem ANTES dos atalhos. Numa tela chamada Placar, abrir com três
+     botões de navegação e o resumo genérico empurra o resultado para baixo da
+     dobra: eram onze linhas antes do primeiro número do placar. Os atalhos
+     continuam existindo, no fim, onde servem de saída e não de entrada. */
+  return resumoGeral() + cabeca + /*<aposta>*/totalGasto +/*</aposta>*/
     codigos.sort((a,b)=> porModalidade[b].length - porModalidade[a].length)
-      .map(k => blocoDaModalidade(k, porModalidade[k])).join("");
+      .map(k => blocoDaModalidade(k, porModalidade[k])).join("") +
+    atalhos();
 };
+
+/* Como o desempenho se comportou ao longo dos concursos.
+
+   O Placar mostrava só o agregado: uma média, uma faixa, um melhor resultado.
+   Com sessenta concursos de histórico isso joga fora a informação mais útil
+   que existe ali — o CAMINHO. Uma média dentro da faixa pode ser um resultado
+   que oscilou e assentou, ou um que está saindo agora; o número final é o
+   mesmo nos dois casos.
+
+   O gráfico desenha a média ACUMULADA contra a linha do acaso, e a faixa de
+   dois erros padrão em volta dela. A faixa ESTREITA conforme os concursos
+   somam — é a forma visual do que a estatística diz: no começo qualquer coisa
+   cabe, e só com volume a diferença começa a significar algo.
+
+   Quem olha aprende sozinho por que "eu tive sorte nos três primeiros" não é
+   um resultado: nos três primeiros a faixa é larga demais para acusar nada. */
+function convergenciaDoPlacar(conf, codigo){
+  const ordenadas = conf.slice().sort((a,b) => Number(a.concurso) - Number(b.concurso));
+  if(ordenadas.length < 8) return `<div class="nota">O caminho aparece a partir de
+    oito conferências — com menos, a faixa do acaso é larga demais para mostrar
+    qualquer coisa, e desenhá-la sugeriria precisão que não existe.</div>`;
+
+  let somaAcertos = 0, somaEsperado = 0, somaVar = 0;
+  const pontos = ordenadas.map((cf, i) => {
+    somaAcertos += cf.acertos;
+    somaEsperado += esperadoAcertos(codigo, cf.tamanho);
+    somaVar += desvioAcertos(codigo, cf.tamanho) ** 2;
+    const n = i + 1;
+    return {n, media: somaAcertos/n, esperado: somaEsperado/n, ep: Math.sqrt(somaVar)/n};
+  });
+
+  /* A escala cobre a faixa mais larga — a do começo — para a linha nunca sair
+     do quadro. Um gráfico que corta o próprio dado mente por omissão. */
+  const baixo = Math.min(...pontos.map(p => Math.min(p.media, p.esperado - 2*p.ep)));
+  const alto  = Math.max(...pontos.map(p => Math.max(p.media, p.esperado + 2*p.ep)));
+  const folga = Math.max((alto - baixo) * 0.08, 0.05);
+  const lo = baixo - folga, hi = alto + folga;
+
+  const L = 300, A = 140, mx = 30, my = 12;
+  const px = i => mx + (L - mx - 8) * (pontos.length === 1 ? 0 : i / (pontos.length - 1));
+  const py = v => my + (A - my*2) * (1 - (v - lo) / (hi - lo));
+
+  const cima = pontos.map((p,i)=>`${i?"L":"M"}${px(i).toFixed(1)},${py(p.esperado + 2*p.ep).toFixed(1)}`).join("");
+  const baixoP = pontos.slice().reverse()
+    .map((p,i)=>`L${px(pontos.length-1-i).toFixed(1)},${py(p.esperado - 2*p.ep).toFixed(1)}`).join("");
+  const faixa = cima + baixoP + "Z";
+  const linhaAcaso = pontos.map((p,i)=>`${i?"L":"M"}${px(i).toFixed(1)},${py(p.esperado).toFixed(1)}`).join("");
+  const linhaVoce = pontos.map((p,i)=>`${i?"L":"M"}${px(i).toFixed(1)},${py(p.media).toFixed(1)}`).join("");
+
+  const fim = pontos[pontos.length-1];
+  const dentro = Math.abs(fim.media - fim.esperado) <= 2 * fim.ep;
+  /* Quantas vezes a média acumulada saiu da faixa depois que ela já era
+     estreita o bastante para significar algo. */
+  const saidas = pontos.filter((p,i) => i >= 7 && Math.abs(p.media - p.esperado) > 2 * p.ep).length;
+
+  return `<div class="carta" style="margin-top:10px">
+    <h2>o caminho até aqui</h2>
+    <p style="font-size:.8rem;color:var(--secundaria);margin:4px 0 8px">
+      Média acumulada de acertos, concurso a concurso, contra o que o acaso
+      produziria. A faixa estreita conforme as conferências somam.</p>
+    <svg viewBox="0 0 ${L} ${A}" width="100%" height="${A}" role="img"
+      aria-label="Média acumulada de acertos ao longo de ${pontos.length} conferências, comparada com o acaso">
+      <path d="${faixa}" fill="var(--acaso)" fill-opacity=".13"/>
+      <path d="${linhaAcaso}" fill="none" stroke="var(--acaso)" stroke-width="1.4"
+        stroke-dasharray="4 3" opacity=".85"/>
+      <path d="${linhaVoce}" fill="none" stroke="var(--seu)" stroke-width="2"
+        stroke-linejoin="round" stroke-linecap="round"/>
+      <text x="2" y="${(py(hi)+9).toFixed(1)}" font-size="8" fill="var(--secundaria)"
+        font-family="var(--mono)">${nf(hi,1)}</text>
+      <text x="2" y="${py(lo).toFixed(1)}" font-size="8" fill="var(--secundaria)"
+        font-family="var(--mono)">${nf(lo,1)}</text>
+    </svg>
+    <div class="escala"><span>1ª conferência</span><span>${inf(pontos.length)}ª</span></div>
+    <div class="nota ${dentro ? "" : "atencao"}" style="margin-bottom:0">
+      ${dentro
+        ? `A linha do seu resultado passou o percurso inteiro dentro da faixa do
+           acaso${saidas ? `, com ${saidas} ponto${saidas===1?"":"s"} fora ao longo do caminho` : ""}.
+           É o que um sorteio honesto produz: oscila no começo, quando a faixa é
+           larga, e se aproxima da linha conforme as conferências somam.`
+        : `A média acumulada terminou fora da faixa do acaso. Com poucas
+           conferências isso acontece por variação comum — a faixa só fica
+           estreita com volume, e é ela que decide o que significa algo.`}
+    </div>
+  </div>`;
+}
 
 T.bancada = () => {
   const c = MODALIDADES[S.modalidade];

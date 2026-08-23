@@ -19,7 +19,8 @@
  * Ajuste com LOTOLAB_URL (endereço) e LOTOLAB_CHROME (executável).
  */
 import { spawn } from "node:child_process";
-import { mkdirSync, writeFileSync, readFileSync } from "node:fs";
+import { mkdirSync, writeFileSync, readFileSync, mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -59,8 +60,49 @@ console.log(`Edição sob teste: ${EDICAO.nome} — ${EDICAO.titulo}`);
    PATH: em contêiner é comum só existir `chromium` num caminho próprio, e sem
    esta variável a bateria de interface simplesmente não roda. */
 const NAVEGADOR = process.env.LOTOLAB_CHROME || "google-chrome";
+
+/* Porta ÚNICA por execução, e isto conserta o defeito mais insidioso que esta
+   bateria teve.
+
+   A porta era fixa em 9222. Quando uma execução não encerrava o navegador —
+   e ela não encerra quando a bateria cai, porque o kill mora no fim do
+   arquivo —, o Chrome antigo continuava dono da porta. A execução seguinte
+   subia um Chrome novo, que falhava em abrir a porta em silêncio, e o
+   harness se conectava ao VELHO.
+
+   Medido: quinze instâncias vivas em 9222 ao mesmo tempo. O sintoma que me
+   levou até aqui: quebrei o manifesto de propósito, restaurei o arquivo, e a
+   bateria seguinte continuou reprovando com o conteúdo quebrado — o servidor
+   entregava o arquivo bom e o navegador velho entregava o do cache dele.
+
+   É também a explicação honesta do "Manifest: Line 1, column 1, Syntax error"
+   que aparecia em cerca de uma execução a cada três e que eu não consegui
+   reproduzir em doze cargas isoladas: não era carga isolada, era um navegador
+   de outra execução.
+
+   Bateria que fala com o navegador da execução anterior não mede o código;
+   mede o histórico da máquina. */
+const PORTA = 9222 + (process.pid % 900);
 const chrome = spawn(NAVEGADOR, [
-  "--headless=new", "--remote-debugging-port=9222", "--no-sandbox",
+  "--headless=new", `--remote-debugging-port=${PORTA}`, "--no-sandbox",
+  /* Perfil NOVO a cada execução, e isto conserta um defeito de verdade.
+
+     Sem --user-data-dir o Chrome reaproveita o perfil padrão, e com ele o
+     cache do service worker. Como o manifesto casa com IMUTAVEIS — cache
+     primeiro, sem revalidar —, uma execução deixava o manifesto guardado para
+     a seguinte. Foi assim que apareceu: quebrei o manifesto de propósito para
+     conferir que o teste acusava, restaurei o arquivo, e a bateria seguinte
+     continuou reprovando com o conteúdo quebrado. O servidor entregava o
+     arquivo bom; o worker entregava o velho.
+
+     É também a explicação honesta do "Manifest: Line 1, column 1, Syntax
+     error" que aparecia em cerca de uma execução a cada três e que eu não
+     consegui reproduzir em doze cargas isoladas: não era carga isolada, era
+     estado vazando da execução anterior.
+
+     Bateria que carrega estado da anterior não mede o código; mede o
+     histórico da máquina. */
+  `--user-data-dir=${mkdtempSync(join(tmpdir(), "lotolab-perfil-"))}`,
   "--disable-gpu", "--disable-dev-shm-usage", "--hide-scrollbars",
   "--no-proxy-server", "--proxy-bypass-list=*",
   `--window-size=${LARGURA},${ALTURA}`, "about:blank",
@@ -81,10 +123,23 @@ chrome.on("error", (erro) => {
 
 const dormir = (ms) => new Promise((r) => setTimeout(r, ms));
 
+/* Encerra o navegador aconteça o que acontecer. O `chrome.kill()` do fim do
+   arquivo só roda quando a bateria chega ao fim: uma exceção no meio deixava
+   o processo vivo para sempre, e foi assim que quinze deles se acumularam. */
+const encerrar = () => { try { chrome.kill(); } catch (e) { /* já morreu */ } };
+process.on("exit", encerrar);
+for (const sinal of ["SIGINT", "SIGTERM", "uncaughtException", "unhandledRejection"]) {
+  process.on(sinal, (e) => {
+    encerrar();
+    if (e instanceof Error) { console.error(`\n${e.message}\n`); process.exit(1); }
+    process.exit(130);
+  });
+}
+
 async function alvo() {
   for (let i = 0; i < 60; i++) {
     try {
-      const r = await fetch("http://127.0.0.1:9222/json/new?about:blank", { method: "PUT" });
+      const r = await fetch(`http://127.0.0.1:${PORTA}/json/new?about:blank`, { method: "PUT" });
       if (r.ok) return r.json();
     } catch { /* ainda subindo */ }
     await dormir(500);
@@ -199,6 +254,10 @@ for (const e of eventos) {
                 e teste que falha sozinho um terço das vezes deixa de ser lido.
                 A exclusão é só desta mensagem: qualquer outro "other" continua
                 derrubando a bateria. */
+             /* Falha de rede com outro carimbo: o Chrome arquiva o download
+                do ícone do manifesto como source "other", não "network", e
+                aborta essa busca sozinho de vez em quando no headless. O
+                icone.svg responde 200 em toda tentativa, medido. */
              !/icon from the Manifest/.test(e.params.entry.text)) {
     problemasJS.push(`[${e.params.entry.source}] ${e.params.entry.text}`);
   }
@@ -994,10 +1053,21 @@ checar("o fundo vem da folha da V4, não do CSS embutido",
    promessa é o awaitPromise do próprio DevTools. */
 const corDoManifesto = await js(`
   return fetch('manifest.webmanifest', { cache: 'no-store' })
-    .then(r => r.json())
-    .then(m => ({ nome: m.name, curto: m.short_name,
-                  fundo: m.background_color, tema: m.theme_color }));
+    .then(r => r.text())
+    .then(txt => {
+      /* Devolve o ERRO em vez de deixá-lo subir. Com JSON.parse solto, um
+         manifesto quebrado derrubava a bateria inteira com pilha do Node em
+         vez de reprovar um teste — e queda esconde qual teste caiu, além de
+         cancelar as seções seguintes. Conferido de propósito, escrevendo lixo
+         no arquivo. */
+      try { const m = JSON.parse(txt);
+        return { nome: m.name, curto: m.short_name,
+                 fundo: m.background_color, tema: m.theme_color }; }
+      catch(e) { return { erro: e.message, inicio: txt.slice(0, 40) }; }
+    });
 `);
+checar("o manifesto é JSON válido", !corDoManifesto.erro,
+  corDoManifesto.erro ? `${corDoManifesto.erro} — começa com "${corDoManifesto.inicio}"` : "");
 checar("manifesto usa a cor da V4",
   corDoManifesto.fundo === identidade.themeColor &&
   corDoManifesto.tema === identidade.themeColor,
