@@ -4505,6 +4505,7 @@ function analisarPendentes(aoTerminar){
         r.quando = new Date().toISOString();
         r.automatica = true;
         S.aprendizado[k] = r;
+        registrarAnalise(k, r);
         prontas.push(r);
       }
     }catch(e){
@@ -5279,6 +5280,122 @@ function aprender(modalidade, opcoes){
    preserva a garantia.
 
    Com uma modalidade só, m = 1 e nada muda: o limiar continua 0,05.          */
+/* Guarda o resultado de CADA análise, e não só o último.
+
+   `S.aprendizado[modalidade]` é sobrescrito a cada retreino — e o app retreina
+   sozinho a cada concurso novo. Ou seja: ele vinha produzindo uma medida de
+   AUC fora da amostra por análise, semana após semana, e jogando todas fora.
+
+   Guardar essa série é a evidência mais forte que este app tem a oferecer.
+   Uma medida isolada de AUC 0,48 diz "esta rodada não achou nada"; quarenta
+   medidas espalhadas em torno de 0,50 mostram que não há o que achar — e essa
+   é uma afirmação que só o tempo consegue sustentar.
+
+   Vive num estado PRÓPRIO, e não dentro de S.aprendizado, porque
+   aplicarCorrecao percorre aquele objeto esperando um resultado por chave.
+   Enfiar um vetor de histórico ali dentro seria mexer no motor para acomodar
+   apresentação.
+
+   Teto para o armazenamento não crescer sem fim: com oito modalidades
+   retreinando a cada concurso, quinhentos registros cobrem meses. */
+const TETO_HISTORICO_APRENDIZADO = 500;
+/* A série de todas as análises já feitas, em todas as modalidades.
+
+   Uma medida isolada de AUC 0,48 diz "esta rodada não achou nada". Quarenta
+   medidas espalhadas em torno de 0,50 dizem outra coisa, mais forte: não há o
+   que achar. É a diferença entre um resultado e uma demonstração — e ela só
+   aparece com tempo, que é justamente o que este app tem de sobra, porque
+   retreina sozinho a cada concurso novo.
+
+   O desenho é uma tira: cada análise vira um traço na posição do seu AUC, com
+   0,50 marcado no meio. Espalhamento simétrico em torno da marca é o retrato
+   de um modelo que não aprende — e é o retrato que se espera. */
+function tiraDeAprendizado(){
+  const serie = (S.historicoAprendizado || []).filter(x => Number.isFinite(x.auc));
+  if(serie.length < 3) return "";
+
+  const aucs = serie.map(x => x.auc);
+  const media = aucs.reduce((a, b) => a + b, 0) / aucs.length;
+  const menor = Math.min(...aucs), maior = Math.max(...aucs);
+  const acima = aucs.filter(a => a > 0.5).length;
+  const mods = new Set(serie.map(x => x.modalidade)).size;
+  /* Quantas ficaram fora da faixa do acaso segundo o p guardado na hora. */
+  const foraDaFaixa = serie.filter(x => Number.isFinite(x.p) && x.p <= 0.05).length;
+
+  /* A escala cobre o observado com folga, nunca menos que 0,45–0,55: uma série
+     muito concentrada não pode virar serra por causa da terceira casa. */
+  const meio = 0.5;
+  const raio = Math.max(0.05, Math.max(maior - meio, meio - menor) * 1.25);
+  const L = 300, A = 64;
+  const px = v => 8 + (L - 16) * ((v - (meio - raio)) / (2 * raio));
+
+  const tracos = serie.map(x => {
+    const cor = Number.isFinite(x.p) && x.p <= 0.05 ? "var(--alerta)" : "var(--acaso)";
+    return `<line x1="${px(x.auc).toFixed(1)}" y1="14" x2="${px(x.auc).toFixed(1)}" y2="40"
+      stroke="${cor}" stroke-width="1.6" opacity=".55"/>`;
+  }).join("");
+
+  return `<div class="carta" style="margin-top:12px">
+    <h2>todas as análises já feitas</h2>
+    <p style="font-size:.82rem;color:var(--secundaria);margin:4px 0 8px">
+      Cada traço é uma análise, na posição do seu AUC fora da amostra. A marca do
+      meio é 0,50 — o valor de um modelo que não distingue nada.</p>
+    <svg viewBox="0 0 ${L} ${A}" width="100%" height="${A}" role="img"
+      aria-label="${inf(serie.length)} análises, AUC entre ${nf(menor,3)} e ${nf(maior,3)}, com 0,50 no meio">
+      <line x1="8" y1="27" x2="${L-8}" y2="27" stroke="var(--linha)" stroke-width="1"/>
+      ${tracos}
+      <line x1="${px(0.5).toFixed(1)}" y1="8" x2="${px(0.5).toFixed(1)}" y2="46"
+        stroke="var(--tinta)" stroke-width="1.6"/>
+      <text x="${px(0.5).toFixed(1)}" y="59" font-size="8" text-anchor="middle"
+        fill="var(--secundaria)" font-family="var(--mono)">0,50</text>
+      <text x="8" y="59" font-size="8" fill="var(--secundaria)" font-family="var(--mono)"
+        >${nf(meio - raio, 2)}</text>
+      <text x="${L-8}" y="59" font-size="8" text-anchor="end" fill="var(--secundaria)"
+        font-family="var(--mono)">${nf(meio + raio, 2)}</text>
+    </svg>
+    <div class="kpis" style="margin-top:10px">
+      <div class="kpi"><div class="rot">análises</div>
+        <div class="val">${inf(serie.length)}</div>
+        <div class="sub">em ${mods} modalidade${mods===1?"":"s"}</div></div>
+      <div class="kpi"><div class="rot">AUC médio</div>
+        <div class="val">${nf(media,4)}</div>
+        <div class="sub">de ${nf(menor,3)} a ${nf(maior,3)}</div></div>
+      <div class="kpi"><div class="rot">acima de 0,50</div>
+        <div class="val">${acima}</div>
+        <div class="sub">de ${serie.length} · esperado ~${Math.round(serie.length/2)}</div></div>
+      <div class="kpi"><div class="rot">fora da faixa</div>
+        <div class="val" style="color:${foraDaFaixa ? "var(--alerta)" : "var(--acaso)"}">${foraDaFaixa}</div>
+        <div class="sub">p ≤ 0,05</div></div>
+    </div>
+    <div class="nota" style="margin-bottom:0">
+      ${foraDaFaixa === 0
+        ? `Nenhuma das ${inf(serie.length)} análises ficou fora da faixa do acaso, e
+           ${acima} delas caíram acima de 0,50 — perto da metade, que é o esperado
+           quando o modelo não distingue nada. Uma medida isolada diria pouco;
+           a série é o argumento.`
+        : `${foraDaFaixa} de ${inf(serie.length)} análises ficaram com p ≤ 0,05. Testando
+           muitas vezes, algumas caem aí por acaso — é o que 5% quer dizer, e com
+           ${inf(serie.length)} análises o esperado é ${nf(serie.length * 0.05, 1)}.
+           O que distinguiria achado de ruído é a REPETIÇÃO na mesma modalidade,
+           com concursos que não participaram da medida anterior.`}
+    </div>
+  </div>`;
+}
+
+function registrarAnalise(modalidade, r){
+  if(!r || r.erro || typeof r.auc !== "number") return;
+  S.historicoAprendizado = S.historicoAprendizado || [];
+  S.historicoAprendizado.push({
+    modalidade, auc: r.auc, p: r.p,
+    concursos: r.nConcursos || r.concursos || null,
+    quando: r.quando || new Date().toISOString(),
+    automatica: !!r.automatica,
+  });
+  if(S.historicoAprendizado.length > TETO_HISTORICO_APRENDIZADO)
+    S.historicoAprendizado = S.historicoAprendizado.slice(-TETO_HISTORICO_APRENDIZADO);
+  Guardar.gravar("historicoAprendizado", S.historicoAprendizado);
+}
+
 function aplicarCorrecao(mapa, alfa=0.05){
   const chaves = Object.keys(mapa).filter(k => mapa[k] && typeof mapa[k].p === "number");
   const m = chaves.length;
@@ -6445,6 +6562,7 @@ T.aprendizado = () => {
         <span>${esc(r.assinatura||"")} concursos:último</span></div>`}`}
     </div>
   </div>
+  ${tiraDeAprendizado()}
   <div class="carta">
     <h2>histórico disponível por modalidade</h2>
     <p style="font-size:.85rem;color:var(--secundaria);margin:6px 0 10px">
@@ -7475,6 +7593,7 @@ function acoesNovas(){
         r.quando = new Date().toISOString();
         r.automatica = false;
         S.aprendizado[S.modalidade] = r;
+        registrarAnalise(S.modalidade, r);
         aplicarCorrecao(S.aprendizado);
         Guardar.gravar("aprendizado", S.aprendizado);
         pintar();
@@ -8206,6 +8325,7 @@ function normalizarConcursos(){
   S.teimosinhas = Guardar.ler("teimosinhas", []);
   S.marcadas = Guardar.ler("marcadas", {});
   S.aprendizado = Guardar.ler("aprendizado", {});
+  S.historicoAprendizado = Guardar.ler("historicoAprendizado", []);
   S.autoAnalise = Guardar.ler("autoAnalise", true);
   S.calibracao = Guardar.ler("calibracao", {});
   S.buscaAutomatica = Guardar.ler("buscaAutomatica", true);

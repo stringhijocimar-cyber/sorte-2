@@ -192,7 +192,8 @@ const EXPOSTOS = [
   "GRUPOS_DE_AVISO", "resultadosDe", "proximasDatasDeSorteio", "idadeDoHistorico",
   "normalizarConcursos", "conferenciaAutomatica", "diasDeSorteio",
   "porDezena", "vereditoDasDezenas", "convergenciaDoPlacar",
-  "panoramaDoLaboratorio",
+  "panoramaDoLaboratorio", "tiraDeAprendizado", "registrarAnalise",
+  "TETO_HISTORICO_APRENDIZADO",
 ];
 const epilogo = `\n;globalThis.__motor = {${EXPOSTOS.map((n) => `${n}: typeof ${n} !== "undefined" ? ${n} : undefined`).join(", ")}};\n`;
 vm.runInContext(fonte + epilogo, contexto, { filename: "index.html:script" });
@@ -3654,6 +3655,82 @@ secao("32. Aviso de histórico atrasado");
     !/pode estar\s+atrasado/.test(contexto.T.resultados()));
 
   S.resultados = guardaRes; S.modalidade = guardaMod;
+}
+
+/* ==================================================================
+   39. Cada análise fica guardada, e a série é o argumento
+
+   `S.aprendizado[modalidade]` é sobrescrito a cada retreino — e o app retreina
+   sozinho a cada concurso novo. Ou seja: ele vinha produzindo uma medida de
+   AUC fora da amostra por análise, semana após semana, e jogando todas fora.
+
+   Uma medida isolada de 0,48 diz "esta rodada não achou nada". Quarenta
+   medidas espalhadas em torno de 0,50 dizem algo mais forte: não há o que
+   achar. É a diferença entre um resultado e uma demonstração, e ela só
+   aparece com tempo.
+   ================================================================== */
+secao("39. A série das análises");
+
+{
+  const S = motor.S;
+  const guarda = S.historicoAprendizado;
+
+  S.historicoAprendizado = [];
+  motor.registrarAnalise("lotofacil", {auc: 0.51, p: 0.4, quando: "2026-08-01T00:00:00Z"});
+  motor.registrarAnalise("mega-sena", {auc: 0.49, p: 0.7, quando: "2026-08-02T00:00:00Z"});
+  checar("cada análise entra na série", S.historicoAprendizado.length === 2);
+
+  /* Análise com erro não pode virar ponto: um treino que falhou não é uma
+     medida de nada, e contá-lo mentiria na contagem. */
+  motor.registrarAnalise("quina", {erro: "sem dados"});
+  motor.registrarAnalise("quina", {auc: null});
+  checar("análise com erro ou sem AUC não entra", S.historicoAprendizado.length === 2);
+
+  /* Teto: o app retreina a cada concurso, em oito modalidades. Sem limite o
+     armazenamento cresceria para sempre no aparelho. */
+  for(let i = 0; i < motor.TETO_HISTORICO_APRENDIZADO + 50; i++)
+    motor.registrarAnalise("lotofacil", {auc: 0.5, p: 0.5, concursos: i});
+  checar("a série tem teto", S.historicoAprendizado.length === motor.TETO_HISTORICO_APRENDIZADO,
+    `${S.historicoAprendizado.length} registros`);
+
+  /* E o que cai é o começo, não o fim: a medida de ontem interessa menos que a
+     de hoje, então o corte tem de ser pela frente da fila. */
+  const ultimo = S.historicoAprendizado[S.historicoAprendizado.length - 1];
+  const primeiro = S.historicoAprendizado[0];
+  checar("o teto descarta as análises mais antigas, não as recentes",
+    ultimo.concursos === motor.TETO_HISTORICO_APRENDIZADO + 49 && primeiro.concursos > 0,
+    `sobrou de ${primeiro.concursos} a ${ultimo.concursos}`);
+
+  /* Com pouca coisa não desenha: três traços não são uma distribuição. */
+  S.historicoAprendizado = [{modalidade:"lotofacil", auc:0.5, p:0.5}];
+  checar("com uma análise só, a tira não aparece", motor.tiraDeAprendizado() === "");
+
+  /* Série honesta: espalhada em torno de 0,50, nenhuma fora da faixa. */
+  S.historicoAprendizado = Array.from({length: 40}, (_, i) => ({
+    modalidade: ["lotofacil","mega-sena"][i % 2],
+    auc: 0.5 + ((i % 7) - 3) * 0.004,
+    p: 0.2 + (i % 5) * 0.15,
+  }));
+  const html = motor.tiraDeAprendizado();
+  checar("com série, desenha a tira", /<svg/.test(html));
+  checar("um traço por análise, mais a régua e a marca do meio",
+    (html.match(/<line/g) || []).length === 42,
+    `${(html.match(/<line/g) || []).length} linhas para 40 análises`);
+  checar("e não imprime NaN", !/NaN|undefined/.test(html),
+    (html.match(/NaN|undefined/g)||[]).join(","));
+  checar("declara que nada saiu da faixa", /Nenhuma das/.test(html.replace(/\s+/g," ")));
+
+  /* Com pontos fora, o texto tem de lembrar que testar muitas vezes produz
+     alguns — senão a própria série vira a fonte do erro que ela desfaz. */
+  S.historicoAprendizado = Array.from({length: 40}, (_, i) => ({
+    modalidade: "lotofacil", auc: 0.5, p: i < 3 ? 0.01 : 0.5,
+  }));
+  const comFora = motor.tiraDeAprendizado().replace(/\s+/g, " ");
+  checar("com pontos fora, explica que testar muito produz alguns",
+    /5%|esperado/.test(comFora));
+  checar("e aponta a repetição como o que decidiria", /REPETIÇÃO|repetição/.test(comFora));
+
+  S.historicoAprendizado = guarda;
 }
 
 /* ==================================================================
