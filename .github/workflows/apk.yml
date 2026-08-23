@@ -37,7 +37,12 @@ jobs:
         # O erro clássico deste projeto: editar index.html e esquecer de copiar
         # para www/, gerando um APK sem as mudanças. Falhar aqui é melhor que
         # entregar um APK velho parecendo novo.
-        run: cmp index.html www/index.html
+        run: |
+          cmp index.html www/index.html
+          # O executor em segundo plano viaja no APK pela pasta www/. Um APK
+          # com o executor antigo confere com regra antiga e avisa errado no
+          # aparelho, sem nada vermelho na compilação.
+          diff -r runner www/runner
 
       - name: Rodar a bateria antes de compilar
         run: node ferramentas/testar-motor.mjs

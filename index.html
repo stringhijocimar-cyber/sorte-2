@@ -1110,10 +1110,30 @@ const Guardar = {
       return v ? JSON.parse(v) : padrao; }catch(e){ return padrao; }
   },
   gravar(chave, valor){
-    try{ localStorage.setItem("lotolab:"+chave, JSON.stringify(valor)); return true; }
-    catch(e){ return false; }
+    try{
+      localStorage.setItem("lotolab:"+chave, JSON.stringify(valor));
+      /* Espelhar aqui, e não em cada lugar que grava jogo, porque são dez
+         lugares e o décimo primeiro vai ser esquecido. Enganchado na gravação,
+         não há como salvar um jogo sem que o executor em segundo plano fique
+         sabendo dele. */
+      if(chave === "jogos" || chave === "teimosinhas" || chave === "buscaAutomatica")
+        agendarEspelho();
+      return true;
+    }catch(e){ return false; }
   }
 };
+
+/* Uma conferência grande grava jogos várias vezes seguidas. Sem a espera,
+   cada gravação viraria uma travessia da ponte para o executor. */
+let relogioDoEspelho = null;
+function agendarEspelho(){
+  if(typeof espelharParaSegundoPlano !== "function") return;
+  if(relogioDoEspelho) clearTimeout(relogioDoEspelho);
+  relogioDoEspelho = setTimeout(() => {
+    relogioDoEspelho = null;
+    try{ espelharParaSegundoPlano(); }catch(e){}
+  }, 1500);
+}
 
 /* ============================ utilidades ============================ */
 const $ = s => document.querySelector(s);
@@ -4844,6 +4864,56 @@ const SLUG_CAIXA = {
   "lotomania":"lotomania", "dupla-sena":"duplasena", "dia-de-sorte":"diadesorte",
   "timemania":"timemania", "mais-milionaria":"maismilionaria"
 };
+
+/* ---- espelho para a conferência com o app fechado ----
+   O executor em segundo plano roda num motor JavaScript separado: sem DOM,
+   sem localStorage, sem nada deste arquivo. Ele só enxerga o CapacitorKV.
+
+   Então o app escreve ali o que o executor precisa — e escreve inclusive as
+   FAIXAS de cada modalidade. Deixar o executor recalcular o que conta como
+   coincidência criaria duas verdades, que divergem na primeira vez que uma
+   delas mudar. Aqui a regra continua sendo uma só: esta.
+
+   Sem o plugin instalado (navegador, PWA, versão antiga) isto não faz nada e
+   não estorva: o app funciona igual, só não confere fechado. */
+/* Tem de ser igual ao "label" em capacitor.config.json: é por ele que o
+   dispatchEvent encontra o executor. */
+const ETIQUETA_SEGUNDO_PLANO = "app.lotolab.jogos.conferencia";
+
+function espelharParaSegundoPlano(){
+  try{
+    const runner = (typeof Capacitor !== "undefined" && Capacitor.Plugins &&
+                    Capacitor.Plugins.BackgroundRunner) ? Capacitor.Plugins.BackgroundRunner : null;
+    if(!runner || typeof runner.dispatchEvent !== "function") return false;
+
+    const modalidades = {};
+    for(const [chave, c] of Object.entries(MODALIDADES)){
+      if(!SLUG_CAIXA[chave]) continue;
+      modalidades[chave] = {slug: SLUG_CAIXA[chave], nome: c.nome, faixas: c.faixas};
+    }
+    /* Só o necessário para contar acerto. Mandar a conferência inteira de cada
+       jogo encheria o armazenamento compartilhado sem servir para nada. */
+    const jogos = S.jogos.concat(S.teimosinhas || []).map(j => ({
+      id: j.id, modalidade: j.modalidade, dezenas: j.dezenas,
+      concursoAlvo: j.concursoAlvo != null ? j.concursoAlvo : null,
+      deConcurso: j.deConcurso != null ? j.deConcurso : null,
+      concursos: j.concursos != null ? j.concursos : null,
+    }));
+
+    /* O app não escreve no CapacitorKV: o plugin não expõe isso à WebView.
+       O que existe é dispatchEvent — então o app manda o estado e quem grava
+       é o executor, que é justamente quem vai ler depois. */
+    runner.dispatchEvent({
+      label: ETIQUETA_SEGUNDO_PLANO,
+      event: "guardarEstado",
+      details: {estado: JSON.stringify({
+        ligado: S.buscaAutomatica !== false,
+        modalidades, jogos,
+      })},
+    }).catch(() => {});
+    return true;
+  }catch(e){ return false; }
+}
 
 function dataBrParaIso(s){
   const m = String(s||"").match(/^(\d{2})\/(\d{2})\/(\d{4})$/);

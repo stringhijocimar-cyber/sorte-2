@@ -198,6 +198,7 @@ const EXPOSTOS = [
   "ordemDeFontes", "FONTES", "buscarNaCaixa", "buscarComLimite", "TEMPO_LIMITE_FONTE",
   "buscarHistorico", "completarAPonta", "MAXIMO_A_EMENDAR",
   "buscaDiaria", "sorteioPendente", "ultimoSorteioEsperado",
+  "espelharParaSegundoPlano", "ETIQUETA_SEGUNDO_PLANO", "faixaAtingida", "SLUG_CAIXA",
   "INTERVALO_BUSCA", "INTERVALO_BUSCA_PENDENTE", "HORA_DE_PUBLICACAO",
 ];
 const epilogo = `\n;globalThis.__motor = {${EXPOSTOS.map((n) => `${n}: typeof ${n} !== "undefined" ? ${n} : undefined`).join(", ")}};\n`;
@@ -4671,6 +4672,178 @@ secao("43. Atualizar sozinho todos os sorteios novos");
   contexto.fetch = guardaFetch;
   S.resultados = g.r; S.modalidade = g.m;
   S.ultimaBusca = g.u; S.buscaAutomatica = g.b;
+}
+
+/* ==================================================================
+   44. Conferir com o app fechado
+
+   O executor em segundo plano roda num motor JavaScript separado: sem DOM,
+   sem localStorage, sem nada do index.html. Isso cria o risco central desta
+   funcionalidade — DUAS VERDADES. Se o executor recalcular por conta própria
+   o que conta como coincidência, ele e o app divergem na primeira vez que uma
+   das duas mudar, e o usuário recebe aviso de coisa que o app não confirma.
+
+   Por isso o executor não decide nada: o app espelha as faixas, e lá só se
+   conta acerto. Estes testes cobram exatamente isso.
+   ================================================================== */
+secao("44. Conferir com o app fechado");
+{
+  const { readFileSync } = await import("node:fs");
+  const fonteRunner = readFileSync(
+    new URL("../runner/segundo-plano.js", import.meta.url), "utf8");
+
+  /* Carrega o executor num contexto que imita o do plugin: sem DOM, sem
+     localStorage, com CapacitorKV e CapacitorNotifications de mentira. Se o
+     arquivo depender de qualquer coisa do navegador, ele quebra aqui — que é
+     o ponto: no aparelho ele quebraria calado. */
+  const eventos = {};
+  const kv = {};
+  const avisados = [];
+  const ctxRunner = {
+    addEventListener: (nome, fn) => { eventos[nome] = fn; },
+    CapacitorKV: {
+      get: (k) => ({value: kv[k]}),
+      set: (k, v) => { kv[k] = v; },
+      remove: (k) => { delete kv[k]; },
+    },
+    CapacitorNotifications: { schedule: (lista) => avisados.push(...lista) },
+    fetch: () => Promise.reject(new Error("sem rede")),
+    console: {log(){}, info(){}, warn(){}, error(){}, debug(){}},
+    setTimeout, clearTimeout, setInterval, clearInterval,
+    encodeURIComponent, JSON, Date, Math, Number, String, Array, Object,
+    Promise, isNaN, parseInt, parseFloat, Error,
+  };
+  ctxRunner.globalThis = ctxRunner;
+  vm.createContext(ctxRunner);
+  vm.runInContext(fonteRunner + "\n;globalThis.__runner = {coincidencias, jogoCobre, normalizar};",
+    ctxRunner, {filename: "runner/segundo-plano.js"});
+  const R = ctxRunner.__runner;
+
+  checar("o executor carrega sem DOM e sem localStorage",
+    typeof R.coincidencias === "function");
+  checar("e registra os dois eventos que o app usa",
+    typeof eventos.conferirSorteios === "function" &&
+    typeof eventos.guardarEstado === "function",
+    Object.keys(eventos).join(", "));
+
+  /* Nada de navegador dentro do arquivo: uma referência a document ou
+     localStorage passaria despercebida até o aparelho. */
+  /* Sem tirar os comentários, esta trava acusa os próprios comentários que
+     explicam por que document e localStorage NÃO existem ali — o gerador da
+     edição estatística já tinha aprendido isso, e eu repeti o erro. */
+  const runnerSemComentarios = fonteRunner
+    .replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  checar("o executor não usa document nem localStorage no código",
+    !/\bdocument\b|\blocalStorage\b/.test(runnerSemComentarios));
+
+  /* ---- as duas verdades ----
+     A prova que importa: para TODA modalidade e TODO número de acertos
+     possível, o veredito do executor tem de ser o mesmo do app. */
+  {
+    let divergencias = [];
+    for(const [chave, c] of Object.entries(M)){
+      if(!contexto.SLUG_CAIXA[chave]) continue;
+      for(let acertos = 0; acertos <= c.k; acertos++){
+        /* monta um jogo que acerta exatamente `acertos` dezenas */
+        const sorteadas = Array.from({length: c.k}, (_, i) => i + 1);
+        const minhas = sorteadas.slice(0, acertos)
+          .concat(Array.from({length: c.k - acertos}, (_, i) => 60 + i));
+        const achados = R.coincidencias(
+          [{id: "x", modalidade: chave, dezenas: minhas}],
+          chave, {concurso: 1, dezenas: sorteadas}, c.faixas);
+        const doApp = contexto.faixaAtingida(chave, acertos) !== null;
+        const doRunner = achados.length === 1;
+        if(doApp !== doRunner)
+          divergencias.push(`${chave}/${acertos}: app=${doApp} runner=${doRunner}`);
+      }
+    }
+    checar("executor e app dão o MESMO veredito em toda modalidade e todo acerto",
+      divergencias.length === 0, divergencias.slice(0,3).join(" · ") || "nenhuma divergência");
+  }
+
+  /* ---- cobertura de concurso: as três formas do app ---- */
+  checar("jogo com concurso declarado vale só naquele concurso",
+    R.jogoCobre({concursoAlvo: 3048}, 3048) === true &&
+    R.jogoCobre({concursoAlvo: 3048}, 3049) === false);
+  checar("teimosinha vale na faixa declarada, e não fora dela",
+    R.jogoCobre({deConcurso: 3040, concursos: 5}, 3044) === true &&
+    R.jogoCobre({deConcurso: 3040, concursos: 5}, 3045) === false);
+  checar("jogo sem declaração vale em qualquer concurso",
+    R.jogoCobre({}, 1) === true);
+
+  /* ---- os dois formatos de resposta ---- */
+  checar("entende o formato da Caixa",
+    (R.normalizar({numero: 3048, listaDezenas: ["01","02","03"]}) || {}).concurso === 3048);
+  checar("e o formato do espelho",
+    (R.normalizar({concurso: 3048, dezenas: [1,2,3]}) || {}).concurso === 3048);
+  checar("e recusa resposta sem dezenas em vez de inventar",
+    R.normalizar({numero: 3048, listaDezenas: []}) === null);
+
+  /* ---- o evento que guarda o estado ---- */
+  await new Promise((pronto) => {
+    eventos.guardarEstado((v) => pronto(v), () => pronto(),
+      {estado: JSON.stringify({ligado: true, jogos: [], modalidades: {}})});
+  });
+  checar("o app manda o estado e o executor o grava no KV",
+    !!kv["lotolab:bg:estado"], kv["lotolab:bg:estado"] ? "gravado" : "vazio");
+
+  /* ---- sem rede, não avisa e não quebra ---- */
+  kv["lotolab:bg:estado"] = JSON.stringify({
+    ligado: true,
+    modalidades: {"mega-sena": {slug:"megasena", nome:"Mega-Sena", faixas:[4,5,6]}},
+    jogos: [{id:"a", modalidade:"mega-sena", dezenas:[1,2,3,4,5,6]}],
+  });
+  avisados.length = 0;
+  await new Promise((pronto) => eventos.conferirSorteios(() => pronto(), () => pronto()));
+  checar("sem rede o executor termina limpo e não avisa nada",
+    avisados.length === 0);
+
+  /* ---- com rede: avisa uma vez, e não repete no mesmo concurso ---- */
+  ctxRunner.fetch = () => Promise.resolve({ok: true, json: async () => ({
+    numero: 3048, listaDezenas: ["01","02","03","04","05","06"],
+  })});
+  avisados.length = 0;
+  await new Promise((pronto) => eventos.conferirSorteios(() => pronto(), () => pronto()));
+  checar("com o sorteio novo, o aviso sai mesmo com o app fechado",
+    avisados.length === 1, JSON.stringify(avisados[0] || {}).slice(0, 80));
+  checar("e o texto fala em coincidência, nunca em prêmio",
+    avisados.length === 1 && /coincid/i.test(avisados[0].title + avisados[0].body) &&
+    !/prêmio|premio|ganhou/i.test(avisados[0].title + avisados[0].body),
+    avisados[0] && avisados[0].title);
+
+  avisados.length = 0;
+  await new Promise((pronto) => eventos.conferirSorteios(() => pronto(), () => pronto()));
+  checar("o mesmo concurso não avisa duas vezes", avisados.length === 0);
+
+  /* ---- desligado é desligado ---- */
+  kv["lotolab:bg:vistos"] = JSON.stringify({});
+  kv["lotolab:bg:estado"] = JSON.stringify({
+    ligado: false,
+    modalidades: {"mega-sena": {slug:"megasena", nome:"Mega-Sena", faixas:[4,5,6]}},
+    jogos: [{id:"a", modalidade:"mega-sena", dezenas:[1,2,3,4,5,6]}],
+  });
+  avisados.length = 0;
+  await new Promise((pronto) => eventos.conferirSorteios(() => pronto(), () => pronto()));
+  checar("quem desliga a busca automática não recebe aviso fechado",
+    avisados.length === 0);
+
+  /* ---- a etiqueta tem de bater com a do capacitor.config.json ---- */
+  {
+    const cfg = JSON.parse(readFileSync(new URL("../capacitor.config.json", import.meta.url), "utf8"));
+    const br = (cfg.plugins || {}).BackgroundRunner || {};
+    checar("a etiqueta do app é a mesma do capacitor.config.json",
+      br.label === contexto.ETIQUETA_SEGUNDO_PLANO,
+      `${br.label} vs ${contexto.ETIQUETA_SEGUNDO_PLANO}`);
+    checar("o evento configurado é o que o executor escuta",
+      typeof eventos[br.event] === "function", br.event);
+    checar("o src aponta para um arquivo que existe dentro de www/",
+      (() => { try { readFileSync(new URL("../www/" + br.src, import.meta.url)); return true; }
+               catch(e){ return false; } })(), "www/" + br.src);
+    /* O WorkManager do Android não roda período menor que 15 minutos: pedir
+       menos não deixa mais rápido, só engana quem lê a configuração. */
+    checar("o intervalo respeita o mínimo do WorkManager",
+      br.interval >= 15, `${br.interval} min`);
+  }
 }
 
 /* ---------- saída ---------- */
