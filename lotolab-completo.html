@@ -3791,6 +3791,58 @@ const INTERVALO_BUSCA = 12 * 60 * 60 * 1000;
 /* Busca do fim para trás, parando no primeiro erro. Devolver o que já veio é
    melhor que devolver nada: um histórico de 400 concursos ainda calibra e
    ainda faz estatística, e a tela informa quantos vieram. */
+/* Quantos concursos a mais o arquivo pode estar atrasado antes de o app
+   desistir de emendar. Dois sorteios por dia em algumas modalidades e um cron
+   que roda de manhã: uma folga de dez cobre até um fim de semana inteiro sem
+   atualização, sem risco de disparar centenas de requisições se o arquivo
+   estiver muito velho — nesse caso o retrato já é bom o bastante e a ponta
+   chega na próxima atualização. */
+const MAXIMO_A_EMENDAR = 10;
+
+/* O arquivo do repositório é um retrato: traz 2829 concursos numa requisição
+   só, o que é ótimo, mas para na hora em que o cron passou. Perguntar só a
+   ele é o que fazia a lista terminar no concurso de dois dias antes mesmo
+   depois de o sorteio do dia ter saído.
+
+   Então: o retrato dá o corpo do histórico, e uma chamada ao vivo dá a ponta.
+   Uma requisição a mais, e deixa de existir um caminho pelo qual o resultado
+   de hoje não entra. */
+async function completarAPonta(modalidade, doArquivo, aoProgresso){
+  const ultimoNoArquivo = Number(doArquivo[doArquivo.length - 1].concurso);
+  let aoVivo;
+  try{
+    aoVivo = await buscarNaCaixa(modalidade, null);
+  }catch(e){
+    /* Sem rede o retrato sozinho ainda serve — e é melhor mostrar histórico
+       velho do que não mostrar histórico. */
+    return doArquivo;
+  }
+  const maisNovo = Number(aoVivo.concurso);
+  if(!Number.isFinite(maisNovo) || maisNovo <= ultimoNoArquivo) return doArquivo;
+
+  /* Se o vão for maior do que se pode emendar, o arquivo volta como está.
+     Grudar os dez mais recentes num retrato que para trezentos concursos
+     atrás deixaria um BURACO no meio da série — e buraco é pior que ponta
+     faltando: a ponta se vê, o buraco não, e toda estatística passaria a
+     rodar sobre uma sequência que finge ser contínua. */
+  if(maisNovo - ultimoNoArquivo > MAXIMO_A_EMENDAR) return doArquivo;
+
+  const faltando = [aoVivo];
+  /* Pode faltar mais de um: o arquivo de sexta não tem nem sábado nem
+     domingo. Desce do mais novo até emendar com o que o arquivo já tinha. */
+  for(let n = maisNovo - 1; n > ultimoNoArquivo; n--){
+    try{ faltando.push(await buscarNaCaixa(modalidade, n)); }
+    catch(e){
+      /* Um elo que não veio também abriria buraco. Sem ele, nada emenda. */
+      return doArquivo;
+    }
+  }
+  faltando.sort((a, b) => Number(a.concurso) - Number(b.concurso));
+  const completo = doArquivo.concat(faltando);
+  if(aoProgresso) aoProgresso(completo.length, completo.length, maisNovo);
+  return completo;
+}
+
 async function buscarHistorico(modalidade, quantos, aoProgresso){
   /* Primeiro o arquivo do repositório: uma requisição traz o histórico
      inteiro. Só se ele falhar é que se cai no laço concurso a concurso, que
@@ -3799,7 +3851,7 @@ async function buscarHistorico(modalidade, quantos, aoProgresso){
     const tudo = await baixarHistoricoDoRepositorio(modalidade);
     if(aoProgresso) aoProgresso(tudo.length, tudo.length,
       tudo[tudo.length-1].concurso);
-    return tudo;
+    return await completarAPonta(modalidade, tudo, aoProgresso);
   }catch(e){ /* segue para o caminho lento */ }
 
   const ultimo = await buscarNaCaixa(modalidade, null);

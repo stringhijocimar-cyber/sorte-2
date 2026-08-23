@@ -196,6 +196,7 @@ const EXPOSTOS = [
   "panoramaDoLaboratorio", "tiraDeAprendizado", "registrarAnalise",
   "TETO_HISTORICO_APRENDIZADO",
   "ordemDeFontes", "FONTES", "buscarNaCaixa", "buscarComLimite", "TEMPO_LIMITE_FONTE",
+  "buscarHistorico", "completarAPonta", "MAXIMO_A_EMENDAR",
 ];
 const epilogo = `\n;globalThis.__motor = {${EXPOSTOS.map((n) => `${n}: typeof ${n} !== "undefined" ? ${n} : undefined`).join(", ")}};\n`;
 vm.runInContext(fonte + epilogo, contexto, { filename: "index.html:script" });
@@ -4408,6 +4409,122 @@ secao("41. Se uma fonte não deixa ver, tem de haver outra");
       !!erro && /não respondeu em \d+s/.test(erro.message) &&
       !/AbortError/.test(erro.message),
       erro && erro.message.slice(0, 90));
+  })();
+
+  contexto.fetch = guardaFetch;
+}
+
+/* ==================================================================
+   42. O histórico em massa também precisa da ponta
+
+   O conserto da seção 40 arrumou buscarNaCaixa — mas os botões "buscar os 20
+   últimos" e "histórico completo" não passam por lá. Eles chamam
+   buscarHistorico, que ia direto ao arquivo do repositório e só tentava a
+   Caixa se o DOWNLOAD do arquivo falhasse. O arquivo nunca falha: ele só está
+   velho. Então a lista continuava terminando no concurso de dois dias antes,
+   e a tela ainda dizia "direto do repositório do app".
+
+   Um conserto que deixa um segundo caminho com o mesmo defeito não é um
+   conserto.
+   ================================================================== */
+secao("42. O histórico em massa também precisa da ponta");
+{
+  const guardaFetch = contexto.fetch;
+
+  /* O arquivo do repositório: retrato que para no 3047, de quinta. */
+  const TAMANHO_DO_ARQUIVO = 401;
+  const arquivo = (ate) => ({ concursos: Array.from({length: TAMANHO_DO_ARQUIVO},
+    (_, i) => ({concurso: ate - TAMANHO_DO_ARQUIVO + 1 + i, data: "2026-08-01",
+                dezenas: [1,2,3,4,5,6]})) });
+
+  const aoVivoCom = (numero) => ({
+    numero, dataApuracao: "23/08/2026",
+    listaDezenas: ["10","20","30","40","50","60"],
+    listaRateioPremio: [], acumulado: true,
+  });
+
+  /* Roteia por URL: raw.githubusercontent é o arquivo, servicebus2 é a Caixa.
+     O "concurso específico" bate primeiro no arquivo e não acha — é o caminho
+     real, e é o que faz a emenda cair na fonte ao vivo. */
+  const montarRede = (ultimoNoArquivo, ultimoAoVivo, contador) => (url) => {
+    const u = String(url);
+    if(u.includes("raw.githubusercontent"))
+      return Promise.resolve({ok:true, json: async () => arquivo(ultimoNoArquivo)});
+    if(u.includes("servicebus2")){
+      if(contador) contador.n++;
+      const m = u.match(/megasena\/(\d+)/);
+      const pedido = m ? Number(m[1]) : ultimoAoVivo;
+      if(pedido > ultimoAoVivo) return Promise.resolve({ok:false, status:404});
+      return Promise.resolve({ok:true, json: async () => aoVivoCom(pedido)});
+    }
+    return Promise.reject(new Error("fonte fora do ar"));
+  };
+
+  await (async () => {
+    contexto.fetch = montarRede(3047, 3048);
+    const h = await contexto.buscarHistorico("mega-sena", 20, null);
+    const ultimo = Number(h[h.length - 1].concurso);
+    checar("o histórico em massa não para no que o arquivo tinha",
+      ultimo === 3048, `terminou no ${ultimo}`);
+    checar("e o corpo do histórico continua vindo inteiro do arquivo",
+      h.length === TAMANHO_DO_ARQUIVO + 1, `${h.length} concursos`);
+    checar("sem repetir o concurso que já estava no arquivo",
+      new Set(h.map(x => Number(x.concurso))).size === h.length);
+    checar("e em ordem crescente de concurso",
+      h.every((x, i) => i === 0 || Number(x.concurso) > Number(h[i-1].concurso)));
+  })();
+
+  await (async () => {
+    /* Arquivo de sexta, dois sorteios desde então. Emendar um só deixaria um
+       buraco no meio — pior que faltar a ponta, porque some sem avisar. */
+    contexto.fetch = montarRede(3047, 3050);
+    const h = await contexto.buscarHistorico("mega-sena", 20, null);
+    const nums = h.map(x => Number(x.concurso));
+    checar("emenda mais de um concurso quando o arquivo está mais atrasado",
+      nums.includes(3048) && nums.includes(3049) && nums.includes(3050),
+      `termina em ${nums[nums.length-1]}`);
+    checar("e não deixa buraco entre o arquivo e a ponta",
+      nums.every((n, i) => i === 0 || n === nums[i-1] + 1));
+  })();
+
+  await (async () => {
+    /* Teto: arquivo muito velho não pode virar centenas de requisições. */
+    const contador = {n: 0};
+    contexto.fetch = montarRede(3000, 3300, contador);
+    const h = await contexto.buscarHistorico("mega-sena", 20, null);
+    checar("arquivo muito velho não dispara centenas de requisições",
+      contador.n <= contexto.MAXIMO_A_EMENDAR + 2,
+      `${contador.n} chamadas ao vivo, teto ${contexto.MAXIMO_A_EMENDAR}`);
+    checar("e ainda assim devolve histórico utilizável",
+      h.length >= TAMANHO_DO_ARQUIVO, `${h.length} concursos`);
+    /* E — o que importa — sem ilha solta: grudar os dez mais recentes num
+       retrato que para trezentos atrás abriria um buraco invisível. */
+    const seq = h.map(x => Number(x.concurso));
+    checar("e sem buraco: prefere ponta faltando a série quebrada",
+      seq.every((n, i) => i === 0 || n === seq[i-1] + 1),
+      `${seq[0]}…${seq[seq.length-1]}`);
+  })();
+
+  await (async () => {
+    /* Sem rede ao vivo, o retrato sozinho ainda serve: histórico velho é
+       melhor que nenhum histórico. */
+    contexto.fetch = (url) => String(url).includes("raw.githubusercontent")
+      ? Promise.resolve({ok:true, json: async () => arquivo(3047)})
+      : Promise.reject(new Error("sem rede"));
+    const h = await contexto.buscarHistorico("mega-sena", 20, null);
+    checar("sem as fontes ao vivo, o arquivo sozinho ainda entrega histórico",
+      h.length > 0 && Number(h[h.length-1].concurso) === 3047,
+      `${h.length} concursos, último ${h[h.length-1].concurso}`);
+  })();
+
+  await (async () => {
+    /* Ponta já em dia: nada a emendar, e nada duplicado. */
+    contexto.fetch = montarRede(3048, 3048);
+    const h = await contexto.buscarHistorico("mega-sena", 20, null);
+    checar("com a ponta em dia, não duplica nem inventa concurso",
+      Number(h[h.length-1].concurso) === 3048 &&
+      new Set(h.map(x => Number(x.concurso))).size === h.length,
+      `${h.length} concursos, último ${h[h.length-1].concurso}`);
   })();
 
   contexto.fetch = guardaFetch;
