@@ -191,6 +191,9 @@ const EXPOSTOS = [
   "POPULACAO_PESQUISA",
   "GRUPOS_DE_AVISO", "resultadosDe", "proximasDatasDeSorteio", "idadeDoHistorico",
   "normalizarConcursos", "conferenciaAutomatica", "diasDeSorteio",
+  "porDezena", "vereditoDasDezenas", "convergenciaDoPlacar",
+  "panoramaDoLaboratorio", "tiraDeAprendizado", "registrarAnalise",
+  "TETO_HISTORICO_APRENDIZADO",
 ];
 const epilogo = `\n;globalThis.__motor = {${EXPOSTOS.map((n) => `${n}: typeof ${n} !== "undefined" ? ${n} : undefined`).join(", ")}};\n`;
 vm.runInContext(fonte + epilogo, contexto, { filename: "index.html:script" });
@@ -996,14 +999,23 @@ secao("10. Placar — cada loteria com o seu próprio placar");
     { concurso: 20, acertos: 13, tamanho: 15, metodo: "uniforme" }]);
   const esperadoMega = contexto.esperadoAcertos("mega-sena", 6);
   const esperadoFacil = contexto.esperadoAcertos("lotofacil", 15);
+  /* Cobra o VALOR, não o número de casas decimais.
+     A versão anterior exigia exatamente três casas, e por isso caiu quando a
+     tela passou a mostrar duas — mudança deliberada: com estas conferências o
+     erro padrão fica na primeira casa, e o terceiro dígito era ruído impresso
+     com ar de medida. O que o teste existe para provar é que cada modalidade
+     compara contra o acaso DELA, e isso não depende da formatação. */
+  const mostraEsperado = (html, valor) =>
+    [2, 3].some(casas => html.includes(valor.toLocaleString("pt-BR",
+      { minimumFractionDigits: casas, maximumFractionDigits: casas })));
   checar("Mega-Sena compara contra o acaso da Mega-Sena",
-    mega.includes(esperadoMega.toLocaleString("pt-BR",
-      { minimumFractionDigits: 3, maximumFractionDigits: 3 })),
-    `esperado ${esperadoMega.toFixed(3)}`);
+    mostraEsperado(mega, esperadoMega), `esperado ${esperadoMega.toFixed(3)}`);
   checar("Lotofácil compara contra o acaso da Lotofácil",
-    facil.includes(esperadoFacil.toLocaleString("pt-BR",
-      { minimumFractionDigits: 3, maximumFractionDigits: 3 })),
-    `esperado ${esperadoFacil.toFixed(3)}`);
+    mostraEsperado(facil, esperadoFacil), `esperado ${esperadoFacil.toFixed(3)}`);
+  /* E o valor da OUTRA modalidade não pode aparecer no bloco desta — senão
+     "compara contra o acaso" passaria com o esperado errado impresso. */
+  checar("e não mostra o esperado da outra modalidade",
+    !mostraEsperado(mega, esperadoFacil) && !mostraEsperado(facil, esperadoMega));
   checar("os dois esperados são mesmo diferentes (senão o teste não prova nada)",
     Math.abs(esperadoMega - esperadoFacil) > 1,
     `${esperadoMega.toFixed(2)} vs ${esperadoFacil.toFixed(2)}`);
@@ -3643,6 +3655,277 @@ secao("32. Aviso de histórico atrasado");
     !/pode estar\s+atrasado/.test(contexto.T.resultados()));
 
   S.resultados = guardaRes; S.modalidade = guardaMod;
+}
+
+/* ==================================================================
+   39. Cada análise fica guardada, e a série é o argumento
+
+   `S.aprendizado[modalidade]` é sobrescrito a cada retreino — e o app retreina
+   sozinho a cada concurso novo. Ou seja: ele vinha produzindo uma medida de
+   AUC fora da amostra por análise, semana após semana, e jogando todas fora.
+
+   Uma medida isolada de 0,48 diz "esta rodada não achou nada". Quarenta
+   medidas espalhadas em torno de 0,50 dizem algo mais forte: não há o que
+   achar. É a diferença entre um resultado e uma demonstração, e ela só
+   aparece com tempo.
+   ================================================================== */
+secao("39. A série das análises");
+
+{
+  const S = motor.S;
+  const guarda = S.historicoAprendizado;
+
+  S.historicoAprendizado = [];
+  motor.registrarAnalise("lotofacil", {auc: 0.51, p: 0.4, quando: "2026-08-01T00:00:00Z"});
+  motor.registrarAnalise("mega-sena", {auc: 0.49, p: 0.7, quando: "2026-08-02T00:00:00Z"});
+  checar("cada análise entra na série", S.historicoAprendizado.length === 2);
+
+  /* Análise com erro não pode virar ponto: um treino que falhou não é uma
+     medida de nada, e contá-lo mentiria na contagem. */
+  motor.registrarAnalise("quina", {erro: "sem dados"});
+  motor.registrarAnalise("quina", {auc: null});
+  checar("análise com erro ou sem AUC não entra", S.historicoAprendizado.length === 2);
+
+  /* Teto: o app retreina a cada concurso, em oito modalidades. Sem limite o
+     armazenamento cresceria para sempre no aparelho. */
+  for(let i = 0; i < motor.TETO_HISTORICO_APRENDIZADO + 50; i++)
+    motor.registrarAnalise("lotofacil", {auc: 0.5, p: 0.5, concursos: i});
+  checar("a série tem teto", S.historicoAprendizado.length === motor.TETO_HISTORICO_APRENDIZADO,
+    `${S.historicoAprendizado.length} registros`);
+
+  /* E o que cai é o começo, não o fim: a medida de ontem interessa menos que a
+     de hoje, então o corte tem de ser pela frente da fila. */
+  const ultimo = S.historicoAprendizado[S.historicoAprendizado.length - 1];
+  const primeiro = S.historicoAprendizado[0];
+  checar("o teto descarta as análises mais antigas, não as recentes",
+    ultimo.concursos === motor.TETO_HISTORICO_APRENDIZADO + 49 && primeiro.concursos > 0,
+    `sobrou de ${primeiro.concursos} a ${ultimo.concursos}`);
+
+  /* Com pouca coisa não desenha: três traços não são uma distribuição. */
+  S.historicoAprendizado = [{modalidade:"lotofacil", auc:0.5, p:0.5}];
+  checar("com uma análise só, a tira não aparece", motor.tiraDeAprendizado() === "");
+
+  /* Série honesta: espalhada em torno de 0,50, nenhuma fora da faixa. */
+  S.historicoAprendizado = Array.from({length: 40}, (_, i) => ({
+    modalidade: ["lotofacil","mega-sena"][i % 2],
+    auc: 0.5 + ((i % 7) - 3) * 0.004,
+    p: 0.2 + (i % 5) * 0.15,
+  }));
+  const html = motor.tiraDeAprendizado();
+  checar("com série, desenha a tira", /<svg/.test(html));
+  checar("um traço por análise, mais a régua e a marca do meio",
+    (html.match(/<line/g) || []).length === 42,
+    `${(html.match(/<line/g) || []).length} linhas para 40 análises`);
+  checar("e não imprime NaN", !/NaN|undefined/.test(html),
+    (html.match(/NaN|undefined/g)||[]).join(","));
+  checar("declara que nada saiu da faixa", /Nenhuma das/.test(html.replace(/\s+/g," ")));
+
+  /* Com pontos fora, o texto tem de lembrar que testar muitas vezes produz
+     alguns — senão a própria série vira a fonte do erro que ela desfaz. */
+  S.historicoAprendizado = Array.from({length: 40}, (_, i) => ({
+    modalidade: "lotofacil", auc: 0.5, p: i < 3 ? 0.01 : 0.5,
+  }));
+  const comFora = motor.tiraDeAprendizado().replace(/\s+/g, " ");
+  checar("com pontos fora, explica que testar muito produz alguns",
+    /5%|esperado/.test(comFora));
+  checar("e aponta a repetição como o que decidiria", /REPETIÇÃO|repetição/.test(comFora));
+
+  S.historicoAprendizado = guarda;
+}
+
+/* ==================================================================
+   38. A evidência acumulada do laboratório fica visível
+
+   A tela de Pesquisa mostrava só a memória da modalidade escolhida. Quem
+   tivesse rodado oitenta gerações na Mega-Sena abria a Lotofácil e via
+   "nenhuma hipótese testada ainda" — o trabalho acumulado ficava invisível,
+   uma modalidade de cada vez.
+
+   E com ele ficava invisível a afirmação central deste app: o motor procura
+   com método, procura muito, e NÃO ACHA. Um painel que só soubesse contar
+   vitórias esconderia justamente o achado.
+   ================================================================== */
+secao("38. Panorama do laboratório");
+
+{
+  const S = motor.S;
+  const guarda = S.pesquisaAdaptativa;
+
+  S.pesquisaAdaptativa = {};
+  checar("sem nenhuma análise, o painel não aparece",
+    motor.panoramaDoLaboratorio() === "");
+
+  S.pesquisaAdaptativa = {
+    "lotofacil": {geracao: 12, hipotesesTestadas: 430,
+      conclusao: {sobreviveu: false, aucValidacao: 0.503, limiar: 0.0001, p: 0.42}},
+    "mega-sena": {geracao: 5, hipotesesTestadas: 180},
+    "quina": {geracao: 0, hipotesesTestadas: 0},
+  };
+  const html = motor.panoramaDoLaboratorio();
+  /* Espaço em branco normalizado antes de procurar frase. O HTML colapsa
+     quebra de linha e indentação, então o que a pessoa lê é a frase inteira —
+     mas no fonte ela vem partida em duas linhas. Procurar no texto cru faria o
+     teste depender da largura da coluna do editor, e não do que a tela diz. */
+  const emUmaLinha = (s) => s.replace(/\s+/g, " ");
+
+  checar("soma as hipóteses de todas as modalidades", /610/.test(html),
+    "430 + 180 = 610");
+  checar("conta só as modalidades que rodaram", />2</.test(html),
+    "quina tem geração 0 e não entra");
+  checar("distingue julgada de não julgada", /sem julgamento/.test(html));
+  checar("mostra o veredito de quem foi julgada", /nada/.test(html));
+  checar("e não imprime NaN nem undefined", !/NaN|undefined/.test(html),
+    (html.match(/NaN|undefined/g)||[]).join(","));
+
+  /* O texto tem de dizer que nada passou — é o achado, não a ausência dele. */
+  checar("com nada sobrevivendo, afirma isso de frente",
+    /Nada passou do limiar/.test(emUmaLinha(html)));
+
+  /* E quando algo sobrevive, não pode virar anúncio: sobreviver uma vez pede
+     repetição com concursos que não participaram da busca. */
+  S.pesquisaAdaptativa["lotofacil"].conclusao.sobreviveu = true;
+  const comSobrevivente = motor.panoramaDoLaboratorio();
+  checar("com sobrevivente, pede repetição antes de afirmar",
+    /repetição|verificação/.test(emUmaLinha(comSobrevivente)));
+  checar("e não promete nada a quem joga",
+    !/mais prováveis|aumenta|vantagem|melhor jogo/i.test(comSobrevivente));
+
+  /* O painel é evidência, não gerador: nenhuma dezena pode aparecer nele. */
+  checar("o painel não exibe dezena nenhuma",
+    !/class="dz\b/.test(comSobrevivente) && !/cartela\(/.test(comSobrevivente));
+
+  S.pesquisaAdaptativa = guarda;
+}
+
+/* ==================================================================
+   37. O Placar mostra o caminho, e não só o destino
+
+   O Placar mostrava apenas o agregado: uma média, uma faixa, um melhor
+   resultado. Com dezenas de concursos conferidos isso joga fora a informação
+   mais útil que existe ali — o caminho. Uma média dentro da faixa pode ser um
+   resultado que oscilou e assentou, ou um que está saindo agora; o número
+   final é o mesmo nos dois casos.
+
+   A faixa do gráfico ESTREITA conforme as conferências somam. É a forma
+   visual do que a estatística diz, e é o que ensina por que "tive sorte nas
+   três primeiras" não é resultado nenhum.
+   ================================================================== */
+secao("37. O caminho do Placar");
+
+{
+  const conf = (n, acertos) => Array.from({length:n}, (_, i) => ({
+    concurso: 1000 + i, acertos: typeof acertos === "function" ? acertos(i) : acertos,
+    tamanho: 15, metodo: "uniforme",
+  }));
+
+  /* Poucas conferências: não desenha, e diz por quê. Desenhar uma faixa larga
+     demais sugeriria precisão que não existe. */
+  const curto = motor.convergenciaDoPlacar(conf(5, 9), "lotofacil");
+  checar("com menos de oito conferências não desenha", !/svg/.test(curto));
+  checar("e explica que a faixa seria larga demais", /larga demais/.test(curto));
+
+  const html = motor.convergenciaDoPlacar(conf(60, 9), "lotofacil");
+  checar("com volume, desenha o gráfico", /<svg/.test(html));
+  checar("e não imprime NaN em coordenada nenhuma", !/NaN|undefined/.test(html),
+    (html.match(/NaN|undefined/g)||[]).join(","));
+  checar("o rótulo acessível conta o que o gráfico mostra",
+    /aria-label="[^"]*acumulada[^"]*acaso/.test(html));
+
+  /* As três camadas: faixa, linha do acaso, linha do usuário. Sem a do acaso
+     o gráfico vira desempenho absoluto, que é a leitura errada. */
+  const caminhos = (html.match(/<path/g) || []).length;
+  checar("desenha faixa, linha do acaso e linha do resultado", caminhos === 3,
+    `${caminhos} caminhos`);
+
+  /* A faixa precisa ESTREITAR: é a única coisa que o gráfico afirma além dos
+     números, e se ela não estreitar o desenho está mentindo. */
+  const ep = (n) => {
+    const dp = motor.desvioAcertos("lotofacil", 15);
+    return dp / Math.sqrt(n);
+  };
+  checar("a faixa estreita conforme as conferências somam", ep(60) < ep(8),
+    `${ep(8).toFixed(3)} com 8 -> ${ep(60).toFixed(3)} com 60`);
+
+  /* Um resultado colado no acaso tem de ser declarado dentro da faixa; um
+     absurdo, fora. Se os dois derem a mesma leitura, o veredito não mede. */
+  const noAcaso = motor.convergenciaDoPlacar(conf(60, 9), "lotofacil");
+  const absurdo = motor.convergenciaDoPlacar(conf(60, 15), "lotofacil");
+  checar("resultado colado no acaso é declarado dentro",
+    /dentro da faixa/.test(noAcaso));
+  checar("e um resultado impossível é declarado fora",
+    /fora da faixa/.test(absurdo));
+
+  /* Ordem: o gráfico é por concurso, então conferências fora de ordem não
+     podem produzir um caminho diferente. */
+  const baralhado = conf(60, i => 8 + (i % 3)).slice().reverse();
+  const emOrdem = conf(60, i => 8 + (i % 3));
+  checar("a ordem de entrada não muda o caminho",
+    motor.convergenciaDoPlacar(baralhado, "lotofacil") ===
+    motor.convergenciaDoPlacar(emOrdem, "lotofacil"));
+}
+
+/* ==================================================================
+   36. A aba Dezenas diz o que a tabela escondia
+
+   A tela de Estatísticas promete no subtítulo "sempre ao lado do que o acaso
+   produziria". Todas as abas cumpriam isso abrindo com a barra de comparação
+   — menos a aba Dezenas, que é a PADRÃO: ela ia direto para vinte e cinco
+   linhas de contagem, com o desvio escondido na última coluna.
+
+   Uma tabela de frequência sem a faixa do acaso convida a ler "o 20 está
+   quente". E a grade vinha ordenada por "mais sorteadas", o que desenha um
+   ranking onde não há nenhum.
+
+   O veredito agora vem antes da tabela, e traz o argumento que falta em toda
+   leitura ingênua de frequência: com vinte e cinco dezenas conferidas ao mesmo
+   tempo, encontrar uma fora da faixa de dois desvios é o ESPERADO, não um
+   achado.
+   ================================================================== */
+secao("36. Veredito da aba Dezenas");
+
+{
+  const S = motor.S;
+  const g = {r:S.resultados, m:S.modalidade};
+  S.modalidade = "lotofacil";
+  S.resultados = historicoSemeado("lotofacil", 25, 15, 400, 7);
+
+  const e = motor.porDezena("lotofacil");
+  const c = motor.MODALIDADES["lotofacil"];
+
+  checar("o esperado por dezena é n × k/N",
+    Math.abs(e.esperado - e.n * c.k / c.N) < 1e-9,
+    `${e.esperado.toFixed(1)} para ${e.n} concursos`);
+  checar("o desvio é o binomial", e.dp > 0 && Number.isFinite(e.dp), e.dp.toFixed(2));
+  checar("cada dezena do volante tem uma linha", e.linhas.length === c.N,
+    `${e.linhas.length} de ${c.N}`);
+  checar("nenhum número sai NaN",
+    e.linhas.every(l => Number.isFinite(l.z) && Number.isFinite(l.vezes)) &&
+    Number.isFinite(e.maiorZ) && Number.isFinite(e.esperado));
+  checar("'fora' conta exatamente quem passa de dois desvios",
+    e.fora === e.linhas.filter(l => Math.abs(l.z) > 2).length,
+    `${e.fora} fora, maior desvio ${e.maiorZ.toFixed(2)}`);
+
+  const html = motor.vereditoDasDezenas(e, "lotofacil");
+  checar("o veredito traz o esperado e a faixa",
+    html.includes("esperado por dezena") && html.includes("faixa do acaso"));
+  checar("e não imprime NaN nem undefined",
+    !/NaN|undefined/.test(html), (html.match(/NaN|undefined/g)||[]).join(","));
+
+  /* O argumento das comparações múltiplas só faz sentido quando há alguém
+     fora — e é justamente aí que a leitura ingênua erra. */
+  const comFora = Object.assign({}, e, {fora: 2});
+  checar("com dezena fora, o veredito explica que isso é esperado",
+    /esperado|5%/.test(motor.vereditoDasDezenas(comFora, "lotofacil")));
+  const semFora = Object.assign({}, e, {fora: 0});
+  checar("sem nenhuma fora, o veredito afirma isso de frente",
+    /Nenhuma dezena está fora/.test(motor.vereditoDasDezenas(semFora, "lotofacil")));
+
+  /* Um sorteio honesto semeado não pode produzir muitas dezenas fora: se
+     produzir, o defeito está na conta e não nos dados. */
+  checar("num sorteio honesto, quase ninguém sai da faixa", e.fora <= 3,
+    `${e.fora} de ${c.N}`);
+
+  S.resultados = g.r; S.modalidade = g.m;
 }
 
 /* ==================================================================

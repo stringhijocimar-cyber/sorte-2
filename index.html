@@ -897,6 +897,15 @@ td{padding:6px 7px;border-bottom:1px solid var(--trama)}
 .cel .b i{display:block;width:9px;border-radius:2px 2px 0 0;background:var(--acaso);
   opacity:.75;min-height:1px}
 .cel.fora .b i{background:var(--alerta);opacity:1}
+/* A barra de desvio cresce do MEIO da célula: para cima quando a dezena saiu
+   mais que o esperado, para baixo quando saiu menos. O fio no meio é o
+   esperado, e é ele que dá sentido ao tamanho da barra. */
+.cel .b.desvio{height:30px;align-items:center;position:relative}
+.cel .b.desvio::before{content:"";position:absolute;left:6px;right:6px;top:50%;
+  height:1px;background:var(--linha)}
+.cel .b.desvio i{align-self:flex-end;margin-bottom:15px;border-radius:2px 2px 0 0}
+.cel.abaixo .b.desvio i{align-self:flex-start;margin-bottom:0;margin-top:15px;
+  border-radius:0 0 2px 2px}
 .cel .c{font-family:var(--mono);font-size:.58rem;color:var(--secundaria);margin-top:2px}
 .cel.fora{border-color:var(--alerta)}
 .escala{display:flex;justify-content:space-between;font-family:var(--mono);font-size:.6rem;
@@ -2305,9 +2314,13 @@ function blocoDaModalidade(codigo, conf){
       <span class="selo ${dentro?"ok":"seu"}">${dentro?"dentro do acaso":"fora da faixa"}</span>
     </div>
     <div class="kpis">
+      ${/* Duas casas, e a incerteza ao lado. Três casas numa média de acertos
+            é precisão que o dado não tem: com estas conferências o erro padrão
+            fica na primeira casa decimal, então o terceiro dígito é ruído
+            impresso com ar de medida. */""}
       <div class="kpi"><div class="rot">acertos médios</div>
-        <div class="val">${nf(media,3)}</div>
-        <div class="sub">acaso: ${nf(esperado,3)}</div></div>
+        <div class="val">${nf(media,2)}</div>
+        <div class="sub">acaso: ${nf(esperado,2)} · ±${nf(2*Math.max(dp,1e-9),2)}</div></div>
       <div class="kpi"><div class="rot">melhor resultado</div>
         <div class="val">${melhor.acertos}</div>
         <div class="sub">concurso ${esc(melhor.concurso)}</div></div>
@@ -2319,6 +2332,7 @@ ${/*<aposta>*/""}      <div class="kpi"><div class="rot">em faixa de prêmio</di
         <div class="sub">de ${inf(total)}</div></div>${/*</aposta>*/""}
     </div>
     ${faixaAcaso(media, esperado, Math.max(dp,0.02))}
+    ${convergenciaDoPlacar(conf, codigo)}
     <div class="nota ${dentro?"":"atencao"}">
       ${dentro
         ? `Dentro da faixa do acaso nesta modalidade. É o resultado esperado: num sorteio honesto nenhum método muda essa média.`
@@ -2495,10 +2509,100 @@ T.placar = () => {
   /* Resumo e atalhos no topo: é a primeira coisa que a pessoa quer saber ao
      abrir a análise, e antes ela precisava rolar até achar. */
 /*</aposta>*/
-  return resumoGeral() + atalhos() + cabeca + /*<aposta>*/totalGasto +/*</aposta>*/
+  /* O placar vem ANTES dos atalhos. Numa tela chamada Placar, abrir com três
+     botões de navegação e o resumo genérico empurra o resultado para baixo da
+     dobra: eram onze linhas antes do primeiro número do placar. Os atalhos
+     continuam existindo, no fim, onde servem de saída e não de entrada. */
+  return resumoGeral() + cabeca + /*<aposta>*/totalGasto +/*</aposta>*/
     codigos.sort((a,b)=> porModalidade[b].length - porModalidade[a].length)
-      .map(k => blocoDaModalidade(k, porModalidade[k])).join("");
+      .map(k => blocoDaModalidade(k, porModalidade[k])).join("") +
+    atalhos();
 };
+
+/* Como o desempenho se comportou ao longo dos concursos.
+
+   O Placar mostrava só o agregado: uma média, uma faixa, um melhor resultado.
+   Com sessenta concursos de histórico isso joga fora a informação mais útil
+   que existe ali — o CAMINHO. Uma média dentro da faixa pode ser um resultado
+   que oscilou e assentou, ou um que está saindo agora; o número final é o
+   mesmo nos dois casos.
+
+   O gráfico desenha a média ACUMULADA contra a linha do acaso, e a faixa de
+   dois erros padrão em volta dela. A faixa ESTREITA conforme os concursos
+   somam — é a forma visual do que a estatística diz: no começo qualquer coisa
+   cabe, e só com volume a diferença começa a significar algo.
+
+   Quem olha aprende sozinho por que "eu tive sorte nos três primeiros" não é
+   um resultado: nos três primeiros a faixa é larga demais para acusar nada. */
+function convergenciaDoPlacar(conf, codigo){
+  const ordenadas = conf.slice().sort((a,b) => Number(a.concurso) - Number(b.concurso));
+  if(ordenadas.length < 8) return `<div class="nota">O caminho aparece a partir de
+    oito conferências — com menos, a faixa do acaso é larga demais para mostrar
+    qualquer coisa, e desenhá-la sugeriria precisão que não existe.</div>`;
+
+  let somaAcertos = 0, somaEsperado = 0, somaVar = 0;
+  const pontos = ordenadas.map((cf, i) => {
+    somaAcertos += cf.acertos;
+    somaEsperado += esperadoAcertos(codigo, cf.tamanho);
+    somaVar += desvioAcertos(codigo, cf.tamanho) ** 2;
+    const n = i + 1;
+    return {n, media: somaAcertos/n, esperado: somaEsperado/n, ep: Math.sqrt(somaVar)/n};
+  });
+
+  /* A escala cobre a faixa mais larga — a do começo — para a linha nunca sair
+     do quadro. Um gráfico que corta o próprio dado mente por omissão. */
+  const baixo = Math.min(...pontos.map(p => Math.min(p.media, p.esperado - 2*p.ep)));
+  const alto  = Math.max(...pontos.map(p => Math.max(p.media, p.esperado + 2*p.ep)));
+  const folga = Math.max((alto - baixo) * 0.08, 0.05);
+  const lo = baixo - folga, hi = alto + folga;
+
+  const L = 300, A = 140, mx = 30, my = 12;
+  const px = i => mx + (L - mx - 8) * (pontos.length === 1 ? 0 : i / (pontos.length - 1));
+  const py = v => my + (A - my*2) * (1 - (v - lo) / (hi - lo));
+
+  const cima = pontos.map((p,i)=>`${i?"L":"M"}${px(i).toFixed(1)},${py(p.esperado + 2*p.ep).toFixed(1)}`).join("");
+  const baixoP = pontos.slice().reverse()
+    .map((p,i)=>`L${px(pontos.length-1-i).toFixed(1)},${py(p.esperado - 2*p.ep).toFixed(1)}`).join("");
+  const faixa = cima + baixoP + "Z";
+  const linhaAcaso = pontos.map((p,i)=>`${i?"L":"M"}${px(i).toFixed(1)},${py(p.esperado).toFixed(1)}`).join("");
+  const linhaVoce = pontos.map((p,i)=>`${i?"L":"M"}${px(i).toFixed(1)},${py(p.media).toFixed(1)}`).join("");
+
+  const fim = pontos[pontos.length-1];
+  const dentro = Math.abs(fim.media - fim.esperado) <= 2 * fim.ep;
+  /* Quantas vezes a média acumulada saiu da faixa depois que ela já era
+     estreita o bastante para significar algo. */
+  const saidas = pontos.filter((p,i) => i >= 7 && Math.abs(p.media - p.esperado) > 2 * p.ep).length;
+
+  return `<div class="carta" style="margin-top:10px">
+    <h2>o caminho até aqui</h2>
+    <p style="font-size:.8rem;color:var(--secundaria);margin:4px 0 8px">
+      Média acumulada de acertos, concurso a concurso, contra o que o acaso
+      produziria. A faixa estreita conforme as conferências somam.</p>
+    <svg viewBox="0 0 ${L} ${A}" width="100%" height="${A}" role="img"
+      aria-label="Média acumulada de acertos ao longo de ${pontos.length} conferências, comparada com o acaso">
+      <path d="${faixa}" fill="var(--acaso)" fill-opacity=".13"/>
+      <path d="${linhaAcaso}" fill="none" stroke="var(--acaso)" stroke-width="1.4"
+        stroke-dasharray="4 3" opacity=".85"/>
+      <path d="${linhaVoce}" fill="none" stroke="var(--seu)" stroke-width="2"
+        stroke-linejoin="round" stroke-linecap="round"/>
+      <text x="2" y="${(py(hi)+9).toFixed(1)}" font-size="8" fill="var(--secundaria)"
+        font-family="var(--mono)">${nf(hi,1)}</text>
+      <text x="2" y="${py(lo).toFixed(1)}" font-size="8" fill="var(--secundaria)"
+        font-family="var(--mono)">${nf(lo,1)}</text>
+    </svg>
+    <div class="escala"><span>1ª conferência</span><span>${inf(pontos.length)}ª</span></div>
+    <div class="nota ${dentro ? "" : "atencao"}" style="margin-bottom:0">
+      ${dentro
+        ? `A linha do seu resultado passou o percurso inteiro dentro da faixa do
+           acaso${saidas ? `, com ${saidas} ponto${saidas===1?"":"s"} fora ao longo do caminho` : ""}.
+           É o que um sorteio honesto produz: oscila no começo, quando a faixa é
+           larga, e se aproxima da linha conforme as conferências somam.`
+        : `A média acumulada terminou fora da faixa do acaso. Com poucas
+           conferências isso acontece por variação comum — a faixa só fica
+           estreita com volume, e é ela que decide o que significa algo.`}
+    </div>
+  </div>`;
+}
 
 T.bancada = () => {
   const c = MODALIDADES[S.modalidade];
@@ -2527,7 +2631,18 @@ T.bancada = () => {
 };
 
 /* Monta a tabela comparativa de um recorte já calculado. */
-function tabelaBancada(r, titulo, umConcursoSo){
+/* `opcoes.semExplicacoes` corta os dois parágrafos longos do fim.
+
+   Motivo medido: a bancada emitia uma tabela por concurso testado e repetia as
+   MESMAS duas explicações depois de cada uma. Com dez concursos, a tela saía
+   com 14.357 caracteres, onze tabelas e as mesmas notas trinta vezes. Quem
+   abria precisava rolar tudo para responder a única pergunta que a bancada
+   existe para responder — algum método se separou do acaso? —, e a resposta
+   estava no recorte agregado, lá em cima, soterrada pelo que veio depois.
+
+   As explicações continuam, uma vez, no agregado. Repetir texto idêntico não
+   reforça; treina a pular. */
+function tabelaBancada(r, titulo, umConcursoSo, opcoes){
   const menorPop = Math.min(...r.linhas.map(l=>l.popularidade));
   const menorSobre = Math.min(...r.linhas.map(l=>l.sobreposicao));
   const v = vereditoAcertos(r, umConcursoSo);
@@ -2547,20 +2662,20 @@ function tabelaBancada(r, titulo, umConcursoSo){
     <strong>Acertos:</strong> ${esc(v.texto)}
     Média do acaso: ${nf(r.esperado,3)} por jogo; um desvio vale ${nf(r.erroPadrao,3)}.
   </div>
-  <div class="nota">
+  ${(opcoes && opcoes.semExplicacoes) ? "" : `<div class="nota">
     <strong>O que dá para escolher:</strong> as colunas em destaque são as que
     dependem do método, e não da sorte — <em>sobreposição</em> (menor = seus jogos
     se repetem menos entre si) e <em>padrão humano</em>, que mede o quanto o jogo
     parece marcado por gente (datas, sequências, desenho no volante). A coluna de
     acertos está aí para você verificar que ela <em>não</em> depende do método.
-  </div>
-  <div class="nota atencao">
+  </div>`}
+  ${(opcoes && opcoes.semExplicacoes) ? "" : `<div class="nota atencao">
     <strong>Sobre a coluna "padrão humano".</strong> Ela descreve a forma do jogo, e
     é só isso. Já houve aqui um método que prometia transformar essa medida em prêmio
     maior; foi retirado, porque os pesos por trás dela nunca puderam ser conferidos
     com ganhadores reais — a calibração precisa de ${MINIMO_CALIBRACAO} concursos com
     rateio publicado por modalidade, e o histórico deste app não chega lá.
-  </div>`;
+  </div>`}`;
 }
 
 T.entender = () => `<div class="prosa">
@@ -3318,9 +3433,65 @@ function porDezena(modalidade){
       fora: Math.abs(vezes - esperado) > 2 * dp
     });
   }
-  return {linhas, n, esperado, dp,
+  const maiorZ = linhas.reduce((m, l) => Math.max(m, Math.abs(l.z)), 0);
+  return {linhas, n, esperado, dp, maiorZ,
+          fora: linhas.filter(l => l.fora).length,
           /* Intervalo de ausência esperado entre aparições: N/k concursos. */
           ausenciaMedia: c.N / c.k};
+}
+
+/* A conclusão vem ANTES da tabela.
+
+   A aba Dezenas era a única da tela que não trazia comparação com o acaso em
+   destaque: as outras abrem com `barraContra`, e esta ia direto para 25 linhas
+   de contagem com o desvio escondido na última coluna. O subtítulo da tela
+   promete "sempre ao lado do que o acaso produziria", e aqui a promessa ficava
+   por conta de quem soubesse ler coluna de z.
+
+   Uma tabela de frequência sem a faixa do acaso convida a ler "o 20 está
+   quente". Com 400 concursos de Lotofácil o esperado é 240 e o desvio é 9,8:
+   a diferença entre a mais sorteada (257) e a menos (252) é meio desvio —
+   ruído puro. É esse número que precisa estar no alto da tela. */
+function vereditoDasDezenas(e, modalidade){
+  const c = MODALIDADES[modalidade];
+  const faixaBaixa = e.esperado - 2 * e.dp;
+  const faixaAlta = e.esperado + 2 * e.dp;
+  const maior = e.linhas.reduce((a, l) => l.vezes > a.vezes ? l : a, e.linhas[0]);
+  const menor = e.linhas.reduce((a, l) => l.vezes < a.vezes ? l : a, e.linhas[0]);
+  const amplitude = maior.vezes - menor.vezes;
+
+  return `<div class="carta ${e.fora ? "" : "ok"}" style="margin-bottom:12px">
+    <div class="kpis">
+      <div class="kpi"><div class="rot">esperado por dezena</div>
+        <div class="val">${inf(Math.round(e.esperado))}</div>
+        <div class="sub">em ${inf(e.n)} concursos</div></div>
+      <div class="kpi"><div class="rot">faixa do acaso</div>
+        <div class="val" style="font-size:1.05rem">${inf(Math.round(faixaBaixa))}–${inf(Math.round(faixaAlta))}</div>
+        <div class="sub">dois desvios (${nf(e.dp,1)})</div></div>
+      <div class="kpi"><div class="rot">fora da faixa</div>
+        <div class="val" style="color:${e.fora ? "var(--alerta)" : "var(--acaso)"}">${e.fora}</div>
+        <div class="sub">de ${e.linhas.length} dezenas</div></div>
+      <div class="kpi"><div class="rot">distância entre extremos</div>
+        <div class="val" style="font-size:1.05rem">${inf(amplitude)}</div>
+        <div class="sub">${nf(amplitude / e.dp, 2)} desvios</div></div>
+    </div>
+    <div class="nota ${e.fora ? "atencao" : ""}">
+      ${e.fora
+        ? `${e.fora} dezena${e.fora===1?"":"s"} está${e.fora===1?"":"ão"} fora da faixa
+           do acaso. Com ${inf(e.linhas.length)} dezenas conferidas ao mesmo tempo,
+           <strong>encontrar uma ou outra fora é o esperado</strong> — a faixa de dois
+           desvios deixa cerca de 5% de fora por acaso, o que dá
+           ${nf(0.05 * e.linhas.length, 1)} dezena${0.05*e.linhas.length<2?"":"s"} nesta
+           modalidade. Fora da faixa não quer dizer viciado; quer dizer que vale olhar
+           de novo daqui a algumas centenas de concursos.`
+        : `<strong>Nenhuma dezena está fora da faixa do acaso.</strong> A mais sorteada
+           (${pad(maior.dezena)}, ${inf(maior.vezes)}) e a menos sorteada
+           (${pad(menor.dezena)}, ${inf(menor.vezes)}) estão separadas por
+           ${nf(amplitude / e.dp, 2)} desvios — é a variação que um sorteio honesto
+           produz sozinho. A ordem desta lista muda a cada concurso e não guarda
+           memória do anterior.`}
+    </div>
+  </div>`;
 }
 
 /* Distribuição de uma contagem por concurso (pares, primos, Fibonacci...)
@@ -4334,6 +4505,7 @@ function analisarPendentes(aoTerminar){
         r.quando = new Date().toISOString();
         r.automatica = true;
         S.aprendizado[k] = r;
+        registrarAnalise(k, r);
         prontas.push(r);
       }
     }catch(e){
@@ -5108,6 +5280,122 @@ function aprender(modalidade, opcoes){
    preserva a garantia.
 
    Com uma modalidade só, m = 1 e nada muda: o limiar continua 0,05.          */
+/* Guarda o resultado de CADA análise, e não só o último.
+
+   `S.aprendizado[modalidade]` é sobrescrito a cada retreino — e o app retreina
+   sozinho a cada concurso novo. Ou seja: ele vinha produzindo uma medida de
+   AUC fora da amostra por análise, semana após semana, e jogando todas fora.
+
+   Guardar essa série é a evidência mais forte que este app tem a oferecer.
+   Uma medida isolada de AUC 0,48 diz "esta rodada não achou nada"; quarenta
+   medidas espalhadas em torno de 0,50 mostram que não há o que achar — e essa
+   é uma afirmação que só o tempo consegue sustentar.
+
+   Vive num estado PRÓPRIO, e não dentro de S.aprendizado, porque
+   aplicarCorrecao percorre aquele objeto esperando um resultado por chave.
+   Enfiar um vetor de histórico ali dentro seria mexer no motor para acomodar
+   apresentação.
+
+   Teto para o armazenamento não crescer sem fim: com oito modalidades
+   retreinando a cada concurso, quinhentos registros cobrem meses. */
+const TETO_HISTORICO_APRENDIZADO = 500;
+/* A série de todas as análises já feitas, em todas as modalidades.
+
+   Uma medida isolada de AUC 0,48 diz "esta rodada não achou nada". Quarenta
+   medidas espalhadas em torno de 0,50 dizem outra coisa, mais forte: não há o
+   que achar. É a diferença entre um resultado e uma demonstração — e ela só
+   aparece com tempo, que é justamente o que este app tem de sobra, porque
+   retreina sozinho a cada concurso novo.
+
+   O desenho é uma tira: cada análise vira um traço na posição do seu AUC, com
+   0,50 marcado no meio. Espalhamento simétrico em torno da marca é o retrato
+   de um modelo que não aprende — e é o retrato que se espera. */
+function tiraDeAprendizado(){
+  const serie = (S.historicoAprendizado || []).filter(x => Number.isFinite(x.auc));
+  if(serie.length < 3) return "";
+
+  const aucs = serie.map(x => x.auc);
+  const media = aucs.reduce((a, b) => a + b, 0) / aucs.length;
+  const menor = Math.min(...aucs), maior = Math.max(...aucs);
+  const acima = aucs.filter(a => a > 0.5).length;
+  const mods = new Set(serie.map(x => x.modalidade)).size;
+  /* Quantas ficaram fora da faixa do acaso segundo o p guardado na hora. */
+  const foraDaFaixa = serie.filter(x => Number.isFinite(x.p) && x.p <= 0.05).length;
+
+  /* A escala cobre o observado com folga, nunca menos que 0,45–0,55: uma série
+     muito concentrada não pode virar serra por causa da terceira casa. */
+  const meio = 0.5;
+  const raio = Math.max(0.05, Math.max(maior - meio, meio - menor) * 1.25);
+  const L = 300, A = 64;
+  const px = v => 8 + (L - 16) * ((v - (meio - raio)) / (2 * raio));
+
+  const tracos = serie.map(x => {
+    const cor = Number.isFinite(x.p) && x.p <= 0.05 ? "var(--alerta)" : "var(--acaso)";
+    return `<line x1="${px(x.auc).toFixed(1)}" y1="14" x2="${px(x.auc).toFixed(1)}" y2="40"
+      stroke="${cor}" stroke-width="1.6" opacity=".55"/>`;
+  }).join("");
+
+  return `<div class="carta" style="margin-top:12px">
+    <h2>todas as análises já feitas</h2>
+    <p style="font-size:.82rem;color:var(--secundaria);margin:4px 0 8px">
+      Cada traço é uma análise, na posição do seu AUC fora da amostra. A marca do
+      meio é 0,50 — o valor de um modelo que não distingue nada.</p>
+    <svg viewBox="0 0 ${L} ${A}" width="100%" height="${A}" role="img"
+      aria-label="${inf(serie.length)} análises, AUC entre ${nf(menor,3)} e ${nf(maior,3)}, com 0,50 no meio">
+      <line x1="8" y1="27" x2="${L-8}" y2="27" stroke="var(--linha)" stroke-width="1"/>
+      ${tracos}
+      <line x1="${px(0.5).toFixed(1)}" y1="8" x2="${px(0.5).toFixed(1)}" y2="46"
+        stroke="var(--tinta)" stroke-width="1.6"/>
+      <text x="${px(0.5).toFixed(1)}" y="59" font-size="8" text-anchor="middle"
+        fill="var(--secundaria)" font-family="var(--mono)">0,50</text>
+      <text x="8" y="59" font-size="8" fill="var(--secundaria)" font-family="var(--mono)"
+        >${nf(meio - raio, 2)}</text>
+      <text x="${L-8}" y="59" font-size="8" text-anchor="end" fill="var(--secundaria)"
+        font-family="var(--mono)">${nf(meio + raio, 2)}</text>
+    </svg>
+    <div class="kpis" style="margin-top:10px">
+      <div class="kpi"><div class="rot">análises</div>
+        <div class="val">${inf(serie.length)}</div>
+        <div class="sub">em ${mods} modalidade${mods===1?"":"s"}</div></div>
+      <div class="kpi"><div class="rot">AUC médio</div>
+        <div class="val">${nf(media,4)}</div>
+        <div class="sub">de ${nf(menor,3)} a ${nf(maior,3)}</div></div>
+      <div class="kpi"><div class="rot">acima de 0,50</div>
+        <div class="val">${acima}</div>
+        <div class="sub">de ${serie.length} · esperado ~${Math.round(serie.length/2)}</div></div>
+      <div class="kpi"><div class="rot">fora da faixa</div>
+        <div class="val" style="color:${foraDaFaixa ? "var(--alerta)" : "var(--acaso)"}">${foraDaFaixa}</div>
+        <div class="sub">p ≤ 0,05</div></div>
+    </div>
+    <div class="nota" style="margin-bottom:0">
+      ${foraDaFaixa === 0
+        ? `Nenhuma das ${inf(serie.length)} análises ficou fora da faixa do acaso, e
+           ${acima} delas caíram acima de 0,50 — perto da metade, que é o esperado
+           quando o modelo não distingue nada. Uma medida isolada diria pouco;
+           a série é o argumento.`
+        : `${foraDaFaixa} de ${inf(serie.length)} análises ficaram com p ≤ 0,05. Testando
+           muitas vezes, algumas caem aí por acaso — é o que 5% quer dizer, e com
+           ${inf(serie.length)} análises o esperado é ${nf(serie.length * 0.05, 1)}.
+           O que distinguiria achado de ruído é a REPETIÇÃO na mesma modalidade,
+           com concursos que não participaram da medida anterior.`}
+    </div>
+  </div>`;
+}
+
+function registrarAnalise(modalidade, r){
+  if(!r || r.erro || typeof r.auc !== "number") return;
+  S.historicoAprendizado = S.historicoAprendizado || [];
+  S.historicoAprendizado.push({
+    modalidade, auc: r.auc, p: r.p,
+    concursos: r.nConcursos || r.concursos || null,
+    quando: r.quando || new Date().toISOString(),
+    automatica: !!r.automatica,
+  });
+  if(S.historicoAprendizado.length > TETO_HISTORICO_APRENDIZADO)
+    S.historicoAprendizado = S.historicoAprendizado.slice(-TETO_HISTORICO_APRENDIZADO);
+  Guardar.gravar("historicoAprendizado", S.historicoAprendizado);
+}
+
 function aplicarCorrecao(mapa, alfa=0.05){
   const chaves = Object.keys(mapa).filter(k => mapa[k] && typeof mapa[k].p === "number");
   const m = chaves.length;
@@ -5784,13 +6072,30 @@ function tabelaDezenas(e, modalidade){
          ["dezena","Ordem numérica"]].map(([k,n])=>
         `<button role="tab" data-ordem="${k}" aria-selected="${ordem===k}">${n}</button>`).join("")}
     </div>
+    ${vereditoDasDezenas(e, modalidade)}
     <div class="grade-freq" style="margin-bottom:12px">
       ${linhas.map(l=>{
-        const alt = e.linhas.reduce((m,x)=> Math.max(m, x.vezes), 1);
-        const h = Math.max(1, Math.round(26 * l.vezes / alt));
-        return `<div class="cel ${l.fora?"fora":""}" title="${l.dezena}: ${l.vezes} vezes">
+        /* A barra desenha o DESVIO em relação ao esperado, e não a frequência
+           bruta.
+
+           Antes a altura era `26 * vezes / maior`. Com 400 concursos de
+           Lotofácil as contagens ficam entre 252 e 257 — todas a menos de dois
+           desvios do esperado — e as barras saíam praticamente do mesmo
+           tamanho, ocupando espaço sem informar. Pior: a grade vinha ordenada
+           por "mais sorteadas", então o olho lia um ranking onde não há
+           nenhum.
+
+           Agora o meio da célula é o esperado, a barra cresce para cima quando
+           a dezena saiu mais que o esperado e para baixo quando saiu menos, e
+           a escala é o desvio padrão. Duas dezenas separadas por meio desvio
+           passam a parecer o que são: iguais. */
+        const alturaMax = 13;
+        const escala = Math.min(3, Math.max(1.5, e.maiorZ));
+        const h = Math.max(1, Math.round(alturaMax * Math.min(Math.abs(l.z), escala) / escala));
+        return `<div class="cel ${l.fora?"fora":""} ${l.z<0?"abaixo":""}"
+            title="${l.dezena}: ${l.vezes} vezes, ${l.z>=0?"+":""}${nf(l.z,2)} desvios do esperado">
           <div class="n">${pad(l.dezena)}</div>
-          <div class="b"><i style="height:${h}px"></i></div>
+          <div class="b desvio"><i style="height:${h}px"></i></div>
           <div class="c">${l.vezes}</div></div>`;
       }).join("")}
     </div>
@@ -6257,6 +6562,7 @@ T.aprendizado = () => {
         <span>${esc(r.assinatura||"")} concursos:último</span></div>`}`}
     </div>
   </div>
+  ${tiraDeAprendizado()}
   <div class="carta">
     <h2>histórico disponível por modalidade</h2>
     <p style="font-size:.85rem;color:var(--secundaria);margin:6px 0 10px">
@@ -6397,6 +6703,99 @@ function tracoAuc(rotulo, valor, escala){
     <b>${nf(valor,4)}</b></div>`;
 }
 
+/* O que o laboratório já mediu, somando TODAS as modalidades.
+
+   A tela mostrava só a memória da modalidade escolhida. Quem tivesse rodado
+   oitenta gerações na Mega-Sena abria a Lotofácil e via "nenhuma hipótese
+   testada ainda" — o trabalho acumulado ficava invisível, uma modalidade de
+   cada vez, e com ele a afirmação central deste app.
+
+   Porque é isto que o motor tem a dizer, e é uma afirmação forte: ele procura
+   com método, procura muito, e NÃO ACHA. Uma busca que testa milhares de
+   hipóteses sempre encontra alguma que parece boa em algum recorte; o que
+   distingue laboratório de dragagem de dados é medir isso contra o limiar
+   corrigido pelo número de hipóteses testadas e relatar o resultado seja ele
+   qual for.
+
+   Um painel que só sabe contar vitórias esconde justamente o achado. */
+function panoramaDoLaboratorio(){
+  const linhas = [];
+  for(const [codigo, mem] of Object.entries(S.pesquisaAdaptativa || {})){
+    if(!mem || !mem.geracao) continue;
+    linhas.push({
+      codigo, nome: (MODALIDADES[codigo] || {}).nome || codigo,
+      geracoes: mem.geracao,
+      hipoteses: mem.hipotesesTestadas || 0,
+      julgada: !!mem.conclusao,
+      sobreviveu: !!(mem.conclusao && mem.conclusao.sobreviveu),
+      auc: mem.conclusao ? mem.conclusao.aucValidacao : null,
+      limiar: mem.conclusao ? mem.conclusao.limiar : null,
+      p: mem.conclusao ? mem.conclusao.p : null,
+    });
+  }
+  if(!linhas.length) return "";
+
+  linhas.sort((a, b) => b.hipoteses - a.hipoteses);
+  const totalHip = linhas.reduce((s, l) => s + l.hipoteses, 0);
+  const totalGer = linhas.reduce((s, l) => s + l.geracoes, 0);
+  const julgadas = linhas.filter(l => l.julgada).length;
+  const sobreviventes = linhas.filter(l => l.sobreviveu).length;
+
+  return `<div class="carta ${sobreviventes ? "" : "ok"}" style="margin-top:12px">
+    <h2>o que o laboratório já mediu</h2>
+    <p style="font-size:.82rem;color:var(--secundaria);margin:4px 0 10px">
+      Somando todas as modalidades analisadas neste aparelho.</p>
+    <div class="kpis">
+      <div class="kpi"><div class="rot">hipóteses testadas</div>
+        <div class="val">${inf(totalHip)}</div>
+        <div class="sub">em ${inf(totalGer)} geraç${totalGer===1?"ão":"ões"}</div></div>
+      <div class="kpi"><div class="rot">modalidades</div>
+        <div class="val">${linhas.length}</div>
+        <div class="sub">${julgadas} com julgamento</div></div>
+      <div class="kpi"><div class="rot">sobreviveram ao limiar</div>
+        <div class="val" style="color:${sobreviventes ? "var(--alerta)" : "var(--acaso)"}">${sobreviventes}</div>
+        <div class="sub">de ${julgadas} julgada${julgadas===1?"":"s"}</div></div>
+    </div>
+    <div class="rolagem"><table>
+      <thead><tr><th>modalidade</th><th>gerações</th><th>hipóteses</th><th>veredito</th></tr></thead>
+      <tbody>${linhas.map(l => `<tr>
+        <td>${esc(l.nome)}</td>
+        <td>${inf(l.geracoes)}</td>
+        <td>${inf(l.hipoteses)}</td>
+        <td>${!l.julgada ? `<span style="color:var(--secundaria)">sem julgamento</span>`
+          : l.sobreviveu
+            ? `<span style="color:var(--alerta)">sobreviveu · AUC ${nf(l.auc,3)}</span>`
+            : `<span style="color:var(--acaso)">nada · AUC ${nf(l.auc,3)}</span>`}</td>
+      </tr>`).join("")}</tbody>
+    </table></div>
+    <div class="nota ${sobreviventes ? "atencao" : ""}" style="margin-bottom:0">
+      ${julgadas === 0
+        ? `Nenhuma modalidade foi julgada ainda. Evoluir gera hipóteses; julgar é o
+           que as mede contra o acaso, fora da amostra, com o limiar corrigido pelo
+           número de hipóteses já testadas.`
+        : sobreviventes === 0
+          ? `${/* Sem repetir a manchete do cartão de veredito, que já a traz
+                   como título: dizer a mesma frase duas vezes na mesma tela é
+                   ruído, e há um teste que cobra isso. E sem a palavra que
+                   promete ganho — o que se mede aqui é separação estatística,
+                   não benefício para quem joga. */""}<strong>Nada passou do
+             limiar</strong> em ${julgadas} modalidade${julgadas===1?"":"s"}
+             julgada${julgadas===1?"":"s"}, depois de ${inf(totalHip)} hipóteses
+             testadas. É o resultado esperado num sorteio honesto — e é o resultado
+             que o motor foi construído para conseguir reconhecer.
+
+             Achar uma hipótese que parece separar bem é fácil quando se testam
+             milhares delas: em algum recorte, alguma sempre parece. O limiar é
+             dividido pelo número de hipóteses já testadas justamente para que o
+             fácil não passe por achado.`
+          : `${sobreviventes} hipótese${sobreviventes===1?"":"s"} passou do limiar corrigido.
+             Isso pede repetição antes de virar afirmação: o mesmo teste, com concursos
+             novos que não participaram desta busca. Sobreviver uma vez é o começo de
+             uma verificação, não o fim dela.`}
+    </div>
+  </div>`;
+}
+
 T.pesquisa = () => {
   const m = S.modalidade;
   const c = MODALIDADES[m];
@@ -6430,10 +6829,12 @@ T.pesquisa = () => {
     foram testadas e quais sobreviveram.</div>`;
 
   if(hist.length < MINIMO_PESQUISA)
-    return cabeca + `<div class="vazio">A pesquisa precisa de ${MINIMO_PESQUISA}
+    return cabeca + panoramaDoLaboratorio() + `<div class="vazio">A pesquisa precisa de ${MINIMO_PESQUISA}
       concursos da ${esc(c.nome)} e há ${hist.length}.<br>
       Faltam ${MINIMO_PESQUISA - hist.length}. Traga histórico em
       <strong>Conferir › Resultados</strong>.</div>`;
+
+  const panorama = panoramaDoLaboratorio();
 
   const controles = `
   <div class="carta">
@@ -6458,7 +6859,7 @@ T.pesquisa = () => {
   </div>`;
 
   if(!mem || !mem.geracao)
-    return cabeca + controles + `<div class="vazio">Nenhuma geração ainda na
+    return cabeca + panorama + controles + `<div class="vazio">Nenhuma geração ainda na
       ${esc(c.nome)}.<br>Toque em <strong>Evoluir e julgar</strong> para começar.</div>`;
 
   const conc = mem.conclusao;
@@ -6651,7 +7052,7 @@ T.pesquisa = () => {
               : aba === "detalhes" ? detalhes
               : julgamento;
 
-  return cabeca + controles + barra + corpo;
+  return cabeca + panorama + controles + barra + corpo;
 };
 
 T.resultados = () => {
@@ -7192,6 +7593,7 @@ function acoesNovas(){
         r.quando = new Date().toISOString();
         r.automatica = false;
         S.aprendizado[S.modalidade] = r;
+        registrarAnalise(S.modalidade, r);
         aplicarCorrecao(S.aprendizado);
         Guardar.gravar("aprendizado", S.aprendizado);
         pintar();
@@ -7440,7 +7842,8 @@ function acoes(){
         brutos.push(bruto);
         return tabelaBancada(bruto,
           `concurso ${r.concurso} — ${r.dezenas.map(pad).join(" ")}`
-            + (i>0 ? "" : " (sem concurso anterior registrado)"), true);
+            + (i>0 ? "" : " (sem concurso anterior registrado)"), true,
+          {semExplicacoes: true});
       },
       (feitos) => { saida.innerHTML = barraProgresso(feitos, total, "testando os métodos"); },
       (partes) => {
@@ -7452,8 +7855,26 @@ function acoes(){
                concurso — rodar em tudo levaria minutos de tela parada, sem melhorar a
                leitura.</div>`
             : "";
-          saida.innerHTML = aviso + (agregado ? agregado : "") +
-            partes.filter(p => typeof p === "string").join("");
+          const porConcurso = partes.filter(p => typeof p === "string");
+          /* Concurso a concurso fica RECOLHIDO. A resposta da bancada é o
+             recorte agregado; as tabelas individuais são a memória de cálculo.
+
+             E há um motivo além do tamanho: ler dez tabelas de concurso
+             isolado convida exatamente ao erro que esta tela existe para
+             desfazer. Em um único sorteio algum método sempre aparece à
+             frente — com cinco métodos e dez concursos são cinquenta chances
+             de alguém parecer melhor por acaso. O agregado é onde essa
+             ilusão se desfaz, e por isso é ele que fica aberto. */
+          const detalhe = !porConcurso.length ? "" : `<details style="margin-top:14px">
+            <summary style="cursor:pointer;padding:10px 0;font-size:.85rem;
+              color:var(--secundaria)">ver concurso a concurso (${porConcurso.length} tabela${porConcurso.length===1?"":"s"})</summary>
+            <div class="nota">Um concurso isolado não decide nada: com cinco métodos
+              e ${porConcurso.length} concurso${porConcurso.length===1?"":"s"}, algum
+              método aparece à frente por acaso em vários deles. Estas tabelas estão
+              aqui como memória de cálculo — o veredito é o recorte agregado, acima.</div>
+            ${porConcurso.join("")}
+          </details>`;
+          saida.innerHTML = aviso + (agregado ? agregado : "") + detalhe;
           go.disabled = false; go.textContent = rotulo;
         };
         if(alvos.length > 1){
@@ -7904,6 +8325,7 @@ function normalizarConcursos(){
   S.teimosinhas = Guardar.ler("teimosinhas", []);
   S.marcadas = Guardar.ler("marcadas", {});
   S.aprendizado = Guardar.ler("aprendizado", {});
+  S.historicoAprendizado = Guardar.ler("historicoAprendizado", []);
   S.autoAnalise = Guardar.ler("autoAnalise", true);
   S.calibracao = Guardar.ler("calibracao", {});
   S.buscaAutomatica = Guardar.ler("buscaAutomatica", true);
