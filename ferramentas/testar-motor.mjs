@@ -4804,8 +4804,13 @@ secao("44. Conferir com o app fechado");
   })});
   avisados.length = 0;
   await new Promise((pronto) => eventos.conferirSorteios(() => pronto(), () => pronto()));
+  /* O detalhe traz título e corpo, e NÃO o objeto inteiro: o id do aviso vem
+     do relógio, e imprimi-lo fazia duas execuções seguidas darem saídas
+     diferentes. O passo "os testes são reprodutíveis" da esteira pegou isso —
+     é exatamente o que ele existe para pegar, e eu o violei. */
   checar("com o sorteio novo, o aviso sai mesmo com o app fechado",
-    avisados.length === 1, JSON.stringify(avisados[0] || {}).slice(0, 80));
+    avisados.length === 1,
+    avisados.length === 1 ? `${avisados[0].title} — ${avisados[0].body}` : "nenhum");
   checar("e o texto fala em coincidência, nunca em prêmio",
     avisados.length === 1 && /coincid/i.test(avisados[0].title + avisados[0].body) &&
     !/prêmio|premio|ganhou/i.test(avisados[0].title + avisados[0].body),
