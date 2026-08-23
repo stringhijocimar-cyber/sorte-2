@@ -2631,7 +2631,18 @@ T.bancada = () => {
 };
 
 /* Monta a tabela comparativa de um recorte já calculado. */
-function tabelaBancada(r, titulo, umConcursoSo){
+/* `opcoes.semExplicacoes` corta os dois parágrafos longos do fim.
+
+   Motivo medido: a bancada emitia uma tabela por concurso testado e repetia as
+   MESMAS duas explicações depois de cada uma. Com dez concursos, a tela saía
+   com 14.357 caracteres, onze tabelas e as mesmas notas trinta vezes. Quem
+   abria precisava rolar tudo para responder a única pergunta que a bancada
+   existe para responder — algum método se separou do acaso? —, e a resposta
+   estava no recorte agregado, lá em cima, soterrada pelo que veio depois.
+
+   As explicações continuam, uma vez, no agregado. Repetir texto idêntico não
+   reforça; treina a pular. */
+function tabelaBancada(r, titulo, umConcursoSo, opcoes){
   const menorPop = Math.min(...r.linhas.map(l=>l.popularidade));
   const menorSobre = Math.min(...r.linhas.map(l=>l.sobreposicao));
   const v = vereditoAcertos(r, umConcursoSo);
@@ -2651,20 +2662,20 @@ function tabelaBancada(r, titulo, umConcursoSo){
     <strong>Acertos:</strong> ${esc(v.texto)}
     Média do acaso: ${nf(r.esperado,3)} por jogo; um desvio vale ${nf(r.erroPadrao,3)}.
   </div>
-  <div class="nota">
+  ${(opcoes && opcoes.semExplicacoes) ? "" : `<div class="nota">
     <strong>O que dá para escolher:</strong> as colunas em destaque são as que
     dependem do método, e não da sorte — <em>sobreposição</em> (menor = seus jogos
     se repetem menos entre si) e <em>padrão humano</em>, que mede o quanto o jogo
     parece marcado por gente (datas, sequências, desenho no volante). A coluna de
     acertos está aí para você verificar que ela <em>não</em> depende do método.
-  </div>
-  <div class="nota atencao">
+  </div>`}
+  ${(opcoes && opcoes.semExplicacoes) ? "" : `<div class="nota atencao">
     <strong>Sobre a coluna "padrão humano".</strong> Ela descreve a forma do jogo, e
     é só isso. Já houve aqui um método que prometia transformar essa medida em prêmio
     maior; foi retirado, porque os pesos por trás dela nunca puderam ser conferidos
     com ganhadores reais — a calibração precisa de ${MINIMO_CALIBRACAO} concursos com
     rateio publicado por modalidade, e o histórico deste app não chega lá.
-  </div>`;
+  </div>`}`;
 }
 
 T.entender = () => `<div class="prosa">
@@ -7712,7 +7723,8 @@ function acoes(){
         brutos.push(bruto);
         return tabelaBancada(bruto,
           `concurso ${r.concurso} — ${r.dezenas.map(pad).join(" ")}`
-            + (i>0 ? "" : " (sem concurso anterior registrado)"), true);
+            + (i>0 ? "" : " (sem concurso anterior registrado)"), true,
+          {semExplicacoes: true});
       },
       (feitos) => { saida.innerHTML = barraProgresso(feitos, total, "testando os métodos"); },
       (partes) => {
@@ -7724,8 +7736,26 @@ function acoes(){
                concurso — rodar em tudo levaria minutos de tela parada, sem melhorar a
                leitura.</div>`
             : "";
-          saida.innerHTML = aviso + (agregado ? agregado : "") +
-            partes.filter(p => typeof p === "string").join("");
+          const porConcurso = partes.filter(p => typeof p === "string");
+          /* Concurso a concurso fica RECOLHIDO. A resposta da bancada é o
+             recorte agregado; as tabelas individuais são a memória de cálculo.
+
+             E há um motivo além do tamanho: ler dez tabelas de concurso
+             isolado convida exatamente ao erro que esta tela existe para
+             desfazer. Em um único sorteio algum método sempre aparece à
+             frente — com cinco métodos e dez concursos são cinquenta chances
+             de alguém parecer melhor por acaso. O agregado é onde essa
+             ilusão se desfaz, e por isso é ele que fica aberto. */
+          const detalhe = !porConcurso.length ? "" : `<details style="margin-top:14px">
+            <summary style="cursor:pointer;padding:10px 0;font-size:.85rem;
+              color:var(--secundaria)">ver concurso a concurso (${porConcurso.length} tabela${porConcurso.length===1?"":"s"})</summary>
+            <div class="nota">Um concurso isolado não decide nada: com cinco métodos
+              e ${porConcurso.length} concurso${porConcurso.length===1?"":"s"}, algum
+              método aparece à frente por acaso em vários deles. Estas tabelas estão
+              aqui como memória de cálculo — o veredito é o recorte agregado, acima.</div>
+            ${porConcurso.join("")}
+          </details>`;
+          saida.innerHTML = aviso + (agregado ? agregado : "") + detalhe;
           go.disabled = false; go.textContent = rotulo;
         };
         if(alvos.length > 1){

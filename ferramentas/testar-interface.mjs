@@ -1320,6 +1320,56 @@ checar("o fundo também continua fechando",
   saida.reabriu === true && saida.fechouPeloFundo === true,
   `reabriu=${saida.reabriu} fechou=${saida.fechouPeloFundo}`);
 
+/* ---------- F12. A Bancada responde antes de detalhar ----------
+   Medido antes de mexer: a tela saía com 14.357 caracteres, ONZE tabelas e as
+   mesmas duas explicações repetidas depois de cada uma. Para responder a única
+   pergunta que a bancada existe para responder — algum método se separou do
+   acaso? — era preciso rolar tudo, e a resposta estava lá em cima, soterrada
+   pelo que vinha depois.
+
+   Além do tamanho, há o risco de leitura: dez tabelas de concurso isolado
+   convidam exatamente ao erro que esta tela desfaz. Com cinco métodos e dez
+   concursos são cinquenta chances de alguém parecer melhor por acaso. */
+secao("F12. A Bancada responde antes de detalhar");
+
+await irPara("bancada");
+await js(`
+  return fetch('dados/lotofacil.json').then(r => r.json()).then(d => {
+    S.resultados = d.concursos.slice(-40).map(c => Object.assign({}, c, {modalidade:'lotofacil'}));
+    S.modalidade = 'lotofacil'; S.bancadaAlvos = 5; S.bancadaRep = 20; S.bancadaQtd = 2;
+    return S.resultados.length;
+  });
+`);
+await irPara("bancada");
+await js(`document.querySelector('#b-go').click(); return 1;`);
+await dormir(6000);
+
+const banca = await js(`
+  const saida = document.querySelector('#b-saida');
+  const det = saida.querySelector('details');
+  const conta = (s) => (saida.innerText.match(new RegExp(s, 'g')) || []).length;
+  return {
+    rodou: !!saida.querySelector('table'),
+    visiveis: saida.innerText.length,
+    abertas: [...saida.querySelectorAll('table')].filter(x => !x.closest('details')).length,
+    recolhidas: det ? det.querySelectorAll('table').length : 0,
+    explicacaoRepetida: conta('O que dá para escolher'),
+    /* O detalhe precisa ABRIR: recolher informação é organizar; escondê-la sem
+       porta é remover. */
+    abre: det ? (det.open = true, det.querySelectorAll('table').length > 0) : false,
+  };
+`);
+
+checar("a bancada roda e produz tabela", banca.rodou);
+checar("o recorte agregado fica aberto", banca.abertas === 1, `${banca.abertas} aberta(s)`);
+checar("as tabelas por concurso ficam recolhidas", banca.recolhidas >= 2,
+  `${banca.recolhidas} recolhida(s)`);
+checar("e continuam acessíveis ao abrir o detalhe", banca.abre === true);
+checar("a explicação longa não se repete por tabela", banca.explicacaoRepetida <= 1,
+  `${banca.explicacaoRepetida} ocorrências`);
+checar("a tela deixa de ser um muro de texto", banca.visiveis < 6000,
+  `${banca.visiveis} caracteres visíveis`);
+
 /* ---------- fim ---------- */
 console.log(linhas.join("\n"));
 console.log(`\n${"─".repeat(60)}`);
