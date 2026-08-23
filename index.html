@@ -897,6 +897,15 @@ td{padding:6px 7px;border-bottom:1px solid var(--trama)}
 .cel .b i{display:block;width:9px;border-radius:2px 2px 0 0;background:var(--acaso);
   opacity:.75;min-height:1px}
 .cel.fora .b i{background:var(--alerta);opacity:1}
+/* A barra de desvio cresce do MEIO da célula: para cima quando a dezena saiu
+   mais que o esperado, para baixo quando saiu menos. O fio no meio é o
+   esperado, e é ele que dá sentido ao tamanho da barra. */
+.cel .b.desvio{height:30px;align-items:center;position:relative}
+.cel .b.desvio::before{content:"";position:absolute;left:6px;right:6px;top:50%;
+  height:1px;background:var(--linha)}
+.cel .b.desvio i{align-self:flex-end;margin-bottom:15px;border-radius:2px 2px 0 0}
+.cel.abaixo .b.desvio i{align-self:flex-start;margin-bottom:0;margin-top:15px;
+  border-radius:0 0 2px 2px}
 .cel .c{font-family:var(--mono);font-size:.58rem;color:var(--secundaria);margin-top:2px}
 .cel.fora{border-color:var(--alerta)}
 .escala{display:flex;justify-content:space-between;font-family:var(--mono);font-size:.6rem;
@@ -3318,9 +3327,65 @@ function porDezena(modalidade){
       fora: Math.abs(vezes - esperado) > 2 * dp
     });
   }
-  return {linhas, n, esperado, dp,
+  const maiorZ = linhas.reduce((m, l) => Math.max(m, Math.abs(l.z)), 0);
+  return {linhas, n, esperado, dp, maiorZ,
+          fora: linhas.filter(l => l.fora).length,
           /* Intervalo de ausência esperado entre aparições: N/k concursos. */
           ausenciaMedia: c.N / c.k};
+}
+
+/* A conclusão vem ANTES da tabela.
+
+   A aba Dezenas era a única da tela que não trazia comparação com o acaso em
+   destaque: as outras abrem com `barraContra`, e esta ia direto para 25 linhas
+   de contagem com o desvio escondido na última coluna. O subtítulo da tela
+   promete "sempre ao lado do que o acaso produziria", e aqui a promessa ficava
+   por conta de quem soubesse ler coluna de z.
+
+   Uma tabela de frequência sem a faixa do acaso convida a ler "o 20 está
+   quente". Com 400 concursos de Lotofácil o esperado é 240 e o desvio é 9,8:
+   a diferença entre a mais sorteada (257) e a menos (252) é meio desvio —
+   ruído puro. É esse número que precisa estar no alto da tela. */
+function vereditoDasDezenas(e, modalidade){
+  const c = MODALIDADES[modalidade];
+  const faixaBaixa = e.esperado - 2 * e.dp;
+  const faixaAlta = e.esperado + 2 * e.dp;
+  const maior = e.linhas.reduce((a, l) => l.vezes > a.vezes ? l : a, e.linhas[0]);
+  const menor = e.linhas.reduce((a, l) => l.vezes < a.vezes ? l : a, e.linhas[0]);
+  const amplitude = maior.vezes - menor.vezes;
+
+  return `<div class="carta ${e.fora ? "" : "ok"}" style="margin-bottom:12px">
+    <div class="kpis">
+      <div class="kpi"><div class="rot">esperado por dezena</div>
+        <div class="val">${inf(Math.round(e.esperado))}</div>
+        <div class="sub">em ${inf(e.n)} concursos</div></div>
+      <div class="kpi"><div class="rot">faixa do acaso</div>
+        <div class="val" style="font-size:1.05rem">${inf(Math.round(faixaBaixa))}–${inf(Math.round(faixaAlta))}</div>
+        <div class="sub">dois desvios (${nf(e.dp,1)})</div></div>
+      <div class="kpi"><div class="rot">fora da faixa</div>
+        <div class="val" style="color:${e.fora ? "var(--alerta)" : "var(--acaso)"}">${e.fora}</div>
+        <div class="sub">de ${e.linhas.length} dezenas</div></div>
+      <div class="kpi"><div class="rot">distância entre extremos</div>
+        <div class="val" style="font-size:1.05rem">${inf(amplitude)}</div>
+        <div class="sub">${nf(amplitude / e.dp, 2)} desvios</div></div>
+    </div>
+    <div class="nota ${e.fora ? "atencao" : ""}">
+      ${e.fora
+        ? `${e.fora} dezena${e.fora===1?"":"s"} está${e.fora===1?"":"ão"} fora da faixa
+           do acaso. Com ${inf(e.linhas.length)} dezenas conferidas ao mesmo tempo,
+           <strong>encontrar uma ou outra fora é o esperado</strong> — a faixa de dois
+           desvios deixa cerca de 5% de fora por acaso, o que dá
+           ${nf(0.05 * e.linhas.length, 1)} dezena${0.05*e.linhas.length<2?"":"s"} nesta
+           modalidade. Fora da faixa não quer dizer viciado; quer dizer que vale olhar
+           de novo daqui a algumas centenas de concursos.`
+        : `<strong>Nenhuma dezena está fora da faixa do acaso.</strong> A mais sorteada
+           (${pad(maior.dezena)}, ${inf(maior.vezes)}) e a menos sorteada
+           (${pad(menor.dezena)}, ${inf(menor.vezes)}) estão separadas por
+           ${nf(amplitude / e.dp, 2)} desvios — é a variação que um sorteio honesto
+           produz sozinho. A ordem desta lista muda a cada concurso e não guarda
+           memória do anterior.`}
+    </div>
+  </div>`;
 }
 
 /* Distribuição de uma contagem por concurso (pares, primos, Fibonacci...)
@@ -5784,13 +5849,30 @@ function tabelaDezenas(e, modalidade){
          ["dezena","Ordem numérica"]].map(([k,n])=>
         `<button role="tab" data-ordem="${k}" aria-selected="${ordem===k}">${n}</button>`).join("")}
     </div>
+    ${vereditoDasDezenas(e, modalidade)}
     <div class="grade-freq" style="margin-bottom:12px">
       ${linhas.map(l=>{
-        const alt = e.linhas.reduce((m,x)=> Math.max(m, x.vezes), 1);
-        const h = Math.max(1, Math.round(26 * l.vezes / alt));
-        return `<div class="cel ${l.fora?"fora":""}" title="${l.dezena}: ${l.vezes} vezes">
+        /* A barra desenha o DESVIO em relação ao esperado, e não a frequência
+           bruta.
+
+           Antes a altura era `26 * vezes / maior`. Com 400 concursos de
+           Lotofácil as contagens ficam entre 252 e 257 — todas a menos de dois
+           desvios do esperado — e as barras saíam praticamente do mesmo
+           tamanho, ocupando espaço sem informar. Pior: a grade vinha ordenada
+           por "mais sorteadas", então o olho lia um ranking onde não há
+           nenhum.
+
+           Agora o meio da célula é o esperado, a barra cresce para cima quando
+           a dezena saiu mais que o esperado e para baixo quando saiu menos, e
+           a escala é o desvio padrão. Duas dezenas separadas por meio desvio
+           passam a parecer o que são: iguais. */
+        const alturaMax = 13;
+        const escala = Math.min(3, Math.max(1.5, e.maiorZ));
+        const h = Math.max(1, Math.round(alturaMax * Math.min(Math.abs(l.z), escala) / escala));
+        return `<div class="cel ${l.fora?"fora":""} ${l.z<0?"abaixo":""}"
+            title="${l.dezena}: ${l.vezes} vezes, ${l.z>=0?"+":""}${nf(l.z,2)} desvios do esperado">
           <div class="n">${pad(l.dezena)}</div>
-          <div class="b"><i style="height:${h}px"></i></div>
+          <div class="b desvio"><i style="height:${h}px"></i></div>
           <div class="c">${l.vezes}</div></div>`;
       }).join("")}
     </div>

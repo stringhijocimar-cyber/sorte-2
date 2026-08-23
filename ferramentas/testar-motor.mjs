@@ -191,6 +191,7 @@ const EXPOSTOS = [
   "POPULACAO_PESQUISA",
   "GRUPOS_DE_AVISO", "resultadosDe", "proximasDatasDeSorteio", "idadeDoHistorico",
   "normalizarConcursos", "conferenciaAutomatica", "diasDeSorteio",
+  "porDezena", "vereditoDasDezenas",
 ];
 const epilogo = `\n;globalThis.__motor = {${EXPOSTOS.map((n) => `${n}: typeof ${n} !== "undefined" ? ${n} : undefined`).join(", ")}};\n`;
 vm.runInContext(fonte + epilogo, contexto, { filename: "index.html:script" });
@@ -3643,6 +3644,70 @@ secao("32. Aviso de histórico atrasado");
     !/pode estar\s+atrasado/.test(contexto.T.resultados()));
 
   S.resultados = guardaRes; S.modalidade = guardaMod;
+}
+
+/* ==================================================================
+   36. A aba Dezenas diz o que a tabela escondia
+
+   A tela de Estatísticas promete no subtítulo "sempre ao lado do que o acaso
+   produziria". Todas as abas cumpriam isso abrindo com a barra de comparação
+   — menos a aba Dezenas, que é a PADRÃO: ela ia direto para vinte e cinco
+   linhas de contagem, com o desvio escondido na última coluna.
+
+   Uma tabela de frequência sem a faixa do acaso convida a ler "o 20 está
+   quente". E a grade vinha ordenada por "mais sorteadas", o que desenha um
+   ranking onde não há nenhum.
+
+   O veredito agora vem antes da tabela, e traz o argumento que falta em toda
+   leitura ingênua de frequência: com vinte e cinco dezenas conferidas ao mesmo
+   tempo, encontrar uma fora da faixa de dois desvios é o ESPERADO, não um
+   achado.
+   ================================================================== */
+secao("36. Veredito da aba Dezenas");
+
+{
+  const S = motor.S;
+  const g = {r:S.resultados, m:S.modalidade};
+  S.modalidade = "lotofacil";
+  S.resultados = historicoSemeado("lotofacil", 25, 15, 400, 7);
+
+  const e = motor.porDezena("lotofacil");
+  const c = motor.MODALIDADES["lotofacil"];
+
+  checar("o esperado por dezena é n × k/N",
+    Math.abs(e.esperado - e.n * c.k / c.N) < 1e-9,
+    `${e.esperado.toFixed(1)} para ${e.n} concursos`);
+  checar("o desvio é o binomial", e.dp > 0 && Number.isFinite(e.dp), e.dp.toFixed(2));
+  checar("cada dezena do volante tem uma linha", e.linhas.length === c.N,
+    `${e.linhas.length} de ${c.N}`);
+  checar("nenhum número sai NaN",
+    e.linhas.every(l => Number.isFinite(l.z) && Number.isFinite(l.vezes)) &&
+    Number.isFinite(e.maiorZ) && Number.isFinite(e.esperado));
+  checar("'fora' conta exatamente quem passa de dois desvios",
+    e.fora === e.linhas.filter(l => Math.abs(l.z) > 2).length,
+    `${e.fora} fora, maior desvio ${e.maiorZ.toFixed(2)}`);
+
+  const html = motor.vereditoDasDezenas(e, "lotofacil");
+  checar("o veredito traz o esperado e a faixa",
+    html.includes("esperado por dezena") && html.includes("faixa do acaso"));
+  checar("e não imprime NaN nem undefined",
+    !/NaN|undefined/.test(html), (html.match(/NaN|undefined/g)||[]).join(","));
+
+  /* O argumento das comparações múltiplas só faz sentido quando há alguém
+     fora — e é justamente aí que a leitura ingênua erra. */
+  const comFora = Object.assign({}, e, {fora: 2});
+  checar("com dezena fora, o veredito explica que isso é esperado",
+    /esperado|5%/.test(motor.vereditoDasDezenas(comFora, "lotofacil")));
+  const semFora = Object.assign({}, e, {fora: 0});
+  checar("sem nenhuma fora, o veredito afirma isso de frente",
+    /Nenhuma dezena está fora/.test(motor.vereditoDasDezenas(semFora, "lotofacil")));
+
+  /* Um sorteio honesto semeado não pode produzir muitas dezenas fora: se
+     produzir, o defeito está na conta e não nos dados. */
+  checar("num sorteio honesto, quase ninguém sai da faixa", e.fora <= 3,
+    `${e.fora} de ${c.N}`);
+
+  S.resultados = g.r; S.modalidade = g.m;
 }
 
 /* ==================================================================
