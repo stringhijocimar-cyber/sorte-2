@@ -192,6 +192,7 @@ const EXPOSTOS = [
   "GRUPOS_DE_AVISO", "resultadosDe", "proximasDatasDeSorteio", "idadeDoHistorico",
   "normalizarConcursos", "conferenciaAutomatica", "diasDeSorteio",
   "porDezena", "vereditoDasDezenas", "convergenciaDoPlacar",
+  "panoramaDoLaboratorio",
 ];
 const epilogo = `\n;globalThis.__motor = {${EXPOSTOS.map((n) => `${n}: typeof ${n} !== "undefined" ? ${n} : undefined`).join(", ")}};\n`;
 vm.runInContext(fonte + epilogo, contexto, { filename: "index.html:script" });
@@ -3653,6 +3654,70 @@ secao("32. Aviso de histórico atrasado");
     !/pode estar\s+atrasado/.test(contexto.T.resultados()));
 
   S.resultados = guardaRes; S.modalidade = guardaMod;
+}
+
+/* ==================================================================
+   38. A evidência acumulada do laboratório fica visível
+
+   A tela de Pesquisa mostrava só a memória da modalidade escolhida. Quem
+   tivesse rodado oitenta gerações na Mega-Sena abria a Lotofácil e via
+   "nenhuma hipótese testada ainda" — o trabalho acumulado ficava invisível,
+   uma modalidade de cada vez.
+
+   E com ele ficava invisível a afirmação central deste app: o motor procura
+   com método, procura muito, e NÃO ACHA. Um painel que só soubesse contar
+   vitórias esconderia justamente o achado.
+   ================================================================== */
+secao("38. Panorama do laboratório");
+
+{
+  const S = motor.S;
+  const guarda = S.pesquisaAdaptativa;
+
+  S.pesquisaAdaptativa = {};
+  checar("sem nenhuma análise, o painel não aparece",
+    motor.panoramaDoLaboratorio() === "");
+
+  S.pesquisaAdaptativa = {
+    "lotofacil": {geracao: 12, hipotesesTestadas: 430,
+      conclusao: {sobreviveu: false, aucValidacao: 0.503, limiar: 0.0001, p: 0.42}},
+    "mega-sena": {geracao: 5, hipotesesTestadas: 180},
+    "quina": {geracao: 0, hipotesesTestadas: 0},
+  };
+  const html = motor.panoramaDoLaboratorio();
+  /* Espaço em branco normalizado antes de procurar frase. O HTML colapsa
+     quebra de linha e indentação, então o que a pessoa lê é a frase inteira —
+     mas no fonte ela vem partida em duas linhas. Procurar no texto cru faria o
+     teste depender da largura da coluna do editor, e não do que a tela diz. */
+  const emUmaLinha = (s) => s.replace(/\s+/g, " ");
+
+  checar("soma as hipóteses de todas as modalidades", /610/.test(html),
+    "430 + 180 = 610");
+  checar("conta só as modalidades que rodaram", />2</.test(html),
+    "quina tem geração 0 e não entra");
+  checar("distingue julgada de não julgada", /sem julgamento/.test(html));
+  checar("mostra o veredito de quem foi julgada", /nada/.test(html));
+  checar("e não imprime NaN nem undefined", !/NaN|undefined/.test(html),
+    (html.match(/NaN|undefined/g)||[]).join(","));
+
+  /* O texto tem de dizer que nada passou — é o achado, não a ausência dele. */
+  checar("com nada sobrevivendo, afirma isso de frente",
+    /Nada passou do limiar/.test(emUmaLinha(html)));
+
+  /* E quando algo sobrevive, não pode virar anúncio: sobreviver uma vez pede
+     repetição com concursos que não participaram da busca. */
+  S.pesquisaAdaptativa["lotofacil"].conclusao.sobreviveu = true;
+  const comSobrevivente = motor.panoramaDoLaboratorio();
+  checar("com sobrevivente, pede repetição antes de afirmar",
+    /repetição|verificação/.test(emUmaLinha(comSobrevivente)));
+  checar("e não promete nada a quem joga",
+    !/mais prováveis|aumenta|vantagem|melhor jogo/i.test(comSobrevivente));
+
+  /* O painel é evidência, não gerador: nenhuma dezena pode aparecer nele. */
+  checar("o painel não exibe dezena nenhuma",
+    !/class="dz\b/.test(comSobrevivente) && !/cartela\(/.test(comSobrevivente));
+
+  S.pesquisaAdaptativa = guarda;
 }
 
 /* ==================================================================

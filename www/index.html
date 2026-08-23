@@ -6574,6 +6574,99 @@ function tracoAuc(rotulo, valor, escala){
     <b>${nf(valor,4)}</b></div>`;
 }
 
+/* O que o laboratório já mediu, somando TODAS as modalidades.
+
+   A tela mostrava só a memória da modalidade escolhida. Quem tivesse rodado
+   oitenta gerações na Mega-Sena abria a Lotofácil e via "nenhuma hipótese
+   testada ainda" — o trabalho acumulado ficava invisível, uma modalidade de
+   cada vez, e com ele a afirmação central deste app.
+
+   Porque é isto que o motor tem a dizer, e é uma afirmação forte: ele procura
+   com método, procura muito, e NÃO ACHA. Uma busca que testa milhares de
+   hipóteses sempre encontra alguma que parece boa em algum recorte; o que
+   distingue laboratório de dragagem de dados é medir isso contra o limiar
+   corrigido pelo número de hipóteses testadas e relatar o resultado seja ele
+   qual for.
+
+   Um painel que só sabe contar vitórias esconde justamente o achado. */
+function panoramaDoLaboratorio(){
+  const linhas = [];
+  for(const [codigo, mem] of Object.entries(S.pesquisaAdaptativa || {})){
+    if(!mem || !mem.geracao) continue;
+    linhas.push({
+      codigo, nome: (MODALIDADES[codigo] || {}).nome || codigo,
+      geracoes: mem.geracao,
+      hipoteses: mem.hipotesesTestadas || 0,
+      julgada: !!mem.conclusao,
+      sobreviveu: !!(mem.conclusao && mem.conclusao.sobreviveu),
+      auc: mem.conclusao ? mem.conclusao.aucValidacao : null,
+      limiar: mem.conclusao ? mem.conclusao.limiar : null,
+      p: mem.conclusao ? mem.conclusao.p : null,
+    });
+  }
+  if(!linhas.length) return "";
+
+  linhas.sort((a, b) => b.hipoteses - a.hipoteses);
+  const totalHip = linhas.reduce((s, l) => s + l.hipoteses, 0);
+  const totalGer = linhas.reduce((s, l) => s + l.geracoes, 0);
+  const julgadas = linhas.filter(l => l.julgada).length;
+  const sobreviventes = linhas.filter(l => l.sobreviveu).length;
+
+  return `<div class="carta ${sobreviventes ? "" : "ok"}" style="margin-top:12px">
+    <h2>o que o laboratório já mediu</h2>
+    <p style="font-size:.82rem;color:var(--secundaria);margin:4px 0 10px">
+      Somando todas as modalidades analisadas neste aparelho.</p>
+    <div class="kpis">
+      <div class="kpi"><div class="rot">hipóteses testadas</div>
+        <div class="val">${inf(totalHip)}</div>
+        <div class="sub">em ${inf(totalGer)} geraç${totalGer===1?"ão":"ões"}</div></div>
+      <div class="kpi"><div class="rot">modalidades</div>
+        <div class="val">${linhas.length}</div>
+        <div class="sub">${julgadas} com julgamento</div></div>
+      <div class="kpi"><div class="rot">sobreviveram ao limiar</div>
+        <div class="val" style="color:${sobreviventes ? "var(--alerta)" : "var(--acaso)"}">${sobreviventes}</div>
+        <div class="sub">de ${julgadas} julgada${julgadas===1?"":"s"}</div></div>
+    </div>
+    <div class="rolagem"><table>
+      <thead><tr><th>modalidade</th><th>gerações</th><th>hipóteses</th><th>veredito</th></tr></thead>
+      <tbody>${linhas.map(l => `<tr>
+        <td>${esc(l.nome)}</td>
+        <td>${inf(l.geracoes)}</td>
+        <td>${inf(l.hipoteses)}</td>
+        <td>${!l.julgada ? `<span style="color:var(--secundaria)">sem julgamento</span>`
+          : l.sobreviveu
+            ? `<span style="color:var(--alerta)">sobreviveu · AUC ${nf(l.auc,3)}</span>`
+            : `<span style="color:var(--acaso)">nada · AUC ${nf(l.auc,3)}</span>`}</td>
+      </tr>`).join("")}</tbody>
+    </table></div>
+    <div class="nota ${sobreviventes ? "atencao" : ""}" style="margin-bottom:0">
+      ${julgadas === 0
+        ? `Nenhuma modalidade foi julgada ainda. Evoluir gera hipóteses; julgar é o
+           que as mede contra o acaso, fora da amostra, com o limiar corrigido pelo
+           número de hipóteses já testadas.`
+        : sobreviventes === 0
+          ? `${/* Sem repetir a manchete do cartão de veredito, que já a traz
+                   como título: dizer a mesma frase duas vezes na mesma tela é
+                   ruído, e há um teste que cobra isso. E sem a palavra que
+                   promete ganho — o que se mede aqui é separação estatística,
+                   não benefício para quem joga. */""}<strong>Nada passou do
+             limiar</strong> em ${julgadas} modalidade${julgadas===1?"":"s"}
+             julgada${julgadas===1?"":"s"}, depois de ${inf(totalHip)} hipóteses
+             testadas. É o resultado esperado num sorteio honesto — e é o resultado
+             que o motor foi construído para conseguir reconhecer.
+
+             Achar uma hipótese que parece separar bem é fácil quando se testam
+             milhares delas: em algum recorte, alguma sempre parece. O limiar é
+             dividido pelo número de hipóteses já testadas justamente para que o
+             fácil não passe por achado.`
+          : `${sobreviventes} hipótese${sobreviventes===1?"":"s"} passou do limiar corrigido.
+             Isso pede repetição antes de virar afirmação: o mesmo teste, com concursos
+             novos que não participaram desta busca. Sobreviver uma vez é o começo de
+             uma verificação, não o fim dela.`}
+    </div>
+  </div>`;
+}
+
 T.pesquisa = () => {
   const m = S.modalidade;
   const c = MODALIDADES[m];
@@ -6607,10 +6700,12 @@ T.pesquisa = () => {
     foram testadas e quais sobreviveram.</div>`;
 
   if(hist.length < MINIMO_PESQUISA)
-    return cabeca + `<div class="vazio">A pesquisa precisa de ${MINIMO_PESQUISA}
+    return cabeca + panoramaDoLaboratorio() + `<div class="vazio">A pesquisa precisa de ${MINIMO_PESQUISA}
       concursos da ${esc(c.nome)} e há ${hist.length}.<br>
       Faltam ${MINIMO_PESQUISA - hist.length}. Traga histórico em
       <strong>Conferir › Resultados</strong>.</div>`;
+
+  const panorama = panoramaDoLaboratorio();
 
   const controles = `
   <div class="carta">
@@ -6635,7 +6730,7 @@ T.pesquisa = () => {
   </div>`;
 
   if(!mem || !mem.geracao)
-    return cabeca + controles + `<div class="vazio">Nenhuma geração ainda na
+    return cabeca + panorama + controles + `<div class="vazio">Nenhuma geração ainda na
       ${esc(c.nome)}.<br>Toque em <strong>Evoluir e julgar</strong> para começar.</div>`;
 
   const conc = mem.conclusao;
@@ -6828,7 +6923,7 @@ T.pesquisa = () => {
               : aba === "detalhes" ? detalhes
               : julgamento;
 
-  return cabeca + controles + barra + corpo;
+  return cabeca + panorama + controles + barra + corpo;
 };
 
 T.resultados = () => {
