@@ -2,14 +2,14 @@
 
 ## Estado canônico
 
-- Versão do produto: **4.3.0**
+- Versão do produto: **4.3.1**
 - Rótulo: **V4.3**
 - Branch fonte: **main**
 - Camada visual: **Mockup Fidelity V4 + visual aprovado V4.3**
-- Android: **versionCode 7** / **versionName 4.3.0**
-- Arquivo `VERSION`: **4.3.0**
-- `package.json`: **4.3.0**
-- `package-lock.json`: **4.3.0**
+- Android: **versionCode 8** / **versionName 4.3.1**
+- Arquivo `VERSION`: **4.3.1**
+- `package.json`: **4.3.1**
+- `package-lock.json`: **4.3.1**
 - Manifesto canônico: `RELEASE_MANIFEST_V4.json`
 
 ## O que já está consolidado
