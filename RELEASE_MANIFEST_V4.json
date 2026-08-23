@@ -1,12 +1,12 @@
 {
   "product": "LotoLab",
-  "version": "4.3.1",
+  "version": "4.3.2",
   "versionLabel": "V4.3",
   "sourceBranch": "main",
   "visualLayer": "Mockup Fidelity V4 + approved mockup UI V4.3",
   "android": {
-    "versionCode": 8,
-    "versionName": "4.3.1"
+    "versionCode": 9,
+    "versionName": "4.3.2"
   },
   "versionFiles": [
     "VERSION",
