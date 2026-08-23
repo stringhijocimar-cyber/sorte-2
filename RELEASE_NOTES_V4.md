@@ -1,14 +1,84 @@
 # LotoLab — notas das versões V4
 
-**Versão atual:** 4.2.0 · **Android:** versionCode 6 / versionName 4.2.0
+**Versão atual:** 4.3.1 · **Android:** versionCode 8 / versionName 4.3.1
 **Fonte da verdade:** branch `main` · **Manifesto:** `RELEASE_MANIFEST_V4.json`
 
-Duas edições são publicadas a partir do mesmo código:
+---
 
-| Edição | O que é | Tag |
-|---|---|---|
-| **LotoLab 4.2.0** | edição completa | `v4.2.0` |
-| **LotoLab Estatístico 4.2.0** | sem os fluxos de aposta | `v4.2.0-stat` |
+# 4.3.1 — o lembrete passa a ler o calendário
+
+Versão de correção, com três defeitos relatados por quem usa.
+
+## O lembrete caía em dia sem sorteio
+
+O app projetava os próximos sorteios pela **mediana dos intervalos**. Numa
+loteria que sorteia de segunda a sexta e no domingo, a mediana é 1 dia — então
+ele agendava lembrete para o **sábado**, dia em que não há sorteio. Alarme em
+dia vazio ensina a ignorar o alarme, que é o oposto do que a fila existe para
+fazer.
+
+O calendário da Caixa mudou em meados de julho de 2026: o último sábado da
+Mega-Sena foi o concurso 3030, em 11/07. Depois disso, domingo. O app seguiu
+projetando sábado por mais de um mês.
+
+Agora os dias de sorteio são lidos do **próprio histórico**, por modalidade, e
+a fila anda dia a dia aceitando só os dias em que aquela loteria de fato
+sorteia. Nenhuma tabela escrita à mão: quando o calendário mudar de novo, o app
+acompanha sozinho.
+
+A janela é de seis semanas, e o número foi medido: com oito, ela ainda
+alcançava três sábados de julho e os dava como dia de sorteio — e aí o próximo
+concurso saía numerado um a mais, porque a fila contava um sorteio que não
+existiu.
+
+Conferido nas oito modalidades, sem nenhum sábado:
+
+| Modalidade | Dias |
+|---|---|
+| Dia de Sorte · Lotofácil · Quina | seg a sex, e dom |
+| Dupla Sena · Lotomania | seg, qua, sex |
+| +Milionária | qua, dom |
+| Mega-Sena · Timemania | ter, qui, dom |
+
+## Não havia como sair das atividades
+
+A folha de notificações tinha apenas o fundo clicável — a faixa escura acima do
+painel. No navegador não existe botão de voltar do sistema, e ninguém adivinha
+que precisa tocar no escuro. A gaveta do menu sempre teve um "fechar" visível;
+esta não tinha. Agora tem.
+
+A bateria cobria **abrir** a folha e o que ela mostra; nunca cobriu **sair** — e
+é por isso que um beco sem saída sobreviveu a tantas versões.
+
+## A notificação de coincidência voltou à edição estatística
+
+Ela tinha sido removida por engano junto com os fluxos de aposta. "Seu conjunto
+coincidiu em 13 dezenas no concurso 3765" é medida, não prêmio.
+
+O texto também deixou de dizer "premiado" na edição completa: o app compara
+conjuntos guardados com concursos publicados, e não sabe se o bilhete foi
+comprado.
+
+## Sonda para a frente no atualizador
+
+Quando a fonte devolve como "último" um concurso já conhecido, o atualizador
+passa a perguntar pelos próximos, um a um, parando no primeiro que não existir.
+Ele confere que o número devolvido é o pedido — a Caixa responde com o último
+quando perguntam por um que não existe.
+
+Nota honesta: esta sonda foi escrita durante um diagnóstico que se revelou
+errado (eu havia concluído que faltava um concurso de sábado, quando não houve
+sorteio no sábado). Ela fica porque o modo de falha que cobre já aconteceu de
+verdade em agosto, mas não era a causa deste relato.
+
+## Testes
+
+| Bateria | Resultado |
+|---|---|
+| Motor | 675/675 |
+| Interface, Chrome de verdade | 111/111 |
+| Atualizador | 18/18 |
+| Referência dourada | idêntica — motor intacto |
 
 ---
 
