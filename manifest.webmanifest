@@ -1,7 +1,7 @@
 {
-  "name": "LotoLab — jogos e conferência",
-  "short_name": "LotoLab",
-  "description": "Monta jogos das loterias brasileiras, guarda no aparelho e confere contra os concursos, sempre mostrando o desempenho comparado ao acaso.",
+  "name": "LotoLab Estatístico — laboratório de loterias",
+  "short_name": "LotoLab Estat.",
+  "description": "Laboratório estatístico das loterias brasileiras: histórico, análise descritiva, simulação e comparação com o acaso. Não opera apostas.",
   "lang": "pt-BR",
   "start_url": "./index.html",
   "scope": "./",
