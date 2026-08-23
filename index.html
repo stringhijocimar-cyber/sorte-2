@@ -4365,6 +4365,15 @@ function pintarAvisos(){
         ${perm === "granted" ? "" :
           `<button class="acao contorno mini" id="a-permitir">permitir notificação</button>`}
         ${S.avisos.length ? `<button class="acao contorno mini" id="a-limpar">limpar</button>` : ""}
+        ${/* Fechar VISÍVEL. A gaveta sempre teve o dela; esta folha só tinha o
+             fundo clicável — a faixa escura acima do painel. Quem abria as
+             atividades ficava sem saída aparente: no navegador não há botão de
+             voltar do sistema, e ninguém adivinha que precisa tocar no escuro.
+             Foi relatado exatamente assim: "vou nas notificações e não consigo
+             voltar". O tratador de [data-fechar] já existia e já marca os
+             avisos como lidos; faltava a porta. */""}
+        <button class="acao contorno mini" data-fechar="1"
+          aria-label="Fechar atividades">fechar</button>
       </div></div>`;
   /* Os chips levam a contagem. "Análises" sem número obriga a tocar para
      descobrir que está vazio; com número, a pessoa já sabe antes de tocar. */

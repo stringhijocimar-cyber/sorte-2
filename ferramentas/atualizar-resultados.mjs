@@ -130,6 +130,11 @@ async function buscar(slug, concurso) {
    qualquer uma pode sair do ar, e derrubar a atualização inteira por causa da
    terceira da lista seria trocar um defeito por outro. */
 
+/* Quantos concursos à frente a sonda tenta antes de desistir. Três cobre um
+   fim de semana de loteria diária; buraco maior que isso é trabalho do
+   backfill para trás, que tem teto próprio. */
+const SONDA_A_FRENTE = 3;
+
 const ESPELHO = "https://loteriascaixa-api.herokuapp.com/api";
 
 /* O espelho usa nomes de campo próprios. Traduz para o formato da Caixa, e daí
@@ -304,6 +309,49 @@ for (const [modalidade, cfg] of Object.entries(MODALIDADES)) {
 
   const novos = [];
   if (!conhecidos.has(ultimo.concurso)) novos.push(ultimo);
+
+  /* ---- sonda PARA A FRENTE ----
+
+     O defeito que motivou isto, medido no log do cron de 23/08: as fontes
+     devolveram "último 3047" para a Mega-Sena enquanto o próprio registro do
+     3047 anunciava o 3048 para o dia 22. Nenhuma fonte falhou, nada ficou
+     vermelho, e o app passou dias sem sorteio novo enquanto o repositório
+     commitava todo dia — porque o commit diário é o backfill de rateio, que
+     de fato trabalha.
+
+     A causa é que este laço só preenchia para TRÁS, a partir do que a fonte
+     chamou de último. Quando o endpoint "sem número" fica preso num concurso
+     já conhecido — e ele fica; foi o mesmo sintoma que me obrigou a
+     acrescentar a segunda fonte —, não havia nada que olhasse adiante.
+
+     O endpoint POR NÚMERO responde normalmente: o backfill de rateio faz
+     vinte chamadas por modalidade a cada execução, todas bem-sucedidas. Então
+     a sonda pergunta pelos próximos, um a um, e para no primeiro que não
+     existir. Custa poucas requisições e é o que faltava para o sorteio de
+     ontem aparecer hoje.
+
+     Orçamento pequeno de propósito: se houver um buraco grande, quem o fecha é
+     o backfill para trás, que já existe e tem teto próprio. */
+  const maiorConhecido = dados.concursos.reduce((m, c) => Math.max(m, c.concurso), 0);
+  let deOnde = Math.max(ultimo.concurso, maiorConhecido);
+  for (let n = deOnde + 1, tentados = 0; tentados < SONDA_A_FRENTE; n++, tentados++) {
+    let r;
+    try {
+      r = converter(await buscar(cfg.slug, n), modalidade);
+    } catch (e) {
+      /* Silencioso: perguntar por um concurso que ainda não foi sorteado é o
+         caso NORMAL desta sonda, não um erro. Barulho aqui todo dia ensinaria
+         a ignorar o log inteiro. */
+      break;
+    }
+    /* A Caixa devolve o último quando perguntam por um número que não existe,
+       em vez de erro. Sem esta conferência a sonda regravaria o mesmo concurso
+       e acharia que avançou. */
+    if (r.concurso !== n || conhecidos.has(r.concurso)) break;
+    novos.push(r);
+    conhecidos.add(r.concurso);
+    console.log(`  ${modalidade}: sonda encontrou o concurso ${r.concurso}`);
+  }
 
   /* Preenche os buracos para trás. O `dataProximo` e a estimativa só valem no
      concurso mais recente, então são removidos dos antigos: manter aumentaria

@@ -1201,6 +1201,55 @@ for (let i = 0; i < 5; i++) {
 checar("o foco de teclado é visível", aneis.length > 0 && aneis.every(Boolean),
   `${aneis.filter(Boolean).length} de ${aneis.length} controles com anel`);
 
+/* ---------- F11. Sair da folha de atividades ----------
+   Relatado por quem usa: "vou nas notificações e não consigo voltar".
+
+   A folha tinha só o fundo clicável — a faixa escura acima do painel. No
+   navegador não existe botão de voltar do sistema, e ninguém adivinha que
+   precisa tocar no escuro. A gaveta sempre teve um "fechar" visível; esta
+   não tinha.
+
+   A bateria cobria ABRIR a folha e o que ela mostra. Nunca cobriu SAIR — e é
+   por isso que um beco sem saída sobreviveu a tantas versões. */
+secao("F11. Sair da folha de atividades");
+
+await irPara("inicio");
+const saida = await js(`
+  const folha = document.querySelector('#folha-avisos');
+  const sino = document.querySelector('.sino');
+  if(!folha || !sino) return {erro:'sem folha ou sino'};
+
+  sino.click();
+  const abriu = folha.dataset.aberta === "1";
+
+  /* O botão precisa estar VISÍVEL, não apenas existir: um fechar de 0x0 ou
+     escondido atrás de overflow é o mesmo beco sem saída com outro nome. */
+  const btn = folha.querySelector('[data-fechar]:not(.fundo)');
+  const cx = btn ? btn.getBoundingClientRect() : null;
+  const visivel = !!(cx && cx.width > 0 && cx.height > 0 &&
+    getComputedStyle(btn).visibility !== 'hidden' &&
+    cx.top >= 0 && cx.bottom <= window.innerHeight);
+
+  if(btn) btn.click();
+  const fechou = folha.dataset.aberta === "0";
+
+  /* E o fundo continua fechando, para quem já aprendeu esse caminho. */
+  sino.click();
+  const reabriu = folha.dataset.aberta === "1";
+  folha.querySelector('.fundo').click();
+  const fechouPeloFundo = folha.dataset.aberta === "0";
+
+  return { abriu, temBotao: !!btn, visivel, alvo: cx ? Math.round(cx.width)+'x'+Math.round(cx.height) : null,
+           fechou, reabriu, fechouPeloFundo };
+`);
+checar("a folha de atividades abre", saida.abriu === true, JSON.stringify(saida.erro||""));
+checar("tem um fechar visível dentro da folha", saida.temBotao && saida.visivel,
+  `botão=${saida.temBotao} visível=${saida.visivel} alvo=${saida.alvo}`);
+checar("e o fechar realmente fecha", saida.fechou === true);
+checar("o fundo também continua fechando",
+  saida.reabriu === true && saida.fechouPeloFundo === true,
+  `reabriu=${saida.reabriu} fechou=${saida.fechouPeloFundo}`);
+
 /* ---------- fim ---------- */
 console.log(linhas.join("\n"));
 console.log(`\n${"─".repeat(60)}`);
