@@ -71,6 +71,17 @@ jobs:
              "LotoLab-v${{ inputs.versao }}.apk"
           ls -la "LotoLab-v${{ inputs.versao }}.apk"
 
+      - name: Conferir o APK por dentro
+        # Esta conferência existe porque um defeito atravessou todas as outras:
+        # o app/build.gradle não aplicava o capacitor.build.gradle, e os plugins
+        # nativos compilavam sem nunca virar dependência do :app. As classes não
+        # chegavam ao APK, o capacitor.plugins.json continuava listando-as, e o
+        # Capacitor falhava calado no aparelho.
+        #
+        # Testar o código não pegava. Testar a build não pegava, porque a build
+        # passava. Só abrir o arquivo que vai para o celular pega.
+        run: python3 ferramentas/conferir-apk.py "LotoLab-v${{ inputs.versao }}.apk"
+
       - name: Conferir que o APK tem a versão certa do app
         # Sem isto, um APK compilado de cache antigo passaria por novo.
         run: |

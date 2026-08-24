@@ -77,3 +77,21 @@ dependencies {
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
     implementation project(':capacitor-cordova-android-plugins')
 }
+
+// A linha que faltava desde sempre.
+//
+// O capacitor.build.gradle é gerado pelo `cap sync` e contém a lista de
+// plugins como dependência do :app. Sem aplicá-lo, os módulos dos plugins
+// entram no settings.gradle (e até compilam, aparecendo no log da build), mas
+// NUNCA viram dependência do aplicativo — as classes deles não chegam ao APK.
+//
+// O `cap sync` continua escrevendo assets/capacitor.plugins.json listando os
+// plugins, então o Capacitor tenta carregá-los por reflexão em tempo de
+// execução e falha calado. Nada quebra, nada avisa, e o recurso simplesmente
+// não existe no aparelho.
+//
+// Foi assim que o @capacitor/local-notifications ficou fora de TODOS os APKs
+// deste projeto: era por isso que as notificações nunca funcionaram.
+// Descoberto ao conferir se o executor em segundo plano tinha entrado na
+// 4.4.0 — ele também não tinha, e a mesma linha ausente explicava os dois.
+apply from: 'capacitor.build.gradle'
