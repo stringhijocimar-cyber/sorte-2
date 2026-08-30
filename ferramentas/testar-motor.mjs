@@ -195,6 +195,8 @@ const EXPOSTOS = [
   "porDezena", "vereditoDasDezenas", "convergenciaDoPlacar",
   "panoramaDoLaboratorio", "tiraDeAprendizado", "registrarAnalise",
   "TETO_HISTORICO_APRENDIZADO",
+  "dezenasRecentes", "sobreposicaoDoAcaso", "repeticaoDoJogo", "daParaEvitar",
+  "vereditoDaRepeticao", "CONCURSOS_RECENTES", "gerarAntirepeticao", "gerarUniforme",
   "ordemDeFontes", "FONTES", "buscarNaCaixa", "buscarComLimite", "TEMPO_LIMITE_FONTE",
   "buscarHistorico", "completarAPonta", "MAXIMO_A_EMENDAR",
   "buscaDiaria", "sorteioPendente", "ultimoSorteioEsperado",
@@ -4849,6 +4851,118 @@ secao("44. Conferir com o app fechado");
     checar("o intervalo respeita o mínimo do WorkManager",
       br.interval >= 15, `${br.interval} min`);
   }
+}
+
+/* ==================================================================
+   45. Repetir dezena recente é o acaso, não defeito
+
+   O dono do app estranhou que os jogos gerados repetissem dezenas de sorteios
+   recentes. A tela mostrava o jogo sem mostrar quanta repetição o acaso
+   produz — e sem o segundo número o primeiro não significa nada.
+
+   A conta é hipergeométrica: das N dezenas do volante, K apareceram nos
+   últimos concursos; um jogo de n dezenas encosta em n*K/N delas, em média.
+   ================================================================== */
+secao("45. Repetir dezena recente é o acaso, não defeito");
+{
+  const S = motor.S;
+  const g = {r: S.resultados, m: S.modalidade};
+
+  /* Cinco concursos de Mega-Sena com 26 dezenas distintas — o mesmo retrato
+     dos dados reais no dia em que isto foi escrito. */
+  const cinco = [
+    [1,2,3,4,5,6], [7,8,9,10,11,12], [13,14,15,16,17,18],
+    [19,20,21,22,23,24], [25,26,1,2,3,4],
+  ];
+  const porMega = () => cinco.map((dz, i) => ({
+    concurso: 3040 + i, data: `2026-08-0${i+1}`, modalidade: "mega-sena", dezenas: dz,
+  }));
+  S.resultados = porMega();
+  S.modalidade = "mega-sena";
+
+  checar("junta as dezenas dos concursos recentes, sem repetir",
+    contexto.dezenasRecentes("mega-sena", 5).size === 26,
+    `${contexto.dezenasRecentes("mega-sena", 5).size} distintas`);
+  checar("e olhar menos concursos junta menos dezenas",
+    contexto.dezenasRecentes("mega-sena", 1).size === 6);
+
+  const base = contexto.sobreposicaoDoAcaso("mega-sena", 6, 5);
+  checar("a média do acaso é tam × K/N",
+    Math.abs(base.media - 6 * 26 / 60) < 1e-9, base.media.toFixed(3));
+  checar("e o desvio usa a correção de população finita",
+    Math.abs(base.dp - Math.sqrt(6 * (26/60) * (1 - 26/60) * ((60 - 6) / 59))) < 1e-9,
+    base.dp.toFixed(3));
+
+  /* A prova que vale: a fórmula tem de bater com o sorteio de verdade. Sem
+     isto eu conferiria minha própria álgebra contra ela mesma. */
+  {
+    let soma = 0; const n = 40000;
+    for(let i = 0; i < n; i++)
+      soma += contexto.repeticaoDoJogo("mega-sena",
+        contexto.gerarUniforme("mega-sena", 1, 6)[0], 5).repetidas;
+    const medido = soma / n;
+    checar("e a fórmula bate com 40 mil sorteios uniformes de verdade",
+      Math.abs(medido - base.media) < 0.05,
+      `fórmula ${base.media.toFixed(2)}, medido ${medido.toFixed(2)}`);
+  }
+
+  checar("jogo todo dentro das recentes marca o máximo",
+    contexto.repeticaoDoJogo("mega-sena", [1,2,3,4,5,6], 5).repetidas === 6);
+  checar("jogo todo fora marca zero",
+    contexto.repeticaoDoJogo("mega-sena", [55,56,57,58,59,60], 5).repetidas === 0);
+
+  const texto = contexto.vereditoDaRepeticao("mega-sena", [[1,2,3,50,51,52]], 5);
+  checar("o veredito põe a faixa do acaso ao lado do que saiu",
+    /acaso\s+sozinho produz/.test(texto) && /2,6/.test(texto), texto.slice(0, 60));
+  checar("e diz que evitar recentes não altera a chance",
+    /não altera a chance/.test(texto));
+  checar("sem cair no vocabulário proibido",
+    !/mais prováveis|aumenta|vantagem|melhor jogo/i.test(texto));
+
+  /* Lotofácil: cinco concursos cobrem as 25 dezenas. Não existe jogo sem
+     repetição, e o app tem de dizer isso em vez de exibir uma faixa. */
+  S.resultados = [0,1,2,3,4].map(i => ({
+    concurso: 3760 + i, data: `2026-08-0${i+1}`, modalidade: "lotofacil",
+    dezenas: Array.from({length: 15}, (_, j) => ((i * 15 + j) % 25) + 1),
+  }));
+  S.modalidade = "lotofacil";
+  checar("na Lotofácil os recentes cobrem o volante inteiro",
+    contexto.dezenasRecentes("lotofacil", 5).size === 25);
+  checar("e por isso evitar é impossível",
+    contexto.daParaEvitar("lotofacil", 15, 5) === false);
+  checar("o app diz que não existe jogo sem repetição, em vez de fingir faixa",
+    /Não existe jogo/.test(
+      contexto.vereditoDaRepeticao("lotofacil",
+        [[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]], 5)));
+
+  /* Na Mega-Sena dá para evitar, e o método tem de evitar os CINCO. */
+  S.resultados = porMega();
+  S.modalidade = "mega-sena";
+  checar("na Mega-Sena ainda sobra volante para evitar",
+    contexto.daParaEvitar("mega-sena", 6, 5) === true);
+  {
+    const lote = contexto.gerarAntirepeticao("mega-sena", 5, 6, null, 5);
+    const pior = Math.max(...lote.map(j =>
+      contexto.repeticaoDoJogo("mega-sena", j, 5).repetidas));
+    checar("o método foge dos CINCO concursos, e não só do último",
+      pior === 0, `pior jogo repetiu ${pior}`);
+    const uniforme = contexto.gerarUniforme("mega-sena", 40, 6)
+      .map(j => contexto.repeticaoDoJogo("mega-sena", j, 5).repetidas)
+      .reduce((a,b)=>a+b,0) / 40;
+    checar("enquanto o uniforme repete o que o acaso manda",
+      uniforme > 1.5, `${uniforme.toFixed(2)} por jogo`);
+  }
+
+  /* A bancada continua podendo dizer QUAL concurso evitar — sem isso ela
+     testaria o método contra o próprio sorteio que mandou evitar. */
+  {
+    const lote = contexto.gerarAntirepeticao("mega-sena", 3, 6, [1,2,3,4,5,6]);
+    const pior = Math.max(...lote.map(j =>
+      j.filter(d => [1,2,3,4,5,6].includes(d)).length));
+    checar("o parâmetro explícito da bancada continua vencendo", pior === 0, `pior ${pior}`);
+  }
+
+  S.resultados = g.r; S.modalidade = g.m;
 }
 
 /* ---------- saída ---------- */

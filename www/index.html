@@ -1050,8 +1050,8 @@ const METODOS = [
      usam como reserva, mas deixou de ser oferecida como estratégia. */
   {id:"cobertura", nome:"Cobertura espalhada",
    desc:"Distribui os jogos pelo volante para que se repitam pouco entre si. Não muda a chance de cada jogo."},
-  {id:"antirepeticao", nome:"Evita o concurso anterior",
-   desc:"Muita gente repete as dezenas que acabaram de sair. Evitá-las não muda sua chance — muda com quantas pessoas você dividiria."},
+  {id:"antirepeticao", nome:"Evita os concursos recentes",
+   desc:"Muita gente repete as dezenas que acabaram de sair. Este método foge das que apareceram nos últimos cinco concursos. Não muda sua chance — a urna não tem memória — e pode nem ser possível: na Lotofácil, cinco concursos costumam cobrir as 25 dezenas."},
   /* "Contraste por restrição" saiu junto com o rateio, e pelo mesmo motivo: era
      o mesmo mecanismo — fugir do que o público marca — trocando peso suave por
      restrição dura, apoiado nos mesmos pesos que nunca foram conferidos com
@@ -1415,7 +1415,95 @@ function ultimoResultado(m){
   return null;
 }
 
-function gerarAntirepeticao(m, quantos, tam, dezenasEvitadas){
+/* Quantos concursos recentes o método passa a olhar. Cinco porque é o que
+   cabe na cabeça de quem acompanha — e porque a partir daí, nas modalidades de
+   volante pequeno, já não sobra dezena para escolher. */
+const CONCURSOS_RECENTES = 5;
+
+function dezenasRecentes(m, quantosConcursos){
+  const hist = historicoDe(m);
+  const set = new Set();
+  for(const r of hist.slice(-Math.max(1, quantosConcursos || 1)))
+    for(const d of (r.dezenas || [])) set.add(d);
+  return set;
+}
+
+/* Quanta sobreposição com os concursos recentes o ACASO sozinho produz.
+   Distribuição hipergeométrica: de N dezenas do volante, K apareceram nos
+   últimos concursos, e o jogo marca `tam`. A média é tam*K/N.
+
+   Esta conta existe porque "meu jogo repetiu dezenas que acabaram de sair" é
+   quase sempre a descrição correta do acaso, e não de um defeito do gerador.
+   Sem o número ao lado, a impressão não tem com o que ser comparada. */
+function sobreposicaoDoAcaso(m, tam, quantosConcursos){
+  const c = MODALIDADES[m];
+  if(!c) return null;
+  const K = dezenasRecentes(m, quantosConcursos).size;
+  if(!K) return null;
+  const N = c.N, n = Math.min(tam, N);
+  const p = K / N;
+  const media = n * p;
+  /* Variância da hipergeométrica, com a correção de população finita. */
+  const varia = N > 1 ? n * p * (1 - p) * ((N - n) / (N - 1)) : 0;
+  return {universo: N, recentes: K, marcadas: n, media, dp: Math.sqrt(Math.max(0, varia))};
+}
+
+/* Quantas dezenas do jogo estão entre as recentes, e a que distância isso
+   fica do que o acaso produz. */
+function repeticaoDoJogo(m, dezenas, quantosConcursos){
+  const base = sobreposicaoDoAcaso(m, (dezenas || []).length, quantosConcursos);
+  if(!base) return null;
+  const recentes = dezenasRecentes(m, quantosConcursos);
+  let repetidas = 0;
+  for(const d of dezenas) if(recentes.has(d)) repetidas++;
+  const z = base.dp > 0 ? (repetidas - base.media) / base.dp : 0;
+  return Object.assign({repetidas, z}, base);
+}
+
+/* Evitar as recentes é POSSÍVEL? Na Lotofácil, cinco concursos costumam cobrir
+   as 25 dezenas: não existe jogo sem repetição, e prometer um seria mentir. */
+function daParaEvitar(m, tam, quantosConcursos){
+  const c = MODALIDADES[m];
+  if(!c) return false;
+  const K = dezenasRecentes(m, quantosConcursos).size;
+  return (c.N - K) >= tam;
+}
+
+/* O parágrafo que faltava na tela: quanta repetição o lote tem, e quanta o
+   acaso produziria. Sem o segundo número o primeiro não significa nada — e foi
+   essa falta que fez um lote normal parecer defeituoso. */
+function vereditoDaRepeticao(m, lote, quantosConcursos){
+  const olhar = quantosConcursos || CONCURSOS_RECENTES;
+  if(!lote || !lote.length) return "";
+  const base = sobreposicaoDoAcaso(m, lote[0].length, olhar);
+  if(!base) return "";
+  const c = MODALIDADES[m];
+  const medidas = lote.map(dez => repeticaoDoJogo(m, dez, olhar).repetidas);
+  const medio = medidas.reduce((a,b)=>a+b, 0) / medidas.length;
+
+  /* Quando as recentes cobrem o volante inteiro, não existe jogo sem
+     repetição. Dizer isso é mais útil que mostrar uma faixa. */
+  if(c.N - base.recentes < base.marcadas)
+    return `<div class="nota">Os últimos ${olhar} concursos usaram
+      ${base.recentes} das ${c.N} dezenas da ${esc(c.nome)}. Não existe jogo de
+      ${base.marcadas} dezenas fora dessas — qualquer combinação repete alguma
+      coisa recente. Repetição aqui não é sinal de nada.</div>`;
+
+  const faixa = `${nf(Math.max(0, base.media - 2*base.dp), 1)} a ${nf(base.media + 2*base.dp, 1)}`;
+  const dentro = Math.abs(medio - base.media) <= 2 * base.dp;
+  return `<div class="nota">
+    <strong>Repetição dos últimos ${olhar} concursos:</strong>
+    ${nf(medio, 1)} dezenas por jogo, em média.
+    Esses concursos usaram ${base.recentes} das ${c.N} dezenas, então o acaso
+    sozinho produz ${nf(base.media, 1)} — quase sempre entre ${faixa}.
+    ${dentro
+      ? "O que saiu está dentro dessa faixa: repetir dezenas recentes é o comportamento normal, e não um defeito do gerador."
+      : "O que saiu está fora dessa faixa, o que acontece em cerca de 5% das vezes por puro acaso."}
+    Sorteios são independentes: evitar ou buscar dezenas recentes não altera a chance de acerto.
+  </div>`;
+}
+
+function gerarAntirepeticao(m, quantos, tam, dezenasEvitadas, quantosConcursos){
   /* Repetir as dezenas do concurso que acabou de sair é um hábito comum de
      quem aposta. Evitá-las não mexe na chance de acerto — a urna não tem
      memória, e o sorteio de amanhã pode repetir cinco dezenas de hoje.
@@ -1433,7 +1521,17 @@ function gerarAntirepeticao(m, quantos, tam, dezenasEvitadas){
      o último concurso registrado e acabaria testando o método contra o próprio
      sorteio que ele foi mandado evitar — o que produziria um déficit de
      acertos garantido, e falso. */
-  const base = dezenasEvitadas || (ultimoResultado(m) || {}).dezenas;
+  /* `dezenasEvitadas` continua vencendo: é como a bancada informa QUAL concurso
+     é o anterior ao que está sendo conferido. Sem ele, o método passa a olhar
+     os últimos CONCURSOS_RECENTES em vez de só o último — que é o que "dezenas
+     que já saíram em sorteios recentes" quer dizer.
+
+     Continua sem mexer na chance: a urna não tem memória. O que muda é com
+     quantas pessoas se dividiria um prêmio, porque repetir o que acabou de
+     sair é hábito comum. */
+  const olhar = quantosConcursos || CONCURSOS_RECENTES;
+  const recentes = dezenasEvitadas ? null : dezenasRecentes(m, olhar);
+  const base = dezenasEvitadas || (recentes && recentes.size ? [...recentes] : null);
   /* Sem concurso anterior não há o que evitar, e a reserva é o sorteio
      uniforme. Já foi o rateio; deixou de ser quando o rateio saiu das
      estratégias oferecidas — cair num método retirado seria oferecê-lo pela
@@ -8072,7 +8170,8 @@ function acoes(){
             <div class="topo"><span class="id">${esc(nomeDoMetodo(j.metodo))}</span>
               <span class="selo">${j.dezenas.length} dezenas</span></div>
             <div class="dezenas">${j.dezenas.map(d=>`<span class="dz marcada">${pad(d)}</span>`).join("")}</div>
-          </div>`).join("") + `
+          </div>`).join("") +
+          vereditoDaRepeticao(S.modalidade, S.ultimoLote.map(j=>j.dezenas)) + `
           <button class="acao" id="g-salvar" style="margin-top:6px">Salvar ${S.ultimoLote.length} jogo${S.ultimoLote.length>1?"s":""}</button>`;
 
         $("#g-salvar").onclick = () => {
