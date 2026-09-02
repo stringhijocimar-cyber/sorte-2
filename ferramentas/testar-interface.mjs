@@ -1491,6 +1491,81 @@ secao("F14. O concurso abre e mostra os jogos salvos");
     (await js(`return !document.querySelector(".concurso-jogos");`)));
 }
 
+/* ---------- F15. A busca de histórico responde onde foi pedida -----------
+   O dono do app relatou que a busca de histórico tinha sido removida. Ela
+   nunca saiu: o botão funcionava e os concursos eram guardados. O que faltava
+   era QUALQUER sinal visível de que algo aconteceu.
+
+   Três defeitos empilhados, todos medidos:
+     1. dois elementos com id="r-saida" na mesma tela — $() devolve o primeiro,
+        e a resposta ia para o topo, fora da vista de quem clicou embaixo;
+     2. mesmo com id próprio, a caixa ficava no FIM dos ajustes, 659px abaixo
+        do botão, atrás dos interruptores e da área de colagem;
+     3. o pintar() agendado depois da busca reconstruía a tela, apagando a
+        mensagem e FECHANDO os ajustes na cara de quem acabara de usá-los.
+
+   Somados: clica, nada aparece, o painel se fecha. Idêntico a não existir. */
+secao("F15. A busca de histórico responde onde foi pedida");
+{
+  await js(`irParaTela("resultados"); return 1;`);
+  await dormir(600);
+
+  /* Id repetido é o defeito de origem, e vale cobrar no documento inteiro:
+     quando dois elementos dividem um id, um deles fica mudo para sempre. */
+  const repetidos = await js(`
+    const contagem = {};
+    for(const el of document.querySelectorAll("[id]"))
+      contagem[el.id] = (contagem[el.id] || 0) + 1;
+    return Object.entries(contagem).filter(([,n]) => n > 1)
+      .map(([id,n]) => id + "×" + n).join(", ");`);
+  checar("nenhum id se repete na tela de Resultados", repetidos === "",
+    repetidos || "todos únicos");
+
+  checar("os dois botões de histórico existem e estão ativos", (await js(`
+    const v=document.querySelector("#r-varios"), t=document.querySelector("#r-tudo");
+    return !!(v && t && !v.disabled && !t.disabled);`)));
+
+  /* Rede simulada: o arquivo do repositório responde com dois concursos. */
+  await js(`
+    window.__original = window.fetch;
+    window.fetch = () => Promise.resolve({ok:true, json: async () => ({concursos:[
+      {concurso:9001,data:"2026-08-01",dezenas:[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]},
+      {concurso:9002,data:"2026-08-04",dezenas:[1,2,3,4,5,6,7,8,9,10,11,12,13,14,16]}]})});
+    return 1;`);
+  await js(`trocarModalidade("lotofacil"); return 1;`);
+  await dormir(500);
+  await js(`document.querySelector("#r-ajustes").open = true;
+    document.querySelector("#r-ajustes").dispatchEvent(new Event("toggle"));
+    return 1;`);
+  await dormir(300);
+  await js(`document.querySelector("#r-tudo").click(); return 1;`);
+  await dormir(3000);
+
+  const depois = await js(`
+    const caixa = document.querySelector("#r-saida-ajustes");
+    const botao = document.querySelector("#r-tudo");
+    const guardados = JSON.parse(localStorage.getItem("lotolab:resultados") || "[]")
+      .filter(r => r.concurso === 9001 || r.concurso === 9002).length;
+    return {texto: caixa ? caixa.textContent.trim() : "",
+            distancia: (caixa && botao)
+              ? Math.round(Math.abs(caixa.getBoundingClientRect().top
+                                    - botao.getBoundingClientRect().bottom)) : -1,
+            ajustesAbertos: !!document.querySelector("#r-ajustes[open]"),
+            guardados};`);
+
+  checar("a busca guarda os concursos", depois.guardados === 2,
+    `${depois.guardados} guardados`);
+  checar("e responde por escrito, em vez de sumir em silêncio",
+    /concursos? recebidos?/.test(depois.texto), depois.texto.slice(0, 70) || "vazio");
+  checar("a resposta aparece junto do botão, e não no fim da página",
+    depois.distancia >= 0 && depois.distancia < 120, `${depois.distancia}px do botão`);
+  checar("e o painel de ajustes continua aberto depois do repintar",
+    depois.ajustesAbertos);
+  await capturar("f15-historico");
+
+  await js(`if(window.__original) window.fetch = window.__original; return 1;`);
+}
+
 /* ---------- fim ---------- */
 console.log(linhas.join("\n"));
 console.log(`\n${"─".repeat(60)}`);

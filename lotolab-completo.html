@@ -8147,7 +8147,7 @@ T.resultados = () => {
      tela, como no mockup. O id continua "r-caixa", então o tratador não mudou
      de lugar nem de nome. */
   return chips + alerta + `<div id="r-saida"></div>` + cartoes + `
-  <details class="ajustes">
+  <details class="ajustes" id="r-ajustes" ${S.ajustesAbertos ? "open" : ""}>
     <summary>Trazer resultados e ajustes</summary>
     <div class="carta">
     <!-- "buscar último na Caixa" saiu daqui: virou o botão "atualizar" lá em
@@ -8160,6 +8160,15 @@ T.resultados = () => {
       <button class="acao contorno mini" id="r-varios" ${temServico?"":"disabled"}>buscar os 20 últimos</button>
       <button class="acao contorno mini" id="r-tudo" ${temServico?"":"disabled"}>histórico completo</button>
     </div>
+    <!-- A resposta fica COLADA nos botões, e com id próprio.
+         Dois defeitos moravam aqui. Primeiro, esta caixa se chamava "r-saida",
+         igual à do topo da tela; $("#r-saida") devolve sempre o primeiro, então
+         a resposta ia parar lá em cima, fora da vista. Depois, mesmo com id
+         próprio, ela ficava no FIM dos ajustes — 659 pixels abaixo do botão,
+         medidos —, atrás dos interruptores e da área de colagem.
+         Nos dois casos o efeito era o mesmo para quem clicava: nada acontece.
+         E foi assim que a busca de histórico passou por removida do app. -->
+    <div id="r-saida-ajustes">${S.recadoAjustes || ""}</div>
     <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;
       border:1px solid var(--linha);border-radius:12px;margin-bottom:10px;cursor:pointer">
       <input type="checkbox" id="r-auto" ${S.buscaAutomatica!==false?"checked":""}
@@ -8207,7 +8216,7 @@ T.resultados = () => {
         border:1px solid var(--linha);border-radius:11px;font-family:var(--mono);
         font-size:.82rem"></textarea></label>
     <button class="acao mini" id="r-colar">importar o que está colado</button>
-    <div id="r-saida"></div>
+
   </div>
   <div class="carta">
     <h2>${esc(c.nome)} — ${meus.length} concurso${meus.length===1?"":"s"} no app</h2>
@@ -8349,7 +8358,7 @@ function acoesNovas(){
   /* --- resultados --- */
   const colar = $("#r-colar");
   if(colar) colar.onclick = () => {
-    const saida = $("#r-saida");
+    const saida = $("#r-saida-ajustes");
     try{
       const novos = lerColagem($("#r-texto").value, S.modalidade);
       const n = guardarResultados(novos);
@@ -8363,8 +8372,12 @@ function acoesNovas(){
     }
   };
 
-  const buscar = async (quantos) => {
-    const saida = $("#r-saida");
+  /* `onde` diz em qual caixa de saída escrever. O botão de atualizar mora no
+     topo da tela e o "buscar os 20 últimos" mora dentro dos ajustes, lá
+     embaixo: uma caixa só, escolhida por id fixo, deixaria um dos dois
+     respondendo fora da vista de quem clicou. */
+  const buscar = async (quantos, onde = "r-saida") => {
+    const saida = $("#" + onde);
     saida.innerHTML = `<div class="nota"><span class="girando"></span>consultando o serviço da Caixa…</div>`;
     try{
       const ultimo = await buscarNaCaixa(S.modalidade, null);
@@ -8379,7 +8392,7 @@ function acoesNovas(){
       const nome = (FONTES.find(f => f.id === lote[0].fonte) || {}).nome || "fonte desconhecida";
       const r = aoMudarHistorico(n, nome);
       const resumo = resumoGanhadores(lote);
-      saida.innerHTML = `<div class="nota"><strong>${lote.length} concurso${lote.length===1?"":"s"}
+      saida.innerHTML = S.recadoAjustes = `<div class="nota"><strong>${lote.length} concurso${lote.length===1?"":"s"}
         recebido${lote.length===1?"":"s"}</strong>, ${n} novo${n===1?"":"s"}.
         ${r.novas} conferência${r.novas===1?"":"s"} automática${r.novas===1?"":"s"}.
         ${resumo.texto ? `<span style="display:block;margin-top:6px">${resumo.texto}.</span>` : ""}
@@ -8397,11 +8410,11 @@ function acoesNovas(){
     }
   };
   if($("#r-caixa")) $("#r-caixa").onclick = () => buscar(1);
-  if($("#r-varios")) $("#r-varios").onclick = () => buscar(20);
+  if($("#r-varios")) $("#r-varios").onclick = () => buscar(20, "r-saida-ajustes");
 
   const tudo = $("#r-tudo");
   if(tudo) tudo.onclick = async () => {
-    const saida = $("#r-saida");
+    const saida = $("#r-saida-ajustes");
     tudo.disabled = true;
     /* Teto de 1200 concursos por vez. Sem teto, a Lotofácil pediria mais de
        três mil requisições de uma vez — o serviço recusaria no meio e a pessoa
@@ -8419,7 +8432,7 @@ function acoesNovas(){
          numa requisição — e avisar "o teto foi atingido, rode de novo" ali é
          mentira exatamente no momento em que tudo deu certo. */
       const veioDoRepositorio = lote[0] && lote[0].origem === "repositorio";
-      saida.innerHTML = `<div class="nota"><strong>${lote.length} concursos recebidos</strong>,
+      saida.innerHTML = S.recadoAjustes = `<div class="nota"><strong>${lote.length} concursos recebidos</strong>,
         ${novos} novo${novos===1?"":"s"}. ${r.novas} conferência${r.novas===1?"":"s"}
         automática${r.novas===1?"":"s"}.${
           veioDoRepositorio
@@ -8429,11 +8442,18 @@ function acoesNovas(){
               : "")}</div>`;
       setTimeout(pintar, 1200);
     }catch(e){
-      saida.innerHTML = `<div class="nota atencao">A busca falhou: ${esc(e.message)}.
+      saida.innerHTML = S.recadoAjustes = `<div class="nota atencao">A busca falhou: ${esc(e.message)}.
         Use a colagem abaixo — ela não depende de rede.</div>`;
       tudo.disabled = false;
     }
   };
+
+  /* Sem lembrar isto, o pintar() que roda depois de uma busca fecha os ajustes
+     na cara de quem acabou de usá-los — e a pessoa, olhando o rodapé da tela,
+     vê o painel sumir sem resposta nenhuma. Era isso que fazia a busca de
+     histórico parecer removida do app. */
+  const ajustes = $("#r-ajustes");
+  if(ajustes) ajustes.ontoggle = () => { S.ajustesAbertos = ajustes.open; };
 
   const rauto = $("#r-auto");
   if(rauto) rauto.onchange = e => {
@@ -9281,6 +9301,10 @@ function pintar(){
   /* O recado da busca vale para a visita atual à tela. Sair dela o descarta,
      senão reaparece dias depois falando de uma conferência esquecida. */
   if(tela.id !== "conferir") S.avisoConferir = null;
+  /* O recado dos ajustes vale para a visita atual à tela de Resultados. Sair
+     dela o descarta — senão "1200 concursos recebidos" reaparece amanhã como
+     se tivesse acabado de acontecer. */
+  if(tela.id !== "resultados") S.recadoAjustes = null;
   if(tela.id !== "jogos") S.avisoJogos = null;
   const segmento = sec.telas.length < 2 ? "" :
     `<div class="segmento" role="tablist">${sec.telas.map(t=>
