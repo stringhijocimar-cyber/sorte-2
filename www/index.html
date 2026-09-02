@@ -343,6 +343,21 @@ main{padding:14px 16px calc(var(--barra) + 45px + var(--base));
 .concurso-topo time{font-family:var(--mono);font-size:.7rem;color:var(--secundaria);
   flex:none}
 .concurso-detalhe{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:9px}
+/* O painel que abre dentro do cartão do concurso. Ocupa a largura toda e
+   empurra o chevron para o topo — com o cartão expandido, a seta centrada
+   verticalmente ficaria no meio da lista de jogos, longe do que ela indica. */
+.concurso-jogos{grid-column:1/-1;margin-top:10px;padding-top:10px;
+  border-top:1px solid var(--linha)}
+/* Com o cartão aberto o chevron vai para o rodapé, apontando para cima: é o
+   gesto de recolher, e é o único canto que não disputa espaço.
+   Medido: mantê-lo no topo o punha exatamente sobre a data — ambos em y=277 —,
+   porque a data e a seta ocupam a mesma faixa horizontal e só a distância
+   vertical os separava no estado fechado. */
+.concurso.aberto .chevron{top:auto;bottom:10px;transform:rotate(-90deg)}
+/* A folga de baixo do cartão aberto fica em ui/lotolab-ui-v4-3.css, junto do
+   padding que a camada visual impõe com !important. Declará-la aqui não teria
+   efeito nenhum — e uma regra que não vence é pior que regra nenhuma, porque
+   quem lê o arquivo acredita nela. */
 .concurso .chevron{position:absolute;right:10px;top:50%;transform:translateY(-50%);
   color:var(--secundaria);display:grid;place-items:center}
 .concurso .chevron svg{width:17px;height:17px;stroke:currentColor;fill:none;
@@ -2053,12 +2068,16 @@ T.jogos = () => {
       `<strong>${esc(MODALIDADES[k].nome)}</strong> (${n})`).join(", ")}.
     Troque no topo da tela para ver.</div>`;
 
-  if(!meus.length) return `<div class="vazio">Nenhum jogo salvo de
+  /* A tira vem antes da lista. O rodapé desta tela já dizia "troque no topo da
+     tela para ver" — apontando para um seletor que não existia aqui. */
+  const chips = chipsDeModalidade();
+
+  if(!meus.length) return chips + `<div class="vazio">Nenhum jogo salvo de
     <strong>${esc(MODALIDADES[S.modalidade].nome)}</strong>.</div>` + rodape;
 
   const porLote = {};
   meus.forEach(j => (porLote[j.lote] = porLote[j.lote] || []).push(j));
-  return resumoDeMeusJogos(meus) + Object.entries(porLote).reverse().map(([lote, jogos])=>{
+  return chips + resumoDeMeusJogos(meus) + Object.entries(porLote).reverse().map(([lote, jogos])=>{
     const p = jogos[0];
     return `<h2 style="margin:14px 0 8px">${esc(MODALIDADES[p.modalidade].nome)} ·
       ${esc(p.data)} · ${esc(p.metodo)}</h2>
@@ -7444,10 +7463,7 @@ T.resultados = () => {
      e empurravam a lista para fora da primeira tela — quem entra em
      "Resultados" quer ver resultado, não configurar como buscá-los. Eles
      continuam aqui, recolhidos num <details> no fim. */
-  const chips = `<div class="chips chips-mod" role="group" aria-label="Modalidade">
-    ${Object.entries(MODALIDADES).map(([k,v]) =>
-      `<button class="chip" data-mod="${k}" aria-pressed="${k===S.modalidade}"
-        >${esc(v.nome)}</button>`).join("")}</div>`;
+  const chips = chipsDeModalidade();
 
   /* Aviso de dado velho.
 
@@ -7476,8 +7492,10 @@ T.resultados = () => {
     ? `<div class="vazio">Nenhum resultado desta modalidade ainda.<br>
         Sem histórico, a bancada e o placar não têm o que medir.</div>`
     : `<div class="concursos">${meus.slice(0,40).map(r => `
-        <article class="concurso ${ganhadoresDoConcurso(r).estado}"
-          data-abrir-concurso="${esc(r.concurso)}">
+        <article class="concurso ${ganhadoresDoConcurso(r).estado}${
+            S.concursoAberto === r.concurso ? " aberto" : ""}"
+          data-abrir-concurso="${esc(r.concurso)}"
+          aria-expanded="${S.concursoAberto === r.concurso}">
           <div class="concurso-topo">
             <b>Concurso ${esc(r.concurso)}</b>
             <time>${esc(r.data || "sem data")}</time>
@@ -7493,6 +7511,8 @@ T.resultados = () => {
               >${esc(r.origem || "manual")}</span></div>
           <span class="chevron" aria-hidden="true">
             <svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></span>
+          ${S.concursoAberto === r.concurso
+            ? `<div class="concurso-jogos">${meusJogosNoConcurso(r)}</div>` : ""}
         </article>`).join("")}</div>
       ${meus.length > 40 ? `<div class="pe">mostrando os 40 mais recentes</div>` : ""}`;
 
@@ -8009,6 +8029,16 @@ function acoesNovas(){
        ensinar a trava a distinguir sentidos. */
     if(S.autoAnalise) analisarPendentes();
   };
+
+  /* --- abrir um concurso e ver como os SEUS jogos foram nele ---
+     O cartão já tinha o atributo e o chevron desde sempre; o tratador nunca
+     existiu. Um alvo que parece clicável e não responde é pior que um alvo que
+     não parece clicável. */
+  document.querySelectorAll("[data-abrir-concurso]").forEach(a => a.onclick = () => {
+    const n = Number(a.dataset.abrirConcurso);
+    S.concursoAberto = S.concursoAberto === n ? null : n;
+    pintar();
+  });
 
   /* --- abrir um jogo salvo na cartela --- */
   document.querySelectorAll("[data-abrir-jogo]").forEach(b => b.onclick = () => {
@@ -8559,6 +8589,56 @@ function trocarModalidade(mod){
   Guardar.gravar("modalidade", S.modalidade);
   const g = $("#gaveta"); if(g) g.dataset.aberta = "0";
   pintar();
+}
+
+/* A tira de modalidades, num lugar só.
+   Ela nasceu embutida na tela de Resultados, e o efeito foi este: as telas que
+   FILTRAM por modalidade — Meus Jogos, Conferência, Placar — não tinham como
+   trocar de modalidade. Quem salvava um jogo de Mega-Sena via a lista vazia e
+   concluía que o jogo tinha sumido; a cartela parecia existir só na Lotofácil
+   porque só a Lotofácil estava selecionada.
+
+   Uma função só, para as telas não divergirem no primeiro ajuste. */
+/* O que os SEUS jogos fizeram naquele concurso.
+   O cartão de resultado já tinha data-abrir-concurso e um chevron — parecia
+   clicável e não fazia nada, porque nunca houve tratador. Faltava a resposta
+   mais óbvia de todas: "e os meus jogos, como foram nesse sorteio?" */
+function meusJogosNoConcurso(r){
+  const cmp = jogosContraConcurso(r);
+  if(!cmp.conferidos.length && !cmp.fora.length)
+    return `<div class="nota">Nenhum jogo salvo de
+      ${esc(MODALIDADES[r.modalidade].nome)} neste aparelho.</div>`;
+
+  if(!cmp.conferidos.length)
+    return `<div class="nota">Você tem jogos salvos, mas nenhum cobre o
+      concurso ${esc(r.concurso)}. ${esc(cmp.fora[0].motivo)}.</div>`;
+
+  const esperado = cmp.conferidos.reduce((t, x) =>
+    t + esperadoAcertos(r.modalidade, x.jogo.dezenas.length), 0) / cmp.conferidos.length;
+  const medio = cmp.coincidencias / cmp.conferidos.length;
+
+  return `<div class="nota">
+      <strong>${cmp.conferidos.length} jogo${cmp.conferidos.length===1?"":"s"} seu${cmp.conferidos.length===1?"":"s"}</strong>
+      cobri${cmp.conferidos.length===1?"a":"am"} este concurso:
+      ${nf(medio, 2)} coincidência${medio===1?"":"s"} por jogo, contra
+      ${nf(esperado, 2)} que o acaso faria.
+      ${cmp.fora.length ? `Outros ${cmp.fora.length} não cobrem este concurso.` : ""}
+    </div>
+    ${cmp.conferidos.map(x => `
+      <div class="ficha" style="margin-top:8px">
+        <div class="topo"><span class="id">#${esc(x.jogo.id)}</span>
+          <span class="selo ${x.acertos > esperadoAcertos(r.modalidade, x.jogo.dezenas.length) ? "ok" : ""}"
+            >${x.acertos} coincidência${x.acertos===1?"":"s"}</span></div>
+        <div class="dezenas">${x.jogo.dezenas.map(d =>
+          `<span class="dz ${r.dezenas.includes(d) ? "acertou" : ""}">${pad(d)}</span>`).join("")}</div>
+      </div>`).join("")}`;
+}
+
+function chipsDeModalidade(){
+  return `<div class="chips chips-mod" role="group" aria-label="Modalidade">
+    ${Object.entries(MODALIDADES).map(([k,v]) =>
+      `<button class="chip" data-mod="${k}" aria-pressed="${k===S.modalidade}"
+        >${esc(v.nome)}</button>`).join("")}</div>`;
 }
 
 function trilhaModalidade(){

@@ -1370,6 +1370,127 @@ checar("a explicação longa não se repete por tabela", banca.explicacaoRepetid
 checar("a tela deixa de ser um muro de texto", banca.visiveis < 6000,
   `${banca.visiveis} caracteres visíveis`);
 
+/* ---------- F13. Trocar de modalidade em qualquer tela que filtra por ela ----
+   O defeito: a tira de modalidades existia SÓ na tela de Resultados, embutida
+   nela. Meus Jogos filtra por S.modalidade e não tinha como trocar — quem
+   salvava um jogo de Mega-Sena via a lista vazia, e a cartela parecia existir
+   só na Lotofácil porque só a Lotofácil estava selecionada. O rodapé da
+   própria tela dizia "troque no topo da tela para ver", apontando para um
+   seletor que não estava lá.                                                */
+secao("F13. Trocar de modalidade onde a tela filtra por ela");
+{
+  await js(`
+    localStorage.setItem("lotolab:resultados", JSON.stringify([
+      {concurso:3050,data:"2026-08-30",modalidade:"mega-sena",origem:"caixa",
+       dezenas:[4,18,22,26,31,58]},
+      {concurso:3776,data:"2026-08-31",modalidade:"lotofacil",origem:"caixa",
+       dezenas:[3,5,7,8,10,14,16,17,18,19,20,21,23,24,25]}]));
+    localStorage.setItem("lotolab:jogos", JSON.stringify([
+      {id:"mg1",modalidade:"mega-sena",dezenas:[4,18,22,40,41,42],data:"2026-08-01",lote:"L1",
+       conferencias:[{concurso:3050,data:"2026-08-30",dezenas:[4,18,22,26,31,58],acertos:3}]},
+      {id:"lf1",modalidade:"lotofacil",dezenas:[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],
+       data:"2026-08-01",lote:"L2",
+       conferencias:[{concurso:3776,data:"2026-08-31",
+        dezenas:[3,5,7,8,10,14,16,17,18,19,20,21,23,24,25],acertos:8}]}]));
+    return 1;`);
+  await cmd("Page.reload", {});
+  await dormir(2500);
+  await js(`trocarModalidade("lotofacil"); irParaTela("jogos"); return 1;`);
+  await dormir(500);
+
+  checar("a tela Meus Jogos traz a tira de modalidades",
+    (await js(`return document.querySelectorAll(".chips-mod .chip").length;`)) === 8,
+    `${await js(`return document.querySelectorAll(".chips-mod .chip").length;`)} chips`);
+
+  const soLotofacil = await js(
+    `return [...document.querySelectorAll("[data-abrir-jogo]")].map(b=>b.dataset.abrirJogo).join();`);
+  checar("com a Lotofácil escolhida, só o jogo dela aparece",
+    soLotofacil === "lf1", soLotofacil || "nenhum");
+
+  await js(`[...document.querySelectorAll(".chips-mod [data-mod]")]
+    .find(b=>b.dataset.mod==="mega-sena").click(); return 1;`);
+  await dormir(600);
+  const soMega = await js(
+    `return [...document.querySelectorAll("[data-abrir-jogo]")].map(b=>b.dataset.abrirJogo).join();`);
+  checar("o chip troca a modalidade sem sair da tela", soMega === "mg1", soMega || "nenhum");
+
+  /* E a cartela não é privilégio da Lotofácil: é a mesma função para as oito. */
+  await js(`document.querySelector('[data-abrir-jogo="mg1"]').click(); return 1;`);
+  await dormir(500);
+  const cart = await js(`
+    const c = document.querySelector(".cartela");
+    if(!c) return null;
+    const r = c.getBoundingClientRect();
+    return {titulo: c.querySelector(".tarja b").textContent,
+            casas: c.querySelectorAll(".casa").length,
+            acertos: c.querySelectorAll(".casa.acertou").length,
+            estoura: r.right > window.innerWidth + 1 || r.left < -1};`);
+  checar("a cartela abre na Mega-Sena, com as 60 casas",
+    !!cart && cart.titulo === "Mega-Sena" && cart.casas === 60,
+    cart ? `${cart.titulo}, ${cart.casas} casas` : "não abriu");
+  checar("e marca os acertos do concurso", !!cart && cart.acertos === 3,
+    cart ? `${cart.acertos} acertos` : "-");
+  checar("sem estourar a largura da tela", !!cart && !cart.estoura);
+  await capturar("f13-cartela-mega-sena");
+}
+
+/* ---------- F14. O cartão do concurso responde ao toque -----------------
+   O cartão trazia data-abrir-concurso e um chevron desde sempre, e NUNCA teve
+   tratador: parecia clicável e não fazia nada. Um alvo que promete resposta e
+   não dá é pior que um alvo que não promete.                              */
+secao("F14. O concurso abre e mostra os jogos salvos");
+{
+  await js(`irParaTela("resultados"); return 1;`);
+  await dormir(600);
+  checar("o cartão do concurso existe e se anuncia como recolhido",
+    (await js(`const a=document.querySelector("[data-abrir-concurso]");
+      return a && a.getAttribute("aria-expanded") === "false";`)));
+
+  await js(`document.querySelector('[data-abrir-concurso="3050"]').click(); return 1;`);
+  await dormir(600);
+  const painel = await js(`
+    const p = document.querySelector(".concurso-jogos");
+    if(!p) return null;
+    const r = p.getBoundingClientRect();
+    /* \\s, e não \s: este trecho viaja dentro de um template literal, onde
+       \s vira apenas "s" — e o replace passa a apagar todas as letras "s" do
+       texto. Foi exatamente o que aconteceu na primeira escrita: a asserção
+       leu "1 jogo  eu cobria e te concur o". */
+    return {texto: p.textContent.replace(/\\s+/g," ").trim(),
+            fichas: p.querySelectorAll(".ficha").length,
+            marcados: p.querySelectorAll(".dz.acertou").length,
+            estoura: r.right > window.innerWidth + 1};`);
+  checar("clicar abre o painel com os jogos salvos", !!painel && painel.fichas === 1,
+    painel ? `${painel.fichas} ficha(s)` : "não abriu");
+  checar("e marca quais dezenas coincidiram", !!painel && painel.marcados === 3,
+    painel ? `${painel.marcados} marcadas` : "-");
+  checar("com a régua do acaso ao lado do resultado",
+    !!painel && /o acaso faria/.test(painel.texto),
+    painel ? painel.texto.slice(0, 80) : "-");
+  checar("sem prometer prêmio",
+    !!painel && !/prêmio|premiado|ganhou/i.test(painel.texto));
+  checar("e sem estourar a largura", !!painel && !painel.estoura);
+
+  /* O chevron vira o gesto de recolher — e não pode cair em cima de nada.
+     Medido duas vezes: primeiro ele pousou sobre a data, depois sobre a
+     ficha. */
+  const colisao = await js(`
+    const c = document.querySelector(".concurso.aberto");
+    if(!c) return "sem cartão aberto";
+    const ch = c.querySelector(".chevron"); const a = ch.getBoundingClientRect();
+    const bate = el => { const b = el.getBoundingClientRect();
+      return !(a.right<b.left||a.left>b.right||a.bottom<b.top||a.top>b.bottom); };
+    return [...c.querySelectorAll("time,.ficha,.nota,.dz,.bola,.selo")]
+      .filter(bate).map(e => e.className || e.tagName).join(", ");`);
+  checar("o chevron do cartão aberto não cobre nada", colisao === "", colisao || "livre");
+  await capturar("f14-concurso-aberto");
+
+  await js(`document.querySelector('[data-abrir-concurso="3050"]').click(); return 1;`);
+  await dormir(500);
+  checar("e clicar de novo recolhe",
+    (await js(`return !document.querySelector(".concurso-jogos");`)));
+}
+
 /* ---------- fim ---------- */
 console.log(linhas.join("\n"));
 console.log(`\n${"─".repeat(60)}`);
