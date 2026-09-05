@@ -1370,6 +1370,269 @@ checar("a explicação longa não se repete por tabela", banca.explicacaoRepetid
 checar("a tela deixa de ser um muro de texto", banca.visiveis < 6000,
   `${banca.visiveis} caracteres visíveis`);
 
+/* ---------- F13. Trocar de modalidade em qualquer tela que filtra por ela ----
+   O defeito: a tira de modalidades existia SÓ na tela de Resultados, embutida
+   nela. Meus Jogos filtra por S.modalidade e não tinha como trocar — quem
+   salvava um jogo de Mega-Sena via a lista vazia, e a cartela parecia existir
+   só na Lotofácil porque só a Lotofácil estava selecionada. O rodapé da
+   própria tela dizia "troque no topo da tela para ver", apontando para um
+   seletor que não estava lá.                                                */
+secao("F13. Trocar de modalidade onde a tela filtra por ela");
+{
+  await js(`
+    localStorage.setItem("lotolab:resultados", JSON.stringify([
+      {concurso:3050,data:"2026-08-30",modalidade:"mega-sena",origem:"caixa",
+       dezenas:[4,18,22,26,31,58]},
+      {concurso:3776,data:"2026-08-31",modalidade:"lotofacil",origem:"caixa",
+       dezenas:[3,5,7,8,10,14,16,17,18,19,20,21,23,24,25]}]));
+    localStorage.setItem("lotolab:jogos", JSON.stringify([
+      {id:"mg1",modalidade:"mega-sena",dezenas:[4,18,22,40,41,42],data:"2026-08-01",lote:"L1",
+       conferencias:[{concurso:3050,data:"2026-08-30",dezenas:[4,18,22,26,31,58],acertos:3}]},
+      {id:"lf1",modalidade:"lotofacil",dezenas:[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],
+       data:"2026-08-01",lote:"L2",
+       conferencias:[{concurso:3776,data:"2026-08-31",
+        dezenas:[3,5,7,8,10,14,16,17,18,19,20,21,23,24,25],acertos:8}]}]));
+    return 1;`);
+  await cmd("Page.reload", {});
+  await dormir(2500);
+  await js(`trocarModalidade("lotofacil"); irParaTela("jogos"); return 1;`);
+  await dormir(500);
+
+  checar("a tela Meus Jogos traz a tira de modalidades",
+    (await js(`return document.querySelectorAll(".chips-mod .chip").length;`)) === 8,
+    `${await js(`return document.querySelectorAll(".chips-mod .chip").length;`)} chips`);
+
+  const soLotofacil = await js(
+    `return [...document.querySelectorAll("[data-abrir-jogo]")].map(b=>b.dataset.abrirJogo).join();`);
+  checar("com a Lotofácil escolhida, só o jogo dela aparece",
+    soLotofacil === "lf1", soLotofacil || "nenhum");
+
+  await js(`[...document.querySelectorAll(".chips-mod [data-mod]")]
+    .find(b=>b.dataset.mod==="mega-sena").click(); return 1;`);
+  await dormir(600);
+  const soMega = await js(
+    `return [...document.querySelectorAll("[data-abrir-jogo]")].map(b=>b.dataset.abrirJogo).join();`);
+  checar("o chip troca a modalidade sem sair da tela", soMega === "mg1", soMega || "nenhum");
+
+  /* E a cartela não é privilégio da Lotofácil: é a mesma função para as oito. */
+  await js(`document.querySelector('[data-abrir-jogo="mg1"]').click(); return 1;`);
+  await dormir(500);
+  const cart = await js(`
+    const c = document.querySelector(".cartela");
+    if(!c) return null;
+    const r = c.getBoundingClientRect();
+    return {titulo: c.querySelector(".tarja b").textContent,
+            casas: c.querySelectorAll(".casa").length,
+            acertos: c.querySelectorAll(".casa.acertou").length,
+            estoura: r.right > window.innerWidth + 1 || r.left < -1};`);
+  checar("a cartela abre na Mega-Sena, com as 60 casas",
+    !!cart && cart.titulo === "Mega-Sena" && cart.casas === 60,
+    cart ? `${cart.titulo}, ${cart.casas} casas` : "não abriu");
+  checar("e marca os acertos do concurso", !!cart && cart.acertos === 3,
+    cart ? `${cart.acertos} acertos` : "-");
+  checar("sem estourar a largura da tela", !!cart && !cart.estoura);
+  await capturar("f13-cartela-mega-sena");
+}
+
+/* ---------- F14. O cartão do concurso responde ao toque -----------------
+   O cartão trazia data-abrir-concurso e um chevron desde sempre, e NUNCA teve
+   tratador: parecia clicável e não fazia nada. Um alvo que promete resposta e
+   não dá é pior que um alvo que não promete.                              */
+secao("F14. O concurso abre e mostra os jogos salvos");
+{
+  await js(`irParaTela("resultados"); return 1;`);
+  await dormir(600);
+  checar("o cartão do concurso existe e se anuncia como recolhido",
+    (await js(`const a=document.querySelector("[data-abrir-concurso]");
+      return a && a.getAttribute("aria-expanded") === "false";`)));
+
+  await js(`document.querySelector('[data-abrir-concurso="3050"]').click(); return 1;`);
+  await dormir(600);
+  const painel = await js(`
+    const p = document.querySelector(".concurso-jogos");
+    if(!p) return null;
+    const r = p.getBoundingClientRect();
+    /* \\s, e não \s: este trecho viaja dentro de um template literal, onde
+       \s vira apenas "s" — e o replace passa a apagar todas as letras "s" do
+       texto. Foi exatamente o que aconteceu na primeira escrita: a asserção
+       leu "1 jogo  eu cobria e te concur o". */
+    return {texto: p.textContent.replace(/\\s+/g," ").trim(),
+            fichas: p.querySelectorAll(".ficha").length,
+            marcados: p.querySelectorAll(".dz.acertou").length,
+            estoura: r.right > window.innerWidth + 1};`);
+  checar("clicar abre o painel com os jogos salvos", !!painel && painel.fichas === 1,
+    painel ? `${painel.fichas} ficha(s)` : "não abriu");
+  checar("e marca quais dezenas coincidiram", !!painel && painel.marcados === 3,
+    painel ? `${painel.marcados} marcadas` : "-");
+  checar("com a régua do acaso ao lado do resultado",
+    !!painel && /o acaso faria/.test(painel.texto),
+    painel ? painel.texto.slice(0, 80) : "-");
+  checar("sem prometer prêmio",
+    !!painel && !/prêmio|premiado|ganhou/i.test(painel.texto));
+  checar("e sem estourar a largura", !!painel && !painel.estoura);
+
+  /* O chevron vira o gesto de recolher — e não pode cair em cima de nada.
+     Medido duas vezes: primeiro ele pousou sobre a data, depois sobre a
+     ficha. */
+  const colisao = await js(`
+    const c = document.querySelector(".concurso.aberto");
+    if(!c) return "sem cartão aberto";
+    const ch = c.querySelector(".chevron"); const a = ch.getBoundingClientRect();
+    const bate = el => { const b = el.getBoundingClientRect();
+      return !(a.right<b.left||a.left>b.right||a.bottom<b.top||a.top>b.bottom); };
+    return [...c.querySelectorAll("time,.ficha,.nota,.dz,.bola,.selo")]
+      .filter(bate).map(e => e.className || e.tagName).join(", ");`);
+  checar("o chevron do cartão aberto não cobre nada", colisao === "", colisao || "livre");
+  await capturar("f14-concurso-aberto");
+
+  await js(`document.querySelector('[data-abrir-concurso="3050"]').click(); return 1;`);
+  await dormir(500);
+  checar("e clicar de novo recolhe",
+    (await js(`return !document.querySelector(".concurso-jogos");`)));
+}
+
+/* ---------- F15. A busca de histórico responde onde foi pedida -----------
+   O dono do app relatou que a busca de histórico tinha sido removida. Ela
+   nunca saiu: o botão funcionava e os concursos eram guardados. O que faltava
+   era QUALQUER sinal visível de que algo aconteceu.
+
+   Três defeitos empilhados, todos medidos:
+     1. dois elementos com id="r-saida" na mesma tela — $() devolve o primeiro,
+        e a resposta ia para o topo, fora da vista de quem clicou embaixo;
+     2. mesmo com id próprio, a caixa ficava no FIM dos ajustes, 659px abaixo
+        do botão, atrás dos interruptores e da área de colagem;
+     3. o pintar() agendado depois da busca reconstruía a tela, apagando a
+        mensagem e FECHANDO os ajustes na cara de quem acabara de usá-los.
+
+   Somados: clica, nada aparece, o painel se fecha. Idêntico a não existir. */
+secao("F15. A busca de histórico responde onde foi pedida");
+{
+  await js(`irParaTela("resultados"); return 1;`);
+  await dormir(600);
+
+  /* Id repetido é o defeito de origem, e vale cobrar no documento inteiro:
+     quando dois elementos dividem um id, um deles fica mudo para sempre. */
+  const repetidos = await js(`
+    const contagem = {};
+    for(const el of document.querySelectorAll("[id]"))
+      contagem[el.id] = (contagem[el.id] || 0) + 1;
+    return Object.entries(contagem).filter(([,n]) => n > 1)
+      .map(([id,n]) => id + "×" + n).join(", ");`);
+  checar("nenhum id se repete na tela de Resultados", repetidos === "",
+    repetidos || "todos únicos");
+
+  checar("os dois botões de histórico existem e estão ativos", (await js(`
+    const v=document.querySelector("#r-varios"), t=document.querySelector("#r-tudo");
+    return !!(v && t && !v.disabled && !t.disabled);`)));
+
+  /* Rede simulada: o arquivo do repositório responde com dois concursos. */
+  await js(`
+    window.__original = window.fetch;
+    window.fetch = () => Promise.resolve({ok:true, json: async () => ({concursos:[
+      {concurso:9001,data:"2026-08-01",dezenas:[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]},
+      {concurso:9002,data:"2026-08-04",dezenas:[1,2,3,4,5,6,7,8,9,10,11,12,13,14,16]}]})});
+    return 1;`);
+  await js(`trocarModalidade("lotofacil"); return 1;`);
+  await dormir(500);
+  await js(`document.querySelector("#r-ajustes").open = true;
+    document.querySelector("#r-ajustes").dispatchEvent(new Event("toggle"));
+    return 1;`);
+  await dormir(300);
+  await js(`document.querySelector("#r-tudo").click(); return 1;`);
+  await dormir(3000);
+
+  const depois = await js(`
+    const caixa = document.querySelector("#r-saida-ajustes");
+    const botao = document.querySelector("#r-tudo");
+    const guardados = JSON.parse(localStorage.getItem("lotolab:resultados") || "[]")
+      .filter(r => r.concurso === 9001 || r.concurso === 9002).length;
+    return {texto: caixa ? caixa.textContent.trim() : "",
+            distancia: (caixa && botao)
+              ? Math.round(Math.abs(caixa.getBoundingClientRect().top
+                                    - botao.getBoundingClientRect().bottom)) : -1,
+            ajustesAbertos: !!document.querySelector("#r-ajustes[open]"),
+            guardados};`);
+
+  checar("a busca guarda os concursos", depois.guardados === 2,
+    `${depois.guardados} guardados`);
+  checar("e responde por escrito, em vez de sumir em silêncio",
+    /concursos? recebidos?/.test(depois.texto), depois.texto.slice(0, 70) || "vazio");
+  checar("a resposta aparece junto do botão, e não no fim da página",
+    depois.distancia >= 0 && depois.distancia < 120, `${depois.distancia}px do botão`);
+  checar("e o painel de ajustes continua aberto depois do repintar",
+    depois.ajustesAbertos);
+  await capturar("f15-historico");
+
+  await js(`if(window.__original) window.fetch = window.__original; return 1;`);
+}
+
+/* ---------- I. Central de sugestões: fluxos reais e responsividade ---------- */
+if(EDICAO.nome === "completa"){
+  secao("I. Central de sugestões 4.9");
+  const historicoInt=JSON.parse(readFileSync(join(RAIZ,"dados/mega-sena.json"),"utf8")).concursos.slice(-80)
+    .map(r=>({...r,modalidade:"mega-sena"}));
+  await js(`S.autoAnalise=false;S.pesquisaAutomatica=false;S.buscaAutomatica=false;
+    S.resultados=${JSON.stringify(historicoInt)};S.jogos=[];return true;`);
+  await escolherModalidade("mega-sena");
+  await irPara("sugestoes");
+  checar("nova tela acessível pela navegação",await js(`return !!document.querySelector('#int-gerar')`));
+  await capturar("inteligencia-configuracao");
+  await js(`
+    for(const [k,v] of Object.entries({quantidade:'5',orcamento:'12',fixas:'03',excluidas:'07',semente:'teste-interface'})){
+      const el=document.querySelector('#int-'+k);el.value=v;el.dispatchEvent(new Event('change',{bubbles:true}));
+    }
+    document.querySelector('#int-gerar').click();return true;`);
+  await dormir(700);
+  const loteInt=await js(`return {jogos:S.intLotes['mega-sena']?.jogos,
+    custo:S.intLotes['mega-sena']?.metricas.custo,texto:document.querySelector('#int-lote').innerText,
+    qtd:document.querySelectorAll('.int-ticket').length};`);
+  checar("orçamento ajusta de cinco para dois jogos",loteInt.qtd===2&&loteInt.custo===12);
+  checar("dezenas fixas e excluídas chegam ao lote",loteInt.jogos?.every(ds=>ds.includes(3)&&!ds.includes(7)));
+  checar("explicação informa o ajuste de orçamento",/2 dos 5/.test(loteInt.texto));
+  await capturar("inteligencia-lote");
+  await js(`document.querySelector('[data-int-dezena="3"]').click();return true;`);
+  checar("mapa detalha a incerteza da frequência",await js(`return /Wilson/.test(document.querySelector('#int-dezena-detalhe').textContent)`));
+  await js(`document.querySelector('#int-salvar').click();return true;`);
+  await dormir(400);
+  checar("lote salvo preserva semente e dados após navegação",await js(`return S.tela==='jogos'&&S.jogos.length===2&&S.jogos.every(j=>j.inteligencia.semente==='teste-interface')`));
+  await irPara("sugestoes");
+  await js(`document.querySelector('#int-salvar').click();return true;`);
+  checar("salvar novamente não duplica o lote",await js(`return S.jogos.length===2&&document.querySelector('#int-salvar').disabled`));
+  await js(`document.querySelector('#int-comparar').click();return true;`);
+  // Espera a conclusão observável; o limite distingue lentidão de trabalho preso.
+  let prontoInt=false;
+  for(let i=0;i<90;i++){
+    prontoInt=await js(`return !!S.intTestes['mega-sena']`);
+    if(prontoInt) break;
+    await dormir(200);
+  }
+  checar("comparação temporal termina na interface",prontoInt);
+  checar("comparação revela intervalo e correção",await js(`return /IC 95%/.test(document.querySelector('#int-comparacao').textContent)&&/p ajustado/.test(document.querySelector('#int-comparacao').textContent)`));
+  await capturar("inteligencia-comparacao");
+  for(const tema of ['escuro','claro']){
+    for(const width of [360,412,1024]){
+      await cmd("Emulation.setDeviceMetricsOverride",{width,height:915,deviceScaleFactor:1,mobile:width<600});
+      await js(`document.documentElement.dataset.tema=${JSON.stringify(tema)};return true;`);
+      const overflow=await js(`return {pagina:document.documentElement.scrollWidth,janela:innerWidth,
+        controles:[...document.querySelectorAll('.int-form input,.int-form select')].every(el=>el.getBoundingClientRect().width>0)};`);
+      checar(`central ${tema} cabe em ${width}px`,overflow.pagina<=overflow.janela+1&&overflow.controles,`${overflow.pagina}px`);
+    }
+  }
+  await cmd("Emulation.setDeviceMetricsOverride",{width:412,height:915,deviceScaleFactor:2,mobile:true});
+  await js(`document.documentElement.dataset.tema='claro';window.scrollTo(0,0);return true;`);
+  await capturar("inteligencia-tema-claro");
+  await js(`document.documentElement.dataset.tema='escuro';return true;`);
+  await cmd("Network.emulateNetworkConditions",{offline:true,latency:0,downloadThroughput:0,uploadThroughput:0});
+  await js(`document.querySelector('#int-gerar').click();return true;`);
+  await dormir(500);
+  checar("nova central gera sem rede",await js(`return document.querySelectorAll('.int-ticket').length===2`));
+  // Trocar de modalidade durante a comparação cancela a renderização pendente.
+  await js(`delete S.intTestes['mega-sena'];document.querySelector('#int-comparar').click();trocarModalidade('lotofacil');return true;`);
+  await dormir(500);
+  checar("resultado pendente não invade outra modalidade",await js(`return S.modalidade==='lotofacil'&&!document.querySelector('.int-test-result')`));
+  await cmd("Network.emulateNetworkConditions",{offline:false,latency:0,downloadThroughput:-1,uploadThroughput:-1});
+}
+
 /* ---------- fim ---------- */
 console.log(linhas.join("\n"));
 console.log(`\n${"─".repeat(60)}`);

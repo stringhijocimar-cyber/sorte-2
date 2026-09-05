@@ -47,9 +47,16 @@ jobs:
           cmp sw.js www/sw.js
           cmp manifest.webmanifest www/manifest.webmanifest
           diff -r ui www/ui
+          # O executor em segundo plano entra no APK pela pasta www/. Editar
+          # só a raiz produziria um APK que confere com regra antiga — e o
+          # sintoma seria aviso errado no aparelho, sem nada vermelho aqui.
+          diff -r runner www/runner
 
       - name: Testes do motor
         run: node ferramentas/testar-motor.mjs
+
+      - name: Testes da inteligência de sugestões
+        run: node ferramentas/testar-inteligencia.mjs
 
       - name: Testes da interface
         # Estes existiam desde sempre e não rodavam em lugar nenhum: nem aqui,
@@ -133,3 +140,39 @@ jobs:
             diff <(head -c 4000 ferramentas/douradas.json) <(head -c 4000 /tmp/douradas-agora.json) || true
             exit 1
           fi
+
+  apk-preview:
+    name: APK para revisão
+    if: github.event_name == 'pull_request'
+    needs: motor
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Preparar Android
+        run: |
+          npm ci
+          npx cap sync android
+      - name: Compilar APK de revisão
+        working-directory: android
+        run: ./gradlew assembleDebug --no-daemon
+      - name: Conferir conteúdo do APK
+        run: |
+          python3 ferramentas/conferir-apk.py android/app/build/outputs/apk/debug/app-debug.apk
+          unzip -p android/app/build/outputs/apk/debug/app-debug.apk assets/public/index.html > /tmp/index-apk.html
+          cmp index.html /tmp/index-apk.html
+          cp android/app/build/outputs/apk/debug/app-debug.apk LotoLab-4.9.0-preview.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: LotoLab-4.9.0-preview
+          path: LotoLab-4.9.0-preview.apk
+          retention-days: 14
