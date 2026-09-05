@@ -3212,12 +3212,36 @@ function sugestaoDoSistema(modalidade, tamanho, opcoes){
     return saida.sort((a,b)=>a-b);
   };
 
-  let melhor = null;
+  /* Antes daqui saía o ARGMAX: a candidata cuja medida mais rara fosse a menos
+     rara de todas. O problema é que o ótimo desse critério é DETERMINÍSTICO —
+     ele cai no valor mais frequente de cada medida. E para "menor dezena" e
+     "maior dezena" o valor mais frequente do histórico é exatamente 1 e 60,
+     porque nenhum outro mínimo ou máximo aparece tanto quanto os extremos.
+
+     Medido em 200 sugestões de Mega-Sena com o histórico real: o 60 aparecia
+     em 100% delas e o 01 em 88%, contra os 10% que o acaso daria. A sugestão
+     tinha deixado de ser uma amostra e virado um jogo fixo.
+
+     Isso não muda a chance de acertar — toda combinação tem a mesma. Muda o
+     que o app promete de fato influenciar: um jogo sempre igual, e formado
+     pelos dois números mais salientes do volante, é mais fácil de ser marcado
+     por outra pessoa, e portanto de ser dividido.
+
+     O conserto guarda a promessa e devolve a variedade: em vez do melhor, toda
+     candidata que fique ACIMA DE UM PISO é aceita, e uma delas é sorteada. O
+     piso sai das próprias candidatas — o topo desta fatia —, então continua
+     valendo que nenhuma medida do jogo escolhido é rara. */
+  const FATIA_ACEITA = 0.15;
+
+  const candidatas = [];
   for(let i=0;i<o.candidatas;i++){
     const cand = sortearComRnd();
-    const p = perfilRapido(cand, dist);
-    if(!melhor || p.menor > melhor.menor) melhor = {dezenas:cand, ...p};
+    candidatas.push({dezenas:cand, ...perfilRapido(cand, dist)});
   }
+  candidatas.sort((a,b) => b.menor - a.menor);
+  const quantasAceitas = Math.max(1, Math.round(candidatas.length * FATIA_ACEITA));
+  const aceitas = candidatas.slice(0, quantasAceitas);
+  const melhor = aceitas[Math.floor(rnd() * aceitas.length)];
 
   /* Referência honesta: o que uma candidata QUALQUER costuma dar. Sem isso, o
      número "a medida mais rara aparece em 21% dos concursos" não significa
@@ -3229,7 +3253,7 @@ function sugestaoDoSistema(modalidade, tamanho, opcoes){
 
   return {modalidade, dezenas: melhor.dezenas, linhas: melhor.linhas,
           menor: melhor.menor, medianaDoAcaso, n: dist.n,
-          candidatas: o.candidatas, tam};
+          candidatas: o.candidatas, aceitas: aceitas.length, tam};
 }
 
 function lerTipicidade(fracao){

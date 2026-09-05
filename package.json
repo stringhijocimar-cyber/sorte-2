@@ -1,6 +1,6 @@
 {
   "name": "lotolab",
-  "version": "4.6.1",
+  "version": "4.7.0",
   "description": "Monta jogos das loterias brasileiras, guarda no aparelho e confere contra os concursos, mostrando o desempenho comparado ao acaso.",
   "private": true,
   "scripts": {

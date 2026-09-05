@@ -4965,6 +4965,88 @@ secao("45. Repetir dezena recente é o acaso, não defeito");
   S.resultados = g.r; S.modalidade = g.m;
 }
 
+/* ==================================================================
+   46. A sugestão do sistema não pode virar um jogo fixo
+
+   O dono do app notou que a sugestão trazia 01 e 60 quase sempre. Medido com
+   o histórico real da Mega-Sena, em 200 sugestões: o 60 aparecia em 100% e o
+   01 em 88%, contra os 10% que o acaso daria.
+
+   A causa não era aleatoriedade quebrada, era o critério. Ele escolhia o
+   ARGMAX da medida mais rara, e o ótimo desse critério é determinístico: cai
+   no valor mais frequente de CADA medida. Entre as dez medidas estão "menor
+   dezena" e "maior dezena", e o valor mais frequente delas no histórico é
+   justamente 1 e 60 — nenhum outro mínimo ou máximo aparece tanto quanto os
+   extremos.
+
+   Isso não mexe na chance de acertar; mexe no que o app diz influenciar de
+   verdade — com quantas pessoas se dividiria, já que um jogo sempre igual e
+   feito dos números mais salientes do volante é fácil de outra pessoa marcar.
+   ================================================================== */
+secao("46. A sugestão do sistema não pode virar um jogo fixo");
+{
+  const S = motor.S;
+  const g = {r: S.resultados, m: S.modalidade};
+
+  /* Histórico grande e honesto, sorteado com semente: é o que dá às
+     distribuições por medida a forma que o app mede na vida real. */
+  S.resultados = historicoSemeado("mega-sena", 60, 6, 1200, 4242);
+  S.modalidade = "mega-sena";
+
+  const QUANTAS = 60, CANDIDATAS = 200;
+  const conta = new Map();
+  const menores = [];
+  let medianaAcaso = null;
+  for(let i = 0; i < QUANTAS; i++){
+    const s = motor.sugestaoDoSistema("mega-sena", 6,
+      {semente: 90000 + i, candidatas: CANDIDATAS});
+    if(s.erro){ checar("a sugestão roda", false, s.erro); break; }
+    for(const d of s.dezenas) conta.set(d, (conta.get(d) || 0) + 1);
+    menores.push(s.menor);
+    medianaAcaso = s.medianaDoAcaso;
+  }
+
+  const maior = [...conta.entries()].sort((a,b) => b[1] - a[1])[0] || [null, 0];
+  const fracao = maior[1] / QUANTAS;
+  /* O acaso põe cada dezena em 6/60 = 10% dos jogos. Com 60 amostras, uma
+     dezena chegar a 40% já é padrão, e não flutuação. */
+  checar("nenhuma dezena domina as sugestões",
+    fracao < 0.40, `a mais repetida é a ${maior[0]} em ${(100*fracao).toFixed(0)}%`);
+
+  /* E especificamente os extremos, que eram o sintoma relatado. */
+  const extremos = ((conta.get(1) || 0) + (conta.get(60) || 0)) / (2 * QUANTAS);
+  checar("os extremos do volante deixam de ser presença garantida",
+    extremos < 0.45, `01 e 60 em ${(100*extremos).toFixed(0)}% das sugestões`);
+
+  /* A promessa da tela tem de continuar verdadeira: nenhuma medida do jogo
+     escolhido é rara. Trocar variedade por mentira não seria conserto. */
+  menores.sort((a,b) => a - b);
+  const pior = menores[0], mediana = menores[Math.floor(menores.length/2)];
+  checar("a medida mais rara do jogo segue bem acima do acaso",
+    pior > medianaAcaso, `pior ${(100*pior).toFixed(1)}% contra ${(100*medianaAcaso).toFixed(1)}% do acaso`);
+  checar("e a mediana das sugestões é claramente mais típica que o acaso",
+    mediana > medianaAcaso * 1.5,
+    `${(100*mediana).toFixed(1)}% contra ${(100*medianaAcaso).toFixed(1)}%`);
+
+  /* A semente continua reproduzindo: sem isso não dá para conferir uma
+     sugestão depois, e a tela promete que dá. */
+  const a = motor.sugestaoDoSistema("mega-sena", 6, {semente: 7, candidatas: CANDIDATAS});
+  const b = motor.sugestaoDoSistema("mega-sena", 6, {semente: 7, candidatas: CANDIDATAS});
+  checar("a mesma semente devolve a mesma sugestão",
+    a.dezenas.join("-") === b.dezenas.join("-"), a.dezenas.join("-"));
+  const c = motor.sugestaoDoSistema("mega-sena", 6, {semente: 8, candidatas: CANDIDATAS});
+  checar("e sementes diferentes devolvem jogos diferentes",
+    a.dezenas.join("-") !== c.dezenas.join("-"), c.dezenas.join("-"));
+
+  /* O jogo continua tendo o tamanho certo e dezenas válidas. */
+  checar("a sugestão tem o tamanho da modalidade", a.dezenas.length === 6);
+  checar("e só dezenas dentro do volante",
+    a.dezenas.every(d => d >= 1 && d <= 60 && Number.isInteger(d)));
+  checar("sem repetir dezena", new Set(a.dezenas).size === a.dezenas.length);
+
+  S.resultados = g.r; S.modalidade = g.m;
+}
+
 /* ---------- saída ---------- */
 console.log(linhas.join("\n"));
 console.log(`\n${"─".repeat(60)}`);
