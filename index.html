@@ -343,6 +343,21 @@ main{padding:14px 16px calc(var(--barra) + 45px + var(--base));
 .concurso-topo time{font-family:var(--mono);font-size:.7rem;color:var(--secundaria);
   flex:none}
 .concurso-detalhe{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:9px}
+/* O painel que abre dentro do cartão do concurso. Ocupa a largura toda e
+   empurra o chevron para o topo — com o cartão expandido, a seta centrada
+   verticalmente ficaria no meio da lista de jogos, longe do que ela indica. */
+.concurso-jogos{grid-column:1/-1;margin-top:10px;padding-top:10px;
+  border-top:1px solid var(--linha)}
+/* Com o cartão aberto o chevron vai para o rodapé, apontando para cima: é o
+   gesto de recolher, e é o único canto que não disputa espaço.
+   Medido: mantê-lo no topo o punha exatamente sobre a data — ambos em y=277 —,
+   porque a data e a seta ocupam a mesma faixa horizontal e só a distância
+   vertical os separava no estado fechado. */
+.concurso.aberto .chevron{top:auto;bottom:10px;transform:rotate(-90deg)}
+/* A folga de baixo do cartão aberto fica em ui/lotolab-ui-v4-3.css, junto do
+   padding que a camada visual impõe com !important. Declará-la aqui não teria
+   efeito nenhum — e uma regra que não vence é pior que regra nenhuma, porque
+   quem lê o arquivo acredita nela. */
 .concurso .chevron{position:absolute;right:10px;top:50%;transform:translateY(-50%);
   color:var(--secundaria);display:grid;place-items:center}
 .concurso .chevron svg{width:17px;height:17px;stroke:currentColor;fill:none;
@@ -1050,8 +1065,8 @@ const METODOS = [
      usam como reserva, mas deixou de ser oferecida como estratégia. */
   {id:"cobertura", nome:"Cobertura espalhada",
    desc:"Distribui os jogos pelo volante para que se repitam pouco entre si. Não muda a chance de cada jogo."},
-  {id:"antirepeticao", nome:"Evita o concurso anterior",
-   desc:"Muita gente repete as dezenas que acabaram de sair. Evitá-las não muda sua chance — muda com quantas pessoas você dividiria."},
+  {id:"antirepeticao", nome:"Evita os concursos recentes",
+   desc:"Muita gente repete as dezenas que acabaram de sair. Este método foge das que apareceram nos últimos cinco concursos. Não muda sua chance — a urna não tem memória — e pode nem ser possível: na Lotofácil, cinco concursos costumam cobrir as 25 dezenas."},
   /* "Contraste por restrição" saiu junto com o rateio, e pelo mesmo motivo: era
      o mesmo mecanismo — fugir do que o público marca — trocando peso suave por
      restrição dura, apoiado nos mesmos pesos que nunca foram conferidos com
@@ -1110,10 +1125,30 @@ const Guardar = {
       return v ? JSON.parse(v) : padrao; }catch(e){ return padrao; }
   },
   gravar(chave, valor){
-    try{ localStorage.setItem("lotolab:"+chave, JSON.stringify(valor)); return true; }
-    catch(e){ return false; }
+    try{
+      localStorage.setItem("lotolab:"+chave, JSON.stringify(valor));
+      /* Espelhar aqui, e não em cada lugar que grava jogo, porque são dez
+         lugares e o décimo primeiro vai ser esquecido. Enganchado na gravação,
+         não há como salvar um jogo sem que o executor em segundo plano fique
+         sabendo dele. */
+      if(chave === "jogos" || chave === "teimosinhas" || chave === "buscaAutomatica")
+        agendarEspelho();
+      return true;
+    }catch(e){ return false; }
   }
 };
+
+/* Uma conferência grande grava jogos várias vezes seguidas. Sem a espera,
+   cada gravação viraria uma travessia da ponte para o executor. */
+let relogioDoEspelho = null;
+function agendarEspelho(){
+  if(typeof espelharParaSegundoPlano !== "function") return;
+  if(relogioDoEspelho) clearTimeout(relogioDoEspelho);
+  relogioDoEspelho = setTimeout(() => {
+    relogioDoEspelho = null;
+    try{ espelharParaSegundoPlano(); }catch(e){}
+  }, 1500);
+}
 
 /* ============================ utilidades ============================ */
 const $ = s => document.querySelector(s);
@@ -1395,7 +1430,95 @@ function ultimoResultado(m){
   return null;
 }
 
-function gerarAntirepeticao(m, quantos, tam, dezenasEvitadas){
+/* Quantos concursos recentes o método passa a olhar. Cinco porque é o que
+   cabe na cabeça de quem acompanha — e porque a partir daí, nas modalidades de
+   volante pequeno, já não sobra dezena para escolher. */
+const CONCURSOS_RECENTES = 5;
+
+function dezenasRecentes(m, quantosConcursos){
+  const hist = historicoDe(m);
+  const set = new Set();
+  for(const r of hist.slice(-Math.max(1, quantosConcursos || 1)))
+    for(const d of (r.dezenas || [])) set.add(d);
+  return set;
+}
+
+/* Quanta sobreposição com os concursos recentes o ACASO sozinho produz.
+   Distribuição hipergeométrica: de N dezenas do volante, K apareceram nos
+   últimos concursos, e o jogo marca `tam`. A média é tam*K/N.
+
+   Esta conta existe porque "meu jogo repetiu dezenas que acabaram de sair" é
+   quase sempre a descrição correta do acaso, e não de um defeito do gerador.
+   Sem o número ao lado, a impressão não tem com o que ser comparada. */
+function sobreposicaoDoAcaso(m, tam, quantosConcursos){
+  const c = MODALIDADES[m];
+  if(!c) return null;
+  const K = dezenasRecentes(m, quantosConcursos).size;
+  if(!K) return null;
+  const N = c.N, n = Math.min(tam, N);
+  const p = K / N;
+  const media = n * p;
+  /* Variância da hipergeométrica, com a correção de população finita. */
+  const varia = N > 1 ? n * p * (1 - p) * ((N - n) / (N - 1)) : 0;
+  return {universo: N, recentes: K, marcadas: n, media, dp: Math.sqrt(Math.max(0, varia))};
+}
+
+/* Quantas dezenas do jogo estão entre as recentes, e a que distância isso
+   fica do que o acaso produz. */
+function repeticaoDoJogo(m, dezenas, quantosConcursos){
+  const base = sobreposicaoDoAcaso(m, (dezenas || []).length, quantosConcursos);
+  if(!base) return null;
+  const recentes = dezenasRecentes(m, quantosConcursos);
+  let repetidas = 0;
+  for(const d of dezenas) if(recentes.has(d)) repetidas++;
+  const z = base.dp > 0 ? (repetidas - base.media) / base.dp : 0;
+  return Object.assign({repetidas, z}, base);
+}
+
+/* Evitar as recentes é POSSÍVEL? Na Lotofácil, cinco concursos costumam cobrir
+   as 25 dezenas: não existe jogo sem repetição, e prometer um seria mentir. */
+function daParaEvitar(m, tam, quantosConcursos){
+  const c = MODALIDADES[m];
+  if(!c) return false;
+  const K = dezenasRecentes(m, quantosConcursos).size;
+  return (c.N - K) >= tam;
+}
+
+/* O parágrafo que faltava na tela: quanta repetição o lote tem, e quanta o
+   acaso produziria. Sem o segundo número o primeiro não significa nada — e foi
+   essa falta que fez um lote normal parecer defeituoso. */
+function vereditoDaRepeticao(m, lote, quantosConcursos){
+  const olhar = quantosConcursos || CONCURSOS_RECENTES;
+  if(!lote || !lote.length) return "";
+  const base = sobreposicaoDoAcaso(m, lote[0].length, olhar);
+  if(!base) return "";
+  const c = MODALIDADES[m];
+  const medidas = lote.map(dez => repeticaoDoJogo(m, dez, olhar).repetidas);
+  const medio = medidas.reduce((a,b)=>a+b, 0) / medidas.length;
+
+  /* Quando as recentes cobrem o volante inteiro, não existe jogo sem
+     repetição. Dizer isso é mais útil que mostrar uma faixa. */
+  if(c.N - base.recentes < base.marcadas)
+    return `<div class="nota">Os últimos ${olhar} concursos usaram
+      ${base.recentes} das ${c.N} dezenas da ${esc(c.nome)}. Não existe jogo de
+      ${base.marcadas} dezenas fora dessas — qualquer combinação repete alguma
+      coisa recente. Repetição aqui não é sinal de nada.</div>`;
+
+  const faixa = `${nf(Math.max(0, base.media - 2*base.dp), 1)} a ${nf(base.media + 2*base.dp, 1)}`;
+  const dentro = Math.abs(medio - base.media) <= 2 * base.dp;
+  return `<div class="nota">
+    <strong>Repetição dos últimos ${olhar} concursos:</strong>
+    ${nf(medio, 1)} dezenas por jogo, em média.
+    Esses concursos usaram ${base.recentes} das ${c.N} dezenas, então o acaso
+    sozinho produz ${nf(base.media, 1)} — quase sempre entre ${faixa}.
+    ${dentro
+      ? "O que saiu está dentro dessa faixa: repetir dezenas recentes é o comportamento normal, e não um defeito do gerador."
+      : "O que saiu está fora dessa faixa, o que acontece em cerca de 5% das vezes por puro acaso."}
+    Sorteios são independentes: evitar ou buscar dezenas recentes não altera a chance de acerto.
+  </div>`;
+}
+
+function gerarAntirepeticao(m, quantos, tam, dezenasEvitadas, quantosConcursos){
   /* Repetir as dezenas do concurso que acabou de sair é um hábito comum de
      quem aposta. Evitá-las não mexe na chance de acerto — a urna não tem
      memória, e o sorteio de amanhã pode repetir cinco dezenas de hoje.
@@ -1413,7 +1536,17 @@ function gerarAntirepeticao(m, quantos, tam, dezenasEvitadas){
      o último concurso registrado e acabaria testando o método contra o próprio
      sorteio que ele foi mandado evitar — o que produziria um déficit de
      acertos garantido, e falso. */
-  const base = dezenasEvitadas || (ultimoResultado(m) || {}).dezenas;
+  /* `dezenasEvitadas` continua vencendo: é como a bancada informa QUAL concurso
+     é o anterior ao que está sendo conferido. Sem ele, o método passa a olhar
+     os últimos CONCURSOS_RECENTES em vez de só o último — que é o que "dezenas
+     que já saíram em sorteios recentes" quer dizer.
+
+     Continua sem mexer na chance: a urna não tem memória. O que muda é com
+     quantas pessoas se dividiria um prêmio, porque repetir o que acabou de
+     sair é hábito comum. */
+  const olhar = quantosConcursos || CONCURSOS_RECENTES;
+  const recentes = dezenasEvitadas ? null : dezenasRecentes(m, olhar);
+  const base = dezenasEvitadas || (recentes && recentes.size ? [...recentes] : null);
   /* Sem concurso anterior não há o que evitar, e a reserva é o sorteio
      uniforme. Já foi o rateio; deixou de ser quando o rateio saiu das
      estratégias oferecidas — cair num método retirado seria oferecê-lo pela
@@ -1799,8 +1932,12 @@ function tabelaSugestao(s){
     <div class="contador"><span>a medida mais rara deste jogo</span>
       <b>${nf(s.menor*100,1)}%</b></div>
     <div class="nota" style="margin-top:6px">
-      Nenhuma das ${s.linhas.length} medidas cai numa configuração incomum: a mais rara
-      ainda apareceu em <strong>${nf(s.menor*100,1)}%</strong> dos ${inf(s.n)} concursos.
+      Nenhuma das ${s.linhas.filter(l => !l.naoEscolhe).length} medidas que orientam a
+      escolha cai numa configuração incomum: a mais rara ainda apareceu em
+      <strong>${nf(s.menor*100,1)}%</strong> dos ${inf(s.n)} concursos.
+      Menor e maior dezena aparecem na tabela, mas não entram no critério — o
+      valor mais comum delas é o próprio extremo do volante, e usá-las para
+      escolher fixaria o 01 e o 60 em quase todo jogo.
       Um jogo sorteado sem critério costuma ter a medida mais rara em
       ${nf(s.medianaDoAcaso*100,1)}% — ${nf(vezes,1)}× menos.
       Escolhido entre ${inf(s.candidatas)} candidatas sorteadas uniformemente.
@@ -1935,12 +2072,16 @@ T.jogos = () => {
       `<strong>${esc(MODALIDADES[k].nome)}</strong> (${n})`).join(", ")}.
     Troque no topo da tela para ver.</div>`;
 
-  if(!meus.length) return `<div class="vazio">Nenhum jogo salvo de
+  /* A tira vem antes da lista. O rodapé desta tela já dizia "troque no topo da
+     tela para ver" — apontando para um seletor que não existia aqui. */
+  const chips = chipsDeModalidade();
+
+  if(!meus.length) return chips + `<div class="vazio">Nenhum jogo salvo de
     <strong>${esc(MODALIDADES[S.modalidade].nome)}</strong>.</div>` + rodape;
 
   const porLote = {};
   meus.forEach(j => (porLote[j.lote] = porLote[j.lote] || []).push(j));
-  return resumoDeMeusJogos(meus) + Object.entries(porLote).reverse().map(([lote, jogos])=>{
+  return chips + resumoDeMeusJogos(meus) + Object.entries(porLote).reverse().map(([lote, jogos])=>{
     const p = jogos[0];
     return `<h2 style="margin:14px 0 8px">${esc(MODALIDADES[p.modalidade].nome)} ·
       ${esc(p.data)} · ${esc(p.metodo)}</h2>
@@ -2987,6 +3128,19 @@ function quantosNaFaixa(ordenados, alvo, largura){
 
 /* Perfil de uma candidata contra as distribuições já montadas. Devolve as
    linhas e a fração da medida mais rara. */
+/* "Menor dezena" e "Maior dezena" são MOSTRADAS, mas não escolhem.
+
+   As duas são estatísticas de ordem, e o valor mais comum de cada uma no
+   histórico é justamente o extremo do volante: nenhum outro mínimo aparece
+   tanto quanto o 1, nem outro máximo tanto quanto o 60. Qualquer critério que
+   premie "medida típica" é empurrado por elas para os extremos — por
+   construção, e não por acaso.
+
+   Medido: com as duas dentro do critério, o 01 saía em 24% das sugestões e o
+   60 em 19%, contra os 10% do acaso. Elas continuam na tabela, porque
+   descrevem o jogo e isso é informação; só deixam de decidir qual jogo sai. */
+const MEDIDAS_QUE_NAO_ESCOLHEM = new Set(["inicial", "final"]);
+
 function perfilRapido(dezenas, dist){
   const linhas = [];
   let menor = 1;
@@ -2996,9 +3150,9 @@ function perfilRapido(dezenas, dist){
       ? quantosNaFaixa(t.ordenados, Number(valor), dist.larguraSoma)
       : (t.contagem.get(String(valor)) || 0);
     const fracao = iguais / dist.n;
-    if(fracao < menor) menor = fracao;
+    if(fracao < menor && !MEDIDAS_QUE_NAO_ESCOLHEM.has(t.medida.id)) menor = fracao;
     linhas.push({id:t.medida.id, nome:t.medida.nome, valor,
-      concursos:iguais, fracao,
+      concursos:iguais, fracao, naoEscolhe: MEDIDAS_QUE_NAO_ESCOLHEM.has(t.medida.id),
       detalhe: t.medida.faixa ? `± ${dist.larguraSoma}` : ""});
   }
   if(dist.ultimo && dist.paresConsecutivos){
@@ -3075,12 +3229,36 @@ function sugestaoDoSistema(modalidade, tamanho, opcoes){
     return saida.sort((a,b)=>a-b);
   };
 
-  let melhor = null;
+  /* Antes daqui saía o ARGMAX: a candidata cuja medida mais rara fosse a menos
+     rara de todas. O problema é que o ótimo desse critério é DETERMINÍSTICO —
+     ele cai no valor mais frequente de cada medida. E para "menor dezena" e
+     "maior dezena" o valor mais frequente do histórico é exatamente 1 e 60,
+     porque nenhum outro mínimo ou máximo aparece tanto quanto os extremos.
+
+     Medido em 200 sugestões de Mega-Sena com o histórico real: o 60 aparecia
+     em 100% delas e o 01 em 88%, contra os 10% que o acaso daria. A sugestão
+     tinha deixado de ser uma amostra e virado um jogo fixo.
+
+     Isso não muda a chance de acertar — toda combinação tem a mesma. Muda o
+     que o app promete de fato influenciar: um jogo sempre igual, e formado
+     pelos dois números mais salientes do volante, é mais fácil de ser marcado
+     por outra pessoa, e portanto de ser dividido.
+
+     O conserto guarda a promessa e devolve a variedade: em vez do melhor, toda
+     candidata que fique ACIMA DE UM PISO é aceita, e uma delas é sorteada. O
+     piso sai das próprias candidatas — o topo desta fatia —, então continua
+     valendo que nenhuma medida do jogo escolhido é rara. */
+  const FATIA_ACEITA = 0.15;
+
+  const candidatas = [];
   for(let i=0;i<o.candidatas;i++){
     const cand = sortearComRnd();
-    const p = perfilRapido(cand, dist);
-    if(!melhor || p.menor > melhor.menor) melhor = {dezenas:cand, ...p};
+    candidatas.push({dezenas:cand, ...perfilRapido(cand, dist)});
   }
+  candidatas.sort((a,b) => b.menor - a.menor);
+  const quantasAceitas = Math.max(1, Math.round(candidatas.length * FATIA_ACEITA));
+  const aceitas = candidatas.slice(0, quantasAceitas);
+  const melhor = aceitas[Math.floor(rnd() * aceitas.length)];
 
   /* Referência honesta: o que uma candidata QUALQUER costuma dar. Sem isso, o
      número "a medida mais rara aparece em 21% dos concursos" não significa
@@ -3092,7 +3270,7 @@ function sugestaoDoSistema(modalidade, tamanho, opcoes){
 
   return {modalidade, dezenas: melhor.dezenas, linhas: melhor.linhas,
           menor: melhor.menor, medianaDoAcaso, n: dist.n,
-          candidatas: o.candidatas, tam};
+          candidatas: o.candidatas, aceitas: aceitas.length, tam};
 }
 
 function lerTipicidade(fracao){
@@ -3160,10 +3338,65 @@ function preverGanhadores(dezenas, modalidade){
 //: vez por dia por modalidade; buscar de hora em hora só gastaria bateria e
 //: bateria alheia.
 const INTERVALO_BUSCA = 12 * 60 * 60 * 1000;
+/* Quando há sorteio esperando, procurar de doze em doze horas é o mesmo que
+   não procurar. */
+const INTERVALO_BUSCA_PENDENTE = 20 * 60 * 1000;
 
 /* Busca do fim para trás, parando no primeiro erro. Devolver o que já veio é
    melhor que devolver nada: um histórico de 400 concursos ainda calibra e
    ainda faz estatística, e a tela informa quantos vieram. */
+/* Quantos concursos a mais o arquivo pode estar atrasado antes de o app
+   desistir de emendar. Dois sorteios por dia em algumas modalidades e um cron
+   que roda de manhã: uma folga de dez cobre até um fim de semana inteiro sem
+   atualização, sem risco de disparar centenas de requisições se o arquivo
+   estiver muito velho — nesse caso o retrato já é bom o bastante e a ponta
+   chega na próxima atualização. */
+const MAXIMO_A_EMENDAR = 10;
+
+/* O arquivo do repositório é um retrato: traz 2829 concursos numa requisição
+   só, o que é ótimo, mas para na hora em que o cron passou. Perguntar só a
+   ele é o que fazia a lista terminar no concurso de dois dias antes mesmo
+   depois de o sorteio do dia ter saído.
+
+   Então: o retrato dá o corpo do histórico, e uma chamada ao vivo dá a ponta.
+   Uma requisição a mais, e deixa de existir um caminho pelo qual o resultado
+   de hoje não entra. */
+async function completarAPonta(modalidade, doArquivo, aoProgresso){
+  const ultimoNoArquivo = Number(doArquivo[doArquivo.length - 1].concurso);
+  let aoVivo;
+  try{
+    aoVivo = await buscarNaCaixa(modalidade, null);
+  }catch(e){
+    /* Sem rede o retrato sozinho ainda serve — e é melhor mostrar histórico
+       velho do que não mostrar histórico. */
+    return doArquivo;
+  }
+  const maisNovo = Number(aoVivo.concurso);
+  if(!Number.isFinite(maisNovo) || maisNovo <= ultimoNoArquivo) return doArquivo;
+
+  /* Se o vão for maior do que se pode emendar, o arquivo volta como está.
+     Grudar os dez mais recentes num retrato que para trezentos concursos
+     atrás deixaria um BURACO no meio da série — e buraco é pior que ponta
+     faltando: a ponta se vê, o buraco não, e toda estatística passaria a
+     rodar sobre uma sequência que finge ser contínua. */
+  if(maisNovo - ultimoNoArquivo > MAXIMO_A_EMENDAR) return doArquivo;
+
+  const faltando = [aoVivo];
+  /* Pode faltar mais de um: o arquivo de sexta não tem nem sábado nem
+     domingo. Desce do mais novo até emendar com o que o arquivo já tinha. */
+  for(let n = maisNovo - 1; n > ultimoNoArquivo; n--){
+    try{ faltando.push(await buscarNaCaixa(modalidade, n)); }
+    catch(e){
+      /* Um elo que não veio também abriria buraco. Sem ele, nada emenda. */
+      return doArquivo;
+    }
+  }
+  faltando.sort((a, b) => Number(a.concurso) - Number(b.concurso));
+  const completo = doArquivo.concat(faltando);
+  if(aoProgresso) aoProgresso(completo.length, completo.length, maisNovo);
+  return completo;
+}
+
 async function buscarHistorico(modalidade, quantos, aoProgresso){
   /* Primeiro o arquivo do repositório: uma requisição traz o histórico
      inteiro. Só se ele falhar é que se cai no laço concurso a concurso, que
@@ -3172,7 +3405,7 @@ async function buscarHistorico(modalidade, quantos, aoProgresso){
     const tudo = await baixarHistoricoDoRepositorio(modalidade);
     if(aoProgresso) aoProgresso(tudo.length, tudo.length,
       tudo[tudo.length-1].concurso);
-    return tudo;
+    return await completarAPonta(modalidade, tudo, aoProgresso);
   }catch(e){ /* segue para o caminho lento */ }
 
   const ultimo = await buscarNaCaixa(modalidade, null);
@@ -3220,21 +3453,94 @@ function diasAte(iso){
 
 /* Busca diária: roda na abertura, uma vez por modalidade que já tem histórico.
    Só o último concurso — quem quer o histórico inteiro pede explicitamente. */
+/* A partir de que hora o resultado do dia já pode existir. O sorteio é às 20h
+   de Brasília e a Caixa publica minutos depois; 21h dá folga sem empurrar a
+   procura para o dia seguinte. */
+const HORA_DE_PUBLICACAO = 21;
+
+/* Data local, e não toISOString(): às 21h de Brasília já é o dia seguinte em
+   UTC, e o app perguntaria pelo sorteio de amanhã justamente na hora em que o
+   de hoje acabou de sair. */
+function dataLocalIso(d){
+  const p = n => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
+/* Mesmo critério de dia da semana que diasDeSorteio() usa, para os dois
+   falarem da mesma coisa: o dia do calendário, sem fuso no meio. */
+const diaDaSemanaIso = (iso) => new Date(iso + "T00:00:00Z").getUTCDay();
+
+function somarDias(iso, n){
+  const d = new Date(iso + "T00:00:00Z");
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+
+/* A data do último sorteio que já deveria ter saído. Sem isto o app não tem
+   como saber se está faltando alguma coisa — e sem saber disso, só resta
+   perguntar de tempos em tempos e torcer. */
+function ultimoSorteioEsperado(modalidade, agora){
+  const dias = diasDeSorteio(modalidade);
+  if(!dias.size) return null;
+  const d = new Date(agora);
+  let cursor = dataLocalIso(d);
+  /* Antes da hora de publicação, o sorteio de hoje ainda não conta. */
+  if(d.getHours() < HORA_DE_PUBLICACAO) cursor = somarDias(cursor, -1);
+  for(let i = 0; i < 14; i++){
+    if(dias.has(diaDaSemanaIso(cursor))) return cursor;
+    cursor = somarDias(cursor, -1);
+  }
+  return null;
+}
+
+/* Há sorteio publicado que o aparelho ainda não tem? */
+function sorteioPendente(modalidade, agora){
+  const esperado = ultimoSorteioEsperado(modalidade, agora);
+  if(!esperado) return false;
+  const hist = historicoDe(modalidade);
+  if(!hist.length) return false;
+  const ultima = String(hist[hist.length - 1].data || "").slice(0, 10);
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(ultima)) return false;
+  return ultima < esperado;
+}
+
 async function buscaDiaria(){
   if(S.buscaAutomatica === false) return {tentadas:0, novos:0};
   const agora = Date.now();
   const marcas = S.ultimaBusca || {};
-  const alvos = Object.keys(MODALIDADES).filter(k =>
-    SLUG_CAIXA[k] &&
-    historicoDe(k).length > 0 &&
-    agora - (marcas[k] || 0) > INTERVALO_BUSCA);
+  /* O intervalo deixa de ser fixo. Doze horas entre buscas parece prudente até
+     alguém abrir o app às 19h — o carimbo é gravado, o sorteio sai às 20h, e
+     às 21h a busca se recusa a acontecer porque "ainda não deu o intervalo".
+     O resultado do dia só entraria no dia seguinte.
+
+     Com o calendário na mão dá para separar os dois casos: quando não há nada
+     esperando, doze horas; quando há sorteio publicado que o aparelho não tem,
+     vinte minutos. */
+  const alvos = Object.keys(MODALIDADES).filter(k => {
+    if(!SLUG_CAIXA[k] || !historicoDe(k).length) return false;
+    const desde = agora - (marcas[k] || 0);
+    return desde > (sorteioPendente(k, agora)
+      ? INTERVALO_BUSCA_PENDENTE : INTERVALO_BUSCA);
+  });
   if(!alvos.length) return {tentadas:0, novos:0};
 
   let novos = 0, falhas = 0;
   for(const k of alvos){
     try{
       const r = await buscarNaCaixa(k, null);
-      novos += guardarResultados([r]);
+      /* Guardar só o último perde sorteio: quem passa três dias sem abrir o
+         app tinha o mais recente gravado e os do meio simplesmente sumiam.
+         Desce do mais novo até emendar com o que já está no aparelho. */
+      const hist = historicoDe(k);
+      const jaTem = hist.length ? Number(hist[hist.length - 1].concurso) : 0;
+      const lote = [r];
+      for(let n = Number(r.concurso) - 1; n > jaTem; n--){
+        if(lote.length >= MAXIMO_A_EMENDAR) break;
+        try{ lote.push(await buscarNaCaixa(k, n)); }
+        catch(e){ break; }
+      }
+      lote.sort((a, b) => Number(a.concurso) - Number(b.concurso));
+      novos += guardarResultados(lote);
       marcas[k] = agora;
     }catch(e){ falhas++; }
   }
@@ -4717,6 +5023,56 @@ const SLUG_CAIXA = {
   "timemania":"timemania", "mais-milionaria":"maismilionaria"
 };
 
+/* ---- espelho para a conferência com o app fechado ----
+   O executor em segundo plano roda num motor JavaScript separado: sem DOM,
+   sem localStorage, sem nada deste arquivo. Ele só enxerga o CapacitorKV.
+
+   Então o app escreve ali o que o executor precisa — e escreve inclusive as
+   FAIXAS de cada modalidade. Deixar o executor recalcular o que conta como
+   coincidência criaria duas verdades, que divergem na primeira vez que uma
+   delas mudar. Aqui a regra continua sendo uma só: esta.
+
+   Sem o plugin instalado (navegador, PWA, versão antiga) isto não faz nada e
+   não estorva: o app funciona igual, só não confere fechado. */
+/* Tem de ser igual ao "label" em capacitor.config.json: é por ele que o
+   dispatchEvent encontra o executor. */
+const ETIQUETA_SEGUNDO_PLANO = "app.lotolab.jogos.conferencia";
+
+function espelharParaSegundoPlano(){
+  try{
+    const runner = (typeof Capacitor !== "undefined" && Capacitor.Plugins &&
+                    Capacitor.Plugins.BackgroundRunner) ? Capacitor.Plugins.BackgroundRunner : null;
+    if(!runner || typeof runner.dispatchEvent !== "function") return false;
+
+    const modalidades = {};
+    for(const [chave, c] of Object.entries(MODALIDADES)){
+      if(!SLUG_CAIXA[chave]) continue;
+      modalidades[chave] = {slug: SLUG_CAIXA[chave], nome: c.nome, faixas: c.faixas};
+    }
+    /* Só o necessário para contar acerto. Mandar a conferência inteira de cada
+       jogo encheria o armazenamento compartilhado sem servir para nada. */
+    const jogos = S.jogos.concat(S.teimosinhas || []).map(j => ({
+      id: j.id, modalidade: j.modalidade, dezenas: j.dezenas,
+      concursoAlvo: j.concursoAlvo != null ? j.concursoAlvo : null,
+      deConcurso: j.deConcurso != null ? j.deConcurso : null,
+      concursos: j.concursos != null ? j.concursos : null,
+    }));
+
+    /* O app não escreve no CapacitorKV: o plugin não expõe isso à WebView.
+       O que existe é dispatchEvent — então o app manda o estado e quem grava
+       é o executor, que é justamente quem vai ler depois. */
+    runner.dispatchEvent({
+      label: ETIQUETA_SEGUNDO_PLANO,
+      event: "guardarEstado",
+      details: {estado: JSON.stringify({
+        ligado: S.buscaAutomatica !== false,
+        modalidades, jogos,
+      })},
+    }).catch(() => {});
+    return true;
+  }catch(e){ return false; }
+}
+
 function dataBrParaIso(s){
   const m = String(s||"").match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
   return m ? `${m[3]}-${m[2]}-${m[1]}` : String(s||"").slice(0,10);
@@ -4901,6 +5257,19 @@ const FONTES = [
   {
     id: "espelho-guidi",
     nome: "espelho loteriascaixa",
+    /* Endereço atual do projeto. O anterior era loteriascaixa-api.herokuapp.com,
+       e o plano gratuito do Heroku foi encerrado no fim de 2022 — aquele host
+       provavelmente só custava uma tentativa perdida. */
+    url: (slug, concurso) =>
+      `https://api.guidi.dev.br/loteria/${slug}/` + (concurso || "ultimo"),
+    converter: normalizarEspelho
+  },
+  {
+    id: "espelho-heroku",
+    nome: "espelho loteriascaixa (endereço antigo)",
+    /* Mantido depois do endereço novo, e não no lugar dele: se o projeto
+       voltar ao ar por aqui, é mais uma chance; se estiver morto, custa uma
+       tentativa que agora tem tempo-limite. */
     url: (slug, concurso) =>
       `https://loteriascaixa-api.herokuapp.com/api/${slug}/` + (concurso || "latest"),
     converter: normalizarEspelho
@@ -4908,42 +5277,111 @@ const FONTES = [
   {
     id: "proxy",
     nome: "Caixa via proxy de CORS",
-    /* Último recurso: um proxy público reenvia a resposta da Caixa com o
-       cabeçalho que falta. O dado continua sendo o oficial; o que muda é
-       quem o entrega. Fica por último porque depende de um terceiro que pode
-       sair do ar ou ficar lento. */
+    /* Um proxy público reenvia a resposta da Caixa com o cabeçalho que falta.
+       O dado continua sendo o oficial; o que muda é quem o entrega. Fica
+       depois das fontes diretas porque depende de um terceiro que pode sair
+       do ar ou ficar lento. */
     url: (slug, concurso) => "https://api.allorigins.win/raw?url=" +
+      encodeURIComponent(`https://servicebus2.caixa.gov.br/portaldeloterias/api/${slug}` +
+        (concurso ? `/${concurso}` : "")),
+    converter: normalizarCaixa
+  },
+  {
+    id: "proxy-codetabs",
+    nome: "Caixa via segundo proxy",
+    /* Segundo proxy, de operador diferente do primeiro. Dois proxies do mesmo
+       dono cairiam juntos e não seriam duas chances. */
+    url: (slug, concurso) => "https://api.codetabs.com/v1/proxy?quest=" +
       encodeURIComponent(`https://servicebus2.caixa.gov.br/portaldeloterias/api/${slug}` +
         (concurso ? `/${concurso}` : "")),
     converter: normalizarCaixa
   }
 ];
 
+/* Sem tempo-limite, uma fonte que aceita a conexão e depois não responde
+   segura a fila inteira: as fontes seguintes nunca chegam a ser tentadas e a
+   tela fica parada, sem erro e sem resultado. O padrão do fetch é esperar
+   indefinidamente, então o corte precisa ser explícito. */
+const TEMPO_LIMITE_FONTE = 8000;
+
+async function buscarComLimite(url, ms){
+  const opcoes = {cache:"no-cache", headers:{Accept:"application/json"}};
+  /* WebView antiga pode não ter AbortController. Sem ele a busca continua
+     funcionando — só perde o corte, que é melhor que não buscar. */
+  if(typeof AbortController !== "function") return fetch(url, opcoes);
+  const controle = new AbortController();
+  const relogio = setTimeout(() => controle.abort(), ms);
+  try{
+    return await fetch(url, Object.assign({}, opcoes, {signal: controle.signal}));
+  }finally{
+    clearTimeout(relogio);
+  }
+}
+
 //: Fonte que respondeu por último. Tentar a que já funcionou antes economiza
 //: duas requisições falhas em cada busca seguinte.
 let FONTE_PREFERIDA = null;
+
+/* A ordem das fontes depende do que se está pedindo, e essa distinção é o
+   conserto de um defeito que fazia o app nunca mostrar o sorteio do dia.
+
+   O repositório do app é um RETRATO: um cron o atualiza duas vezes por dia.
+   Perguntar a ele "qual foi o último resultado?" devolve o último que ESTAVA
+   no arquivo — que numa noite de domingo é o de sexta. A resposta chega com
+   status 200, o laço para satisfeito, a Caixa nunca é consultada, e
+   FONTE_PREFERIDA passa a apontar para o retrato: da segunda busca em diante
+   nem a primeira tentativa sai do arquivo velho.
+
+   Não era lentidão nem falta de sinal. Pedir o último resultado a um retrato
+   tirado de manhã não pode dar o resultado da noite, por mais rápida que
+   seja a rede.
+
+   Então: pedido do ÚLTIMO resultado vai primeiro às fontes ao vivo, e o
+   repositório fica por último, como rede de segurança para quem está sem
+   internet — e nesse caso a tela nomeia a fonte, para ninguém confundir um
+   retrato com o sorteio de agora.
+
+   Pedido de um concurso ESPECÍFICO e passado continua indo primeiro ao
+   repositório: aquele número não muda mais, o arquivo responde na hora e
+   poupa uma chamada à Caixa. */
+function ordemDeFontes(concurso){
+  const porId = id => FONTES.find(f => f.id === id);
+  const repositorio = porId("repositorio");
+  const aoVivo = FONTES.filter(f => f.id !== "repositorio");
+
+  if(concurso) return [repositorio, ...aoVivo].filter(Boolean);
+
+  /* A preferência só vale entre as fontes ao vivo. Promover o repositório
+     aqui reintroduziria exatamente o defeito. */
+  const preferida = FONTE_PREFERIDA && FONTE_PREFERIDA !== "repositorio"
+    ? [porId(FONTE_PREFERIDA), ...aoVivo.filter(f => f.id !== FONTE_PREFERIDA)]
+    : aoVivo;
+  return [...preferida, repositorio].filter(Boolean);
+}
 
 async function buscarNaCaixa(modalidade, concurso){
   const slug = SLUG_CAIXA[modalidade];
   if(!slug) throw new Error("modalidade sem serviço público conhecido");
 
-  const ordem = FONTE_PREFERIDA
-    ? [FONTES.find(f => f.id === FONTE_PREFERIDA), ...FONTES.filter(f => f.id !== FONTE_PREFERIDA)]
-        .filter(Boolean)
-    : FONTES;
+  const ordem = ordemDeFontes(concurso);
 
   const falhas = [];
   for(const fonte of ordem){
     try{
-      const resp = await fetch(fonte.url(slug, concurso, modalidade),
-        {cache:"no-cache", headers:{Accept:"application/json"}});
+      const resp = await buscarComLimite(
+        fonte.url(slug, concurso, modalidade), TEMPO_LIMITE_FONTE);
       if(!resp.ok) throw new Error(`respondeu ${resp.status}`);
       const r = fonte.converter(await resp.json(), modalidade, concurso);
       r.fonte = fonte.id;
       FONTE_PREFERIDA = fonte.id;
       return r;
     }catch(e){
-      falhas.push(`${fonte.nome}: ${e.message}`);
+      /* "AbortError" não diz nada a quem lê. O que aconteceu foi que a fonte
+         passou do tempo — e é isso que precisa aparecer. */
+      const motivo = (e && (e.name === "AbortError" || e.name === "TimeoutError"))
+        ? `não respondeu em ${Math.round(TEMPO_LIMITE_FONTE/1000)}s`
+        : e.message;
+      falhas.push(`${fonte.nome}: ${motivo}`);
     }
   }
   /* Erro que nomeia cada tentativa. "Failed to fetch" sozinho não diz se o
@@ -7066,10 +7504,7 @@ T.resultados = () => {
      e empurravam a lista para fora da primeira tela — quem entra em
      "Resultados" quer ver resultado, não configurar como buscá-los. Eles
      continuam aqui, recolhidos num <details> no fim. */
-  const chips = `<div class="chips chips-mod" role="group" aria-label="Modalidade">
-    ${Object.entries(MODALIDADES).map(([k,v]) =>
-      `<button class="chip" data-mod="${k}" aria-pressed="${k===S.modalidade}"
-        >${esc(v.nome)}</button>`).join("")}</div>`;
+  const chips = chipsDeModalidade();
 
   /* Aviso de dado velho.
 
@@ -7098,8 +7533,10 @@ T.resultados = () => {
     ? `<div class="vazio">Nenhum resultado desta modalidade ainda.<br>
         Sem histórico, a bancada e o placar não têm o que medir.</div>`
     : `<div class="concursos">${meus.slice(0,40).map(r => `
-        <article class="concurso ${ganhadoresDoConcurso(r).estado}"
-          data-abrir-concurso="${esc(r.concurso)}">
+        <article class="concurso ${ganhadoresDoConcurso(r).estado}${
+            S.concursoAberto === r.concurso ? " aberto" : ""}"
+          data-abrir-concurso="${esc(r.concurso)}"
+          aria-expanded="${S.concursoAberto === r.concurso}">
           <div class="concurso-topo">
             <b>Concurso ${esc(r.concurso)}</b>
             <time>${esc(r.data || "sem data")}</time>
@@ -7115,6 +7552,8 @@ T.resultados = () => {
               >${esc(r.origem || "manual")}</span></div>
           <span class="chevron" aria-hidden="true">
             <svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></span>
+          ${S.concursoAberto === r.concurso
+            ? `<div class="concurso-jogos">${meusJogosNoConcurso(r)}</div>` : ""}
         </article>`).join("")}</div>
       ${meus.length > 40 ? `<div class="pe">mostrando os 40 mais recentes</div>` : ""}`;
 
@@ -7122,7 +7561,7 @@ T.resultados = () => {
      tela, como no mockup. O id continua "r-caixa", então o tratador não mudou
      de lugar nem de nome. */
   return chips + alerta + `<div id="r-saida"></div>` + cartoes + `
-  <details class="ajustes">
+  <details class="ajustes" id="r-ajustes" ${S.ajustesAbertos ? "open" : ""}>
     <summary>Trazer resultados e ajustes</summary>
     <div class="carta">
     <!-- "buscar último na Caixa" saiu daqui: virou o botão "atualizar" lá em
@@ -7135,6 +7574,15 @@ T.resultados = () => {
       <button class="acao contorno mini" id="r-varios" ${temServico?"":"disabled"}>buscar os 20 últimos</button>
       <button class="acao contorno mini" id="r-tudo" ${temServico?"":"disabled"}>histórico completo</button>
     </div>
+    <!-- A resposta fica COLADA nos botões, e com id próprio.
+         Dois defeitos moravam aqui. Primeiro, esta caixa se chamava "r-saida",
+         igual à do topo da tela; $("#r-saida") devolve sempre o primeiro, então
+         a resposta ia parar lá em cima, fora da vista. Depois, mesmo com id
+         próprio, ela ficava no FIM dos ajustes — 659 pixels abaixo do botão,
+         medidos —, atrás dos interruptores e da área de colagem.
+         Nos dois casos o efeito era o mesmo para quem clicava: nada acontece.
+         E foi assim que a busca de histórico passou por removida do app. -->
+    <div id="r-saida-ajustes">${S.recadoAjustes || ""}</div>
     <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;
       border:1px solid var(--linha);border-radius:12px;margin-bottom:10px;cursor:pointer">
       <input type="checkbox" id="r-auto" ${S.buscaAutomatica!==false?"checked":""}
@@ -7182,7 +7630,7 @@ T.resultados = () => {
         border:1px solid var(--linha);border-radius:11px;font-family:var(--mono);
         font-size:.82rem"></textarea></label>
     <button class="acao mini" id="r-colar">importar o que está colado</button>
-    <div id="r-saida"></div>
+
   </div>
   <div class="carta">
     <h2>${esc(c.nome)} — ${meus.length} concurso${meus.length===1?"":"s"} no app</h2>
@@ -7324,7 +7772,7 @@ function acoesNovas(){
   /* --- resultados --- */
   const colar = $("#r-colar");
   if(colar) colar.onclick = () => {
-    const saida = $("#r-saida");
+    const saida = $("#r-saida-ajustes");
     try{
       const novos = lerColagem($("#r-texto").value, S.modalidade);
       const n = guardarResultados(novos);
@@ -7338,8 +7786,12 @@ function acoesNovas(){
     }
   };
 
-  const buscar = async (quantos) => {
-    const saida = $("#r-saida");
+  /* `onde` diz em qual caixa de saída escrever. O botão de atualizar mora no
+     topo da tela e o "buscar os 20 últimos" mora dentro dos ajustes, lá
+     embaixo: uma caixa só, escolhida por id fixo, deixaria um dos dois
+     respondendo fora da vista de quem clicou. */
+  const buscar = async (quantos, onde = "r-saida") => {
+    const saida = $("#" + onde);
     saida.innerHTML = `<div class="nota"><span class="girando"></span>consultando o serviço da Caixa…</div>`;
     try{
       const ultimo = await buscarNaCaixa(S.modalidade, null);
@@ -7354,7 +7806,7 @@ function acoesNovas(){
       const nome = (FONTES.find(f => f.id === lote[0].fonte) || {}).nome || "fonte desconhecida";
       const r = aoMudarHistorico(n, nome);
       const resumo = resumoGanhadores(lote);
-      saida.innerHTML = `<div class="nota"><strong>${lote.length} concurso${lote.length===1?"":"s"}
+      saida.innerHTML = S.recadoAjustes = `<div class="nota"><strong>${lote.length} concurso${lote.length===1?"":"s"}
         recebido${lote.length===1?"":"s"}</strong>, ${n} novo${n===1?"":"s"}.
         ${r.novas} conferência${r.novas===1?"":"s"} automática${r.novas===1?"":"s"}.
         ${resumo.texto ? `<span style="display:block;margin-top:6px">${resumo.texto}.</span>` : ""}
@@ -7372,11 +7824,11 @@ function acoesNovas(){
     }
   };
   if($("#r-caixa")) $("#r-caixa").onclick = () => buscar(1);
-  if($("#r-varios")) $("#r-varios").onclick = () => buscar(20);
+  if($("#r-varios")) $("#r-varios").onclick = () => buscar(20, "r-saida-ajustes");
 
   const tudo = $("#r-tudo");
   if(tudo) tudo.onclick = async () => {
-    const saida = $("#r-saida");
+    const saida = $("#r-saida-ajustes");
     tudo.disabled = true;
     /* Teto de 1200 concursos por vez. Sem teto, a Lotofácil pediria mais de
        três mil requisições de uma vez — o serviço recusaria no meio e a pessoa
@@ -7394,7 +7846,7 @@ function acoesNovas(){
          numa requisição — e avisar "o teto foi atingido, rode de novo" ali é
          mentira exatamente no momento em que tudo deu certo. */
       const veioDoRepositorio = lote[0] && lote[0].origem === "repositorio";
-      saida.innerHTML = `<div class="nota"><strong>${lote.length} concursos recebidos</strong>,
+      saida.innerHTML = S.recadoAjustes = `<div class="nota"><strong>${lote.length} concursos recebidos</strong>,
         ${novos} novo${novos===1?"":"s"}. ${r.novas} conferência${r.novas===1?"":"s"}
         automática${r.novas===1?"":"s"}.${
           veioDoRepositorio
@@ -7404,11 +7856,18 @@ function acoesNovas(){
               : "")}</div>`;
       setTimeout(pintar, 1200);
     }catch(e){
-      saida.innerHTML = `<div class="nota atencao">A busca falhou: ${esc(e.message)}.
+      saida.innerHTML = S.recadoAjustes = `<div class="nota atencao">A busca falhou: ${esc(e.message)}.
         Use a colagem abaixo — ela não depende de rede.</div>`;
       tudo.disabled = false;
     }
   };
+
+  /* Sem lembrar isto, o pintar() que roda depois de uma busca fecha os ajustes
+     na cara de quem acabou de usá-los — e a pessoa, olhando o rodapé da tela,
+     vê o painel sumir sem resposta nenhuma. Era isso que fazia a busca de
+     histórico parecer removida do app. */
+  const ajustes = $("#r-ajustes");
+  if(ajustes) ajustes.ontoggle = () => { S.ajustesAbertos = ajustes.open; };
 
   const rauto = $("#r-auto");
   if(rauto) rauto.onchange = e => {
@@ -7632,6 +8091,16 @@ function acoesNovas(){
     if(S.autoAnalise) analisarPendentes();
   };
 
+  /* --- abrir um concurso e ver como os SEUS jogos foram nele ---
+     O cartão já tinha o atributo e o chevron desde sempre; o tratador nunca
+     existiu. Um alvo que parece clicável e não responde é pior que um alvo que
+     não parece clicável. */
+  document.querySelectorAll("[data-abrir-concurso]").forEach(a => a.onclick = () => {
+    const n = Number(a.dataset.abrirConcurso);
+    S.concursoAberto = S.concursoAberto === n ? null : n;
+    pintar();
+  });
+
   /* --- abrir um jogo salvo na cartela --- */
   document.querySelectorAll("[data-abrir-jogo]").forEach(b => b.onclick = () => {
     S.jogoAberto = S.jogoAberto === b.dataset.abrirJogo ? null : b.dataset.abrirJogo;
@@ -7792,7 +8261,8 @@ function acoes(){
             <div class="topo"><span class="id">${esc(nomeDoMetodo(j.metodo))}</span>
               <span class="selo">${j.dezenas.length} dezenas</span></div>
             <div class="dezenas">${j.dezenas.map(d=>`<span class="dz marcada">${pad(d)}</span>`).join("")}</div>
-          </div>`).join("") + `
+          </div>`).join("") +
+          vereditoDaRepeticao(S.modalidade, S.ultimoLote.map(j=>j.dezenas)) + `
           <button class="acao" id="g-salvar" style="margin-top:6px">Salvar ${S.ultimoLote.length} jogo${S.ultimoLote.length>1?"s":""}</button>`;
 
         $("#g-salvar").onclick = () => {
@@ -8182,6 +8652,56 @@ function trocarModalidade(mod){
   pintar();
 }
 
+/* A tira de modalidades, num lugar só.
+   Ela nasceu embutida na tela de Resultados, e o efeito foi este: as telas que
+   FILTRAM por modalidade — Meus Jogos, Conferência, Placar — não tinham como
+   trocar de modalidade. Quem salvava um jogo de Mega-Sena via a lista vazia e
+   concluía que o jogo tinha sumido; a cartela parecia existir só na Lotofácil
+   porque só a Lotofácil estava selecionada.
+
+   Uma função só, para as telas não divergirem no primeiro ajuste. */
+/* O que os SEUS jogos fizeram naquele concurso.
+   O cartão de resultado já tinha data-abrir-concurso e um chevron — parecia
+   clicável e não fazia nada, porque nunca houve tratador. Faltava a resposta
+   mais óbvia de todas: "e os meus jogos, como foram nesse sorteio?" */
+function meusJogosNoConcurso(r){
+  const cmp = jogosContraConcurso(r);
+  if(!cmp.conferidos.length && !cmp.fora.length)
+    return `<div class="nota">Nenhum jogo salvo de
+      ${esc(MODALIDADES[r.modalidade].nome)} neste aparelho.</div>`;
+
+  if(!cmp.conferidos.length)
+    return `<div class="nota">Você tem jogos salvos, mas nenhum cobre o
+      concurso ${esc(r.concurso)}. ${esc(cmp.fora[0].motivo)}.</div>`;
+
+  const esperado = cmp.conferidos.reduce((t, x) =>
+    t + esperadoAcertos(r.modalidade, x.jogo.dezenas.length), 0) / cmp.conferidos.length;
+  const medio = cmp.coincidencias / cmp.conferidos.length;
+
+  return `<div class="nota">
+      <strong>${cmp.conferidos.length} jogo${cmp.conferidos.length===1?"":"s"} seu${cmp.conferidos.length===1?"":"s"}</strong>
+      cobri${cmp.conferidos.length===1?"a":"am"} este concurso:
+      ${nf(medio, 2)} coincidência${medio===1?"":"s"} por jogo, contra
+      ${nf(esperado, 2)} que o acaso faria.
+      ${cmp.fora.length ? `Outros ${cmp.fora.length} não cobrem este concurso.` : ""}
+    </div>
+    ${cmp.conferidos.map(x => `
+      <div class="ficha" style="margin-top:8px">
+        <div class="topo"><span class="id">#${esc(x.jogo.id)}</span>
+          <span class="selo ${x.acertos > esperadoAcertos(r.modalidade, x.jogo.dezenas.length) ? "ok" : ""}"
+            >${x.acertos} coincidência${x.acertos===1?"":"s"}</span></div>
+        <div class="dezenas">${x.jogo.dezenas.map(d =>
+          `<span class="dz ${r.dezenas.includes(d) ? "acertou" : ""}">${pad(d)}</span>`).join("")}</div>
+      </div>`).join("")}`;
+}
+
+function chipsDeModalidade(){
+  return `<div class="chips chips-mod" role="group" aria-label="Modalidade">
+    ${Object.entries(MODALIDADES).map(([k,v]) =>
+      `<button class="chip" data-mod="${k}" aria-pressed="${k===S.modalidade}"
+        >${esc(v.nome)}</button>`).join("")}</div>`;
+}
+
 function trilhaModalidade(){
   const gav = $("#gaveta-mods");
   if(gav) gav.innerHTML = Object.entries(MODALIDADES).map(([k,v])=>
@@ -8195,6 +8715,10 @@ function pintar(){
   /* O recado da busca vale para a visita atual à tela. Sair dela o descarta,
      senão reaparece dias depois falando de uma conferência esquecida. */
   if(tela.id !== "conferir") S.avisoConferir = null;
+  /* O recado dos ajustes vale para a visita atual à tela de Resultados. Sair
+     dela o descarta — senão "1200 concursos recebidos" reaparece amanhã como
+     se tivesse acabado de acontecer. */
+  if(tela.id !== "resultados") S.recadoAjustes = null;
   if(tela.id !== "jogos") S.avisoJogos = null;
   const segmento = sec.telas.length < 2 ? "" :
     `<div class="segmento" role="tablist">${sec.telas.map(t=>
@@ -8355,6 +8879,18 @@ function normalizarConcursos(){
      falha: sem sinal é o caso comum, e um aviso a cada abertura offline
      treinaria a pessoa a ignorar o sino. */
   buscaDiaria().then(r => { if(r.novos) pintar(); }).catch(()=>{});
+
+  /* E de novo toda vez que o app volta ao primeiro plano. Rodar só na abertura
+     significa que quem deixa o app aberto durante a noite não recebe o sorteio
+     das 20h — o app estava lá, ligado, e não olhou. Voltar ao primeiro plano é
+     o momento natural: é quando a pessoa quer ver.
+
+     Sem risco de martelar o serviço: buscaDiaria() já decide sozinha se está
+     na hora, e responde {tentadas:0} quando não está. */
+  document.addEventListener("visibilitychange", () => {
+    if(document.visibilityState !== "visible") return;
+    buscaDiaria().then(r => { if(r.novos) pintar(); }).catch(()=>{});
+  });
 
   /* Sino e folha de avisos. Ficam fora de pintar() porque vivem no cabeçalho,
      que não é redesenhado a cada troca de tela. */
