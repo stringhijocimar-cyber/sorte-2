@@ -2220,8 +2220,12 @@ secao("22. Sugestão do sistema e retirada do rateio");
   checar("a medida mais rara da sugestão é mais comum que a de um jogo qualquer",
     s1.menor > s1.medianaDoAcaso,
     `sugestão ${(s1.menor * 100).toFixed(1)}% vs acaso ${(s1.medianaDoAcaso * 100).toFixed(1)}%`);
-  checar("e nenhuma das medidas ficou abaixo desse mínimo",
-    s1.linhas.every((l) => l.fracao >= s1.menor - 1e-12));
+  /* Vale para as medidas QUE ESCOLHEM. "Menor dezena" e "Maior dezena" saíram
+     do critério — o valor mais comum das duas é o próprio extremo do volante,
+     e mantê-las dentro fixava o 01 e o 60 em quase toda sugestão. Elas
+     continuam na tabela e podem, sim, ficar abaixo do mínimo declarado. */
+  checar("e nenhuma das medidas que escolhem ficou abaixo desse mínimo",
+    s1.linhas.filter((l) => !l.naoEscolhe).every((l) => l.fracao >= s1.menor - 1e-12));
   checar("toda linha diz em quantos concursos aquilo apareceu",
     s1.linhas.every((l) => Number.isInteger(l.concursos) && l.concursos >= 0 &&
       l.fracao >= 0 && l.fracao <= 1));
@@ -2233,12 +2237,38 @@ secao("22. Sugestão do sistema e retirada do rateio");
   checar("semente diferente dá outra sugestão",
     s3.dezenas.join(",") !== s1.dezenas.join(","));
 
-  /* Mais candidatas não pode piorar o mínimo: é uma busca por máximo. */
-  const poucas = contexto.sugestaoDoSistema("mega-sena", 6, { semente: 5, candidatas: 20 });
-  const muitas = contexto.sugestaoDoSistema("mega-sena", 6, { semente: 5, candidatas: 400 });
-  checar("mais candidatas não pioram a escolha",
-    muitas.menor >= poucas.menor,
-    `20 -> ${(poucas.menor * 100).toFixed(1)}% · 400 -> ${(muitas.menor * 100).toFixed(1)}%`);
+  /* Antes a escolha era o ARGMAX, e então mais candidatas nunca podiam piorar
+     o mínimo — era monótono, e o teste cobrava isso de UMA semente.
+
+     Agora a escolha é um sorteio entre as candidatas que passam de um piso, e
+     a monotonia deixou de valer caso a caso: com mais candidatas o piso sobe,
+     mas o jogo escolhido é um qualquer acima dele. Cobrar monotonia numa
+     semente só passou a medir sorte.
+
+     O que continua verdade, e é o que importa: com mais candidatas o conjunto
+     aceito é melhor, então a MEDIANA de várias sugestões não piora. */
+  const medianaDeMenores = (candidatas) => {
+    const v = [];
+    for(let i = 0; i < 21; i++)
+      v.push(contexto.sugestaoDoSistema("mega-sena", 6, {semente: 5000 + i, candidatas}).menor);
+    v.sort((a, b) => a - b);
+    return v[Math.floor(v.length / 2)];
+  };
+  const poucasMed = medianaDeMenores(20), muitasMed = medianaDeMenores(400);
+  /* E não é "mais candidatas, melhor jogo": a aceitação é uma FATIA do topo,
+     então a qualidade típica fica praticamente constante — medido, 15,8% com
+     20 candidatas contra 15,0% com 400. Afirmar monotonia crescente aqui seria
+     escrever no teste uma propriedade que este desenho não tem.
+     O que o número de candidatas compra é VARIEDADE: mais candidatas, mais
+     jogos distintos acima do mesmo piso. */
+  checar("a qualidade típica não depende do número de candidatas",
+    Math.abs(muitasMed - poucasMed) < 0.03,
+    `20 -> ${(poucasMed * 100).toFixed(1)}% · 400 -> ${(muitasMed * 100).toFixed(1)}%`);
+  const poucasAceitas = contexto.sugestaoDoSistema("mega-sena", 6, {semente:5, candidatas:20}).aceitas;
+  const muitasAceitas = contexto.sugestaoDoSistema("mega-sena", 6, {semente:5, candidatas:400}).aceitas;
+  checar("mas mais candidatas dão mais jogos distintos para escolher",
+    muitasAceitas > poucasAceitas * 5,
+    `${poucasAceitas} aceitas contra ${muitasAceitas}`);
 
   /* Respeita o tamanho pedido, inclusive fora do mínimo da modalidade. */
   const grande = contexto.sugestaoDoSistema("mega-sena", 8, { semente: 3 });
@@ -5013,10 +5043,45 @@ secao("46. A sugestão do sistema não pode virar um jogo fixo");
   checar("nenhuma dezena domina as sugestões",
     fracao < 0.40, `a mais repetida é a ${maior[0]} em ${(100*fracao).toFixed(0)}%`);
 
-  /* E especificamente os extremos, que eram o sintoma relatado. */
+  /* E especificamente os extremos, que eram o sintoma relatado. Depois de
+     tirar "menor dezena" e "maior dezena" do critério, eles voltam à taxa do
+     acaso — 6/60 = 10% —, e não apenas "menos que antes". */
   const extremos = ((conta.get(1) || 0) + (conta.get(60) || 0)) / (2 * QUANTAS);
-  checar("os extremos do volante deixam de ser presença garantida",
-    extremos < 0.45, `01 e 60 em ${(100*extremos).toFixed(0)}% das sugestões`);
+  checar("os extremos do volante voltam à taxa do acaso",
+    extremos < 0.22, `01 e 60 em ${(100*extremos).toFixed(0)}% das sugestões, acaso 10%`);
+
+  /* As duas continuam na tabela: elas descrevem o jogo, e isso é informação.
+     O que mudou é que deixaram de decidir qual jogo sai. */
+  {
+    const uma = motor.sugestaoDoSistema("mega-sena", 6,
+      {semente: 4321, candidatas: CANDIDATAS});
+    const ordem = uma.linhas.filter(l => l.id === "inicial" || l.id === "final");
+    checar("menor e maior dezena continuam aparecendo na tabela",
+      ordem.length === 2, `${ordem.length} de 2`);
+    checar("mas marcadas como fora do critério",
+      ordem.every(l => l.naoEscolhe === true));
+    /* A prova de que estão MESMO fora: em vários sorteios, alguma delas
+       precisa ficar ABAIXO da medida mais rara declarada. Se nunca ficasse, a
+       exclusão poderia ser coincidência — e o teste, decoração.
+
+       (A primeira versão desta asserção era `l.fracao >= menor || l.fracao <
+        menor`, que é verdade para qualquer número: um teste que não podia
+        falhar. Trocado por este, que pode.) */
+    let houveOrdemAbaixo = 0;
+    for(let k = 0; k < 20; k++){
+      const x = motor.sugestaoDoSistema("mega-sena", 6,
+        {semente: 70000 + k, candidatas: CANDIDATAS});
+      if(x.linhas.some(l => l.naoEscolhe && l.fracao < x.menor - 1e-12)) houveOrdemAbaixo++;
+    }
+    checar("uma estatística de ordem chega a ficar abaixo da mais rara declarada",
+      houveOrdemAbaixo > 0,
+      `em ${houveOrdemAbaixo} de 20 sugestões — prova que ela não trava o critério`);
+    const menorDasQueEscolhem = Math.min(...uma.linhas
+      .filter(l => !l.naoEscolhe).map(l => l.fracao));
+    checar("e a medida mais rara sai só das medidas que escolhem",
+      Math.abs(menorDasQueEscolhem - uma.menor) < 1e-12,
+      `${(100*menorDasQueEscolhem).toFixed(1)}% contra ${(100*uma.menor).toFixed(1)}%`);
+  }
 
   /* A promessa da tela tem de continuar verdadeira: nenhuma medida do jogo
      escolhido é rara. Trocar variedade por mentira não seria conserto. */

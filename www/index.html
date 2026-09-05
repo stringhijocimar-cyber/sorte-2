@@ -1932,8 +1932,12 @@ function tabelaSugestao(s){
     <div class="contador"><span>a medida mais rara deste jogo</span>
       <b>${nf(s.menor*100,1)}%</b></div>
     <div class="nota" style="margin-top:6px">
-      Nenhuma das ${s.linhas.length} medidas cai numa configuração incomum: a mais rara
-      ainda apareceu em <strong>${nf(s.menor*100,1)}%</strong> dos ${inf(s.n)} concursos.
+      Nenhuma das ${s.linhas.filter(l => !l.naoEscolhe).length} medidas que orientam a
+      escolha cai numa configuração incomum: a mais rara ainda apareceu em
+      <strong>${nf(s.menor*100,1)}%</strong> dos ${inf(s.n)} concursos.
+      Menor e maior dezena aparecem na tabela, mas não entram no critério — o
+      valor mais comum delas é o próprio extremo do volante, e usá-las para
+      escolher fixaria o 01 e o 60 em quase todo jogo.
       Um jogo sorteado sem critério costuma ter a medida mais rara em
       ${nf(s.medianaDoAcaso*100,1)}% — ${nf(vezes,1)}× menos.
       Escolhido entre ${inf(s.candidatas)} candidatas sorteadas uniformemente.
@@ -3124,6 +3128,19 @@ function quantosNaFaixa(ordenados, alvo, largura){
 
 /* Perfil de uma candidata contra as distribuições já montadas. Devolve as
    linhas e a fração da medida mais rara. */
+/* "Menor dezena" e "Maior dezena" são MOSTRADAS, mas não escolhem.
+
+   As duas são estatísticas de ordem, e o valor mais comum de cada uma no
+   histórico é justamente o extremo do volante: nenhum outro mínimo aparece
+   tanto quanto o 1, nem outro máximo tanto quanto o 60. Qualquer critério que
+   premie "medida típica" é empurrado por elas para os extremos — por
+   construção, e não por acaso.
+
+   Medido: com as duas dentro do critério, o 01 saía em 24% das sugestões e o
+   60 em 19%, contra os 10% do acaso. Elas continuam na tabela, porque
+   descrevem o jogo e isso é informação; só deixam de decidir qual jogo sai. */
+const MEDIDAS_QUE_NAO_ESCOLHEM = new Set(["inicial", "final"]);
+
 function perfilRapido(dezenas, dist){
   const linhas = [];
   let menor = 1;
@@ -3133,9 +3150,9 @@ function perfilRapido(dezenas, dist){
       ? quantosNaFaixa(t.ordenados, Number(valor), dist.larguraSoma)
       : (t.contagem.get(String(valor)) || 0);
     const fracao = iguais / dist.n;
-    if(fracao < menor) menor = fracao;
+    if(fracao < menor && !MEDIDAS_QUE_NAO_ESCOLHEM.has(t.medida.id)) menor = fracao;
     linhas.push({id:t.medida.id, nome:t.medida.nome, valor,
-      concursos:iguais, fracao,
+      concursos:iguais, fracao, naoEscolhe: MEDIDAS_QUE_NAO_ESCOLHEM.has(t.medida.id),
       detalhe: t.medida.faixa ? `± ${dist.larguraSoma}` : ""});
   }
   if(dist.ultimo && dist.paresConsecutivos){
