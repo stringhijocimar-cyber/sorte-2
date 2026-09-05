@@ -24,6 +24,39 @@ allprojects {
     }
 }
 
+// O build.gradle do @capacitor/background-runner declara Java 21 e não declara
+// nada para o Kotlin, que fica no padrão 17. O Gradle recusa a combinação:
+//
+//   Inconsistent JVM-target compatibility detected for tasks
+//   'compileDebugJavaWithJavac' (21) and 'compileDebugKotlin' (17)
+//
+// É descuido do plugin, e não do projeto — mas node_modules não é versionado,
+// então corrigir lá dentro duraria até o próximo npm install. Aqui, no
+// projeto, a correção sobrevive.
+//
+// Alinha-se em 17, e não em 21, porque 17 é o que o Capacitor 6 usa, o que o
+// resto do projeto já compila e o que a esteira instala. Puxar tudo para 21
+// exigiria JDK 21 em todo lugar para resolver um número que só uma biblioteca
+// pediu.
+subprojects {
+    afterEvaluate { projeto ->
+        if (projeto.hasProperty("android")) {
+            projeto.android {
+                compileOptions {
+                    sourceCompatibility JavaVersion.VERSION_17
+                    targetCompatibility JavaVersion.VERSION_17
+                }
+            }
+        }
+        // O Kotlin já usa 17 por padrão; fixar aqui evita que a próxima versão
+        // do plugin mude o padrão e a compilação volte a quebrar com a mesma
+        // mensagem, meses depois, sem ninguém lembrar do porquê.
+        projeto.tasks.matching { it.name ==~ /compile.*Kotlin/ }.configureEach { tarefa ->
+            if (tarefa.hasProperty("kotlinOptions")) tarefa.kotlinOptions.jvmTarget = "17"
+        }
+    }
+}
+
 task clean(type: Delete) {
     delete rootProject.buildDir
 }

@@ -37,7 +37,12 @@ jobs:
         # O erro clássico deste projeto: editar index.html e esquecer de copiar
         # para www/, gerando um APK sem as mudanças. Falhar aqui é melhor que
         # entregar um APK velho parecendo novo.
-        run: cmp index.html www/index.html
+        run: |
+          cmp index.html www/index.html
+          # O executor em segundo plano viaja no APK pela pasta www/. Um APK
+          # com o executor antigo confere com regra antiga e avisa errado no
+          # aparelho, sem nada vermelho na compilação.
+          diff -r runner www/runner
 
       - name: Rodar a bateria antes de compilar
         run: node ferramentas/testar-motor.mjs
@@ -65,6 +70,17 @@ jobs:
           cp android/app/build/outputs/apk/debug/app-debug.apk \
              "LotoLab-v${{ inputs.versao }}.apk"
           ls -la "LotoLab-v${{ inputs.versao }}.apk"
+
+      - name: Conferir o APK por dentro
+        # Esta conferência existe porque um defeito atravessou todas as outras:
+        # o app/build.gradle não aplicava o capacitor.build.gradle, e os plugins
+        # nativos compilavam sem nunca virar dependência do :app. As classes não
+        # chegavam ao APK, o capacitor.plugins.json continuava listando-as, e o
+        # Capacitor falhava calado no aparelho.
+        #
+        # Testar o código não pegava. Testar a build não pegava, porque a build
+        # passava. Só abrir o arquivo que vai para o celular pega.
+        run: python3 ferramentas/conferir-apk.py "LotoLab-v${{ inputs.versao }}.apk"
 
       - name: Conferir que o APK tem a versão certa do app
         # Sem isto, um APK compilado de cache antigo passaria por novo.

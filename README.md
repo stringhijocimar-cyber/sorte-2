@@ -1,5 +1,44 @@
 # LotoLab — aplicativo
 
+## Novidades da 4.9.0
+
+Abra **Início → Criar sugestões**, ou **Mais → Sugestões**.
+
+- **Lotes personalizados:** perfil + diversidade, diversidade ou aleatório uniforme; de 1 a 60 jogos únicos, dezenas fixas/excluídas e limite de orçamento. Os filtros nunca são relaxados silenciosamente.
+- **Explicações:** soma, pares, primos, consecutivos, linhas ocupadas e metade inferior comparados à referência. O perfil usa 50, 100, 300 ou todos os concursos disponíveis. Volantes com tamanho diferente do sorteio usam uma referência aleatória do mesmo tamanho, sem comparar 20 dezenas com um sorteio de 15.
+- **Diversidade:** dezenas distintas, pares cobertos, sobreposição média e máxima calculadas a partir dos jogos. Essas medidas não representam probabilidade de prêmio.
+- **Frequências:** mapa interativo com contagens, ausências nos registros observados e intervalo individual de Wilson. Dados inválidos e concursos conflitantes são excluídos; lacunas são informadas.
+- **Comparação temporal:** cada lote é gerado apenas com concursos anteriores ao alvo. Compara três critérios com quantidade, tamanho e custo iguais; mostra diferença pareada, intervalo aproximado por blocos, p ajustado por Holm e consistência em três recortes. É um teste exploratório; não valida previsão e não estima lucro.
+- **Reprodução e exportação:** código, parâmetros, versão e assinatura do histórico permitem repetir uma seleção. CSV por download no navegador; no Android, texto copiável para não depender de downloads `blob:` da WebView. Jogos salvos guardam a proveniência e o preço usado na sugestão.
+- **Custos corrigidos:** Lotomania e Timemania têm preço fixo por volante. Mega-Sena passa a R$ 6 e Dupla Sena a R$ 3. A chance principal da +Milionária inclui dois trevos. O custo de jogos ampliados também foi corrigido na bancada, retrospectiva, placar e teimosinha.
+- **Entrega consistente:** fontes Android sincronizados e arquivo único com todas as folhas de estilo e a ilustração embutidas. O PR gera um APK de revisão depois dos testes, sem publicar uma release.
+
+### Método e limites
+
+`Perfil + diversidade` seleciona aleatoriamente entre os 40% de perfis com menor distância média padronizada em seis medidas e monta o lote reduzindo a soma dos quadrados das interseções. É uma heurística de organização, não uma estimativa da chance futura nem um modelo treinado para prever dezenas. A variedade não é garantia de fechamento e os filtros alteram a distribuição das sugestões.
+
+O comparador usa até 100 concursos anteriores por alvo e 30 alvos por padrão. A incerteza considera a diferença de acertos médios **por concurso**, não trata cada bilhete sobreposto como observação independente. São 1.200 reamostragens em blocos móveis de cinco e permutações de sinais em blocos. Holm corrige somente as duas comparações daquela execução; procurar outros recortes depois de ver o resultado continua sendo exploração.
+
+As sugestões e a conferência permanecem voltadas às **dezenas principais** das oito modalidades existentes. É necessário completar trevos, Mês da Sorte e Time do Coração no volante correspondente. A comparação da Dupla Sena considera o primeiro sorteio. Prêmios adicionais, retorno financeiro e probabilidade conjunta de lotes sobrepostos não são inferidos a partir desses dados.
+
+Fontes dos preços e regras, consultadas em 05/09/2026: [Mega-Sena](https://loterias.caixa.gov.br/Paginas/Mega-Sena.aspx), [Lotofácil](https://loterias.caixa.gov.br/Paginas/Lotofacil.aspx), [Quina](https://loterias.caixa.gov.br/Paginas/Quina.aspx), [Lotomania](https://loterias.caixa.gov.br/Paginas/Lotomania.aspx), [Dupla Sena](https://loterias.caixa.gov.br/Paginas/Dupla-Sena.aspx), [Dia de Sorte](https://loterias.caixa.gov.br/Paginas/Dia-de-Sorte.aspx), [Timemania](https://loterias.caixa.gov.br/Paginas/Timemania.aspx) e [+Milionária](https://loterias.caixa.gov.br/Paginas/Mais-Milionaria.aspx). Probabilidades calculadas por combinação e distribuição hipergeométrica; arredondamentos podem diferir dos inteiros truncados nas tabelas oficiais.
+
+### Validação e origem
+
+A `main` ainda estava na 4.3.2, enquanto a versão publicada era a tag `v4.8.0`. Esta atualização incorpora a versão publicada e preserva os dados mais recentes da `main`.
+
+```sh
+node ferramentas/testar-motor.mjs
+node ferramentas/testar-inteligencia.mjs
+# Com Chrome e servidor HTTP na porta 8123:
+node ferramentas/testar-interface.mjs
+```
+
+O APK de revisão fica nos artefatos da execução **Testes**, depois do job **APK para revisão**. Usa assinatura de depuração, sem publicação em loja. Instalação/atualização em aparelho real precisa ser conferida separadamente.
+
+---
+
+
 O app é uma página única sem dependência externa e sem etapa de build: o
 `index.html` contém interface, lógica e estilos. O Capacitor apenas o embrulha
 num app nativo Android.
