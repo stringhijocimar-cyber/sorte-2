@@ -30,11 +30,11 @@
 /* 9: a conferência passou a guardar o número do concurso como número, e a
    abertura junta as duplicatas que a versão anterior deixou gravadas. Quem
    usa pelo navegador precisa receber o index.html novo, não o do cache. */
-const VERSAO = "11";
+const VERSAO = "12";
 const CACHE = `lotolab-v${VERSAO}`;
 
 //: A casca mínima para o app abrir offline.
-const CASCA = ["./", "./index.html", "./manifest.webmanifest", "./icone.svg", "./ui/sorte2-ui-final.css", "./ui/brain-network.svg", "./ui/lotolab-ui-v4-3.css"];
+const CASCA = ["./", "./index.html", "./manifest.webmanifest", "./icone.svg", "./ui/sorte2-ui-final.css", "./ui/brain-network.svg", "./ui/lotolab-ui-v4-3.css", "./ui/inteligencia-v4-9.css"];
 
 //: Recursos que praticamente não mudam. Ícone novo sai com versão nova.
 const IMUTAVEIS = /\.(png|svg|webmanifest)$/i;

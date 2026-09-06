@@ -1,6 +1,6 @@
 {
   "name": "lotolab",
-  "version": "4.3.2",
+  "version": "4.9.0",
   "description": "Monta jogos das loterias brasileiras, guarda no aparelho e confere contra os concursos, mostrando o desempenho comparado ao acaso.",
   "private": true,
   "scripts": {
@@ -9,13 +9,15 @@
     "android:add": "cap add android",
     "android:sync": "cap sync android",
     "android:open": "cap open android",
-    "android:build": "cap sync android && cd android && ./gradlew assembleDebug"
+    "android:build": "cap sync android && cd android && ./gradlew assembleDebug",
+    "test:inteligencia": "node ferramentas/testar-inteligencia.mjs"
   },
   "devDependencies": {
     "@capacitor/cli": "^6.1.2"
   },
   "dependencies": {
     "@capacitor/android": "^6.1.2",
+    "@capacitor/background-runner": "^2.3.1",
     "@capacitor/core": "^6.1.2",
     "@capacitor/local-notifications": "^6.1.3"
   }

@@ -72,23 +72,18 @@ html = html.replace(
    Foi assim que a V4 deixou de chegar nesta via de entrega sem ninguém
    perceber: a virada visual mexeu no index.html e o gerador continuou
    copiando o <link> como texto. */
-const folha = join(RAIZ, "ui", "sorte2-ui-final.css");
-if (!existsSync(folha)) {
-  console.error("ui/sorte2-ui-final.css não encontrado: o arquivo único sairia sem o visual da V4.");
-  process.exit(1);
-}
-const css = readFileSync(folha, "utf8");
-const antes = html;
-html = html.replace(/<link rel="stylesheet" href="ui\/sorte2-ui-final\.css[^"]*"[^>]*>/,
-  `<style data-sorte2-visual-final="embutido">\n${css}\n</style>`);
-if (html === antes) {
-  console.error("não achei o <link> da folha da V4 no index.html — o arquivo único sairia sem o visual.");
-  process.exit(1);
-}
+html = html.replace(/<link rel="stylesheet" href="(ui\/[^"?]+)(?:\?[^"\s]*)?"[^>]*>/g, (tag, caminho) => {
+  const arquivo = join(RAIZ, caminho);
+  if (!existsSync(arquivo)) throw new Error(`Folha ausente: ${caminho}`);
+  let css = readFileSync(arquivo, "utf8");
+  css = css.replace(/url\(["']?(?:\.\/)?brain-network\.svg["']?\)/g,
+    () => `url("data:image/svg+xml;base64,${readFileSync(join(RAIZ,"ui/brain-network.svg")).toString("base64")}")`);
+  return `<style data-folha="${caminho}">\n${css}\n</style>`;
+});
 
 /* Sem service worker neste arquivo: de file:// ele não registra, e num
    servidor ele reintroduziria justamente o cache que congelou o app. */
-html = html.replace(/if\("serviceWorker" in navigator\)\{[\s\S]*?\n  \}/,
+html = html.replace(/if\("serviceWorker" in navigator && navigator.serviceWorker\) try\{[\s\S]*?\n  \}catch\(e\)\{[^\n]*\}/,
   "/* service worker removido nesta versão: ver gerar-completo.mjs */");
 
 writeFileSync(join(RAIZ, "lotolab-completo.html"), html, "utf8");
