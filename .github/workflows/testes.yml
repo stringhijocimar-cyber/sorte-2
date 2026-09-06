@@ -147,7 +147,7 @@ jobs:
     needs: motor
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -176,3 +176,24 @@ jobs:
           name: LotoLab-4.9.0-preview
           path: LotoLab-4.9.0-preview.apk
           retention-days: 14
+
+      - name: Disponibilizar APK para download direto
+        if: github.head_ref == 'codex/inteligencia-sugestoes-v4.9'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          LOTOLAB_TAG: v4.9.0-rc.${{ github.run_number }}
+        run: |
+          cat > /tmp/lotolab-release.md <<'NOTAS'
+          LotoLab 4.9.0 — versão de teste com central de sugestões, restrições,
+          orçamento, explicações, diversidade e comparação temporal.
+
+          Baixe LotoLab-4.9.0-preview.apk abaixo. APK assinado para depuração.
+          A assinatura pode ser diferente da instalação anterior: não desinstale
+          seu aplicativo sem antes preservar seus jogos e resultados.
+
+          Motor e interface validados automaticamente; instalação em aparelho
+          físico ainda requer conferência. Não prevê resultados de loterias.
+          NOTAS
+          gh release create "$LOTOLAB_TAG" LotoLab-4.9.0-preview.apk \
+            --target "$GITHUB_SHA" --prerelease \
+            --title "LotoLab 4.9.0 — teste" --notes-file /tmp/lotolab-release.md

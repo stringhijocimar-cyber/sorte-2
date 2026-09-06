@@ -1909,6 +1909,26 @@ html[data-tema="claro"] .int-hero h2,html[data-tema="claro"] .int-test-result h3
 @media(min-width:600px){.int-heatmap{grid-template-columns:repeat(10,minmax(0,1fr))}.int-summary{grid-template-columns:repeat(4,minmax(0,1fr))}.int-hero{padding:30px}.int-hero h2{font-size:2rem!important}}
 @media(prefers-reduced-motion:reduce){.int-results{scroll-behavior:auto}}
 
+/* Alvos de toque de 44px, inclusive navegação secundária e fonte oficial. */
+.int-home-link{min-height:44px;min-width:44px;padding:10px 0}
+.int-help a{display:inline-flex;align-items:center;min-height:44px;min-width:44px}
+/* Contraste nos dois temas e navegação compacta para a nova tela. */
+.int-hero h2,.int-section-title h2{color:var(--tinta)!important;text-transform:none!important}
+.segmento:has([data-tela="sugestoes"]){display:flex!important;flex-wrap:nowrap!important;overflow-x:auto;gap:4px}
+.segmento:has([data-tela="sugestoes"]) button{flex:0 0 auto;min-width:76px;min-height:44px}
+html[data-tema="claro"] body{background:#f1f4f8!important;color:#172434!important}
+html[data-tema="claro"] header,html[data-tema="claro"] nav{background:#fff!important;border-color:#d7dee8!important}
+html[data-tema="claro"] .marca-titulo b{background:none!important;-webkit-text-fill-color:#26354c!important;color:#26354c!important}
+html[data-tema="claro"] .marca-titulo span{color:#59677d!important}
+html[data-tema="claro"] .menu,html[data-tema="claro"] .sino{background:#f1f4f8!important;color:#26354c!important;border-color:#d7dee8!important}
+html[data-tema="claro"] .carta,html[data-tema="claro"] .panel,html[data-tema="claro"] .ficha,html[data-tema="claro"] .kpi,html[data-tema="claro"] .mini-card{background:#fff!important;border-color:#d7dee8!important}
+html[data-tema="claro"] .titulo h1,html[data-tema="claro"] .carta h2,html[data-tema="claro"] h3{color:#172434!important}
+html[data-tema="claro"] .segmento{background:#fff!important;border-color:#d7dee8!important}
+html[data-tema="claro"] .segmento button{color:#5c6980!important}
+html[data-tema="claro"] .segmento button[aria-selected="true"]{color:#fff!important}
+html[data-tema="claro"] .int-form input,html[data-tema="claro"] .int-form select{background:#f6f8fb!important;color:#172434!important;border-color:#cbd5e1!important}
+html[data-tema="claro"] .int-hero .nota{background:#eef4f8!important;color:#40546b!important;border-color:#d1dee8!important}
+
 </style>
 </head>
 <body>

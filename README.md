@@ -11,7 +11,7 @@ Abra **Início → Criar sugestões**, ou **Mais → Sugestões**.
 - **Comparação temporal:** cada lote é gerado apenas com concursos anteriores ao alvo. Compara três critérios com quantidade, tamanho e custo iguais; mostra diferença pareada, intervalo aproximado por blocos, p ajustado por Holm e consistência em três recortes. É um teste exploratório; não valida previsão e não estima lucro.
 - **Reprodução e exportação:** código, parâmetros, versão e assinatura do histórico permitem repetir uma seleção. CSV por download no navegador; no Android, texto copiável para não depender de downloads `blob:` da WebView. Jogos salvos guardam a proveniência e o preço usado na sugestão.
 - **Custos corrigidos:** Lotomania e Timemania têm preço fixo por volante. Mega-Sena passa a R$ 6 e Dupla Sena a R$ 3. A chance principal da +Milionária inclui dois trevos. O custo de jogos ampliados também foi corrigido na bancada, retrospectiva, placar e teimosinha.
-- **Entrega consistente:** fontes Android sincronizados e arquivo único com todas as folhas de estilo e a ilustração embutidas. O PR gera um APK de revisão depois dos testes, sem publicar uma release.
+- **Entrega consistente:** fontes Android sincronizados e arquivo único com todas as folhas de estilo e a ilustração embutidas. O PR gera um APK de revisão depois dos testes e disponibiliza uma prévia com download direto.
 
 ### Método e limites
 
@@ -34,7 +34,7 @@ node ferramentas/testar-inteligencia.mjs
 node ferramentas/testar-interface.mjs
 ```
 
-O APK de revisão fica nos artefatos da execução **Testes**, depois do job **APK para revisão**. Usa assinatura de depuração, sem publicação em loja. Instalação/atualização em aparelho real precisa ser conferida separadamente.
+O APK de revisão fica nos artefatos da execução **Testes** e em uma prévia na página de versões, depois do job **APK para revisão**. Usa assinatura de depuração, sem publicação em loja. Instalação/atualização em aparelho real precisa ser conferida separadamente.
 
 ---
 

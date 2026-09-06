@@ -282,8 +282,8 @@ checar("nenhuma tela ficou sem porta na navegação",
     const orfas = existem.filter(k => !alvos.has(k));
     return orfas.length === 0 ? true : 'órfãs: ' + orfas.join(', ');
   `) === true);
-checar("as treze telas continuam alcançáveis",
-  await js(`return SECOES.reduce((n,s)=>n+s.telas.length,0)`) === 13,
+checar("as telas da edição continuam alcançáveis",
+  await js(`return SECOES.reduce((n,s)=>n+s.telas.length,0)`) === (EDICAO.nome === "completa" ? 14 : 13),
   String(await js(`return SECOES.reduce((n,s)=>n+s.telas.length,0)`)));
 
 /* ---------- percorrer a navegação ----------
@@ -1608,6 +1608,7 @@ if(EDICAO.nome === "completa"){
   }
   checar("comparação temporal termina na interface",prontoInt);
   checar("comparação revela intervalo e correção",await js(`return /IC 95%/.test(document.querySelector('#int-comparacao').textContent)&&/p ajustado/.test(document.querySelector('#int-comparacao').textContent)`));
+  await js(`document.querySelector("#int-comparacao").scrollIntoView({block:"start"});return true;`);
   await capturar("inteligencia-comparacao");
   for(const tema of ['escuro','claro']){
     for(const width of [360,412,1024]){
