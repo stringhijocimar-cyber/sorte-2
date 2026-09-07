@@ -1744,6 +1744,44 @@ for(const retorno of ['objeto','promessa','falha']){
   await cmd('Page.removeScriptToEvaluateOnNewDocument',{identifier});
 }
 
+secao('O. Trevos, dois sorteios e notificações 4.12');
+await js(`S.modalidade='mais-milionaria';S.jogos=[];S.teimosinhas=[];S.avisos=[];S.resultados=[];S.intLotes={};S.intConfig={};S.metaConfig={};irParaTela('sugestoes');return true;`);
+checar('+Milionária oferece campo de dois trevos',await js(`return !!document.querySelector('#int-trevos')`));
+await js(`document.querySelector('#int-trevos').value='02 06';document.querySelector('#int-concurso').value='100';document.querySelector('#int-semente').value='ui412';return true;`);
+await tocar('#int-gerar');await dormir(250);
+checar('sugestões incluem os pares antes de salvar',await js(`return S.intLotes['mais-milionaria'].trevos.every(t=>t.join()==='2,6')&&document.querySelectorAll('#int-lote .trevo').length===6`));
+await capturar('sugestoes-trevos-412');
+await tocar('#int-salvar');
+checar('trevos e concurso persistem junto aos jogos',await js(`const salvos=JSON.parse(localStorage.getItem('lotolab:jogos'));return S.tela==='jogos'&&salvos.length===3&&salvos.every(j=>j.trevos.join()==='2,6'&&j.concursoAlvo===100)`));
+await js(`const j=S.jogos[0];guardarResultados([{modalidade:j.modalidade,concurso:100,data:'2026-09-07',dezenas:j.dezenas.slice(),trevos:[2,6]}]);conferenciaAutomatica();S.metaConfig[j.modalidade]={limite:'18',concursos:1,meta:6,pool:'',concurso:'100'};irParaTela('inicio');return true;`);
+checar('meta 6 + 2 só confirma após resultado completo',await js(`return document.querySelector('.foco-acompanhamento').textContent.includes('6 dezenas + 2 trevos conferidos')`));
+await capturar('meta-milionaria-412');
+await tocar('#btn-avisos');
+checar('sino mostra trevos conferidos em bolinhas',await js(`return document.querySelector('#folha-avisos').textContent.includes('Trevos · 2 de 2')&&document.querySelectorAll('#folha-avisos .extras-volante .acertou').length>=2`));
+await capturar('notificacao-trevos-412');
+await tocar('#folha-avisos [data-fechar]:not(.fundo)');
+await js(`delete S.jogos[0].trevos;S.jogoAberto=S.jogos[0].id;irParaTela('jogos');return true;`);
+await js(`document.querySelector('[id^="j-trevos-"]').value='01 01';return true;`);
+await tocar('[data-salvar-trevos]');
+checar('corrigir jogo antigo recusa trevos repetidos',await js(`return !S.jogos[0].trevos&&document.querySelector('[id^="j-trevos-erro-"]').textContent.length>0`));
+await js(`document.querySelector('[id^="j-trevos-"]').value='02 06';return true;`);
+await tocar('[data-salvar-trevos]');
+checar('corrigir jogo antigo atualiza a conferência sem duplicar',await js(`return S.jogos[0].trevos.join()==='2,6'&&S.jogos[0].conferencias.length===1&&S.jogos[0].conferencias[0].acertosTrevos===2`));
+await js(`S.modalidade='dupla-sena';S.jogos=[{id:'dupla412',modalidade:'dupla-sena',data:'2026-09-01',concursoAlvo:100,dezenas:[1,2,3,4,5,6],conferencias:[]}];S.avisos=[];S.resultados=[{modalidade:'dupla-sena',concurso:100,data:'2026-09-07',dezenas:[7,8,9,10,11,12],dezenasSegundoSorteio:[1,2,3,4,5,6]}];conferenciaAutomatica();irParaTela('jogos');return true;`);
+checar('ficha separa zero no primeiro e seis no segundo sorteio',await js(`return document.querySelector('.ficha').textContent.includes('1º: 0 · 2º: 6')&&document.querySelectorAll('.ficha .extras-volante .acertou').length===6`));
+await capturar('dupla-sena-412');
+await tocar('#btn-avisos');
+checar('notificação da Dupla Sena mostra os dois grupos',await js(`return document.querySelector('#folha-avisos').textContent.includes('2º sorteio · 6 de 6')&&document.querySelectorAll('#folha-avisos .resultado-bolas').length>=2`));
+await capturar('notificacao-dupla-412');
+await tocar('#folha-avisos [data-fechar]:not(.fundo)');
+await js(`notificarSistema('Dupla Sena','Concurso 100',null,'jogos',metaValidarConferencia(metaConferencia(S.jogos[0],S.resultados[0])));return true;`);await dormir(150);
+checar('ponte nativa recebe também o segundo sorteio',await js(`return __foco411.avisos.at(-1).conferencia.sorteadasSegundo.join()==='1,2,3,4,5,6'&&__foco411.avisos.at(-1).conferencia.acertosSegundo===6`));
+for(const tema of ['escuro','claro'])for(const m of ['dupla-sena','mais-milionaria']){
+  await cmd('Emulation.setDeviceMetricsOverride',{width:360,height:915,deviceScaleFactor:1,mobile:true});
+  await js(`S.modalidade=${JSON.stringify(m)};document.documentElement.dataset.tema=${JSON.stringify(tema)};irParaTela('sugestoes');return true;`);
+  checar('campos adicionais cabem em 360px: '+m+' '+tema,await js('return document.documentElement.scrollWidth<=innerWidth+1'));
+}
+
 /* ---------- fim ---------- */
 console.log(linhas.join("\n"));
 console.log(`\n${"─".repeat(60)}`);

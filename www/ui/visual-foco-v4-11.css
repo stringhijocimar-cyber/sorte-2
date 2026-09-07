@@ -50,3 +50,12 @@ html[data-tema="claro"] .foco-modalidades button[aria-pressed="true"]{background
 html[data-tema="claro"] .foco-texto-btn{color:#6c3da3}
 @media(min-width:650px){.foco-boasvindas :is(h1,h2){font-size:2.2rem}.foco-hero{padding:26px}.foco-objetivo{grid-template-columns:minmax(0,1fr) 110px;gap:30px}.foco-alvo{width:100px;height:100px}.foco-alvo strong{font-size:2.4rem}.foco-objetivo h2{font-size:1.8rem}.foco-acessos button{padding:18px}.foco-modalidades button{font-size:.7rem}}
 @media(max-width:370px){.foco-hero{padding:16px}.foco-objetivo{grid-template-columns:minmax(0,1fr) 64px;gap:9px}.foco-alvo{width:64px;height:64px}.foco-objetivo h2{font-size:1.25rem}.foco-modalidades{gap:5px}.foco-modalidades button{font-size:.56rem}.foco-acessos button{padding:11px 8px}}
+
+/* Campos independentes do volante, 4.12. */
+.extras-volante{margin:12px 0 4px;padding:12px;border:1px solid #8f63d93d;border-radius:12px;background:#8b5bd90a;min-width:0}
+.extras-volante>b{display:block;margin-bottom:9px;font-size:.72rem;color:var(--tinta)}
+.extras-volante .campo{margin:0}.extras-volante .int-help{font-size:.68rem;line-height:1.6}
+.extras-volante .dezenas{margin:4px 0;gap:7px}.extras-volante .extras-volante{border:0;padding:0}
+.extras-volante .trevo{background:#643cb2;color:#fff;border-color:#a279e9;box-shadow:inset 0 0 0 2px #ffffff10}
+.foco-acompanhamento>.extras-volante{grid-column:1/-1;width:100%;box-sizing:border-box}
+.resultado-resumo{flex-wrap:wrap;gap:6px}.resultado-resumo b{line-height:1.6}

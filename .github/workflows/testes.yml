@@ -58,7 +58,9 @@ jobs:
         run: node ferramentas/testar-inteligencia.mjs
 
       - name: Metas, orçamento, cobertura e conferência colorida
-        run: node ferramentas/testar-metas.mjs
+        run: |
+          node ferramentas/testar-metas.mjs
+          node ferramentas/testar-complementos.mjs
 
       - name: Testes da interface
         # Estes existiam desde sempre e não rodavam em lugar nenhum: nem aqui,
@@ -172,32 +174,32 @@ jobs:
           python3 ferramentas/conferir-apk.py android/app/build/outputs/apk/debug/app-debug.apk
           unzip -p android/app/build/outputs/apk/debug/app-debug.apk assets/public/index.html > /tmp/index-apk.html
           cmp index.html /tmp/index-apk.html
-          cp android/app/build/outputs/apk/debug/app-debug.apk LotoLab-4.11.0-preview.apk
+          cp android/app/build/outputs/apk/debug/app-debug.apk LotoLab-4.12.0-preview.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: LotoLab-4.11.0-preview
-          path: LotoLab-4.11.0-preview.apk
+          name: LotoLab-4.12.0-preview
+          path: LotoLab-4.12.0-preview.apk
           retention-days: 14
 
       - name: Disponibilizar APK para download direto
         if: github.head_ref == 'codex/inteligencia-sugestoes-v4.9'
         env:
           GH_TOKEN: ${{ github.token }}
-          LOTOLAB_TAG: v4.11.0-rc.${{ github.run_number }}
+          LOTOLAB_TAG: v4.12.0-rc.${{ github.run_number }}
         run: |
           cat > /tmp/lotolab-release.md <<'NOTAS'
-          LotoLab 4.11.0 — menu e sino corrigidos no Android; novo painel por modalidade,
-          meta de todas as dezenas e acompanhamento por concurso.
-          Abra Início > Definir meta de acertos. No sino, experimente
-          o exemplo de notificação colorida e expanda o aviso no Android.
+          LotoLab 4.12.0 — sugestões com dois trevos da +Milionária e conferência dos
+          dois sorteios da Dupla Sena. Metas e notificações distinguem os campos.
+          Trevos antigos podem ser completados em Meus jogos > Ver na cartela.
+          No Android, expanda a notificação para ver os grupos de bolinhas.
 
-          Baixe LotoLab-4.11.0-preview.apk abaixo. APK assinado para depuração.
+          Baixe LotoLab-4.12.0-preview.apk abaixo. APK assinado para depuração.
           A assinatura pode ser diferente da instalação anterior: não desinstale
           seu aplicativo sem antes preservar seus jogos e resultados.
 
           Inicialização nativa simulada e toques validados em Chrome; instalação em aparelho
           físico ainda requer conferência. Não prevê resultados de loterias.
           NOTAS
-          gh release create "$LOTOLAB_TAG" LotoLab-4.11.0-preview.apk \
+          gh release create "$LOTOLAB_TAG" LotoLab-4.12.0-preview.apk \
             --target "$GITHUB_SHA" --prerelease \
-            --title "LotoLab 4.11.0 — teste" --notes-file /tmp/lotolab-release.md
+            --title "LotoLab 4.12.0 — teste" --notes-file /tmp/lotolab-release.md

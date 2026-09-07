@@ -44,7 +44,7 @@ public class ConferenciaWorker extends Worker {
         try {
             JSONObject estado=new JSONObject(prefs.getString("estado","{}"));
             if(!estado.optBoolean("ligado",false))return Result.success();
-            JSONObject mods=estado.optJSONObject("modalidades"),conhecidos=estado.optJSONObject("conhecidos");
+            JSONObject mods=estado.optJSONObject("modalidades"),conhecidos=estado.optJSONObject("conhecidos"),completos=estado.optJSONObject("completos");
             JSONArray jogos=estado.optJSONArray("jogos");
             if(mods==null||jogos==null||jogos.length()==0)return Result.success();
             Iterator<String> it=mods.keys();
@@ -55,7 +55,9 @@ public class ConferenciaWorker extends Worker {
                 if(!tem)continue;
                 try {
                     JSONObject r=buscar(mod.getString("slug"));int n=r.getInt("numero");
-                    if(n<=Math.max(prefs.getInt("visto:"+m,0),conhecidos==null?0:conhecidos.optInt(m,0)))continue;
+                    int visto=prefs.getInt("visto:"+m,0),conhecido=conhecidos==null?0:conhecidos.optInt(m,0);
+                    boolean especial="mais-milionaria".equals(m)||"dupla-sena".equals(m);
+                    if(n<Math.max(visto,conhecido)||(!especial&&n<=Math.max(visto,conhecido))||(n==visto&&prefs.getBoolean("completo:"+m,false))||(completos!=null&&n<=completos.optInt(m,0)))continue;
                     String data=iso(r.getString("dataApuracao"));JSONArray dezenas=r.getJSONArray("listaDezenas");
                     int[] sorteio=NotificacaoColorida.numeros(dezenas),regra=NotificacaoColorida.regra(m);
                     if(!ConferenciaRegras.validos(sorteio,regra[2],regra[2],regra[0],regra[1]))continue;
@@ -65,13 +67,19 @@ public class ConferenciaWorker extends Worker {
                         if(!ConferenciaRegras.cobre(j.optInt("concursoAlvo",0),j.optInt("deConcurso",0),j.optInt("concursos",0),j.optString("data"),n,data))continue;
                         JSONObject cf=new JSONObject().put("modalidade",m).put("concurso",n).put("jogo",j.optString("id"))
                             .put("dezenas",j.getJSONArray("dezenas")).put("sorteadas",dezenas);
+                        if("mais-milionaria".equals(m)){
+                            if(!j.isNull("trevos"))cf.put("trevos",j.getJSONArray("trevos"));
+                            if(!r.isNull("trevosSorteados"))cf.put("trevosSorteados",r.getJSONArray("trevosSorteados"));
+                        }
+                        if("dupla-sena".equals(m)&&!r.isNull("listaDezenasSegundoSorteio"))cf.put("sorteadasSegundo",r.getJSONArray("listaDezenasSegundoSorteio"));
                         if(!NotificacaoColorida.valida(cf))continue;
-                        int acertos=ConferenciaRegras.acertos(NotificacaoColorida.numeros(j.getJSONArray("dezenas")),sorteio);
+                        int acertos=NotificacaoColorida.pontos(cf);
                         if(acertos>maior){maior=acertos;melhor=cf;}
                     }
                     // Um resumo por modalidade e concurso, inclusive quando não houve faixa de prêmio.
                     if(melhor!=null&&!NotificacaoColorida.mostrar(getApplicationContext(),melhor,mod.optString("nome",m),false))continue;
-                    prefs.edit().putInt("visto:"+m,n).apply();
+                    boolean completo=!especial||("mais-milionaria".equals(m)?ConferenciaRegras.validos(NotificacaoColorida.numeros(r.optJSONArray("trevosSorteados")),2,2,1,6):ConferenciaRegras.validos(NotificacaoColorida.numeros(r.optJSONArray("listaDezenasSegundoSorteio")),6,6,1,50));
+                    prefs.edit().putInt("visto:"+m,n).putBoolean("completo:"+m,completo).apply();
                 }catch(Exception e){falhou=true;}
             }
         }catch(Exception e){return Result.failure();}

@@ -1,4 +1,16 @@
-# LotoLab 4.11 — menu corrigido e novo painel por concurso
+# LotoLab 4.12 — trevos e dois sorteios na conferência
+
+- **+Milionária:** as sugestões e os fechamentos incluem dois trevos por jogo, gerados pelo código de reprodução ou definidos por você. Salvar, copiar e exportar conserva os pares. Na cartela de um jogo antigo, é possível completar os trevos.
+- **Meta 6 + 2:** só registra o objetivo completo quando as seis dezenas e os dois trevos coincidem no mesmo jogo. Um dado ausente permanece pendente. A cobertura combinatória das dezenas continua identificada separadamente.
+- **Dupla Sena:** resultados, jogos, metas e notificações mostram os dois sorteios separadamente. Nunca somamos dezenas de sorteios distintos para declarar seis acertos.
+- **Notificações Android:** grupos separados para dezenas, trevos e segundo sorteio; verde com número branco para acertos, vermelho suave para não sorteadas e cinza quando faltam dados. Resultados que chegam em etapas atualizam a conferência sem duplicar jogos.
+- **Atualização:** o importador conserva os campos adicionais e o APK consulta a CAIXA pela API HTTP nativa. Fontes incompletas não apagam detalhes conhecidos do mesmo sorteio.
+
+As análises históricas das estratégias continuam baseadas nas dezenas principais e, na Dupla Sena, no primeiro sorteio. A versão gera exatamente dois trevos por jogo; não oferece apostas ampliadas de trevos. Não prevê sorteios nem confirma pagamento de prêmio. [Regras e decisões da 4.12](docs/conferencia-4.12.md).
+
+Validação: `node ferramentas/testar-complementos.mjs`, suítes de metas, inteligência e motor, toques na interface pelo Chrome e testes Java na compilação Android.
+
+## Correções da 4.11 preservadas
 
 A 4.10 interrompia a inicialização no Android ao tratar o retorno de `addListener` como uma Promise: a ponte nativa pode retornar `{remove}` diretamente. Isso deixava menu e sino sem ação. A 4.11 aceita as duas formas e liga os controles antes dos plugins. Os testes agora reiniciam o app com uma ponte Android simulada e usam toques por coordenadas para abrir e fechar ambos.
 
