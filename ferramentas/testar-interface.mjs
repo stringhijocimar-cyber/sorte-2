@@ -1634,6 +1634,53 @@ if(EDICAO.nome === "completa"){
   await cmd("Network.emulateNetworkConditions",{offline:false,latency:0,downloadThroughput:-1,uploadThroughput:-1});
 }
 
+/* ---------- plano, metas e conferência colorida ---------- */
+{
+  await js(`S.autoAnalise=false;S.pesquisaAutomatica=false;S.buscaAutomatica=false;S.resultados=[];S.jogos=[];S.teimosinhas=[];S.avisos=[];S.metaConfig={};S.metaFechamentos={};return true;`);
+  await escolherModalidade('mega-sena');
+  await irPara('plano');
+  checar('plano de metas alcançável pela navegação',await js(`return !!document.querySelector('#meta-fechar')`));
+  await js(`document.querySelector('#meta-limite').value='24';document.querySelector('#meta-concursos').value='2';document.querySelector('#meta-concurso').value='999999';document.querySelector('#meta-limite').dispatchEvent(new Event('change'));return true;`);
+  checar('plano distribui o limite entre dois concursos',await js(`return document.querySelector('#meta-plano').innerText.includes('R$ 24,00')&&!!document.querySelector('#meta-aplicar')`));
+  await capturar('plano-metas');
+  await js(`document.querySelector('#meta-pool').value='1 2 3 4 5 6 7';document.querySelector('#meta-alvo').value='6';document.querySelector('#meta-fechar').click();return true;`);
+  let fechado=false;for(let i=0;i<100;i++){fechado=await js(`return !!S.metaFechamentos['mega-sena']`);if(fechado)break;await dormir(100);}
+  checar('fechamento termina com dois jogos dentro do limite',fechado&&await js(`return S.metaFechamentos['mega-sena'].jogos.length===2&&S.metaFechamentos['mega-sena'].custo===12`));
+  checar('cobertura incompleta informa a condição e não promete a meta',await js(`return /Cobertura parcial/.test(document.querySelector('#meta-fechamento').innerText)&&/não há garantia/.test(document.querySelector('#meta-fechamento').innerText)`));
+  await js(`document.querySelector('#meta-fechamento').scrollIntoView({block:'start'});return true;`);
+  await capturar('cobertura-verificada');
+  await js(`document.querySelector('#meta-salvar-fechamento').click();return true;`);
+  checar('fechamento salvo acompanha apenas o concurso declarado',await js(`return S.jogos.length===2&&S.jogos.every(j=>j.concursoAlvo===999999)`));
+  await js(`document.querySelector('#meta-aplicar').click();return true;`);
+  checar('plano transfere limite e concurso para as sugestões',await js(`return S.tela==='sugestoes'&&document.querySelector('#int-orcamento').value==='12'&&document.querySelector('#int-concurso').value==='999999'`));
+  await js(`document.querySelector('#int-gerar').click();return true;`);await dormir(600);
+  checar('lote gerado preserva o alvo mesmo após editar o formulário',await js(`document.querySelector('#int-concurso').value='888888';return S.intLotes['mega-sena'].concursoAlvo===999999`));
+  await js(`document.querySelector('#btn-avisos').click();document.querySelector('#meta-testar-aviso').click();return true;`);
+  await dormir(200);
+  checar('aviso de demonstração exibe quatro acertos e dois erros',await js(`return document.querySelectorAll('#corpo-avisos .dz.acertou').length===4&&document.querySelectorAll('#corpo-avisos .dz.errou').length===2`));
+  const verde=await js(`const s=getComputedStyle(document.querySelector('#corpo-avisos .dz.acertou'));return {fundo:s.backgroundColor,texto:s.color,raio:s.borderRadius}`);
+  checar('acertos são bolinhas verdes com números brancos',verde.fundo==='rgb(21, 125, 71)'&&verde.texto==='rgb(255, 255, 255)'&&verde.raio==='50%');
+  const vermelho=await js(`return getComputedStyle(document.querySelector('#corpo-avisos .dz.errou')).backgroundColor`);
+  checar('erros recebem vermelho suave',vermelho==='rgb(252, 230, 232)');
+  await capturar('notificacao-colorida');
+  await js(`document.querySelector('[data-aviso-jogo]').click();return true;`);
+  checar('ação do aviso fecha a folha e abre os jogos',await js(`return S.tela==='jogos'&&document.querySelector('#folha-avisos').dataset.aberta==='0'`));
+  await irPara('plano');
+  for(const tema of ['escuro','claro'])for(const width of [360,412,1024]){
+    await cmd('Emulation.setDeviceMetricsOverride',{width,height:915,deviceScaleFactor:1,mobile:width<600});
+    await js(`document.documentElement.dataset.tema=${JSON.stringify(tema)};return true;`);
+    checar(`plano ${tema} cabe em ${width}px`,await js(`return document.documentElement.scrollWidth<=innerWidth+1`));
+  }
+  await cmd('Emulation.setDeviceMetricsOverride',{width:412,height:915,deviceScaleFactor:2,mobile:true});
+  await js(`window.scrollTo(0,0);return true;`);await capturar('plano-tema-claro');
+  await js(`document.documentElement.dataset.tema='escuro';return true;`);
+  await escolherModalidade('lotomania');await irPara('plano');
+  await js(`document.querySelector('#meta-limite').value='12';document.querySelector('#meta-pool').value=Array.from({length:50},(_,i)=>i).join(' ');document.querySelector('#meta-espelho').click();return true;`);
+  checar('Lotomania oferece os dois volantes complementares',await js(`return S.metaFechamentos.lotomania.jogos[0][0]===0&&S.metaFechamentos.lotomania.jogos[1][0]===50`));
+  await irPara('jogos');await irPara('plano');
+  checar('espelho mantém explicação correta ao voltar para a tela',await js(`return /Original \+ espelho/.test(document.querySelector('#meta-fechamento').innerText)&&/não é faixa de prêmio/.test(document.querySelector('#meta-fechamento').innerText)`));
+}
+
 /* ---------- fim ---------- */
 console.log(linhas.join("\n"));
 console.log(`\n${"─".repeat(60)}`);

@@ -1930,6 +1930,72 @@ html[data-tema="claro"] .int-form input,html[data-tema="claro"] .int-form select
 html[data-tema="claro"] .int-hero .nota{background:#eef4f8!important;color:#40546b!important;border-color:#d1dee8!important}
 
 </style>
+<style data-folha="ui/visual-metas-v4-10.css">
+/* LotoLab 4.10: superfícies discretas, roxo de navegação e cores de resultado. */
+:root{--meta-roxo:#8250df;--meta-verde:#157d47;--meta-erro:#fce6e8;--meta-erro-tinta:#922d3c}
+html[data-tema="escuro"]{--fundo:#080c13;--carta:#111821;--trama:#151f2b;--linha:#2a3444;--tinta:#f6f7fc;--secundaria:#a6b0c3;--acaso:#9d80e9;--acaso-fundo:#7750cf}
+html[data-tema="escuro"] body{background:radial-gradient(ellipse at 100% 0,rgba(107,60,186,.09),transparent 55%),#080c13!important}
+html[data-tema="escuro"] .carta,html[data-tema="escuro"] .panel,html[data-tema="escuro"] .ficha,html[data-tema="escuro"] .kpi{background:linear-gradient(145deg,#131b25,#0e151e)!important;border-color:#283342!important}
+.carta,.panel,.ficha{border-radius:18px!important}
+.marca-titulo b{font-size:1.65rem!important;letter-spacing:-.045em!important}
+.marca-titulo span{letter-spacing:.14em!important;font-size:.57rem!important}
+.hero-card.hero-card{border:1px solid #5d4288!important;background:radial-gradient(ellipse at 93% 5%,#624696 0,transparent 65%),linear-gradient(130deg,#20172f,#121925)!important;border-radius:22px!important;padding:24px!important;overflow:hidden}
+.hero-card.hero-card h2{font-size:1.08rem!important;letter-spacing:.05em!important;color:#f9f6ff!important}
+.hero-card.hero-card p{color:#d1c6e4!important}
+.hero-card .int-home-link{color:#e2d4ff!important;text-align:left;font-weight:650}
+.primary-btn,.acao:not(.contorno):not(.secundaria){background:linear-gradient(110deg,#7844d0,#5931a7)!important;border-color:#9062d8!important;color:white!important;box-shadow:0 5px 15px #35235322!important}
+.acao,.campo input,.campo select,.campo textarea{border-radius:11px!important}
+.dz{border-radius:50%!important;aspect-ratio:1;align-items:center;justify-content:center;font-weight:750!important;font-variant-numeric:tabular-nums}
+.dz.acertou,.resultado-bolas .dz.acertou{background:#157d47!important;border:1px solid #258c58!important;color:#fff!important;-webkit-text-fill-color:#fff!important;box-shadow:inset 0 1px 0 #ffffff29,0 3px 8px #0b673e24!important}
+.dz.errou,.resultado-bolas .dz.errou{background:#fce6e8!important;border:1px solid #e6aeb6!important;color:#922d3c!important;-webkit-text-fill-color:#922d3c!important;box-shadow:none!important}
+.dz.acertou::after,.dz.errou::after{display:none!important}
+.resultado-bolas{gap:9px!important;padding:8px 0!important;flex-wrap:wrap}
+.resultado-bolas .dz{width:36px!important;height:36px!important;min-width:36px!important;font-size:.84rem!important;position:relative;overflow:visible}
+.resultado-bolas .dz i{position:absolute;right:-3px;bottom:-3px;display:grid;place-items:center;background:inherit;color:inherit;border:1px solid currentColor;border-radius:50%;width:13px;height:13px;font-size:8px;font-style:normal;line-height:1}
+.resultado-legenda{display:flex;flex-wrap:wrap;gap:14px;font-size:.68rem;margin:9px 0 12px;color:var(--secundaria)}
+.resultado-resumo{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:.72rem;margin-bottom:5px}
+.resultado-resumo b{color:var(--tinta)!important;font-size:.88rem}
+.aviso-resultado{margin-top:14px;border-top:1px solid var(--linha);padding-top:12px}
+#corpo-avisos .item{grid-template-columns:30px minmax(0,1fr) auto!important;position:relative;padding:16px 13px!important;column-gap:11px!important;align-items:start;border-radius:16px!important;margin-bottom:9px}
+#corpo-avisos .item .marca-cor{position:absolute;left:0;top:17px;bottom:17px;width:3px;background:#7854c1;border-radius:3px}
+#corpo-avisos .item.ok .marca-cor{background:#239b62}
+#corpo-avisos .item .txt{min-width:0;overflow-wrap:anywhere}
+#corpo-avisos .item .txt>span{display:block;line-height:1.55;margin-top:5px;font-size:.76rem;color:var(--secundaria)}
+#corpo-avisos .item .quando{font-size:.59rem;white-space:nowrap}
+#corpo-avisos .item .ponto-lido{position:absolute;right:13px;top:36px}
+#corpo-avisos .item .ic-aviso{width:29px;height:29px;border-radius:9px}
+.folha .corpo{border-radius:24px 24px 0 0!important;max-height:90dvh!important}
+.meta-hero{position:relative;border:1px solid #715394;border-radius:22px;background:radial-gradient(ellipse at 100% 0,#5d4382,transparent 65%),linear-gradient(125deg,#251738,#131d29);padding:26px 22px;margin-bottom:18px;overflow:hidden}
+.meta-hero h2{font-size:1.85rem;line-height:1.12;color:#fff!important;letter-spacing:-.04em;text-transform:none;font-weight:800;margin:14px 0}
+.meta-hero p{font-size:.8rem;line-height:1.65;color:#d5c9e8;margin:0;position:relative;max-width:280px}
+.meta-hero .int-eyebrow{color:#dcc4ff}
+.meta-orbita{position:absolute;right:-26px;top:38px;width:150px;height:150px;border:1px solid #ffffff21;border-radius:50%;transform:rotate(-18deg);pointer-events:none}
+.meta-orbita span{position:absolute;width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:#8257b6;border:1px solid #bc93e8;color:#fff;font-size:1rem;font-weight:700;box-shadow:0 7px 15px #0003}
+.meta-orbita span:nth-child(1){top:-14px;left:22px}.meta-orbita span:nth-child(2){top:63px;left:-19px}.meta-orbita span:nth-child(3){bottom:-7px;right:9px}
+.meta-form input,.meta-form select,.meta-form textarea,#meta-pool,#meta-alvo{min-height:46px;width:100%;background:var(--trama)!important;color:var(--tinta)!important;border:1px solid var(--linha)!important;padding:12px;font-size:.88rem}
+#meta-pool{resize:vertical;border-radius:11px;line-height:1.5;font-variant-numeric:tabular-nums}
+.meta-link{display:flex;align-items:center;min-height:48px;padding:9px 14px;margin:-2px 0 16px;border:1px solid var(--linha);border-radius:12px;font-size:.76rem;color:var(--tinta);text-decoration:none;background:var(--carta)}
+.meta-tabela{font-size:.73rem}.meta-tabela th{text-align:left;font-size:.65rem}.meta-tabela td{padding:12px 10px}.meta-tabela .meta-atual{background:#8b5cf617}
+.meta-certificado{margin-top:18px;padding:17px;border:1px solid #7856ac;border-radius:15px;background:#8b5cf60b}
+.meta-certificado h3{font-size:1.15rem;margin:8px 0}.meta-certificado>p{font-size:.79rem;line-height:1.6}
+.meta-jogo{padding:14px 0;border-top:1px solid var(--linha)}.meta-jogo>b{font-size:.75rem;color:var(--secundaria)}.meta-jogo .dezenas{margin-top:8px}
+.meta-fontes{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}.meta-fontes a{display:flex;align-items:center;min-height:44px;color:var(--tinta);font-size:.73rem;text-underline-offset:4px}
+#meta-progresso:not(:empty),#meta-salvou:not(:empty){margin-top:13px;font-size:.8rem;line-height:1.55}
+.meta-faixas{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}.meta-faixas span{display:grid;gap:4px;border:1px solid var(--linha);background:var(--carta);padding:8px;border-radius:9px;font-size:.65rem}.meta-faixas b{font-size:.69rem}
+html[data-tema="claro"] .meta-form input,html[data-tema="claro"] #meta-pool,html[data-tema="claro"] #meta-alvo{background:#f6f7fb!important;border-color:#d1d7e4!important}
+html[data-tema="claro"] .item,html[data-tema="claro"] .folha .corpo{background:#fff!important;color:#172434!important}
+html[data-tema="claro"] .meta-certificado h3{color:#32234a!important}
+@media(min-width:600px){.meta-hero{padding:32px}.meta-hero h2{font-size:2.25rem}.meta-orbita{right:28px;top:30px;width:170px;height:170px}.meta-hero p{max-width:400px}}
+@media(max-width:370px){.resultado-bolas{gap:8px!important}.resultado-bolas .dz{width:31px!important;height:31px!important;min-width:31px!important;font-size:.74rem!important}.meta-hero{padding:23px 17px}.meta-orbita{opacity:.4}.meta-hero p{max-width:245px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation:none!important}}
+
+/* Na cartela, só as dezenas marcadas que já foram conferidas recebem sinal. */
+.casa.acertou,.casa.errou{background:transparent!important}
+.casa.acertou::before{background:#157d47!important;border-radius:50%!important;box-shadow:none!important;inset:8%!important}
+.casa.errou::before{background:#fce6e8!important;border:1px solid #e6aeb6;border-radius:50%!important;inset:8%!important}
+.casa.acertou span{color:#fff!important}.casa.errou span{color:#922d3c!important}
+
+</style>
 </head>
 <body>
 <header>
@@ -2074,6 +2140,7 @@ const METODOS_APOSENTADOS = {
 function nomeDoMetodo(id){
   const m = METODOS.find(x => x.id === id);
   if(m) return m.nome;
+  if(id === "meta-cobertura") return "Cobertura por meta";
   if(id && id.startsWith("int-")) return INT_METODOS[id.slice(4)] || id;
   return METODOS_APOSENTADOS[id] || String(id || "método desconhecido");
 }
@@ -3064,7 +3131,208 @@ function intCsv(lote){
   return "\ufeff"+linhas.map(l=>l.map(cel).join(";")).join("\r\n");
 }
 
+/* Metas e cobertura 4.10. Critérios combinatórios, sem ajuste aos sorteios futuros. */
+function metaPlano(m, limite, concursos){
+  const c=MODALIDADES[m];
+  if(!c || !Number.isFinite(limite) || limite<0 || limite>1000000) throw new Error('Informe um limite entre R$ 0 e R$ 1.000.000.');
+  if(!Number.isInteger(concursos)||concursos<1||concursos>31) throw new Error('Escolha de 1 a 31 concursos no período.');
+  const centavos=Math.floor(limite*100+1e-6), preco=Math.round(c.preco*100);
+  const porConcurso=Math.min(60,Math.floor(centavos/(concursos*preco)));
+  const gasto=porConcurso*concursos*preco/100;
+  return {m,limite,concursos,porConcurso,gasto,sobra:(centavos-Math.round(gasto*100))/100,
+    unitario:c.preco,porRodada:porConcurso*c.preco,chanceIndividual:intChancePrincipal(m,c.min)};
+}
+function metaPop(n){n-= (n>>>1)&0x55555555;n=(n&0x33333333)+((n>>>2)&0x33333333);return (((n+(n>>>4))&0x0f0f0f0f)*0x01010101)>>>24;}
+function* metaFechamento(m, numeros, meta, quantidade, semente='lotolab-410'){
+  const c=MODALIDADES[m], pool=intDezenas(numeros,m);
+  if(m==='lotomania') throw new Error('Na Lotomania use a aposta-espelho de 50 dezenas.');
+  if(pool.length<c.min||pool.length>20) throw new Error('Selecione entre '+c.min+' e 20 dezenas na base.');
+  if(!c.faixas.includes(meta)||meta===0) throw new Error('Meta de acertos inválida.');
+  if(!Number.isInteger(quantidade)||quantidade<1||quantidade>60) throw new Error('Escolha de 1 a 60 jogos.');
+  const total=combinacoes(pool.length,c.k);
+  if(total>20000) throw new Error('Esta base exige verificar '+inf(total)+' cenários. Reduza a base para até 20.000 cenários.');
+  const rnd=geradorSemeado(intHash('fechamento-410:'+m+':'+semente));
+  const todos=combinacoesDe(pool,c.min);
+  const candidatas=embaralhar(todos,rnd).slice(0,800);
+  const indice=new Map(pool.map((d,i)=>[d,i]));
+  const mascara=ds=>ds.reduce((s,d)=>s|(1<<indice.get(d)),0);
+  const cenarios=combinacoesDe(pool,c.k).map(mascara), words=Math.ceil(total/32);
+  const coberturas=[];
+  for(let i=0;i<candidatas.length;i++){
+    const mask=mascara(candidatas[i]), bits=new Uint32Array(words);
+    for(let j=0;j<total;j++) if(metaPop(mask&cenarios[j])>=meta) bits[j>>>5]|=1<<(j&31);
+    coberturas.push(bits);
+    if(i%16===0) yield {fase:'Verificando cenários',feitos:i,total:candidatas.length};
+  }
+  const cobertos=new Uint32Array(words), usados=new Set(), jogos=[];
+  let quantidadeCoberta=0;
+  while(jogos.length<quantidade && quantidadeCoberta<total){
+    let melhor=-1,ganho=-1;
+    for(let i=0;i<candidatas.length;i++){
+      if(usados.has(i)) continue;
+      let novos=0;
+      for(let w=0;w<words;w++) novos+=metaPop(coberturas[i][w]&~cobertos[w]);
+      if(novos>ganho){ganho=novos;melhor=i;}
+    }
+    if(melhor<0||ganho<=0) break;
+    usados.add(melhor);jogos.push(candidatas[melhor]);quantidadeCoberta+=ganho;
+    for(let w=0;w<words;w++) cobertos[w]|=coberturas[melhor][w];
+    yield {fase:'Selecionando cobertura',feitos:jogos.length,total:quantidade};
+  }
+  const masks=jogos.map(mascara);let piso=c.k;
+  for(const s of cenarios) piso=Math.min(piso,Math.max(...masks.map(j=>metaPop(j&s))));
+  return {modalidade:m,pool,meta,jogos,total,cobertos:quantidadeCoberta,piso,
+    cobertura:quantidadeCoberta/total,completo:quantidadeCoberta===total,
+    custo:jogos.length*c.preco,semente,candidatas:candidatas.length,
+    chanceCondicao:combinacoes(pool.length,c.k)/combinacoes(c.N,c.k)};
+}
+function metaEspelho(ds){
+  const jogo=intDezenas(ds,'lotomania');
+  if(jogo.length!==50) throw new Error('Marque exatamente 50 dezenas para criar o espelho.');
+  return universo('lotomania').filter(d=>!jogo.includes(d));
+}
+function metaFaixasObservadas(linha,m){
+  const c=MODALIDADES[m];
+  return c.faixas.map(h=>({acertos:h,concursos:linha.serie.filter(r=>r.acertos.some(n=>n===h)).length}));
+}
+function metaConferencia(j,r){
+  return {modalidade:j.modalidade,concurso:r.concurso,jogo:j.id,dezenas:j.dezenas.slice(),
+    sorteadas:r.dezenas.slice(),acertos:j.dezenas.filter(d=>r.dezenas.includes(d)).length};
+}
+function metaValidarConferencia(x){
+  if(!x||!MODALIDADES[x.modalidade]||!Number.isSafeInteger(x.concurso)||x.concurso<1) return null;
+  const c=MODALIDADES[x.modalidade];
+  const valida=(ds,min,max)=>Array.isArray(ds)&&ds.length>=min&&ds.length<=max&&
+    new Set(ds).size===ds.length&&ds.every(d=>Number.isInteger(d)&&d>=c.base&&d<c.base+c.N);
+  if(!valida(x.dezenas,c.min,c.max)||!valida(x.sorteadas,c.k,c.k)) return null;
+  return {...x,acertos:x.dezenas.filter(d=>x.sorteadas.includes(d)).length};
+}
+function metaBolinhas(dezenas,sorteadas){
+  return '<div class="dezenas resultado-bolas" role="group" aria-label="Conferência das dezenas">'+dezenas.map(d=>{
+    const acertou=sorteadas.includes(d);
+    return '<span class="dz '+(acertou?'acertou':'errou')+'" aria-label="'+pad(d)+(acertou?', acertou':', não sorteada')+'">'+pad(d)+'<i aria-hidden="true">'+(acertou?'✓':'−')+'</i></span>';
+  }).join('')+'</div>';
+}
+function metaAvisoDados(a){
+  const direto=metaValidarConferencia(a.conferencia);if(direto) return direto;
+  const chave=String(a.chave||'');if(!chave.startsWith('coincidencia:')) return null;
+  const p=chave.lastIndexOf(':'),id=chave.slice(13,p),n=Number(chave.slice(p+1));
+  const j=S.jogos.concat(S.teimosinhas||[]).find(j=>j.id===id);
+  const r=j&&(j.conferencias||[]).find(r=>r.concurso===n);
+  return j&&r?metaValidarConferencia(metaConferencia(j,r)):null;
+}
+function metaAvisoHtml(a){
+  const cf=metaAvisoDados(a);if(!cf) return '';
+  return '<div class="aviso-resultado"><div class="resultado-resumo"><b>'+cf.acertos+' acertos</b><span>Concurso '+cf.concurso+'</span></div>'+metaBolinhas(cf.dezenas,cf.sorteadas)+
+    '<div class="resultado-legenda"><span>✓ Acertou</span><span>− Não sorteada</span></div><button class="acao secundaria mini" data-aviso-jogo="'+esc(cf.jogo||'')+'" data-aviso-mod="'+esc(cf.modalidade)+'">Ver jogo</button></div>';
+}
+
+
+let _metaPlugin=null;
+function metaPlugin(){
+  try{
+    if(typeof Capacitor==='undefined'||!Capacitor.isNativePlatform?.()||!Capacitor.isPluginAvailable?.('LotoLabNotificacoes'))return null;
+    if(!_metaPlugin)_metaPlugin=Capacitor.registerPlugin?Capacitor.registerPlugin('LotoLabNotificacoes'):Capacitor.Plugins.LotoLabNotificacoes;
+    return _metaPlugin;
+  }catch(e){return null;}
+}
+async function metaAbrirDestino(){
+  const p=metaPlugin();if(!p)return;
+  try{const r=await p.destino();if(!MODALIDADES[r.modalidade])return;S.modalidade=r.modalidade;S.jogoAberto=r.jogo||null;irParaTela('jogos');}catch(e){}
+}
+function metaLigarNativo(){
+  const p=metaPlugin();if(!p)return;
+  p.addListener('abrirJogo',metaAbrirDestino).catch(()=>{});
+  metaAbrirDestino();espelharParaSegundoPlano();
+}
+function metaExemploAviso(){
+  return {modalidade:'mega-sena',concurso:1,jogo:'demonstracao',dezenas:[3,12,25,33,47,58],sorteadas:[3,12,25,33,40,51],acertos:4};
+}
+async function metaTestarAviso(){
+  const cf=metaExemploAviso();
+  avisar('conferencia','Demonstração de cores','Exemplo fictício para visualizar acertos e dezenas não sorteadas.','demo-cores:'+Date.now(),cf);
+  pintarAvisos();pintarContaAvisos();
+  const p=metaPlugin();if(!p)return;
+  const permis=await pedirPermissaoDeAviso();if(permis!=='granted')return;
+  try{await p.mostrar({conferencia:cf,nome:'Mega-Sena',demonstracao:true});}catch(e){}
+}
+
+
 const T = {};
+S.metaConfig={};S.metaFechamentos={};let metaTrabalho=0;
+function metaConfig(m){return S.metaConfig[m]||(S.metaConfig[m]={limite:'',concursos:2,meta:MODALIDADES[m].k-1,pool:'',concurso:''});}
+const META_GUIA={
+  'mega-sena':['Quadra, quina e sena','Jogos simples diferentes cobrem resultados principais diferentes. Fechamentos podem oferecer um piso de acertos se as seis sorteadas estiverem na base escolhida.'],
+  lotofacil:['11 a 15 acertos','Confira a cobertura de 13, 14 ou 15 acertos por enumeração. Mais dezenas na base ampliam o custo; uma base escolhida por frequência não fica mais provável.'],
+  quina:['Duque, terno, quadra e quina','Use uma meta de faixa e verifique o fechamento. A aposta ampliada contém várias apostas simples e cobra por todas elas.'],
+  lotomania:['15 a 20 ou zero acertos','Aposta-espelho usa as outras 50 dezenas: se o jogo faz h acertos, o espelho faz 20 − h. Isso garante ao menos 10 em um deles, o que não garante prêmio.'],
+  'dupla-sena':['Dois sorteios por bilhete','Cada bilhete participa de dois sorteios. As probabilidades e fechamentos abaixo tratam um sorteio; a comparação histórica do app usa o primeiro.'],
+  'dia-de-sorte':['4 a 7 acertos + mês','A faixa principal exige sete dezenas. O Mês da Sorte é uma faixa independente de 1 em 12; complete o mês no volante.'],
+  timemania:['3 a 7 acertos + time','Você marca dez dezenas e são sorteadas sete. O Time do Coração é uma premiação adicional; complete o time no volante.'],
+  'mais-milionaria':['Dezenas e trevos','O prêmio máximo exige seis dezenas e dois trevos. Um fechamento das dezenas não cobre os trevos; as faixas inferiores dependem dos dois campos.']
+};
+function metaUmaEm(p){return p>0?'1 em '+inf(Math.round(1/p)):'—';}
+function metaRenderPlano(){
+  const o=metaConfig(S.modalidade);
+  if(o.limite==='') return '<p class="int-help">Informe um limite para comparar as oito modalidades. As linhas são alternativas para o mesmo orçamento.</p>';
+  try{
+    const linhas=Object.keys(MODALIDADES).map(m=>metaPlano(m,Number(o.limite),Number(o.concursos)));
+    const r=linhas.find(x=>x.m===S.modalidade);
+    return `<div class="int-summary"><div><small>Jogos por concurso</small><b>${r.porConcurso}</b></div><div><small>Custo no período</small><b>${brl(r.gasto)}</b></div><div><small>Reserva</small><b>${brl(r.sobra)}</b></div><div><small>Participações</small><b>${r.concursos}</b></div></div>
+      <p class="int-help">Limite distribuído igualmente entre os concursos escolhidos, até 60 jogos simples por concurso. Guardar sugestões não registra uma aposta. O dinheiro da reserva permanece fora do plano.</p>
+      <button class="acao" id="meta-aplicar" ${r.porConcurso?'':'disabled'}>Usar este limite nas sugestões</button>
+      <details class="int-details"><summary>Comparar as oito modalidades</summary><p class="int-help">Alternativas: escolha uma linha. O limite não é multiplicado pelas oito modalidades. Chance individual do prêmio principal com uma aposta mínima, por sorteio; +Milionária inclui dois trevos.</p>
+      <div class="rolagem"><table class="meta-tabela"><thead><tr><th>Modalidade</th><th>Por concurso</th><th>No período</th><th>Chance individual</th></tr></thead><tbody>${linhas.map(x=>`<tr ${x.m===S.modalidade?'class="meta-atual"':''}><td>${esc(MODALIDADES[x.m].nome)}</td><td>${x.porConcurso} jogos</td><td>${brl(x.gasto)}</td><td>${metaUmaEm(x.chanceIndividual)}</td></tr>`).join('')}</tbody></table></div>
+      <p class="int-help">Jogos de um lote podem compartilhar resultados premiados; não multiplicamos a chance individual pela quantidade para anunciar uma chance de prêmio. Sorteios independentes não ficam mais favoráveis por atraso ou acumulação.</p></details>`;
+  }catch(e){return '<p class="nota atencao">'+esc(e.message)+'</p>';}
+}
+function metaRenderFechamento(r){
+  if(r.espelho)return '<article class="meta-certificado"><h3>Original + espelho</h3><p>Se um jogo faz h acertos, o outro faz 20 − h. Piso 10: essa contagem não é faixa de prêmio.</p><div class="int-price"><span>Dois jogos simples</span><strong>R$ 6,00</strong></div>'+r.jogos.map((ds,i)=>'<div class="meta-jogo"><b>'+(i?'Espelho':'Original')+'</b><div class="dezenas">'+ds.map(d=>'<span class="dz marcada">'+pad(d)+'</span>').join('')+'</div></div>').join('')+'<button class="acao" id="meta-salvar-fechamento">Salvar para acompanhar</button><div id="meta-salvou" role="status"></div></article>';
+  const c=MODALIDADES[r.modalidade];
+  return `<article class="meta-certificado"><span class="int-eyebrow">COBERTURA VERIFICADA</span><h3>${r.completo?'Condição totalmente coberta':'Cobertura parcial: '+nf(r.cobertura*100,2)+'%'}</h3>
+    <p>${inf(r.cobertos)} de ${inf(r.total)} cenários da base atingem <strong>ao menos ${r.meta} acertos</strong>. Piso verificado: ${r.piso}.</p>
+    <p class="int-help">Base verificada: ${r.pool.map(pad).join(" · ")}.</p>
+    <p class="nota"><strong>Condição:</strong> as ${c.k} dezenas sorteadas precisam estar entre as ${r.pool.length} da sua base. Chance dessa condição: ${metaUmaEm(r.chanceCondicao)} por sorteio. ${c.trevos?'Trevos não estão incluídos na cobertura.':''}</p>
+    <div class="int-price"><span>${r.jogos.length} jogos simples</span><strong>${brl(r.custo)}</strong></div>
+    <p class="int-help">O algoritmo busca cobrir novos cenários a cada jogo, entre até 800 candidatas. A verificação de cobertura é exata; a seleção pode não ser a menor possível. ${r.completo?'Parou ao cobrir a condição para evitar jogos adicionais.':'O limite não completou a cobertura; não há garantia de atingir a meta.'}</p>
+    ${r.jogos.map((ds,i)=>`<div class="meta-jogo"><b>Jogo ${i+1}</b><div class="dezenas">${ds.map(d=>`<span class="dz marcada">${pad(d)}</span>`).join('')}</div></div>`).join('')}
+    <button class="acao" id="meta-salvar-fechamento">Salvar para acompanhar</button><div id="meta-salvou" role="status"></div></article>`;
+}
+T.plano=()=>{
+  const m=S.modalidade,c=MODALIDADES[m],o=metaConfig(m),g=META_GUIA[m];
+  return `<section class="meta-hero"><div class="meta-orbita" aria-hidden="true"><span>01</span><span>07</span><span>25</span></div><span class="int-eyebrow">LOTO LAB / PLANO & METAS</span><h2>Seu objetivo,<br>em números.</h2><p>Escolha a faixa. Verifique a cobertura.<br>Acompanhe os concursos que fazem sentido para você.</p></section>
+    <section class="carta meta-form"><div class="int-section-title"><h2>Seu plano de participação</h2><span>${esc(c.nome)}</span></div>
+      <div class="int-grid"><label class="campo" for="meta-limite">Limite para o período (R$)<input id="meta-limite" type="number" min="0" max="1000000" step="0.01" inputmode="decimal" value="${esc(o.limite)}" placeholder="Definido por você"></label><label class="campo" for="meta-concursos">Concursos que pretende jogar<input id="meta-concursos" type="number" min="1" max="31" value="${o.concursos}" inputmode="numeric"></label></div>
+      <label class="campo" for="meta-concurso">Concurso para acompanhar (opcional)<input id="meta-concurso" type="number" min="1" step="1" value="${esc(o.concurso)}" inputmode="numeric" placeholder="Número de um concurso futuro"></label>
+      <p class="int-help">Pode acompanhar os resultados sem apostar. Com concurso informado, o lote salvo será conferido apenas nele. O app não realiza apostas.</p><div id="meta-plano">${metaRenderPlano()}</div></section>
+    <section class="carta"><div class="int-section-title"><h2>${esc(g[0])}</h2><span>Metodologia</span></div><p class="int-help">${esc(g[1])}</p><button class="acao secundaria mini" id="meta-base-aleatoria">Preencher uma base aleatória</button>
+    ${m==='lotomania'?`<label class="campo" for="meta-pool">As 50 dezenas da aposta original<textarea id="meta-pool" rows="4" placeholder="00 a 99, separadas por espaço">${esc(o.pool)}</textarea></label><p class="int-help">Jogo original + espelho custam ${brl(c.preco*2)}. O espelho não garante 15, 19 ou 20 acertos.</p><button class="acao" id="meta-espelho">Criar e conferir o espelho</button>`:`<label class="campo" for="meta-pool">Base de dezenas para o fechamento<textarea id="meta-pool" rows="3" placeholder="Escolha entre ${c.min} e 20 dezenas">${esc(o.pool)}</textarea></label>
+      <label class="campo" for="meta-alvo">Meta de acertos nas dezenas<select id="meta-alvo">${c.faixas.filter(h=>h>0).map(h=>`<option value="${h}" ${h===Number(o.meta)?'selected':''}>${h} acertos${h===c.k?' · todas as dezenas':''}</option>`).join('')}</select></label>
+      <p class="int-help">Usa o limite por concurso do plano. Verifica todos os resultados possíveis dentro da base (até 20.000 cenários). A meta é um objetivo de cobertura; não uma previsão.</p><button class="acao" id="meta-fechar">Buscar cobertura para a meta</button>`}
+      <div id="meta-progresso" role="status" aria-live="polite"></div><div id="meta-fechamento">${S.metaFechamentos[m]?metaRenderFechamento(S.metaFechamentos[m]):''}</div></section>
+    <section class="carta meta-guia"><h2>O que a pesquisa sustenta</h2><details class="int-details" open><summary>Fechamentos e diversidade</summary><p class="int-help">Cobertura combinatória garante apenas condições verificadas. Jogos repetidos gastam duas vezes cobrindo o mesmo resultado. Distribuir dezenas reduz repetição entre jogos, mas não cria previsão.</p></details><details class="int-details"><summary>Bolão, acumulados e escolhas populares</summary><p class="int-help">O bolão reparte custo e prêmio; considere as tarifas antes de comparar. Um prêmio maior muda o valor potencial do prêmio, não a chance da combinação. Evitar escolhas populares pode reduzir divisão se ganhar, mas este app não conhece as apostas dos outros e não atribui uma vantagem inventada.</p></details><details class="int-details"><summary>Frequências, atrasos e IA</summary><p class="int-help">Frequências, sequências, quadrantes e redes neurais podem ser hipóteses de pesquisa. Para avaliar previsão é preciso acertar resultados posteriores ao treino e superar o aleatório repetidamente. Um recorde isolado ou ajuste ao passado não basta. A comparação de sugestões agora registra as faixas atingidas por concurso.</p><button class="acao secundaria" data-atalho="sugestoes">Abrir comparação temporal</button></details>
+      <details class="int-details"><summary>Super Sete, Loteca, Federal e Instantânea</summary><p class="int-help">Super Sete depende da posição: sete colunas de 0 a 9, chance principal de 1 em 10 milhões na aposta simples. Loteca usa resultados de futebol, que exigem probabilidades esportivas próprias. Federal usa bilhetes e séries; Instantânea depende do plano de premiação de cada produto. O gerador de dezenas cobre as oito modalidades da seleção acima; estas quatro exigem motores diferentes.</p></details>
+      <div class="meta-fontes"><a href="https://loterias.caixa.gov.br/Paginas/${INT_FONTES[m]}.aspx" target="_blank" rel="noopener noreferrer">Regras e probabilidades CAIXA ↗</a><a href="https://dmgordon.org/covering-designs/" target="_blank" rel="noopener noreferrer">Pesquisa sobre cobertura ↗</a></div><p class="int-help">Fontes consultadas em 06/09/2026. Nenhum método aqui garante prêmio ou retorno financeiro.</p></section>`;
+};
+function metaLigarAcoes(){
+  if(S.tela!=='plano') return;
+  const m=S.modalidade,o=metaConfig(m);
+  const ler=()=>{o.limite=$('#meta-limite').value;o.concursos=Number($('#meta-concursos').value);o.pool=$('#meta-pool').value;o.concurso=$('#meta-concurso').value;if($('#meta-alvo'))o.meta=Number($('#meta-alvo').value);Guardar.gravar('metaConfig',S.metaConfig);};
+  const alvo=()=>{const v=String(o.concurso).trim();if(!v)return null;const n=Number(v);if(!Number.isSafeInteger(n)||n<1)throw new Error('Informe um número inteiro positivo de concurso.');const hist=intHistorico(m,S.resultados).hist;if(hist.length&&n<=hist.at(-1).concurso)throw new Error('Escolha um concurso posterior ao último resultado conhecido.');return n;};
+  $('#meta-base-aleatoria').onclick=()=>{const c=MODALIDADES[m];o.pool=intAmostra(universo(m),m==='lotomania'?50:Math.min(20,c.min+2),geradorSemeado(Date.now())).map(pad).join(' ');$('#meta-pool').value=o.pool;ler();};
+  const aplicar=()=>{const b=$('#meta-aplicar');if(b)b.onclick=()=>{try{ler();const p=metaPlano(m,Number(o.limite),o.concursos),n=alvo();Object.assign(intConfig(m),{tam:MODALIDADES[m].min,quantidade:p.porConcurso,orcamento:String(p.porRodada),modo:'cobertura',concurso:n??''});irParaTela('sugestoes');}catch(e){$('#meta-progresso').textContent=e.message;}};};
+  document.querySelectorAll('.meta-form input').forEach(el=>el.onchange=()=>{ler();$('#meta-plano').innerHTML=metaRenderPlano();aplicar();});aplicar();
+  const guardar=()=>{const b=$('#meta-salvar-fechamento');if(!b)return;b.onclick=()=>{try{ler();const r=S.metaFechamentos[m],p=metaPlano(m,Number(o.limite),o.concursos);if(o.limite===''||r.custo>p.porRodada)throw new Error('O lote excede o limite atual por concurso. Recalcule a cobertura antes de salvar.');const n=alvo(),data=hoje(),id='F'+Date.now().toString(36),presentes=new Set(S.jogos.filter(j=>j.modalidade===m&&j.data===data&&(j.concursoAlvo??null)===n).map(j=>j.dezenas.join('-')));
+    const novos=r.jogos.filter(ds=>!presentes.has(ds.join('-'))).map((ds,i)=>({id:id+'-'+i,modalidade:m,dezenas:ds.slice(),metodo:'meta-cobertura',data,lote:id,conferencias:[],...(n?{concursoAlvo:n}:{}),cobertura:{meta:r.meta,piso:r.piso,pool:r.pool,completo:r.completo}}));
+    if(novos.length&&!Guardar.gravar('jogos',S.jogos.concat(novos)))throw new Error('Não foi possível salvar neste aparelho.');S.jogos.push(...novos);espelharParaSegundoPlano();$('#meta-salvou').textContent=novos.length+' jogos novos salvos para acompanhar.';b.disabled=true;
+  }catch(e){$('#meta-progresso').textContent=e.message;}};};guardar();
+  const espelho=$('#meta-espelho');if(espelho)espelho.onclick=()=>{try{ler();const ds=intDezenas(o.pool,m),outro=metaEspelho(ds);const p=metaPlano(m,Number(o.limite),o.concursos);if(o.limite===''||p.porConcurso<2)throw new Error('O limite por concurso precisa cobrir os dois jogos.');alvo();S.metaFechamentos[m]={modalidade:m,pool:universo(m),meta:10,jogos:[ds,outro],total:1,cobertos:1,piso:10,cobertura:1,completo:true,custo:6,chanceCondicao:1,espelho:true};$('#meta-fechamento').innerHTML='<p class="nota">Original e espelho: se um faz h acertos, o outro faz 20 − h. Piso 10, que não é faixa de prêmio. Dois jogos: R$ 6,00.</p>'+[ds,outro].map((ns,i)=>'<div class="meta-jogo"><b>'+ (i?'Espelho':'Original')+'</b><div class="dezenas">'+ns.map(d=>'<span class="dz marcada">'+pad(d)+'</span>').join('')+'</div></div>').join('')+'<button class="acao" id="meta-salvar-fechamento">Salvar para acompanhar</button><div id="meta-salvou" role="status"></div>';guardar();}catch(e){$('#meta-progresso').textContent=e.message;}};
+  const b=$('#meta-fechar');if(b)b.onclick=()=>{try{ler();alvo();const p=metaPlano(m,Number(o.limite),o.concursos);if(o.limite===''||p.porConcurso<1)throw new Error('Defina um limite que cubra pelo menos um jogo por concurso.');const it=metaFechamento(m,o.pool,o.meta,p.porConcurso),token=++metaTrabalho; b.disabled=true;const saida=$('#meta-progresso');
+    const passo=()=>{if(token!==metaTrabalho||S.tela!=='plano'||S.modalidade!==m||!saida.isConnected)return;try{const r=it.next();if(r.done){S.metaFechamentos[m]=r.value;$('#meta-fechamento').innerHTML=metaRenderFechamento(r.value);saida.textContent='Verificação concluída.';b.disabled=false;guardar();return;}saida.innerHTML=barraProgresso(r.value.feitos,r.value.total,r.value.fase);setTimeout(passo,0);}catch(e){saida.textContent=e.message;b.disabled=false;}};passo();
+  }catch(e){$('#meta-progresso').textContent=e.message;}};
+}
+
+
 /* ==================== central de sugestões ==================== */
 S.intConfig = {};
 S.intLotes = {};
@@ -3072,7 +3340,7 @@ S.intTestes = {};
 let intTrabalho = 0;
 
 function intConfig(m){
-  return S.intConfig[m] || (S.intConfig[m]={tam:MODALIDADES[m].min,quantidade:3,
+  return S.intConfig[m] || (S.intConfig[m]={tam:MODALIDADES[m].min,quantidade:3,concurso:"",
     modo:"equilibrado",janela:100,fixas:"",excluidas:"",orcamento:"",semente:""});
 }
 function intStatusBase(base){
@@ -3097,6 +3365,7 @@ T.sugestoes = () => {
     <h2>Seu próximo lote,<br>com critérios claros.</h2>
     <p>Escolha o perfil. Defina seus limites. Compare a diversidade dos jogos antes de salvar.</p>
     ${intStatusBase(base)}</section>
+    <a class="meta-link" href="#plano" data-atalho="plano">Plano de participação e cobertura por meta →</a>
     <section class="carta int-form"><div class="int-section-title"><h2>Montar sugestões</h2><span>${esc(c.nome)}</span></div>
       <label class="campo" for="int-modo">Critério de seleção
         <select id="int-modo">${Object.entries(INT_METODOS).map(([v,n])=>`<option value="${v}" ${o.modo===v?"selected":""}>${n}</option>`).join("")}</select></label>
@@ -3115,6 +3384,7 @@ T.sugestoes = () => {
         <p class="int-help">Mesmo código, parâmetros e base reproduzem o mesmo lote. Fixar ou excluir dezenas limita a variedade; não altera a chance de cada combinação.</p>
       </details>
       <div class="int-price"><span>Estimativa antes do limite</span><strong id="int-preco">${brl(custoDoJogo(m,o.tam)*o.quantidade)}</strong></div>
+      <label class="campo" for="int-concurso">Concurso para acompanhar (opcional)<input id="int-concurso" type="number" min="1" step="1" inputmode="numeric" value="${esc(o.concurso||"")}" placeholder="Vazio: acompanhar resultados futuros"></label>
       <button class="acao int-primary" id="int-gerar">Criar sugestões</button>
       <div id="int-mensagem" role="status" aria-live="polite"></div>
       <p class="int-help">Preços consultados em 05/09/2026 · <a href="https://loterias.caixa.gov.br/Paginas/${INT_FONTES[m]}.aspx" target="_blank" rel="noopener noreferrer">regras da modalidade</a>.</p>
@@ -3140,6 +3410,7 @@ function intMapaFrequencias(m,hist){
 function intRenderLote(r){
   const mt=r.metricas,m=r.modalidade,c=MODALIDADES[m];
   return `<section class="int-results"><div class="int-section-title"><h2>Seu lote está pronto</h2><span>${r.jogos.length} jogos únicos</span></div>
+    ${r.concursoAlvo?`<p class="nota">Acompanhar somente o concurso ${r.concursoAlvo}. Salvar não registra uma aposta.</p>`:""}
     ${r.jogos.length<r.solicitados?`<div class="nota">Seu limite comporta ${r.jogos.length} dos ${r.solicitados} jogos solicitados. Total ajustado: ${brl(mt.custo)}.</div>`:""}
     <div class="int-summary"><div><small>Custo estimado</small><b>${brl(mt.custo)}</b></div>
       <div><small>Dezenas distintas</small><b>${mt.distintas}<em> / ${c.N}</em></b></div>
@@ -3168,6 +3439,8 @@ function intRenderTeste(r){
     ${r.linhas.map(l=>`<article class="int-comparison-row"><div><b>${esc(INT_METODOS[l.modo])}</b><strong>${nf(l.media,3)}</strong></div>
       <div class="int-bar"><i style="width:${Math.min(100,l.media/MODALIDADES[r.modalidade].k*100)}%"></i></div>
       <p class="int-help">Acertos médios por jogo · melhor jogo do lote: ${nf(l.melhor,2)} em média.</p>
+      <div class="meta-faixas">${metaFaixasObservadas(l,r.modalidade).map(f=>`<span><b>${f.acertos} acertos</b>${f.concursos}/${r.n} concursos</span>`).join("")}</div>
+      <p class="int-help">Ao menos um jogo com exatamente essa contagem de dezenas no concurso. Registros do teste, sem estimar chance futura nem confirmar prêmio; campos adicionais não entram na contagem.</p>
       ${l.modo!=="uniforme"?`<p class="int-help">Diferença vs. aleatório: ${nf(l.delta,3)}. IC 95% aproximado: ${nf(l.intervalo[0],3)} a ${nf(l.intervalo[1],3)}. p ajustado: ${nf(l.pAjustado,3)}.</p>`:""}</article>`).join("")}
     <details class="int-details"><summary>Critérios e limites do teste</summary><p class="int-help">Treino móvel de até 100 concursos anteriores a cada alvo. Resultado pareado por concurso; reamostragem e permutação em blocos de 5, 1.200 repetições, correção de Holm nas duas comparações. Critério exploratório: diferença positiva, intervalo acima de zero, p ajustado menor que 0,05 e resultado positivo nos três recortes temporais. Repetir testes em outros recortes aumenta o risco de achados ao acaso; a correção vale somente para esta execução. Não estima lucro nem confirma previsão. ${intExtraModalidade(r.modalidade)} Código: ${esc(r.semente)}.</p></details>
     </div>`;
@@ -3177,7 +3450,7 @@ function intLigarAcoes(){
   const m=S.modalidade,o=intConfig(m);
   const ler=()=>{
     for(const k of ["tam","quantidade","janela"]) o[k]=Number($("#int-"+k).value);
-    for(const k of ["modo","fixas","excluidas","orcamento","semente"]) o[k]=$("#int-"+k).value;
+    for(const k of ["modo","fixas","excluidas","orcamento","semente","concurso"]) o[k]=$("#int-"+k).value;
   };
   document.querySelectorAll('.int-form input,.int-form select').forEach(el=>el.onchange=()=>{
     ler();
@@ -3191,7 +3464,11 @@ function intLigarAcoes(){
     setTimeout(()=>{
       if(token!==intTrabalho||S.tela!=="sugestoes"||S.modalidade!==m) return;
       try{
+        const alvo=parametros.concurso===""?null:Number(parametros.concurso);
+        const ultimo=intHistorico(m,S.resultados).hist.at(-1)?.concurso||0;
+        if(alvo!==null&&(!Number.isSafeInteger(alvo)||alvo<=ultimo)) throw new Error("Informe um concurso futuro, posterior ao último resultado conhecido.");
         const r=intGerarLote(m,parametros.tam,parametros.quantidade,{...parametros,semente:parametros.semente||undefined});
+        r.concursoAlvo=alvo;
         S.intLotes[m]=r; pintar(); $("#int-lote").scrollIntoView({block:"start",behavior:"smooth"});
       }catch(e){ $("#int-mensagem").textContent=e.message;botao.disabled=false;botao.textContent="Criar sugestões"; }
     },20);
@@ -3200,9 +3477,10 @@ function intLigarAcoes(){
   if(lote){
     $("#int-salvar").onclick=()=>{
       const data=hoje(),loteId="I"+Date.now().toString(36);
-      const existentes=new Set(S.jogos.filter(j=>j.modalidade===m&&j.data===data).map(j=>j.dezenas.slice().sort((a,b)=>a-b).join("-")));
+      const existentes=new Set(S.jogos.filter(j=>j.modalidade===m&&j.data===data&&(j.concursoAlvo??null)===(lote.concursoAlvo??null)).map(j=>j.dezenas.slice().sort((a,b)=>a-b).join("-")));
       const novos=lote.jogos.filter(ds=>!existentes.has(ds.join("-"))).map((ds,i)=>({id:loteId+"-"+i,
         dezenas:ds.slice(),modalidade:m,metodo:"int-"+lote.modo,data,lote:loteId,conferencias:[],
+        ...(lote.concursoAlvo?{concursoAlvo:lote.concursoAlvo}:{}),
         inteligencia:{versao:lote.versao,semente:lote.semente,assinatura:lote.base.assinatura,
           janela:lote.janela,fixas:lote.fixas,excluidas:lote.excluidas,preco:lote.metricas.unitario}}));
       if(!novos.length){$("#int-salvar").textContent="Lote já salvo hoje";$("#int-salvar").disabled=true;return;}
@@ -3540,7 +3818,7 @@ function ficha(j){
     </div>
     <div class="dezenas">${j.dezenas.map(d=>{
       const acertou = ultima && ultima.dezenas.includes(d);
-      return `<span class="dz ${acertou?"acertou":""}">${pad(d)}</span>`;
+      return `<span class="dz ${acertou?"acertou":ultima?"errou":""}">${pad(d)}</span>`;
     }).join("")}</div>
     ${ultima ? `<div style="margin-top:9px;font-size:.82rem;color:var(--secundaria)">
       concurso ${esc(ultima.concurso)}: <strong style="color:var(--tinta)">${ultima.acertos} coincidência${ultima.acertos===1?"":"s"}</strong>
@@ -3719,7 +3997,7 @@ function linhaDoJogo(item, sorteadas){
       <span class="contexto">${esc(j.metodo || "salvo")} · o acaso faria ${nf(esperado,2)}</span>
     </div>
     <div class="dezenas">${j.dezenas.map(d =>
-      `<span class="dz ${sorteadas.includes(d) ? "acertou" : ""}">${pad(d)}</span>`).join("")}</div>
+      `<span class="dz ${sorteadas.includes(d) ? "acertou" : "errou"}">${pad(d)}</span>`).join("")}</div>
   </div>`;
 }
 
@@ -3981,7 +4259,7 @@ T.inicio = () => {
       <h2>IA ADAPTATIVA</h2>
       <p>Motor de pesquisa estatística</p>
       <button class="primary-btn" data-atalho="sugestoes">CRIAR SUGESTÕES</button>
-      <button class="int-home-link" data-atalho="pesquisa">Ver IA adaptativa →</button>
+      <button class="int-home-link" data-atalho="plano">Planejar participação e metas →</button>
     </div>
     <div class="brain"></div>
   </section>
@@ -5507,7 +5785,7 @@ function cartela(modalidade, marcadas, opcoes){
   const casas = [];
   for(let d = c.base; d <= c.N + c.base - 1; d++){
     const m = marc.has(d), s = sort && sort.has(d);
-    const classe = s && m ? "casa acertou" : s ? "casa sorteada" : "casa";
+    const classe = s && m ? "casa acertou" : s ? "casa sorteada" : sort && m ? "casa errou" : "casa";
     casas.push(`<button type="button" class="${classe}" ${o.interativa?"":"disabled"}
       data-casa="${d}" aria-pressed="${m}"
       aria-label="${d}${s?" sorteada":""}${m?" marcada":""}"><span>${pad(d)}</span></button>`);
@@ -5580,7 +5858,7 @@ function comLoteDeAvisos(fn){
   }
 }
 
-function avisar(tipo, titulo, texto, chave){
+function avisar(tipo, titulo, texto, chave, conferencia){
   /* `chave` torna o aviso idempotente: o mesmo fato não avisa duas vezes.
      A busca era linear na lista inteira a cada chamada — com duzentos avisos e
      mil chamadas, quarenta mil comparações de string. O conjunto abaixo é
@@ -5594,7 +5872,8 @@ function avisar(tipo, titulo, texto, chave){
   }
   S.avisos.unshift({
     id:`${Date.now().toString(36)}-${Math.random().toString(36).slice(2,6)}`,
-    tipo, titulo, texto, chave, quando:new Date().toISOString(), lido:false
+    tipo, titulo, texto, chave, quando:new Date().toISOString(), lido:false,
+    ...(metaValidarConferencia(conferencia)?{conferencia:metaValidarConferencia(conferencia)}:{})
   });
   if(chave && _chavesDeAviso){
     _chavesDeAviso.add(chave);
@@ -5672,7 +5951,9 @@ const Avisos = {
     return Math.abs(h % 2000000000) + 1;
   },
 
-  async agora(titulo, texto, chave, destino){
+  async agora(titulo, texto, chave, destino, conferencia){
+    const colorido=metaPlugin(),cf=metaValidarConferencia(conferencia);
+    if(colorido&&cf){try{const r=await colorido.mostrar({conferencia:cf,nome:MODALIDADES[cf.modalidade].nome});if(r.exibida)return true;}catch(e){}}
     const p = this.plugin();
     if(p){
       try{
@@ -5738,10 +6019,10 @@ const Avisos = {
   },
 };
 
-function notificarSistema(titulo, texto, chave, destino){
+function notificarSistema(titulo, texto, chave, destino, conferencia){
   /* Sem await: quem chama está no meio de conferir jogos, e travar essa conta
      esperando o Android responder deixaria a tela parada por nada. */
-  Avisos.agora(titulo, texto, chave, destino);
+  Avisos.agora(titulo, texto, chave, destino, conferencia);
 }
 
 /* O toque na notificação abre a tela que o aviso trata. Sem isto o app abre no
@@ -6022,7 +6303,7 @@ function conferenciaAutomatica(){
     avisos no armazenamento, e uma conferência grande fazia mais de mil
     gravações com a tela parada. Agora grava uma vez, no fim. */
  return comLoteDeAvisos(() => {
-  let novas = 0, premios = 0;
+  let novas = 0, premios = 0; const resumos={};
   let melhor = null;
   const todos = S.jogos.concat(S.teimosinhas || []);
   todos.forEach(j => {
@@ -6039,17 +6320,19 @@ function conferenciaAutomatica(){
       for(const d of r.dezenas) if(minhas.has(d)) acertos++;
       j.conferencias.push({concurso:r.concurso, data:r.data, dezenas:r.dezenas, acertos});
       novas++;
+      const resumo=resumos[j.modalidade];
+      if(!resumo||r.concurso>resumo.concurso||(r.concurso===resumo.concurso&&acertos>resumo.acertos))resumos[j.modalidade]=metaConferencia(j,r);
       const faixa = faixaAtingida(j.modalidade, acertos);
       if(faixa !== null){
         premios++;
         /* Guarda o melhor achado da rodada para a notificação poder dizer
            QUANTO foi. Melhor = mais acertos; empate fica com o primeiro. */
         if(!melhor || acertos > melhor.acertos)
-          melhor = {acertos, modalidade:j.modalidade, concurso:r.concurso, jogo:j.id};
+          melhor = metaConferencia(j,r);
         const nome = MODALIDADES[j.modalidade].nome;
         avisar("premio", `${nome}: ${faixa} coincidência${faixa===1?"":"s"}`,
           `Concurso ${r.concurso} — o jogo ${j.dezenas.map(pad).join(" ")} coincidiu em ${faixa} dezena${faixa===1?"":"s"}.${/*<aposta>*/""} É uma faixa de prêmio: confira no volante oficial antes de comemorar.${/*</aposta>*/""}`,
-          `coincidencia:${j.id}:${r.concurso}`);
+          `coincidencia:${j.id}:${r.concurso}`, metaConferencia(j,r));
       }
     });
   });
@@ -6057,7 +6340,7 @@ function conferenciaAutomatica(){
     Guardar.gravar("jogos", S.jogos);
     Guardar.gravar("teimosinhas", S.teimosinhas);
   }
-  return {novas, premios, melhor};
+  return {novas, premios, melhor, resumos};
  });
 }
 
@@ -6065,6 +6348,9 @@ function conferenciaAutomatica(){
    entraram, e só então notifica o sistema. */
 function aoMudarHistorico(quantosConcursos, origem){
   const r = conferenciaAutomatica();
+  const colorido=metaPlugin();
+  if(colorido)for(const cf of Object.values(r.resumos||{}))
+    notificarSistema(MODALIDADES[cf.modalidade].nome+": "+cf.acertos+" acertos","Concurso "+cf.concurso,null,"jogos",cf);
   if(quantosConcursos > 0){
     const titulo = `${quantosConcursos} concurso${quantosConcursos===1?"":"s"} novo${quantosConcursos===1?"":"s"}`;
     const texto = r.novas
@@ -6089,13 +6375,13 @@ function aoMudarHistorico(quantosConcursos, origem){
      concursos publicados. Anunciar prêmio a partir disso afirma o que não foi
      medido, e o texto antigo já se contradizia pedindo para conferir no
      volante antes de comemorar. */
-  if(r.premios){
+  if(r.premios&&!colorido){
     const detalhe = r.melhor
       ? `${r.melhor.acertos} coincidências na ${MODALIDADES[r.melhor.modalidade].nome}, concurso ${r.melhor.concurso}.`
       : "Abra o LotoLab para ver qual jogo e qual concurso.";
     notificarSistema(
       r.premios === 1 ? "Um jogo seu coincidiu" : `${r.premios} jogos seus coincidiram`,
-      detalhe, `coincidencia:${Date.now()}`, "conferir");
+      detalhe, `coincidencia:${Date.now()}`, "conferir",r.melhor);
   }
   if(S.autoAnalise !== false) analisarPendentes();
   /* Reagenda o alarme do próximo sorteio: a data mudou agora que entrou
@@ -6380,7 +6666,7 @@ function pintarAvisos(){
       <span class="marca-cor"></span>
       <span class="ic-aviso ${esc(grupoDoAviso(a.tipo))}" aria-hidden="true">
         <svg viewBox="0 0 24 24">${ICONE_AVISO[a.tipo] || ICONE_AVISO.sistema}</svg></span>
-      <span class="txt"><b>${esc(a.titulo)}</b><span>${esc(a.texto)}</span></span>
+      <div class="txt"><b>${esc(a.titulo)}</b><span>${esc(a.texto)}</span>${metaAvisoHtml(a)}</div>
       <span class="quando">${esc(new Date(a.quando).toLocaleTimeString("pt-BR",
         {hour:"2-digit", minute:"2-digit"}))}</span>
       ${/* O ponto de status do mockup. Ele NÃO diz "deu certo" — diz que o
@@ -6404,7 +6690,9 @@ function pintarAvisos(){
           <div class="lista">${g.itens.map(item).join("")}</div>
         </div>`).join("");
 
-  corpo.innerHTML = cabeca + barra + lista;
+  corpo.innerHTML = cabeca + '<button class="acao secundaria mini" id="meta-testar-aviso">Ver exemplo de notificação colorida</button>' + barra + lista;
+  corpo.querySelector('#meta-testar-aviso').onclick=metaTestarAviso;
+  corpo.querySelectorAll("[data-aviso-jogo]").forEach(b=>b.onclick=()=>{$('#folha-avisos [data-fechar]').click();S.modalidade=b.dataset.avisoMod;S.jogoAberto=b.dataset.avisoJogo;irParaTela("jogos");});
 
   /* Mede depois de desenhar: só há rolagem se o conteúdo não coube de fato, e
      isso depende da largura do aparelho e do tamanho de fonte do sistema —
@@ -6467,7 +6755,8 @@ function espelharParaSegundoPlano(){
   try{
     const runner = (typeof Capacitor !== "undefined" && Capacitor.Plugins &&
                     Capacitor.Plugins.BackgroundRunner) ? Capacitor.Plugins.BackgroundRunner : null;
-    if(!runner || typeof runner.dispatchEvent !== "function") return false;
+    const colorido=metaPlugin();
+    if(!colorido&&(!runner||typeof runner.dispatchEvent!=="function"))return false;
 
     const modalidades = {};
     for(const [chave, c] of Object.entries(MODALIDADES)){
@@ -6477,7 +6766,7 @@ function espelharParaSegundoPlano(){
     /* Só o necessário para contar acerto. Mandar a conferência inteira de cada
        jogo encheria o armazenamento compartilhado sem servir para nada. */
     const jogos = S.jogos.concat(S.teimosinhas || []).map(j => ({
-      id: j.id, modalidade: j.modalidade, dezenas: j.dezenas,
+      id: j.id, modalidade: j.modalidade, dezenas: j.dezenas, data:j.data,
       concursoAlvo: j.concursoAlvo != null ? j.concursoAlvo : null,
       deConcurso: j.deConcurso != null ? j.deConcurso : null,
       concursos: j.concursos != null ? j.concursos : null,
@@ -6486,14 +6775,13 @@ function espelharParaSegundoPlano(){
     /* O app não escreve no CapacitorKV: o plugin não expõe isso à WebView.
        O que existe é dispatchEvent — então o app manda o estado e quem grava
        é o executor, que é justamente quem vai ler depois. */
-    runner.dispatchEvent({
-      label: ETIQUETA_SEGUNDO_PLANO,
-      event: "guardarEstado",
-      details: {estado: JSON.stringify({
-        ligado: S.buscaAutomatica !== false,
-        modalidades, jogos,
-      })},
-    }).catch(() => {});
+    const conhecidos={};
+    for(const r of S.resultados)conhecidos[r.modalidade]=Math.max(conhecidos[r.modalidade]||0,Number(r.concurso)||0);
+    const estado={ligado:S.buscaAutomatica!==false,modalidades,jogos,conhecidos};
+    const legado=ligado=>runner?.dispatchEvent({label:ETIQUETA_SEGUNDO_PLANO,event:"guardarEstado",
+      details:{estado:JSON.stringify({...estado,ligado})}}).catch(()=>{});
+    if(colorido)colorido.sincronizar({estado}).then(()=>legado(false)).catch(()=>legado(estado.ligado));
+    else legado(estado.ligado);
     return true;
   }catch(e){ return false; }
 }
@@ -9555,7 +9843,7 @@ function acoesNovas(){
        assunto, e um item chamado "Conferência concluída" que só aparece em
        Sistema é o tipo de detalhe que faz a pessoa achar que o filtro não
        funciona. */
-    avisar("conferencia", "Conferência concluída", detalhe, `conf:${Date.now()}`);
+    avisar("conferencia", "Conferência concluída", detalhe, `conf:${Date.now()}`, r.resumos?.[S.modalidade]);
     S.avisoJogos = {modalidade:S.modalidade, texto: r.novas
       ? `${inf(r.novas)} ${r.novas === 1 ? "conferência nova" : "conferências novas"}. ${detalhe}`
       : `Nada de novo para conferir. ${detalhe}`};
@@ -9969,6 +10257,8 @@ const SECOES = [
       sub:"Monta combinações válidas por método. Compare os critérios e a variedade entre os jogos."},
      {id:"sugestoes", nome:"Sugestões", titulo:"Central de sugestões",
       sub:"Lotes explicados, diversidade e comparação com o acaso."},
+     {id:"plano", nome:"Plano & metas", titulo:"Plano de jogos",
+      sub:"Metas de acertos, cobertura verificada e participação com limite."},
      {id:"montar", nome:"Montar", titulo:"Montar à mão",
       sub:"Marque as dezenas que quiser. O app mostra as características do jogo e como elas se comparam ao esperado do acaso."},
      {id:"bancada", nome:"Bancada", titulo:"Bancada de testes",
@@ -10124,7 +10414,7 @@ function meusJogosNoConcurso(r){
           <span class="selo ${x.acertos > esperadoAcertos(r.modalidade, x.jogo.dezenas.length) ? "ok" : ""}"
             >${x.acertos} coincidência${x.acertos===1?"":"s"}</span></div>
         <div class="dezenas">${x.jogo.dezenas.map(d =>
-          `<span class="dz ${r.dezenas.includes(d) ? "acertou" : ""}">${pad(d)}</span>`).join("")}</div>
+          `<span class="dz ${r.dezenas.includes(d) ? "acertou" : "errou"}">${pad(d)}</span>`).join("")}</div>
       </div>`).join("")}`;
 }
 
@@ -10221,6 +10511,7 @@ function pintar(){
   pintarContaAvisos();
   acoes();
   intLigarAcoes();
+  metaLigarAcoes();
 }
 
 async function carregarCalibracao(){
@@ -10275,6 +10566,7 @@ function normalizarConcursos(){
 }
 
 (function iniciar(){
+  S.metaConfig = Guardar.ler("metaConfig", {});
   S.jogos = Guardar.ler("jogos", []);
   S.resultados = Guardar.ler("resultados", []);
   /* Semeia a partir do histórico embutido o que ainda não estiver guardado.
@@ -10316,6 +10608,7 @@ function normalizarConcursos(){
   pintar();
   ligarBotaoVoltarDoAndroid();
   ligarToqueNaNotificacao();
+  metaLigarNativo();
   /* Análises pendentes na abertura. Sem isto, quem já tinha histórico ficaria
      esperando o próximo concurso para ver a primeira análise — e quem fechou o
      app no meio de uma análise nunca a veria terminar. Roda depois do pintar()
@@ -10335,6 +10628,7 @@ function normalizarConcursos(){
      na hora, e responde {tentadas:0} quando não está. */
   document.addEventListener("visibilitychange", () => {
     if(document.visibilityState !== "visible") return;
+    metaAbrirDestino();
     buscaDiaria().then(r => { if(r.novos) pintar(); }).catch(()=>{});
   });
 

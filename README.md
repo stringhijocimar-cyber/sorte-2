@@ -1,3 +1,17 @@
+# LotoLab 4.10 — visual, metas e conferência colorida
+
+- **Início → Planejar participação e metas:** orçamento do período, quantidade de concursos e alvo futuro opcional.
+- **Cobertura por meta:** busca jogos dentro do limite e verifica todos os cenários da base; informa a condição, o piso e se a cobertura é parcial.
+- **Lotomania:** original + espelho, com custo e efeito matemático explícitos.
+- **Sino → Ver exemplo de notificação colorida:** acertos verdes com números brancos; erros em vermelho suave. No Android, expanda a notificação.
+- **Comparação temporal:** contagem de concursos por faixa de acertos, além das médias e incerteza.
+
+O gerador trabalha com as oito modalidades de dezenas já presentes. O guia também trata Super Sete, Loteca, Federal e Instantânea e explica por que exigem motores diferentes. [Pesquisa, métodos, fontes e limitações](docs/metodologias-4.10.md).
+
+Para testar: `node ferramentas/testar-metas.mjs`, `node ferramentas/testar-inteligencia.mjs`, `node ferramentas/testar-motor.mjs` e a suíte de interface. A CI compila o Android, executa testes Java e inspeciona o APK final. A versão de teste usa assinatura de depuração; preserve seus jogos antes de considerar desinstalar uma versão anterior.
+
+---
+
 # LotoLab — aplicativo
 
 ## Novidades da 4.9.0

@@ -5,8 +5,7 @@
 # a v10 — a compilação falhou, e a única pista era um log de release. Testar no
 # push transforma isso num aviso de trinta segundos, no lugar certo.
 #
-# Não compila o APK: compilar leva minutos e depende do Android SDK. Aqui só
-# roda o que é rápido e pega quase tudo.
+# O APK de revisão só é compilado após os testes aprovarem o código.
 
 name: Testes
 
@@ -57,6 +56,9 @@ jobs:
 
       - name: Testes da inteligência de sugestões
         run: node ferramentas/testar-inteligencia.mjs
+
+      - name: Metas, orçamento, cobertura e conferência colorida
+        run: node ferramentas/testar-metas.mjs
 
       - name: Testes da interface
         # Estes existiam desde sempre e não rodavam em lugar nenhum: nem aqui,
@@ -164,36 +166,38 @@ jobs:
           npx cap sync android
       - name: Compilar APK de revisão
         working-directory: android
-        run: ./gradlew assembleDebug --no-daemon
+        run: ./gradlew testDebugUnitTest assembleDebug --no-daemon
       - name: Conferir conteúdo do APK
         run: |
           python3 ferramentas/conferir-apk.py android/app/build/outputs/apk/debug/app-debug.apk
           unzip -p android/app/build/outputs/apk/debug/app-debug.apk assets/public/index.html > /tmp/index-apk.html
           cmp index.html /tmp/index-apk.html
-          cp android/app/build/outputs/apk/debug/app-debug.apk LotoLab-4.9.0-preview.apk
+          cp android/app/build/outputs/apk/debug/app-debug.apk LotoLab-4.10.0-preview.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: LotoLab-4.9.0-preview
-          path: LotoLab-4.9.0-preview.apk
+          name: LotoLab-4.10.0-preview
+          path: LotoLab-4.10.0-preview.apk
           retention-days: 14
 
       - name: Disponibilizar APK para download direto
         if: github.head_ref == 'codex/inteligencia-sugestoes-v4.9'
         env:
           GH_TOKEN: ${{ github.token }}
-          LOTOLAB_TAG: v4.9.0-rc.${{ github.run_number }}
+          LOTOLAB_TAG: v4.10.0-rc.${{ github.run_number }}
         run: |
           cat > /tmp/lotolab-release.md <<'NOTAS'
-          LotoLab 4.9.0 — versão de teste com central de sugestões, restrições,
-          orçamento, explicações, diversidade e comparação temporal.
+          LotoLab 4.10.0 — layout renovado, notificações com bolinhas coloridas,
+          planejamento por concurso e fechamentos com cobertura verificada.
+          Abra Início > Planejar participação e metas. No sino, experimente
+          o exemplo de notificação colorida e expanda o aviso no Android.
 
-          Baixe LotoLab-4.9.0-preview.apk abaixo. APK assinado para depuração.
+          Baixe LotoLab-4.10.0-preview.apk abaixo. APK assinado para depuração.
           A assinatura pode ser diferente da instalação anterior: não desinstale
           seu aplicativo sem antes preservar seus jogos e resultados.
 
           Motor e interface validados automaticamente; instalação em aparelho
           físico ainda requer conferência. Não prevê resultados de loterias.
           NOTAS
-          gh release create "$LOTOLAB_TAG" LotoLab-4.9.0-preview.apk \
+          gh release create "$LOTOLAB_TAG" LotoLab-4.10.0-preview.apk \
             --target "$GITHUB_SHA" --prerelease \
-            --title "LotoLab 4.9.0 — teste" --notes-file /tmp/lotolab-release.md
+            --title "LotoLab 4.10.0 — teste" --notes-file /tmp/lotolab-release.md
