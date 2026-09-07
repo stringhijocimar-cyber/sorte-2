@@ -47,6 +47,10 @@ jobs:
           cmp sw.js www/sw.js
           cmp manifest.webmanifest www/manifest.webmanifest
           diff -r ui www/ui
+          # O executor em segundo plano entra no APK pela pasta www/. Editar
+          # só a raiz produziria um APK que confere com regra antiga — e o
+          # sintoma seria aviso errado no aparelho, sem nada vermelho aqui.
+          diff -r runner www/runner
 
       - name: Testes do motor
         run: node ferramentas/testar-motor.mjs
