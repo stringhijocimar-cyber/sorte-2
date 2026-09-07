@@ -1682,6 +1682,68 @@ if(EDICAO.nome === "completa"){
   checar('espelho mantém explicação correta ao voltar para a tela',await js(`return document.querySelector('#meta-fechamento').innerText.includes('Original + espelho')&&/não é faixa de prêmio/.test(document.querySelector('#meta-fechamento').innerText)`));
 }
 
+/* Regressão do Android 4.10: o handle síncrono da ponte não tem .catch().
+   Reinicia o documento COM a ponte antes de iniciar(), e usa toques enviados
+   pelo navegador, incluindo hit testing. .click() sozinho ocultava falhas. */
+secao('N. Inicialização Android e toque no menu/sino');
+async function tocar(seletor){
+  await js(`document.querySelector(${JSON.stringify(seletor)})?.scrollIntoView({block:'center',behavior:'instant'});return true;`);
+  await dormir(100);
+  const p=await js(`const el=document.querySelector(${JSON.stringify(seletor)});if(!el)return null;const r=el.getBoundingClientRect(),x=r.left+r.width/2,y=r.top+r.height/2;const h=document.elementFromPoint(x,y);return {x,y,atingivel:!!h&&(el===h||el.contains(h))};`);
+  if(!p?.atingivel)throw new Error('Toque bloqueado: '+seletor);
+  await cmd('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:p.x,y:p.y,radiusX:2,radiusY:2,force:1}]});
+  await cmd('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await dormir(150);
+}
+const resultadoFoco={...JSON.parse(readFileSync(join(RAIZ,'dados/mega-sena.json'),'utf8')).concursos.at(-1),modalidade:'mega-sena'};
+await cmd('Emulation.setDeviceMetricsOverride',{width:412,height:915,deviceScaleFactor:2,mobile:true});
+await cmd('Emulation.setTouchEmulationEnabled',{enabled:true,maxTouchPoints:1});
+for(const retorno of ['objeto','promessa','falha']){
+  const fixture=`
+    localStorage.clear();
+    for(const k of ['autoAnalise','pesquisaAutomatica','buscaAutomatica'])localStorage.setItem('lotolab:'+k,'false');
+    localStorage.setItem('lotolab:modalidade',JSON.stringify('mega-sena'));
+    localStorage.setItem('lotolab:resultados',JSON.stringify([${JSON.stringify(resultadoFoco)}]));
+    window.__foco411={erros:[],avisos:[],espelhos:0};
+    window.addEventListener('error',e=>__foco411.erros.push(e.message));
+    window.addEventListener('unhandledrejection',e=>__foco411.erros.push(String(e.reason)));
+    const handle={remove:async()=>{}};
+    const p={addListener:()=>${retorno==='objeto'?'handle':retorno==='promessa'?'Promise.resolve(handle)':"Promise.reject(new Error('evento indisponível'))"},destino:async()=>({}),sincronizar:async()=>{__foco411.espelhos++;},mostrar:async x=>{__foco411.avisos.push(x);return {exibida:true};}};
+    window.Capacitor={isNativePlatform:()=>true,isPluginAvailable:n=>n==='LotoLabNotificacoes',Plugins:{LotoLabNotificacoes:p,LocalNotifications:{addListener:()=>handle,checkPermissions:async()=>({display:'granted'}),requestPermissions:async()=>({display:'granted'}),getPending:async()=>({notifications:[]}),cancel:async()=>{},schedule:async()=>{}}}};
+  `;
+  const {identifier}=await cmd('Page.addScriptToEvaluateOnNewDocument',{source:fixture});
+  await cmd('Page.navigate',{url:ENDERECO+'?regressao411='+retorno});await dormir(1800);
+  checar(retorno+': inicializa sem erro JavaScript',await js('return __foco411.erros.length===0'),await js('return __foco411.erros.join("; ")'));
+  checar(retorno+': sincronização nativa completa apesar do tipo do listener',await js('return __foco411.espelhos>0'));
+  await tocar('#btn-menu');
+  checar(retorno+': toque abre o menu',await js(`return document.querySelector('#gaveta').dataset.aberta==='1'&&document.querySelector('#btn-menu').getAttribute('aria-expanded')==='true'`));
+  if(retorno==='objeto')await capturar('menu-android-411');
+  await tocar('#gaveta .gaveta-topo [data-fechar]');
+  checar(retorno+': toque fecha o menu',await js(`return document.querySelector('#gaveta').dataset.aberta==='0'`));
+  await tocar('#btn-avisos');
+  checar(retorno+': toque abre notificações',await js(`return document.querySelector('#folha-avisos').dataset.aberta==='1'`));
+  await tocar('#meta-testar-aviso');
+  checar(retorno+': exemplo envia as dezenas ao plugin Android',await js(`return __foco411.avisos.length===1&&__foco411.avisos[0].conferencia.acertos===4&&__foco411.avisos[0].demonstracao===true`));
+  if(retorno==='objeto')await capturar('notificacoes-android-411');
+  await tocar('#folha-avisos [data-fechar]:not(.fundo)');
+  checar(retorno+': toque fecha notificações',await js(`return document.querySelector('#folha-avisos').dataset.aberta==='0'`));
+  if(retorno==='objeto'){
+    await capturar('inicio-foco-411');
+    await tocar('.foco-modalidades [data-mod="lotofacil"]');
+    checar('troca de modalidade pelo novo painel',await js(`return S.modalidade==='lotofacil'&&document.querySelector('[data-meta-maxima]').textContent.includes('15 acertos')`));
+    await tocar('[data-meta-maxima]');
+    checar('atalho inicia a meta de todas as dezenas sem criar gasto',await js(`return S.tela==='plano'&&document.querySelector('#meta-alvo').value==='15'&&document.querySelector('#meta-limite').value===''&&S.jogos.length===0`));
+    await irPara('inicio');
+    for(const tema of ['escuro','claro'])for(const width of [360,412,1024]){
+      await cmd('Emulation.setDeviceMetricsOverride',{width,height:915,deviceScaleFactor:1,mobile:width<600});
+      await js(`document.documentElement.dataset.tema=${JSON.stringify(tema)};return true;`);
+      checar('painel '+tema+' cabe em '+width+'px',await js('return document.documentElement.scrollWidth<=innerWidth+1'));
+      if(width===412&&tema==='claro')await capturar('inicio-claro-411');
+    }
+    await cmd('Emulation.setDeviceMetricsOverride',{width:412,height:915,deviceScaleFactor:2,mobile:true});
+  }
+  await cmd('Page.removeScriptToEvaluateOnNewDocument',{identifier});
+}
+
 /* ---------- fim ---------- */
 console.log(linhas.join("\n"));
 console.log(`\n${"─".repeat(60)}`);

@@ -1,6 +1,16 @@
-# LotoLab 4.10 — visual, metas e conferência colorida
+# LotoLab 4.11 — menu corrigido e novo painel por concurso
 
-- **Início → Planejar participação e metas:** orçamento do período, quantidade de concursos e alvo futuro opcional.
+A 4.10 interrompia a inicialização no Android ao tratar o retorno de `addListener` como uma Promise: a ponte nativa pode retornar `{remove}` diretamente. Isso deixava menu e sino sem ação. A 4.11 aceita as duas formas e liga os controles antes dos plugins. Os testes agora reiniciam o app com uma ponte Android simulada e usam toques por coordenadas para abrir e fechar ambos.
+
+- **Novo Início:** identificação 4.11, oito modalidades com cores, último resultado cadastrado e acesso direto a notificações e análises.
+- **Todas as dezenas como meta:** o botão principal abre o plano com a contagem máxima selecionada, sem preencher orçamento nem salvar jogos automaticamente.
+- **Busca de cobertura:** até três seleções com o mesmo limite; conserva a melhor cobertura verificada e para quando a condição está coberta. No caso de jogos simples com meta máxima, uma busca basta: cada jogo distinto cobre um resultado distinto.
+- **Chance do lote:** quando a meta é todas as dezenas, mostra a união exata de resultados cobertos no universo completo. Não multiplica probabilidades de jogos sobrepostos; na +Milionária, distingue dezenas e trevos.
+- **Concurso escolhido:** acompanha jogos explicitamente vinculados àquele concurso, recalcula os acertos com o resultado cadastrado e mostra quantas dezenas faltaram. Não confunde a meta com previsão ou confirmação de prêmio.
+
+## Recursos da 4.10 preservados
+
+- **Início → Definir meta de acertos:** orçamento do período, quantidade de concursos e alvo futuro opcional.
 - **Cobertura por meta:** busca jogos dentro do limite e verifica todos os cenários da base; informa a condição, o piso e se a cobertura é parcial.
 - **Lotomania:** original + espelho, com custo e efeito matemático explícitos.
 - **Sino → Ver exemplo de notificação colorida:** acertos verdes com números brancos; erros em vermelho suave. No Android, expanda a notificação.

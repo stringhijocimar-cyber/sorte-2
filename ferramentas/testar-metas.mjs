@@ -6,6 +6,7 @@ const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
 const ctx=vm.createContext({console});
 vm.runInContext(html.slice(html.indexOf('<script>')+8,html.indexOf('(function iniciar(){')),ctx);
 const api=vm.runInContext('({MODALIDADES,metaPlano,metaFechamento,metaEspelho,metaConferencia,metaValidarConferencia,metaAvisoDados,metaAvisoHtml,metaBolinhas,metaFaixasObservadas,S,metaPlugin,metaRenderPlano})',ctx);
+const foco=vm.runInContext('({metaBuscarMelhor,metaChanceTodas,focoConcurso})',ctx);
 const terminar=g=>{let r;do{r=g.next();}while(!r.done);return r.value;};
 // Enumeração independente do algoritmo e sem máscaras binárias.
 function combos(a,k){if(k===0)return [[]];if(a.length<k)return [];return combos(a.slice(1),k-1).map(s=>[a[0],...s]).concat(combos(a.slice(1),k));}
@@ -69,4 +70,54 @@ test('faixas contam concursos com ocorrência, e não somam bilhetes como evento
   const fs=api.metaFaixasObservadas({serie:[{acertos:[5,5,4]},{acertos:[6,5,4]},{acertos:[0,1,2]}]},'mega-sena');
   assert.equal(fs.find(x=>x.acertos===5).concursos,2);assert.equal(fs.find(x=>x.acertos===6).concursos,1);
   assert.equal(api.metaPlugin(),null);
+});
+for(const tipo of ['objeto','promessa','rejeitada','excecao','ausente']){
+  test('inicialização nativa não trava com listener '+tipo,async()=>{
+    let inscricoes=0,espelhos=0;
+    const handle={remove:async()=>{}};
+    const plugin={destino:async()=>({}),sincronizar:async()=>{}};
+    if(tipo!=='ausente')plugin.addListener=()=>{
+      inscricoes++;
+      if(tipo==='excecao')throw new Error('plugin indisponível');
+      if(tipo==='rejeitada')return Promise.reject(new Error('não registrado'));
+      return tipo==='objeto'?handle:Promise.resolve(handle);
+    };
+    const sandbox=vm.createContext({console,Capacitor:{isNativePlatform:()=>true,isPluginAvailable:()=>true,Plugins:{LotoLabNotificacoes:plugin}},espelharTeste:async()=>{espelhos++;}});
+    vm.runInContext(html.slice(html.indexOf('<script>')+8,html.indexOf('(function iniciar(){')),sandbox);
+    vm.runInContext('espelharParaSegundoPlano=espelharTeste',sandbox);
+    await assert.doesNotReject(()=>vm.runInContext('metaLigarNativo()',sandbox));
+    assert.equal(espelhos,1);
+    if(['objeto','promessa'].includes(tipo)){
+      await vm.runInContext('metaLigarNativo()',sandbox);assert.equal(inscricoes,1);
+    }
+  });
+}
+test('buscas adicionais preservam orçamento e nunca reduzem a cobertura da primeira',()=>{
+  const pool=Array.from({length:12},(_,i)=>i+1),seed='comparar-cobertura';
+  const primeira=terminar(api.metaFechamento('mega-sena',pool,4,2,seed+':0'));
+  const melhor=terminar(foco.metaBuscarMelhor('mega-sena',pool,4,2,seed));
+  assert.ok(melhor.cobertos>=primeira.cobertos);assert.ok(melhor.custo<=12);assert.ok(melhor.buscas<=3);
+  const cenarios=combos(pool,6),acertos=cenarios.map(s=>Math.max(...melhor.jogos.map(j=>j.filter(d=>s.includes(d)).length)));
+  assert.equal(melhor.cobertos,acertos.filter(h=>h>=4).length);assert.equal(melhor.piso,Math.min(...acertos));
+});
+test('meta máxima informa chance exata do lote sem somar resultados sobrepostos',()=>{
+  const mega=terminar(foco.metaBuscarMelhor('mega-sena',[1,2,3,4,5,6,7],6,2));
+  assert.equal(mega.buscas,1);assert.equal(foco.metaChanceTodas(mega),2/50063860);
+  const time=terminar(foco.metaBuscarMelhor('timemania',Array.from({length:12},(_,i)=>i+1),7,3));
+  const uniao=new Set(time.jogos.flatMap(j=>combos([...j],7).map(s=>s.join(','))));
+  const total=Array.from({length:7},(_,i)=>(80-i)/(i+1)).reduce((a,b)=>a*b,1);
+  assert.ok(Math.abs(foco.metaChanceTodas(time)-uniao.size/total)<1e-15);
+  assert.equal(foco.metaChanceTodas({...mega,meta:5}),null);
+});
+test('missão acompanha só o concurso e modalidade declarados, recomputando os acertos',()=>{
+  const jogos=[{id:'a',modalidade:'mega-sena',concursoAlvo:50,dezenas:[1,2,3,4,5,6]},
+    {id:'b',modalidade:'mega-sena',concursoAlvo:49,dezenas:[1,2,3,4,7,8]},
+    {id:'c',modalidade:'quina',concursoAlvo:50,dezenas:[1,2,3,4,5]}];
+  const resultado={modalidade:'mega-sena',concurso:50,data:'2026-09-01',dezenas:[1,2,3,4,7,8]};
+  assert.equal(foco.focoConcurso('mega-sena','',jogos,[]).alvo,null);
+  assert.equal(foco.focoConcurso('mega-sena',50,jogos,[]).melhor,null);
+  const r=foco.focoConcurso('mega-sena',50,jogos,[resultado]);
+  assert.equal(r.jogos,1);assert.equal(r.melhor,4);assert.equal(r.faltam,2);assert.equal(r.atingiu,false);
+  assert.equal(foco.focoConcurso('mega-sena',50,jogos,[{...resultado,dezenas:[1,2,3,4,5,6]}]).atingiu,true);
+  assert.equal(foco.focoConcurso('mega-sena',50,jogos,[resultado,{...resultado,dezenas:[1,2,3,4,5,6]}]).melhor,null);
 });

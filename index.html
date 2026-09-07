@@ -956,6 +956,7 @@ td{padding:6px 7px;border-bottom:1px solid var(--trama)}
 <link rel="stylesheet" href="ui/lotolab-ui-v4-3.css?v=4.3.0" data-lotolab-ui="4.3.0">
 <link rel="stylesheet" href="ui/inteligencia-v4-9.css?v=4.9.0">
 <link rel="stylesheet" href="ui/visual-metas-v4-10.css?v=4.10.0">
+<link rel="stylesheet" href="ui/visual-foco-v4-11.css?v=4.11.0">
 </head>
 <body>
 <header>
@@ -2144,6 +2145,44 @@ function metaEspelho(ds){
   if(jogo.length!==50) throw new Error('Marque exatamente 50 dezenas para criar o espelho.');
   return universo('lotomania').filter(d=>!jogo.includes(d));
 }
+function* metaBuscarMelhor(m,numeros,meta,quantidade,semente='lotolab-411'){
+  const c=MODALIDADES[m];
+  const tentativas=c&&c.min===c.k&&meta===c.k?1:3;
+  let melhor=null, buscas=0;
+  for(let i=0;i<tentativas;i++){
+    const it=metaFechamento(m,numeros,meta,quantidade,semente+':'+i);
+    let r;
+    while(!(r=it.next()).done)yield {...r.value,fase:'Busca '+(i+1)+'/'+tentativas+' · '+r.value.fase};
+    buscas++;
+    const novo=r.value;
+    if(!melhor||novo.cobertos>melhor.cobertos||
+      (novo.cobertos===melhor.cobertos&&(novo.jogos.length<melhor.jogos.length||
+      (novo.jogos.length===melhor.jogos.length&&novo.piso>melhor.piso))))melhor=novo;
+    if(melhor.completo)break;
+  }
+  return {...melhor,buscas};
+}
+function metaChanceTodas(r){
+  const c=MODALIDADES[r.modalidade];
+  // Todos os jogos pertencem à base verificada. Para k acertos, a união dos
+  // cenários cobertos é também exata no universo inteiro, sem dupla contagem.
+  return c&&!r.espelho&&r.meta===c.k?r.cobertos/combinacoes(c.N,c.k):null;
+}
+function focoConcurso(m,alvo,jogos,resultados){
+  const c=MODALIDADES[m],n=Number(alvo);
+  if(!c||!Number.isSafeInteger(n)||n<1)return {alvo:null,jogos:0,melhor:null,faltam:null,atingiu:false};
+  const vinculados=jogos.filter(j=>j.modalidade===m&&Number(j.concursoAlvo)===n);
+  const r=intHistorico(m,resultados).hist.find(r=>r.concurso===n);
+  const conferidos=r?vinculados.map(j=>metaValidarConferencia({modalidade:m,concurso:n,dezenas:j.dezenas,sorteadas:r.dezenas})).filter(Boolean):[];
+  const melhor=conferidos.length?Math.max(...conferidos.map(x=>x.acertos)):null;
+  return {alvo:n,jogos:vinculados.length,melhor,faltam:melhor===null?null:c.k-melhor,atingiu:melhor===c.k};
+}
+function focoAcompanhamento(m){
+  const c=MODALIDADES[m],r=focoConcurso(m,metaConfig(m).concurso,S.jogos,S.resultados);
+  return `<div class="foco-acompanhamento"><div><span class="foco-label">${r.alvo?'CONCURSO '+r.alvo:'CONCURSO A DEFINIR'}</span><h3>${r.melhor===null?'Sua meta, acompanhada':r.atingiu?'Todas as dezenas conferidas':r.melhor+' de '+c.k+' dezenas'}</h3></div>
+    <p>${r.alvo?(r.melhor===null?r.jogos+' jogos vinculados · '+(r.jogos?'aguardando resultado cadastrado.':'salve jogos para este concurso.'):'Melhor jogo vinculado: '+r.melhor+' acertos. '+(r.atingiu?'Meta das dezenas atingida.':r.faltam+' dezenas até a meta.')):'Escolha um concurso no plano. Depois, veja os acertos e quantas dezenas faltaram para a meta.'}</p>
+    ${r.melhor!==null?'<div class="foco-progresso" role="meter" aria-label="Dezenas acertadas no melhor jogo" aria-valuemin="0" aria-valuemax="'+c.k+'" aria-valuenow="'+r.melhor+'"><i style="width:'+(r.melhor/c.k*100)+'%"></i></div><small>Conferência das dezenas do resultado cadastrado; campos adicionais e prêmio precisam ser conferidos no bilhete.</small>':''}</div>`;
+}
 function metaFaixasObservadas(linha,m){
   const c=MODALIDADES[m];
   return c.faixas.map(h=>({acertos:h,concursos:linha.serie.filter(r=>r.acertos.some(n=>n===h)).length}));
@@ -2193,10 +2232,20 @@ async function metaAbrirDestino(){
   const p=metaPlugin();if(!p)return;
   try{const r=await p.destino();if(!MODALIDADES[r.modalidade])return;S.modalidade=r.modalidade;S.jogoAberto=r.jogo||null;irParaTela('jogos');}catch(e){}
 }
-function metaLigarNativo(){
-  const p=metaPlugin();if(!p)return;
-  p.addListener('abrirJogo',metaAbrirDestino).catch(()=>{});
-  metaAbrirDestino();espelharParaSegundoPlano();
+let _metaOuvindo=false;
+async function metaLigarNativo(){
+  const p=metaPlugin();if(!p)return false;
+  // A ponte injetada no Android devolve {remove}; o proxy JS pode devolver
+  // Promise<handle>. Aceita ambos, sem deixar o plugin bloquear a navegação.
+  try{
+    if(!_metaOuvindo&&typeof p.addListener==='function'){
+      await Promise.resolve(p.addListener('abrirJogo',metaAbrirDestino));
+      _metaOuvindo=true;
+    }
+  }catch(e){ /* O sino interno continua disponível se o evento nativo falhar. */ }
+  await metaAbrirDestino();
+  try{await espelharParaSegundoPlano();}catch(e){}
+  return true;
 }
 function metaExemploAviso(){
   return {modalidade:'mega-sena',concurso:1,jogo:'demonstracao',dezenas:[3,12,25,33,47,58],sorteadas:[3,12,25,33,40,51],acertos:4};
@@ -2213,7 +2262,7 @@ async function metaTestarAviso(){
 
 const T = {};
 S.metaConfig={};S.metaFechamentos={};let metaTrabalho=0;
-function metaConfig(m){return S.metaConfig[m]||(S.metaConfig[m]={limite:'',concursos:2,meta:MODALIDADES[m].k-1,pool:'',concurso:''});}
+function metaConfig(m){return S.metaConfig[m]||(S.metaConfig[m]={limite:'',concursos:2,meta:MODALIDADES[m].k,pool:'',concurso:''});}
 const META_GUIA={
   'mega-sena':['Quadra, quina e sena','Jogos simples diferentes cobrem resultados principais diferentes. Fechamentos podem oferecer um piso de acertos se as seis sorteadas estiverem na base escolhida.'],
   lotofacil:['11 a 15 acertos','Confira a cobertura de 13, 14 ou 15 acertos por enumeração. Mais dezenas na base ampliam o custo; uma base escolhida por frequência não fica mais provável.'],
@@ -2244,17 +2293,18 @@ function metaRenderFechamento(r){
   const c=MODALIDADES[r.modalidade];
   return `<article class="meta-certificado"><span class="int-eyebrow">COBERTURA VERIFICADA</span><h3>${r.completo?'Condição totalmente coberta':'Cobertura parcial: '+nf(r.cobertura*100,2)+'%'}</h3>
     <p>${inf(r.cobertos)} de ${inf(r.total)} cenários da base atingem <strong>ao menos ${r.meta} acertos</strong>. Piso verificado: ${r.piso}.</p>
+    ${metaChanceTodas(r)!==null?`<div class="foco-chance"><b>Todas as ${c.k} dezenas no lote</b><strong>${metaUmaEm(metaChanceTodas(r))}</strong><small>Chance exata por sorteio no universo completo, com ${inf(r.cobertos)} resultados distintos cobertos. ${c.trevos?'Somente dezenas: os trevos não estão incluídos.':''}</small></div>`:''}
     <p class="int-help">Base verificada: ${r.pool.map(pad).join(" · ")}.</p>
     <p class="nota"><strong>Condição:</strong> as ${c.k} dezenas sorteadas precisam estar entre as ${r.pool.length} da sua base. Chance dessa condição: ${metaUmaEm(r.chanceCondicao)} por sorteio. ${c.trevos?'Trevos não estão incluídos na cobertura.':''}</p>
     <div class="int-price"><span>${r.jogos.length} jogos simples</span><strong>${brl(r.custo)}</strong></div>
-    <p class="int-help">O algoritmo busca cobrir novos cenários a cada jogo, entre até 800 candidatas. A verificação de cobertura é exata; a seleção pode não ser a menor possível. ${r.completo?'Parou ao cobrir a condição para evitar jogos adicionais.':'O limite não completou a cobertura; não há garantia de atingir a meta.'}</p>
+    <p class="int-help">${r.buscas?'Melhor cobertura entre '+r.buscas+' busca(s), com o mesmo limite. ':''}O algoritmo busca cobrir novos cenários a cada jogo, entre até 800 candidatas por busca. A verificação de cobertura é exata; a seleção pode não ser a menor possível. ${r.completo?'Parou ao cobrir a condição para evitar jogos adicionais.':'O limite não completou a cobertura; não há garantia de atingir a meta.'}</p>
     ${r.jogos.map((ds,i)=>`<div class="meta-jogo"><b>Jogo ${i+1}</b><div class="dezenas">${ds.map(d=>`<span class="dz marcada">${pad(d)}</span>`).join('')}</div></div>`).join('')}
     <button class="acao" id="meta-salvar-fechamento">Salvar para acompanhar</button><div id="meta-salvou" role="status"></div></article>`;
 }
 T.plano=()=>{
   const m=S.modalidade,c=MODALIDADES[m],o=metaConfig(m),g=META_GUIA[m];
   return `<section class="meta-hero"><div class="meta-orbita" aria-hidden="true"><span>01</span><span>07</span><span>25</span></div><span class="int-eyebrow">LOTO LAB / PLANO & METAS</span><h2>Seu objetivo,<br>em números.</h2><p>Escolha a faixa. Verifique a cobertura.<br>Acompanhe os concursos que fazem sentido para você.</p></section>
-    <section class="carta meta-form"><div class="int-section-title"><h2>Seu plano de participação</h2><span>${esc(c.nome)}</span></div>
+    ${focoAcompanhamento(m)}<section class="carta meta-form"><div class="int-section-title"><h2>Seu plano de participação</h2><span>${esc(c.nome)}</span></div>
       <div class="int-grid"><label class="campo" for="meta-limite">Limite para o período (R$)<input id="meta-limite" type="number" min="0" max="1000000" step="0.01" inputmode="decimal" value="${esc(o.limite)}" placeholder="Definido por você"></label><label class="campo" for="meta-concursos">Concursos que pretende jogar<input id="meta-concursos" type="number" min="1" max="31" value="${o.concursos}" inputmode="numeric"></label></div>
       <label class="campo" for="meta-concurso">Concurso para acompanhar (opcional)<input id="meta-concurso" type="number" min="1" step="1" value="${esc(o.concurso)}" inputmode="numeric" placeholder="Número de um concurso futuro"></label>
       <p class="int-help">Pode acompanhar os resultados sem apostar. Com concurso informado, o lote salvo será conferido apenas nele. O app não realiza apostas.</p><div id="meta-plano">${metaRenderPlano()}</div></section>
@@ -2280,7 +2330,7 @@ function metaLigarAcoes(){
     if(novos.length&&!Guardar.gravar('jogos',S.jogos.concat(novos)))throw new Error('Não foi possível salvar neste aparelho.');S.jogos.push(...novos);espelharParaSegundoPlano();$('#meta-salvou').textContent=novos.length+' jogos novos salvos para acompanhar.';b.disabled=true;
   }catch(e){$('#meta-progresso').textContent=e.message;}};};guardar();
   const espelho=$('#meta-espelho');if(espelho)espelho.onclick=()=>{try{ler();const ds=intDezenas(o.pool,m),outro=metaEspelho(ds);const p=metaPlano(m,Number(o.limite),o.concursos);if(o.limite===''||p.porConcurso<2)throw new Error('O limite por concurso precisa cobrir os dois jogos.');alvo();S.metaFechamentos[m]={modalidade:m,pool:universo(m),meta:10,jogos:[ds,outro],total:1,cobertos:1,piso:10,cobertura:1,completo:true,custo:6,chanceCondicao:1,espelho:true};$('#meta-fechamento').innerHTML='<p class="nota">Original e espelho: se um faz h acertos, o outro faz 20 − h. Piso 10, que não é faixa de prêmio. Dois jogos: R$ 6,00.</p>'+[ds,outro].map((ns,i)=>'<div class="meta-jogo"><b>'+ (i?'Espelho':'Original')+'</b><div class="dezenas">'+ns.map(d=>'<span class="dz marcada">'+pad(d)+'</span>').join('')+'</div></div>').join('')+'<button class="acao" id="meta-salvar-fechamento">Salvar para acompanhar</button><div id="meta-salvou" role="status"></div>';guardar();}catch(e){$('#meta-progresso').textContent=e.message;}};
-  const b=$('#meta-fechar');if(b)b.onclick=()=>{try{ler();alvo();const p=metaPlano(m,Number(o.limite),o.concursos);if(o.limite===''||p.porConcurso<1)throw new Error('Defina um limite que cubra pelo menos um jogo por concurso.');const it=metaFechamento(m,o.pool,o.meta,p.porConcurso),token=++metaTrabalho; b.disabled=true;const saida=$('#meta-progresso');
+  const b=$('#meta-fechar');if(b)b.onclick=()=>{try{ler();alvo();const p=metaPlano(m,Number(o.limite),o.concursos);if(o.limite===''||p.porConcurso<1)throw new Error('Defina um limite que cubra pelo menos um jogo por concurso.');const it=metaBuscarMelhor(m,o.pool,o.meta,p.porConcurso),token=++metaTrabalho; b.disabled=true;const saida=$('#meta-progresso');
     const passo=()=>{if(token!==metaTrabalho||S.tela!=='plano'||S.modalidade!==m||!saida.isConnected)return;try{const r=it.next();if(r.done){S.metaFechamentos[m]=r.value;$('#meta-fechamento').innerHTML=metaRenderFechamento(r.value);saida.textContent='Verificação concluída.';b.disabled=false;guardar();return;}saida.innerHTML=barraProgresso(r.value.feitos,r.value.total,r.value.fase);setTimeout(passo,0);}catch(e){saida.textContent=e.message;b.disabled=false;}};passo();
   }catch(e){$('#meta-progresso').textContent=e.message;}};
 }
@@ -3198,58 +3248,30 @@ function atalhos(){
     </button>`).join("")}</div>`;
 }
 
-/* Tela Início — marcação copiada do pacote sorte2_mockup_exact, com os dados
-   reais do app no lugar dos de demonstração. Nenhuma classe foi renomeada e
-   nenhuma cor trocada: se a marcação é a dele e o CSS é o dele, o resultado é
-   igual por construção, e não por semelhança. */
+/* Painel 4.11: modalidade, objetivo e resultado disponíveis na primeira tela. */
+const FOCO_CORES={'mega-sena':'#27894d',lotofacil:'#9257de',quina:'#4560d7',lotomania:'#d66e20','dupla-sena':'#c74651','dia-de-sorte':'#a87a16',timemania:'#558322','mais-milionaria':'#773acd'};
 T.inicio = () => {
-  const mem = S.pesquisaAdaptativa[S.modalidade];
-  const conc = mem && mem.conclusao;
-  const concursos = historicoDe(S.modalidade).length;
-  return `
-  <section class="hero-card">
-    <div>
-      <h2>IA ADAPTATIVA</h2>
-      <p>Motor de pesquisa estatística</p>
-      <button class="primary-btn" data-atalho="sugestoes">CRIAR SUGESTÕES</button>
-      <button class="int-home-link" data-atalho="plano">Planejar participação e metas →</button>
-    </div>
-    <div class="brain"></div>
-  </section>
-
-  <section class="quick-grid">
-    <button class="quick" data-atalho="pesquisa">
-      <div class="quick-icon"><svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg></div>
-      <div><b>Analisar</b><small>IA Adaptativa</small></div></button>
-    <button class="quick" data-atalho="jogos">
-      <div class="quick-icon"><svg viewBox="0 0 24 24" aria-hidden="true">
-        <rect x="3.5" y="4" width="17" height="17" rx="2.5"/><path d="M8 9.5h8M8 14h5"/></svg></div>
-      <div><b>Meus Jogos</b><small>Conferir e gerenciar</small></div></button>
-    <button class="quick" data-atalho="resultados">
-      <div class="quick-icon"><svg viewBox="0 0 24 24" aria-hidden="true">
-        <rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9.5h18M8 3v3M16 3v3"/></svg></div>
-      <div><b>Resultados</b><small>Ver concursos</small></div></button>
-  </section>
-
-  ${/* Os quatro números do mockup. Os dois últimos falam do que é DA PESSOA —
-        jogos salvos e prêmios de hoje — e não do motor: quem abre o app quer
-        primeiro saber de si. As medidas do motor têm a tela de Análise
-        inteira para elas. */""}
-  <section class="panel">
-    <div class="panel-title"><h3>Resumo rápido</h3>
-      <span>${mem && mem.geracao ? "Atualizado agora há pouco" : "Aguardando análise"}</span></div>
-    <div class="kpi-grid">
-      <div class="mini-card"><strong>${inf(Object.keys(MODALIDADES).length)}</strong>
-        <small>Modalidades ativas</small></div>
-      <div class="mini-card"><strong>${inf(concursos)}</strong>
-        <small>Concursos analisados</small></div>
-      <div class="mini-card"><strong class="teal">${inf(S.jogos.length)}</strong>
-        <small>Jogos salvos</small></div>
-      ${/*<aposta>*/""}<div class="mini-card"><strong class="${premiosDeHoje() ? "teal" : ""}">${inf(premiosDeHoje())}</strong>
-        <small>Prêmios hoje</small></div>${/*</aposta>*/""}
-    </div>
-  </section>`;
+  const m=S.modalidade,c=MODALIDADES[m],r=ultimoResultado(m),concursos=historicoDe(m).length;
+  const avisos=S.avisos.filter(a=>!a.lido).length;
+  return `<div class="foco-inicio" style="--foco-cor:${FOCO_CORES[m]}">
+    <div class="foco-boasvindas"><div><span class="foco-label">SEU LABORATÓRIO</span><${podeVoltar()?'h2':'h1'}>Um concurso.<br>Uma meta clara.</${podeVoltar()?'h2':'h1'}></div><span class="foco-versao">4.11</span></div>
+    <div class="foco-modalidades" role="group" aria-label="Modalidades na tela inicial">${Object.entries(MODALIDADES).map(([id,v])=>`<button data-mod="${id}" aria-pressed="${id===m}" style="--foco-cor:${FOCO_CORES[id]}">${esc(v.nome)}</button>`).join('')}</div>
+    <section class="foco-hero"><div class="foco-hero-topo"><span class="foco-label">FOCO EM TODAS AS DEZENAS</span><span class="foco-tag">${esc(c.nome)}</span></div>
+      <div class="foco-objetivo"><div><h2>Seu próximo jogo<br>começa pela meta.</h2><p>Cobertura verificada, limite definido e acompanhamento do concurso escolhido.</p></div><div class="foco-alvo" aria-label="Meta de ${c.k} dezenas"><strong>${c.k}</strong><span>de ${c.k} dezenas</span></div></div>
+      <button class="acao foco-primary" data-atalho="plano" data-meta-maxima>Definir meta de ${c.k} acertos <span aria-hidden="true">→</span></button>
+      <button class="foco-secundaria" data-atalho="sugestoes">Criar sugestões com meus critérios <span aria-hidden="true">↗</span></button>
+    </section>
+    ${focoAcompanhamento(m)}
+    <section class="foco-ultimo"><div class="foco-section-title"><div><span class="foco-label">ÚLTIMO RESULTADO NA BASE</span><h3>${esc(c.nome)}</h3></div><button class="foco-texto-btn" data-atalho="resultados">Ver todos ↗</button></div>
+      ${r?`<p class="foco-data">Concurso ${r.concurso} · ${esc(String(r.data||'').split('-').reverse().join('/'))}</p><div class="foco-bolas" aria-label="Dezenas do último resultado">${r.dezenas.map(d=>`<span>${pad(d)}</span>`).join('')}</div>`:'<p class="foco-data">Importe ou atualize os concursos em Resultados para mostrar as dezenas aqui.</p>'}
+    </section>
+    <section class="foco-acessos" aria-label="Acesso rápido">
+      <button data-atalho="pesquisa"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><b>Análises</b><span>Comparar hipóteses</span></button>
+      <button data-atalho="jogos"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="3"/><path d="M8 9h8M8 14h5"/></svg><b>Meus jogos</b><span>${S.jogos.length} salvos no aparelho</span></button>
+      <button data-abrir-avisos><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 8-3 8h18s-3-1-3-8M10 21h4"/></svg><b>Notificações</b><span>${avisos?avisos+' não lidas':'Ver conferências'}</span></button>
+    </section>
+    <div class="foco-rodape"><span><b>${inf(concursos)}</b> concursos de ${esc(c.nome)} na base</span><span>8 modalidades</span></div>
+  </div>`;
 };
 
 /* "Prêmios hoje" conta os AVISOS de prêmio registrados hoje, e não uma varredura
@@ -8820,8 +8842,14 @@ function acoes(){
     el.onkeydown = ev => { if(ev.key==="Enter"||ev.key===" "){ ev.preventDefault(); escolher(); } };
   });
 
+  document.querySelectorAll('[data-abrir-avisos]').forEach(b=>b.onclick=()=>$('#btn-avisos').click());
+
   /* --- motor de pesquisa --- */
   document.querySelectorAll("[data-atalho]").forEach(b => b.onclick = () => {
+    if(b.hasAttribute('data-meta-maxima')){
+      const o=metaConfig(S.modalidade);o.meta=MODALIDADES[S.modalidade].k;
+      Guardar.gravar('metaConfig',S.metaConfig);
+    }
     irParaTela(b.dataset.atalho);
   });
 
@@ -9325,6 +9353,7 @@ function trocarModalidade(mod){
   S.modalidade = mod; S.tamanho = null; REFERENCIA = {};
   Guardar.gravar("modalidade", S.modalidade);
   const g = $("#gaveta"); if(g) g.dataset.aberta = "0";
+  $("#btn-menu")?.setAttribute("aria-expanded","false");
   pintar();
 }
 
@@ -9448,7 +9477,7 @@ function pintar(){
        </div>`
     : `<div class="titulo"><h1>${esc(tela.titulo)}</h1><p>${esc(tela.sub)}</p></div>`;
 
-  $("#tela").innerHTML = segmento + cabecalho +
+  $("#tela").innerHTML = segmento + (tela.id==="inicio"&&!podeVoltar()?"":cabecalho) +
     (comProximo.includes(tela.id) ? cartaoProximo(S.modalidade) : "") +
     T[tela.id]() +
     `<div class="aviso-fixo">Nenhum método aumenta a chance de acertar.<br>
@@ -9518,61 +9547,8 @@ function normalizarConcursos(){
   return ajustes;
 }
 
-(function iniciar(){
-  S.metaConfig = Guardar.ler("metaConfig", {});
-  S.jogos = Guardar.ler("jogos", []);
-  S.resultados = Guardar.ler("resultados", []);
-  normalizarConcursos();
-  S.tema = Guardar.ler("tema", "escuro");
-  S.avisos = Guardar.ler("avisos", []);
-  S.teimosinhas = Guardar.ler("teimosinhas", []);
-  S.marcadas = Guardar.ler("marcadas", {});
-  S.aprendizado = Guardar.ler("aprendizado", {});
-  S.historicoAprendizado = Guardar.ler("historicoAprendizado", []);
-  S.autoAnalise = Guardar.ler("autoAnalise", true);
-  S.calibracao = Guardar.ler("calibracao", {});
-  S.buscaAutomatica = Guardar.ler("buscaAutomatica", true);
-  S.avisarSorteio = Guardar.ler("avisarSorteio", true);
-  S.pesquisaAdaptativa = Guardar.ler("pesquisaAdaptativa", {});
-  S.pesquisaAutomatica = Guardar.ler("pesquisaAutomatica", true);
-  S.bancadaAlvos = Guardar.ler("bancadaAlvos", 10);
-  S.ultimaBusca = Guardar.ler("ultimaBusca", {});
-  S.modalidade = Guardar.ler("modalidade", S.modalidade);
-  document.documentElement.dataset.tema = S.tema;
-  /* A pilha de navegação NÃO é lida do armazenamento, de propósito: abrir o app
-     e encontrar uma seta apontando para uma tela da semana passada não é
-     memória útil, é confusão. Cada abertura começa na raiz. */
-  S.pilha = [];
-  /* Conferir na abertura: quem digitou um resultado e fechou o app antes de
-     conferir os jogos encontra tudo conferido ao voltar. */
-  conferenciaAutomatica();
-  pintar();
-  ligarBotaoVoltarDoAndroid();
-  ligarToqueNaNotificacao();
-  metaLigarNativo();
-  /* Análises pendentes na abertura. Sem isto, quem já tinha histórico ficaria
-     esperando o próximo concurso para ver a primeira análise — e quem fechou o
-     app no meio de uma análise nunca a veria terminar. Roda depois do pintar()
-     para a tela aparecer primeiro; o processamento é fatiado e não trava. */
-  if(S.autoAnalise !== false) analisarPendentes();
-  /* Busca diária em segundo plano. Não bloqueia a abertura e não avisa quando
-     falha: sem sinal é o caso comum, e um aviso a cada abertura offline
-     treinaria a pessoa a ignorar o sino. */
-  buscaDiaria().then(r => { if(r.novos) pintar(); }).catch(()=>{});
-
-  /* E de novo toda vez que o app volta ao primeiro plano. Rodar só na abertura
-     significa que quem deixa o app aberto durante a noite não recebe o sorteio
-     das 20h — o app estava lá, ligado, e não olhou. Voltar ao primeiro plano é
-     o momento natural: é quando a pessoa quer ver.
-
-     Sem risco de martelar o serviço: buscaDiaria() já decide sozinha se está
-     na hora, e responde {tentadas:0} quando não está. */
-  document.addEventListener("visibilitychange", () => {
-    if(document.visibilityState !== "visible") return;
-    metaAbrirDestino();
-    buscaDiaria().then(r => { if(r.novos) pintar(); }).catch(()=>{});
-  });
-
+// Os controles essenciais são ligados antes de qualquer integração nativa.
+function ligarControlesCabecalho(){
   /* Sino e folha de avisos. Ficam fora de pintar() porque vivem no cabeçalho,
      que não é redesenhado a cada troca de tela. */
   const folha = $("#folha-avisos");
@@ -9620,6 +9596,64 @@ function normalizarConcursos(){
       }
     }
   });
+}
+
+(function iniciar(){
+  S.metaConfig = Guardar.ler("metaConfig", {});
+  S.jogos = Guardar.ler("jogos", []);
+  S.resultados = Guardar.ler("resultados", []);
+  normalizarConcursos();
+  S.tema = Guardar.ler("tema", "escuro");
+  S.avisos = Guardar.ler("avisos", []);
+  S.teimosinhas = Guardar.ler("teimosinhas", []);
+  S.marcadas = Guardar.ler("marcadas", {});
+  S.aprendizado = Guardar.ler("aprendizado", {});
+  S.historicoAprendizado = Guardar.ler("historicoAprendizado", []);
+  S.autoAnalise = Guardar.ler("autoAnalise", true);
+  S.calibracao = Guardar.ler("calibracao", {});
+  S.buscaAutomatica = Guardar.ler("buscaAutomatica", true);
+  S.avisarSorteio = Guardar.ler("avisarSorteio", true);
+  S.pesquisaAdaptativa = Guardar.ler("pesquisaAdaptativa", {});
+  S.pesquisaAutomatica = Guardar.ler("pesquisaAutomatica", true);
+  S.bancadaAlvos = Guardar.ler("bancadaAlvos", 10);
+  S.ultimaBusca = Guardar.ler("ultimaBusca", {});
+  S.modalidade = Guardar.ler("modalidade", S.modalidade);
+  document.documentElement.dataset.tema = S.tema;
+  /* A pilha de navegação NÃO é lida do armazenamento, de propósito: abrir o app
+     e encontrar uma seta apontando para uma tela da semana passada não é
+     memória útil, é confusão. Cada abertura começa na raiz. */
+  S.pilha = [];
+  ligarControlesCabecalho();
+  /* Conferir na abertura: quem digitou um resultado e fechou o app antes de
+     conferir os jogos encontra tudo conferido ao voltar. */
+  conferenciaAutomatica();
+  pintar();
+  ligarBotaoVoltarDoAndroid();
+  ligarToqueNaNotificacao();
+  metaLigarNativo();
+  /* Análises pendentes na abertura. Sem isto, quem já tinha histórico ficaria
+     esperando o próximo concurso para ver a primeira análise — e quem fechou o
+     app no meio de uma análise nunca a veria terminar. Roda depois do pintar()
+     para a tela aparecer primeiro; o processamento é fatiado e não trava. */
+  if(S.autoAnalise !== false) analisarPendentes();
+  /* Busca diária em segundo plano. Não bloqueia a abertura e não avisa quando
+     falha: sem sinal é o caso comum, e um aviso a cada abertura offline
+     treinaria a pessoa a ignorar o sino. */
+  buscaDiaria().then(r => { if(r.novos) pintar(); }).catch(()=>{});
+
+  /* E de novo toda vez que o app volta ao primeiro plano. Rodar só na abertura
+     significa que quem deixa o app aberto durante a noite não recebe o sorteio
+     das 20h — o app estava lá, ligado, e não olhou. Voltar ao primeiro plano é
+     o momento natural: é quando a pessoa quer ver.
+
+     Sem risco de martelar o serviço: buscaDiaria() já decide sozinha se está
+     na hora, e responde {tentadas:0} quando não está. */
+  document.addEventListener("visibilitychange", () => {
+    if(document.visibilityState !== "visible") return;
+    metaAbrirDestino();
+    buscaDiaria().then(r => { if(r.novos) pintar(); }).catch(()=>{});
+  });
+
   carregarCalibracao().then(()=>{ if(CALIBRACAO && S.tela==="gerar") pintar(); });
   /* O try/catch e a checagem de objeto não são zelo excessivo: um navegador em
      que "serviceWorker" existe na chave mas vem indefinido — modo privativo,

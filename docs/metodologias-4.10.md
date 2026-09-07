@@ -57,3 +57,13 @@ No Android, a notificação expandida contém uma imagem desenhada no próprio a
 O executor nativo agenda conferência periódica com WorkManager, a cada 30 minutos, condicionada a rede e bateria. A execução pode ser adiada pelo Android; não promete alerta no minuto do sorteio. Consulta o último resultado público da CAIXA para cada modalidade acompanhada, valida dezenas e datas e suprime avisos repetidos. Após a transferência do estado para o executor nativo, o runner antigo é desativado para evitar duplicações. Sem suporte nativo, a conferência interna continua funcionando. [Documentação WorkManager](https://developer.android.com/develop/background-work/background-tasks/persistent/getting-started).
 
 Testes: `node ferramentas/testar-metas.mjs`, suítes existentes do motor e interface, `./gradlew testDebugUnitTest assembleDebug`, e inspeção do conteúdo final do APK. A aparência final da notificação ainda deve ser conferida no aparelho e na versão Android usada.
+
+## Atualização 4.11
+
+O plano inicia na meta de todas as dezenas. Para metas inferiores ou volantes com mais dezenas do que o sorteio, são tentadas até três seleções sobre a mesma base e dentro do mesmo limite. O desempate usa quantidade de cenários cobertos, menor quantidade de jogos e maior piso. Cada seleção é verificada por enumeração; isso não demonstra que seja ótima. A busca para ao cobrir a condição. Jogos simples mirando todas as dezenas precisam de uma só busca porque cada combinação distinta cobre um resultado principal distinto.
+
+Quando a meta é k acertos e os jogos pertencem à base enumerada, a probabilidade exata de o lote conter todas as sorteadas é `cenários cobertos / C(N,k)`. O cálculo conta a união dos resultados sem duplicatas, inclusive na Timemania. Para +Milionária ele trata só dezenas; os trevos continuam necessários para a faixa principal. Para metas inferiores, não extrapola a cobertura condicional ao universo inteiro.
+
+O painel de acompanhamento lê apenas jogos vinculados explicitamente ao concurso e à modalidade escolhidos. Usa o resultado cadastrado validado, rejeita concursos conflitantes e recalcula interseções. Mostra acertos observados e a distância até k; não apresenta uma porcentagem de previsão.
+
+A correção do menu/sino decorre do retorno síncrono de `addListener` na [ponte nativa do Capacitor 6.2.1](https://github.com/ionic-team/capacitor/blob/6.2.1/core/native-bridge.ts). O retorno é normalizado com `Promise.resolve`, e uma falha no plugin não impede registrar as ações do cabeçalho. Há testes dos retornos objeto, Promise, rejeição, exceção e método ausente, além da inicialização completa e toques em Chrome com ponte simulada. Isso não substitui a conferência em aparelho físico.
