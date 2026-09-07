@@ -61,3 +61,13 @@ html[data-tema="claro"] .meta-certificado h3{color:#32234a!important}
 .casa.acertou::before{background:#157d47!important;border-radius:50%!important;box-shadow:none!important;inset:8%!important}
 .casa.errou::before{background:#fce6e8!important;border:1px solid #e6aeb6;border-radius:50%!important;inset:8%!important}
 .casa.acertou span{color:#fff!important}.casa.errou span{color:#922d3c!important}
+
+/* A mesma escala de superfícies em toda a aplicação. As bolinhas têm raio próprio. */
+:root{--ll43-r-superficie:18px}
+.hero-card.hero-card,.carta,.panel,.painel,.nota,.ficha,.kpi,.card,.activity-item,.item,.draw-card,.concurso,.metric,.sum-card,.chart-card,.pq-grafico,.mini-card.mini-card,.resumo .kpi{border-radius:18px!important}
+
+/* O texto da lista de avisos não pode desfazer o alinhamento das dezenas. */
+#corpo-avisos .resultado-bolas .dz{display:inline-flex!important;align-items:center!important;justify-content:center!important;text-align:center!important;line-height:1!important;padding:0!important;font-size:.84rem!important}
+.meta-form .int-section-title h2,.meta-guia>h2{font-size:1rem!important;letter-spacing:-.02em!important;line-height:1.3}
+.meta-form .int-section-title>span{white-space:nowrap;flex-shrink:0}
+@media(max-width:599px){.meta-orbita{display:none}.meta-hero p{max-width:none}}
