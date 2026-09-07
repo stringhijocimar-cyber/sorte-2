@@ -1,12 +1,12 @@
 {
   "product": "LotoLab",
-  "version": "4.3.2",
-  "versionLabel": "V4.3",
-  "sourceBranch": "main",
-  "visualLayer": "Mockup Fidelity V4 + approved mockup UI V4.3",
+  "version": "4.9.0",
+  "versionLabel": "V4.9",
+  "sourceBranch": "codex/inteligencia-sugestoes-v4.9",
+  "visualLayer": "Central de sugestões 4.9 sobre o visual 4.3",
   "android": {
-    "versionCode": 9,
-    "versionName": "4.3.2"
+    "versionCode": 17,
+    "versionName": "4.9.0"
   },
   "versionFiles": [
     "VERSION",
@@ -15,7 +15,7 @@
     "android/app/build.gradle"
   ],
   "releaseState": "source-ready",
-  "notes": "Manifesto canônico da versão atual do código. A V4.3 aplica ao app real o visual aprovado, com identidade escura/roxa, cores de contexto por modalidade e status verde/amarelo dos resultados históricos.",
+  "notes": "Integra a versão publicada 4.8.0, corrige custos e adiciona sugestões em lote, restrições, orçamento, análise de frequências e comparação temporal.",
   "editions": [
     {
       "name": "LotoLab 4.3.0",
