@@ -139,6 +139,7 @@ const contexto = {
   window: { matchMedia: () => ({ matches: false, addEventListener() {} }),
             scrollTo() {}, addEventListener() {} },
   fetch: () => Promise.reject(new Error("sem rede — proposital")),
+  AbortController,
   setTimeout, clearTimeout, requestAnimationFrame: (f) => setTimeout(f, 0),
   Math: mathSemeado(), Date, JSON, Number, String, Array, Object, Map, Set, Error, isNaN,
   parseInt, parseFloat, Promise, Intl,
@@ -194,6 +195,13 @@ const EXPOSTOS = [
   "porDezena", "vereditoDasDezenas", "convergenciaDoPlacar",
   "panoramaDoLaboratorio", "tiraDeAprendizado", "registrarAnalise",
   "TETO_HISTORICO_APRENDIZADO",
+  "dezenasRecentes", "sobreposicaoDoAcaso", "repeticaoDoJogo", "daParaEvitar",
+  "vereditoDaRepeticao", "CONCURSOS_RECENTES", "gerarAntirepeticao", "gerarUniforme",
+  "ordemDeFontes", "FONTES", "buscarNaCaixa", "buscarComLimite", "TEMPO_LIMITE_FONTE",
+  "buscarHistorico", "completarAPonta", "MAXIMO_A_EMENDAR",
+  "buscaDiaria", "sorteioPendente", "ultimoSorteioEsperado",
+  "espelharParaSegundoPlano", "ETIQUETA_SEGUNDO_PLANO", "faixaAtingida", "SLUG_CAIXA",
+  "INTERVALO_BUSCA", "INTERVALO_BUSCA_PENDENTE", "HORA_DE_PUBLICACAO",
 ];
 const epilogo = `\n;globalThis.__motor = {${EXPOSTOS.map((n) => `${n}: typeof ${n} !== "undefined" ? ${n} : undefined`).join(", ")}};\n`;
 vm.runInContext(fonte + epilogo, contexto, { filename: "index.html:script" });
@@ -1806,10 +1814,10 @@ secao("17. Perfil do jogo");
   checar("raro é sinalizado a favor, não contra",
     contexto.lerTipicidade(0.001).rotulo === "raro" &&
     contexto.lerTipicidade(0.001).cor === "var(--acaso)");
-  checar("a leitura de muito comum fala em dividir com mais gente",
-    /mais gente para dividir/.test(contexto.lerTipicidade(0.5).leitura));
-  checar("a leitura de raro fala em dividir com menos gente",
-    /menos gente para dividir/.test(contexto.lerTipicidade(0.001).leitura));
+  checar("a leitura de muito comum descreve o histórico sem inferir apostas",
+    contexto.lerTipicidade(0.5).leitura === "configuração muito frequente no histórico");
+  checar("a leitura de raro descreve o histórico sem estimar rateio",
+    contexto.lerTipicidade(0.001).leitura === "configuração rara no histórico");
   checar("nenhuma leitura promete acerto",
     [0.5, 0.1, 0.03, 0.001].every(f =>
       !/chance|mais prov|melhor jogo|ganhar/i.test(contexto.lerTipicidade(f).leitura)));
@@ -2212,8 +2220,12 @@ secao("22. Sugestão do sistema e retirada do rateio");
   checar("a medida mais rara da sugestão é mais comum que a de um jogo qualquer",
     s1.menor > s1.medianaDoAcaso,
     `sugestão ${(s1.menor * 100).toFixed(1)}% vs acaso ${(s1.medianaDoAcaso * 100).toFixed(1)}%`);
-  checar("e nenhuma das medidas ficou abaixo desse mínimo",
-    s1.linhas.every((l) => l.fracao >= s1.menor - 1e-12));
+  /* Vale para as medidas QUE ESCOLHEM. "Menor dezena" e "Maior dezena" saíram
+     do critério — o valor mais comum das duas é o próprio extremo do volante,
+     e mantê-las dentro fixava o 01 e o 60 em quase toda sugestão. Elas
+     continuam na tabela e podem, sim, ficar abaixo do mínimo declarado. */
+  checar("e nenhuma das medidas que escolhem ficou abaixo desse mínimo",
+    s1.linhas.filter((l) => !l.naoEscolhe).every((l) => l.fracao >= s1.menor - 1e-12));
   checar("toda linha diz em quantos concursos aquilo apareceu",
     s1.linhas.every((l) => Number.isInteger(l.concursos) && l.concursos >= 0 &&
       l.fracao >= 0 && l.fracao <= 1));
@@ -2225,12 +2237,38 @@ secao("22. Sugestão do sistema e retirada do rateio");
   checar("semente diferente dá outra sugestão",
     s3.dezenas.join(",") !== s1.dezenas.join(","));
 
-  /* Mais candidatas não pode piorar o mínimo: é uma busca por máximo. */
-  const poucas = contexto.sugestaoDoSistema("mega-sena", 6, { semente: 5, candidatas: 20 });
-  const muitas = contexto.sugestaoDoSistema("mega-sena", 6, { semente: 5, candidatas: 400 });
-  checar("mais candidatas não pioram a escolha",
-    muitas.menor >= poucas.menor,
-    `20 -> ${(poucas.menor * 100).toFixed(1)}% · 400 -> ${(muitas.menor * 100).toFixed(1)}%`);
+  /* Antes a escolha era o ARGMAX, e então mais candidatas nunca podiam piorar
+     o mínimo — era monótono, e o teste cobrava isso de UMA semente.
+
+     Agora a escolha é um sorteio entre as candidatas que passam de um piso, e
+     a monotonia deixou de valer caso a caso: com mais candidatas o piso sobe,
+     mas o jogo escolhido é um qualquer acima dele. Cobrar monotonia numa
+     semente só passou a medir sorte.
+
+     O que continua verdade, e é o que importa: com mais candidatas o conjunto
+     aceito é melhor, então a MEDIANA de várias sugestões não piora. */
+  const medianaDeMenores = (candidatas) => {
+    const v = [];
+    for(let i = 0; i < 21; i++)
+      v.push(contexto.sugestaoDoSistema("mega-sena", 6, {semente: 5000 + i, candidatas}).menor);
+    v.sort((a, b) => a - b);
+    return v[Math.floor(v.length / 2)];
+  };
+  const poucasMed = medianaDeMenores(20), muitasMed = medianaDeMenores(400);
+  /* E não é "mais candidatas, melhor jogo": a aceitação é uma FATIA do topo,
+     então a qualidade típica fica praticamente constante — medido, 15,8% com
+     20 candidatas contra 15,0% com 400. Afirmar monotonia crescente aqui seria
+     escrever no teste uma propriedade que este desenho não tem.
+     O que o número de candidatas compra é VARIEDADE: mais candidatas, mais
+     jogos distintos acima do mesmo piso. */
+  checar("a qualidade típica não depende do número de candidatas",
+    Math.abs(muitasMed - poucasMed) < 0.03,
+    `20 -> ${(poucasMed * 100).toFixed(1)}% · 400 -> ${(muitasMed * 100).toFixed(1)}%`);
+  const poucasAceitas = contexto.sugestaoDoSistema("mega-sena", 6, {semente:5, candidatas:20}).aceitas;
+  const muitasAceitas = contexto.sugestaoDoSistema("mega-sena", 6, {semente:5, candidatas:400}).aceitas;
+  checar("mas mais candidatas dão mais jogos distintos para escolher",
+    muitasAceitas > poucasAceitas * 5,
+    `${poucasAceitas} aceitas contra ${muitasAceitas}`);
 
   /* Respeita o tamanho pedido, inclusive fora do mínimo da modalidade. */
   const grande = contexto.sugestaoDoSistema("mega-sena", 8, { semente: 3 });
@@ -4202,6 +4240,876 @@ secao("33. Conferência rápida e avisos que chegam sozinhos");
 
   S.jogos = g.j; S.teimosinhas = g.t; S.resultados = g.r;
   S.avisos = g.a; S.modalidade = g.m;
+}
+
+/* ==================================================================
+   40. Pedir o último resultado não pode ir a um retrato
+
+   O defeito: o repositório do app era a PRIMEIRA fonte consultada, inclusive
+   quando se pedia "o último resultado". Esse arquivo é atualizado por um cron
+   duas vezes por dia; num domingo à noite ele ainda tem o sorteio de sexta.
+   Ele respondia 200, o laço parava satisfeito, a Caixa nunca era chamada — e
+   FONTE_PREFERIDA passava a apontar para o retrato, travando também as buscas
+   seguintes.
+
+   Do lado de quem usa: o sorteio do dia simplesmente nunca aparecia.
+   ================================================================== */
+secao("40. Pedir o último resultado não pode ir a um retrato");
+{
+  const ids = ordem => ordem.map(f => f.id);
+
+  /* Pedido do ÚLTIMO: fontes ao vivo primeiro. */
+  const ultimo = ids(contexto.ordemDeFontes(null));
+  checar("pedir o último resultado não começa pelo repositório",
+    ultimo[0] !== "repositorio", ultimo.join(" → "));
+  checar("a Caixa oficial é a primeira tentativa",
+    ultimo[0] === "caixa", ultimo[0]);
+
+  /* Mas o retrato não é jogado fora: sem internet, é o que sobra. */
+  checar("o repositório continua na fila, como rede de segurança offline",
+    ultimo[ultimo.length - 1] === "repositorio", ultimo.join(" → "));
+
+  /* Nenhuma fonte pode sumir nem aparecer duas vezes: a ordenação é uma
+     permutação, e um erro aqui removeria silenciosamente uma alternativa. */
+  checar("a ordem é uma permutação das fontes — nada some, nada duplica",
+    ultimo.length === contexto.FONTES.length &&
+    new Set(ultimo).size === contexto.FONTES.length,
+    `${ultimo.length} de ${contexto.FONTES.length}`);
+
+  /* Pedido de um concurso ESPECÍFICO e passado: aquele número não muda mais,
+     então o arquivo local responde na hora e poupa a chamada à Caixa. */
+  const especifico = ids(contexto.ordemDeFontes(3040));
+  checar("concurso específico continua indo primeiro ao repositório",
+    especifico[0] === "repositorio", especifico.join(" → "));
+  checar("e também aqui a ordem é uma permutação",
+    new Set(especifico).size === contexto.FONTES.length);
+
+  /* A trava do defeito: mesmo que o repositório tenha respondido por último,
+     ele NÃO pode ser promovido num pedido de último resultado. Era essa
+     promoção que tornava o defeito permanente depois da primeira busca. */
+  const guardaFetch = contexto.fetch;
+
+  const respostaCaixa = {
+    ok: true,
+    json: async () => ({
+      numero: 3048, dataApuracao: "23/08/2026",
+      listaDezenas: ["01","02","03","04","05","06"],
+      listaRateioPremio: [], acumulado: false,
+    }),
+  };
+  /* O repositório devolve o retrato antigo — sexta, concurso 3047. */
+  const respostaRepositorio = {
+    ok: true,
+    json: async () => ({ concursos: [
+      {concurso: 3046, data: "2026-08-18", dezenas: [7,8,9,10,11,12]},
+      {concurso: 3047, data: "2026-08-20", dezenas: [1,2,3,4,5,6]},
+    ]}),
+  };
+
+  await (async () => {
+    /* Primeiro, força o repositório a ser a fonte que respondeu: só ele
+       funciona, todo o resto cai. */
+    contexto.fetch = (url) => String(url).includes("dados")
+      || String(url).includes(".json") && !String(url).includes("caixa")
+      ? Promise.resolve(respostaRepositorio)
+      : Promise.reject(new Error("fora do ar"));
+
+    let doRetrato = null;
+    try { doRetrato = await contexto.buscarNaCaixa("mega-sena", null); }
+    catch (e) { doRetrato = {erro: e.message}; }
+    checar("sem a Caixa, o retrato ainda responde — ninguém fica sem nada",
+      doRetrato && doRetrato.fonte === "repositorio",
+      doRetrato && (doRetrato.fonte || doRetrato.erro));
+
+    /* Agora a Caixa volta. Se o defeito tivesse voltado, a preferência
+       gravada no passo anterior mandaria direto ao retrato de novo. */
+    contexto.fetch = (url) => String(url).includes("servicebus2")
+      ? Promise.resolve(respostaCaixa)
+      : Promise.resolve(respostaRepositorio);
+
+    const agora = await contexto.buscarNaCaixa("mega-sena", null);
+    checar("com a Caixa de pé, a busca seguinte NÃO fica presa no retrato",
+      agora.fonte === "caixa", agora.fonte);
+    checar("e traz o sorteio do dia, não o de dois dias antes",
+      agora.concurso === 3048, `concurso ${agora.concurso}`);
+  })();
+
+  contexto.fetch = guardaFetch;
+}
+
+/* ==================================================================
+   41. Se uma fonte não deixa ver, tem de haver outra
+
+   Duas coisas separadas: a fila precisa ter alternativas de operadores
+   diferentes, e nenhuma delas pode segurar as outras.
+   ================================================================== */
+secao("41. Se uma fonte não deixa ver, tem de haver outra");
+{
+  const F = contexto.FONTES;
+  const aoVivo = F.filter(f => f.id !== "repositorio");
+
+  checar("há mais de uma alternativa à Caixa", aoVivo.length >= 4,
+    `${aoVivo.length} fontes ao vivo`);
+
+  /* Alternativas do mesmo dono cairiam juntas e não seriam alternativas. */
+  const hosts = aoVivo.map(f => {
+    const u = f.url("megasena", null, "mega-sena");
+    return (u.match(/^https:\/\/([^/?]+)/) || [,"?"])[1];
+  });
+  checar("cada fonte ao vivo está num host diferente",
+    new Set(hosts).size === hosts.length, hosts.join(", "));
+
+  /* O espelho antigo do Heroku continua na fila, mas não pode ser o único
+     espelho: o plano gratuito do Heroku acabou em 2022. */
+  checar("o espelho tem endereço atual, e não só o do Heroku",
+    hosts.some(h => h.includes("guidi.dev.br")), hosts.join(", "));
+  checar("e existe um segundo proxy, de outro operador",
+    aoVivo.filter(f => /proxy/.test(f.id)).length >= 2);
+
+  /* Toda fonte precisa saber pedir tanto o último quanto um concurso dado. */
+  const semUltimo = aoVivo.filter(f =>
+    f.url("megasena", null, "mega-sena") === f.url("megasena", 3048, "mega-sena"));
+  checar("pedir o último e pedir um concurso dão URLs diferentes em toda fonte",
+    semUltimo.length === 0, semUltimo.map(f => f.id).join(", ") || "todas distinguem");
+
+  /* ---- o tempo-limite ---- */
+  const guardaFetch = contexto.fetch;
+
+  /* Uma fonte que aceita a conexão e nunca responde por conta própria — só o
+     aborto a encerra, como faz o fetch de verdade. Um stub que ignorasse o
+     sinal penduraria a própria bateria, e foi o que aconteceu na primeira
+     escrita deste teste: o arnês parou com "unsettled top-level await". */
+  const pendura = (url, opcoes) => new Promise((_, rej) => {
+    if(opcoes && opcoes.signal)
+      opcoes.signal.addEventListener("abort", () => {
+        const e = new Error("The operation was aborted"); e.name = "AbortError"; rej(e);
+      });
+  });
+
+  await (async () => {
+    contexto.fetch = pendura;
+    const t0 = Date.now();
+    let erro = null;
+    /* Limite curto só neste teste: esperar 8s de verdade tornaria a bateria
+       lenta sem medir nada a mais. */
+    try {
+      await contexto.buscarComLimite("https://exemplo.invalido/x", 120);
+    } catch (e) { erro = e; }
+    const levou = Date.now() - t0;
+    checar("uma fonte pendurada é cortada, não esperada para sempre",
+      !!erro && levou < 2000, `${levou} ms, ${erro && erro.name}`);
+    checar("e o corte se identifica como aborto",
+      !!erro && erro.name === "AbortError", erro && erro.name);
+  })();
+
+  await (async () => {
+    /* Na cadeia inteira: a primeira pendura, a segunda responde. O resultado
+       tem de vir da segunda — prova de que a fila não travou. */
+    let chamadas = 0;
+    contexto.fetch = (url, opcoes) => {
+      chamadas++;
+      if(String(url).includes("servicebus2") && !String(url).includes("proxy"))
+        return new Promise((_, rej) => {
+          /* imita o abort real: rejeita quando o sinal dispara */
+          if(opcoes && opcoes.signal)
+            opcoes.signal.addEventListener("abort", () => {
+              const e = new Error("abortado"); e.name = "AbortError"; rej(e);
+            });
+        });
+      return Promise.resolve({ok:true, json: async () => ({
+        concurso: 3048, data: "23/08/2026",
+        dezenas: ["01","02","03","04","05","06"], premiacoes: [],
+      })});
+    };
+    const r = await contexto.buscarNaCaixa("mega-sena", null);
+    checar("com a primeira fonte pendurada, a seguinte entrega o resultado",
+      r && r.concurso === 3048, r && `${r.fonte} → concurso ${r.concurso}`);
+    checar("e mais de uma fonte chegou a ser tentada", chamadas >= 2,
+      `${chamadas} tentativas`);
+  })();
+
+  await (async () => {
+    /* A mensagem de erro precisa dizer "não respondeu em Ns", e não
+       "AbortError", que não significa nada para quem lê a tela. */
+    contexto.fetch = (url, opcoes) => new Promise((_, rej) => {
+      if(opcoes && opcoes.signal)
+        opcoes.signal.addEventListener("abort", () => {
+          const e = new Error("The operation was aborted"); e.name = "AbortError"; rej(e);
+        });
+      else rej(new Error("sem sinal"));
+    });
+    let erro = null;
+    try { await contexto.buscarNaCaixa("mega-sena", null); } catch (e) { erro = e; }
+    checar("o erro diz que a fonte não respondeu, e não 'AbortError'",
+      !!erro && /não respondeu em \d+s/.test(erro.message) &&
+      !/AbortError/.test(erro.message),
+      erro && erro.message.slice(0, 90));
+  })();
+
+  contexto.fetch = guardaFetch;
+}
+
+/* ==================================================================
+   42. O histórico em massa também precisa da ponta
+
+   O conserto da seção 40 arrumou buscarNaCaixa — mas os botões "buscar os 20
+   últimos" e "histórico completo" não passam por lá. Eles chamam
+   buscarHistorico, que ia direto ao arquivo do repositório e só tentava a
+   Caixa se o DOWNLOAD do arquivo falhasse. O arquivo nunca falha: ele só está
+   velho. Então a lista continuava terminando no concurso de dois dias antes,
+   e a tela ainda dizia "direto do repositório do app".
+
+   Um conserto que deixa um segundo caminho com o mesmo defeito não é um
+   conserto.
+   ================================================================== */
+secao("42. O histórico em massa também precisa da ponta");
+{
+  const guardaFetch = contexto.fetch;
+
+  /* O arquivo do repositório: retrato que para no 3047, de quinta. */
+  const TAMANHO_DO_ARQUIVO = 401;
+  const arquivo = (ate) => ({ concursos: Array.from({length: TAMANHO_DO_ARQUIVO},
+    (_, i) => ({concurso: ate - TAMANHO_DO_ARQUIVO + 1 + i, data: "2026-08-01",
+                dezenas: [1,2,3,4,5,6]})) });
+
+  const aoVivoCom = (numero) => ({
+    numero, dataApuracao: "23/08/2026",
+    listaDezenas: ["10","20","30","40","50","60"],
+    listaRateioPremio: [], acumulado: true,
+  });
+
+  /* Roteia por URL: raw.githubusercontent é o arquivo, servicebus2 é a Caixa.
+     O "concurso específico" bate primeiro no arquivo e não acha — é o caminho
+     real, e é o que faz a emenda cair na fonte ao vivo. */
+  const montarRede = (ultimoNoArquivo, ultimoAoVivo, contador) => (url) => {
+    const u = String(url);
+    if(u.includes("raw.githubusercontent"))
+      return Promise.resolve({ok:true, json: async () => arquivo(ultimoNoArquivo)});
+    if(u.includes("servicebus2")){
+      if(contador) contador.n++;
+      const m = u.match(/megasena\/(\d+)/);
+      const pedido = m ? Number(m[1]) : ultimoAoVivo;
+      if(pedido > ultimoAoVivo) return Promise.resolve({ok:false, status:404});
+      return Promise.resolve({ok:true, json: async () => aoVivoCom(pedido)});
+    }
+    return Promise.reject(new Error("fonte fora do ar"));
+  };
+
+  await (async () => {
+    contexto.fetch = montarRede(3047, 3048);
+    const h = await contexto.buscarHistorico("mega-sena", 20, null);
+    const ultimo = Number(h[h.length - 1].concurso);
+    checar("o histórico em massa não para no que o arquivo tinha",
+      ultimo === 3048, `terminou no ${ultimo}`);
+    checar("e o corpo do histórico continua vindo inteiro do arquivo",
+      h.length === TAMANHO_DO_ARQUIVO + 1, `${h.length} concursos`);
+    checar("sem repetir o concurso que já estava no arquivo",
+      new Set(h.map(x => Number(x.concurso))).size === h.length);
+    checar("e em ordem crescente de concurso",
+      h.every((x, i) => i === 0 || Number(x.concurso) > Number(h[i-1].concurso)));
+  })();
+
+  await (async () => {
+    /* Arquivo de sexta, dois sorteios desde então. Emendar um só deixaria um
+       buraco no meio — pior que faltar a ponta, porque some sem avisar. */
+    contexto.fetch = montarRede(3047, 3050);
+    const h = await contexto.buscarHistorico("mega-sena", 20, null);
+    const nums = h.map(x => Number(x.concurso));
+    checar("emenda mais de um concurso quando o arquivo está mais atrasado",
+      nums.includes(3048) && nums.includes(3049) && nums.includes(3050),
+      `termina em ${nums[nums.length-1]}`);
+    checar("e não deixa buraco entre o arquivo e a ponta",
+      nums.every((n, i) => i === 0 || n === nums[i-1] + 1));
+  })();
+
+  await (async () => {
+    /* Teto: arquivo muito velho não pode virar centenas de requisições. */
+    const contador = {n: 0};
+    contexto.fetch = montarRede(3000, 3300, contador);
+    const h = await contexto.buscarHistorico("mega-sena", 20, null);
+    checar("arquivo muito velho não dispara centenas de requisições",
+      contador.n <= contexto.MAXIMO_A_EMENDAR + 2,
+      `${contador.n} chamadas ao vivo, teto ${contexto.MAXIMO_A_EMENDAR}`);
+    checar("e ainda assim devolve histórico utilizável",
+      h.length >= TAMANHO_DO_ARQUIVO, `${h.length} concursos`);
+    /* E — o que importa — sem ilha solta: grudar os dez mais recentes num
+       retrato que para trezentos atrás abriria um buraco invisível. */
+    const seq = h.map(x => Number(x.concurso));
+    checar("e sem buraco: prefere ponta faltando a série quebrada",
+      seq.every((n, i) => i === 0 || n === seq[i-1] + 1),
+      `${seq[0]}…${seq[seq.length-1]}`);
+  })();
+
+  await (async () => {
+    /* Sem rede ao vivo, o retrato sozinho ainda serve: histórico velho é
+       melhor que nenhum histórico. */
+    contexto.fetch = (url) => String(url).includes("raw.githubusercontent")
+      ? Promise.resolve({ok:true, json: async () => arquivo(3047)})
+      : Promise.reject(new Error("sem rede"));
+    const h = await contexto.buscarHistorico("mega-sena", 20, null);
+    checar("sem as fontes ao vivo, o arquivo sozinho ainda entrega histórico",
+      h.length > 0 && Number(h[h.length-1].concurso) === 3047,
+      `${h.length} concursos, último ${h[h.length-1].concurso}`);
+  })();
+
+  await (async () => {
+    /* Ponta já em dia: nada a emendar, e nada duplicado. */
+    contexto.fetch = montarRede(3048, 3048);
+    const h = await contexto.buscarHistorico("mega-sena", 20, null);
+    checar("com a ponta em dia, não duplica nem inventa concurso",
+      Number(h[h.length-1].concurso) === 3048 &&
+      new Set(h.map(x => Number(x.concurso))).size === h.length,
+      `${h.length} concursos, último ${h[h.length-1].concurso}`);
+  })();
+
+  contexto.fetch = guardaFetch;
+}
+
+/* ==================================================================
+   43. Atualizar sozinho todos os sorteios novos
+
+   Três defeitos separados faziam o app não se atualizar sozinho:
+
+   1. Intervalo fixo de 12h. Abrir o app às 19h gravava o carimbo; o sorteio
+      saía às 20h; às 21h a busca se recusava a acontecer porque "ainda não
+      deu o intervalo". O resultado do dia só entrava no dia seguinte.
+   2. Guardava só o último concurso. Quem passasse três dias sem abrir o app
+      recebia o mais recente e perdia os do meio, sem aviso.
+   3. Rodava só na abertura. App aberto a noite inteira não via o sorteio das
+      20h — estava ligado e não olhou.
+   ================================================================== */
+secao("43. Atualizar sozinho todos os sorteios novos");
+{
+  const S = motor.S;
+  const g = {r: S.resultados, m: S.modalidade, u: S.ultimaBusca, b: S.buscaAutomatica};
+  const guardaFetch = contexto.fetch;
+
+  /* Histórico de domingos e quintas (o calendário atual da Mega-Sena), para
+     diasDeSorteio() ter o que medir. */
+  const montarHistorico = (ateIso, ateConcurso) => {
+    const saida = [];
+    let iso = ateIso, n = ateConcurso;
+    for(let i = 0; i < 20; i++){
+      saida.unshift({concurso: n, data: iso, modalidade: "mega-sena",
+                     dezenas: [1,2,3,4,5,6]});
+      /* volta ao dia de sorteio anterior: dom → qui → ter → dom */
+      const d = new Date(iso + "T00:00:00Z");
+      do { d.setUTCDate(d.getUTCDate() - 1); }
+      while(![0,2,4].includes(d.getUTCDay()));
+      iso = d.toISOString().slice(0,10);
+      n--;
+    }
+    return saida;
+  };
+
+  /* Domingo 2026-08-23, com histórico terminando na quinta 2026-08-20. */
+  S.resultados = montarHistorico("2026-08-20", 3047);
+  const dom19h = new Date(2026, 7, 23, 19, 0, 0).getTime();
+  const dom21h = new Date(2026, 7, 23, 21, 30, 0).getTime();
+
+  checar("às 19h o sorteio de hoje ainda não é esperado",
+    contexto.ultimoSorteioEsperado("mega-sena", dom19h) !== "2026-08-23",
+    String(contexto.ultimoSorteioEsperado("mega-sena", dom19h)));
+  checar("às 21h30 ele passa a ser esperado",
+    contexto.ultimoSorteioEsperado("mega-sena", dom21h) === "2026-08-23",
+    String(contexto.ultimoSorteioEsperado("mega-sena", dom21h)));
+  checar("e com o histórico parado na quinta, o domingo fica pendente",
+    contexto.sorteioPendente("mega-sena", dom21h) === true);
+  checar("às 19h nada está pendente — não havia sorteio ainda",
+    contexto.sorteioPendente("mega-sena", dom19h) === false);
+
+  /* O sábado não pode ser esperado: não há sorteio nesse dia. */
+  const sab = new Date(2026, 7, 22, 22, 0, 0).getTime();
+  checar("sábado não é dia de sorteio, então não gera pendência",
+    contexto.ultimoSorteioEsperado("mega-sena", sab) !== "2026-08-22",
+    String(contexto.ultimoSorteioEsperado("mega-sena", sab)));
+
+  /* O intervalo curto só vale quando há o que esperar. */
+  checar("com pendência, o intervalo é de minutos, não de meio dia",
+    contexto.INTERVALO_BUSCA_PENDENTE < contexto.INTERVALO_BUSCA / 10,
+    `${contexto.INTERVALO_BUSCA_PENDENTE/60000} min contra ` +
+    `${contexto.INTERVALO_BUSCA/3600000} h`);
+
+  /* ---- o caso das 19h, de ponta a ponta ---- */
+  await (async () => {
+    const responder = (numero) => (url) => {
+      const u = String(url);
+      if(u.includes("raw.githubusercontent")) return Promise.reject(new Error("sem arquivo"));
+      if(u.includes("servicebus2")){
+        const m = u.match(/megasena\/(\d+)/);
+        const pedido = m ? Number(m[1]) : numero;
+        if(pedido > numero) return Promise.resolve({ok:false, status:404});
+        return Promise.resolve({ok:true, json: async () => ({
+          numero: pedido, dataApuracao: "23/08/2026",
+          listaDezenas: ["01","02","03","04","05","06"],
+          listaRateioPremio: [], acumulado: true,
+        })});
+      }
+      return Promise.reject(new Error("fora do ar"));
+    };
+
+    /* Alguém abre o app às 19h: nada pendente, mas o carimbo é gravado. */
+    S.resultados = montarHistorico("2026-08-20", 3047);
+    S.ultimaBusca = {"mega-sena": dom19h};
+    S.buscaAutomatica = true;
+    contexto.fetch = responder(3048);
+
+    /* Duas horas depois o sorteio saiu. Antes, o intervalo de 12h barrava. */
+    const antes = historicoTem(3048);
+    const r = await contexto.buscaDiaria();
+    checar("depois do sorteio, a busca acontece mesmo com o carimbo recente",
+      r.tentadas > 0, `${r.tentadas} modalidade(s) tentada(s)`);
+    checar("e o concurso do dia entra no aparelho",
+      historicoTem(3048) && !antes, `novos: ${r.novos}`);
+  })();
+
+  function historicoTem(n){
+    return motor.S.resultados.some(x => x.modalidade === "mega-sena" &&
+      Number(x.concurso) === n);
+  }
+
+  /* ---- sorteios perdidos: três dias sem abrir o app ---- */
+  await (async () => {
+    S.resultados = montarHistorico("2026-08-20", 3047);
+    S.ultimaBusca = {};
+    contexto.fetch = (url) => {
+      const u = String(url);
+      if(u.includes("raw.githubusercontent")) return Promise.reject(new Error("sem arquivo"));
+      if(u.includes("servicebus2")){
+        const m = u.match(/megasena\/(\d+)/);
+        const pedido = m ? Number(m[1]) : 3050;
+        if(pedido > 3050) return Promise.resolve({ok:false, status:404});
+        return Promise.resolve({ok:true, json: async () => ({
+          numero: pedido, dataApuracao: "23/08/2026",
+          listaDezenas: ["01","02","03","04","05","06"],
+          listaRateioPremio: [], acumulado: true,
+        })});
+      }
+      return Promise.reject(new Error("fora do ar"));
+    };
+    await contexto.buscaDiaria();
+    checar("três sorteios desde a última abertura: nenhum se perde",
+      [3048, 3049, 3050].every(historicoTem),
+      [3048,3049,3050].filter(historicoTem).join(", ") || "nenhum");
+  })();
+
+  /* ---- o desligamento continua sendo respeitado ---- */
+  await (async () => {
+    S.buscaAutomatica = false;
+    const r = await contexto.buscaDiaria();
+    checar("quem desliga a busca automática continua desligado",
+      r.tentadas === 0);
+  })();
+
+  contexto.fetch = guardaFetch;
+  S.resultados = g.r; S.modalidade = g.m;
+  S.ultimaBusca = g.u; S.buscaAutomatica = g.b;
+}
+
+/* ==================================================================
+   44. Conferir com o app fechado
+
+   O executor em segundo plano roda num motor JavaScript separado: sem DOM,
+   sem localStorage, sem nada do index.html. Isso cria o risco central desta
+   funcionalidade — DUAS VERDADES. Se o executor recalcular por conta própria
+   o que conta como coincidência, ele e o app divergem na primeira vez que uma
+   das duas mudar, e o usuário recebe aviso de coisa que o app não confirma.
+
+   Por isso o executor não decide nada: o app espelha as faixas, e lá só se
+   conta acerto. Estes testes cobram exatamente isso.
+   ================================================================== */
+secao("44. Conferir com o app fechado");
+{
+  const { readFileSync } = await import("node:fs");
+  const fonteRunner = readFileSync(
+    new URL("../runner/segundo-plano.js", import.meta.url), "utf8");
+
+  /* Carrega o executor num contexto que imita o do plugin: sem DOM, sem
+     localStorage, com CapacitorKV e CapacitorNotifications de mentira. Se o
+     arquivo depender de qualquer coisa do navegador, ele quebra aqui — que é
+     o ponto: no aparelho ele quebraria calado. */
+  const eventos = {};
+  const kv = {};
+  const avisados = [];
+  const ctxRunner = {
+    addEventListener: (nome, fn) => { eventos[nome] = fn; },
+    CapacitorKV: {
+      get: (k) => ({value: kv[k]}),
+      set: (k, v) => { kv[k] = v; },
+      remove: (k) => { delete kv[k]; },
+    },
+    CapacitorNotifications: { schedule: (lista) => avisados.push(...lista) },
+    fetch: () => Promise.reject(new Error("sem rede")),
+    console: {log(){}, info(){}, warn(){}, error(){}, debug(){}},
+    setTimeout, clearTimeout, setInterval, clearInterval,
+    encodeURIComponent, JSON, Date, Math, Number, String, Array, Object,
+    Promise, isNaN, parseInt, parseFloat, Error,
+  };
+  ctxRunner.globalThis = ctxRunner;
+  vm.createContext(ctxRunner);
+  vm.runInContext(fonteRunner + "\n;globalThis.__runner = {coincidencias, jogoCobre, normalizar};",
+    ctxRunner, {filename: "runner/segundo-plano.js"});
+  const R = ctxRunner.__runner;
+
+  checar("o executor carrega sem DOM e sem localStorage",
+    typeof R.coincidencias === "function");
+  checar("e registra os dois eventos que o app usa",
+    typeof eventos.conferirSorteios === "function" &&
+    typeof eventos.guardarEstado === "function",
+    Object.keys(eventos).join(", "));
+
+  /* Nada de navegador dentro do arquivo: uma referência a document ou
+     localStorage passaria despercebida até o aparelho. */
+  /* Sem tirar os comentários, esta trava acusa os próprios comentários que
+     explicam por que document e localStorage NÃO existem ali — o gerador da
+     edição estatística já tinha aprendido isso, e eu repeti o erro. */
+  const runnerSemComentarios = fonteRunner
+    .replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  checar("o executor não usa document nem localStorage no código",
+    !/\bdocument\b|\blocalStorage\b/.test(runnerSemComentarios));
+
+  /* ---- as duas verdades ----
+     A prova que importa: para TODA modalidade e TODO número de acertos
+     possível, o veredito do executor tem de ser o mesmo do app. */
+  {
+    let divergencias = [];
+    for(const [chave, c] of Object.entries(M)){
+      if(!contexto.SLUG_CAIXA[chave]) continue;
+      for(let acertos = 0; acertos <= c.k; acertos++){
+        /* monta um jogo que acerta exatamente `acertos` dezenas */
+        const sorteadas = Array.from({length: c.k}, (_, i) => i + 1);
+        const minhas = sorteadas.slice(0, acertos)
+          .concat(Array.from({length: c.k - acertos}, (_, i) => 60 + i));
+        const achados = R.coincidencias(
+          [{id: "x", modalidade: chave, dezenas: minhas}],
+          chave, {concurso: 1, dezenas: sorteadas}, c.faixas);
+        const doApp = contexto.faixaAtingida(chave, acertos) !== null;
+        const doRunner = achados.length === 1;
+        if(doApp !== doRunner)
+          divergencias.push(`${chave}/${acertos}: app=${doApp} runner=${doRunner}`);
+      }
+    }
+    checar("executor e app dão o MESMO veredito em toda modalidade e todo acerto",
+      divergencias.length === 0, divergencias.slice(0,3).join(" · ") || "nenhuma divergência");
+  }
+
+  /* ---- cobertura de concurso: as três formas do app ---- */
+  checar("jogo com concurso declarado vale só naquele concurso",
+    R.jogoCobre({concursoAlvo: 3048}, 3048) === true &&
+    R.jogoCobre({concursoAlvo: 3048}, 3049) === false);
+  checar("teimosinha vale na faixa declarada, e não fora dela",
+    R.jogoCobre({deConcurso: 3040, concursos: 5}, 3044) === true &&
+    R.jogoCobre({deConcurso: 3040, concursos: 5}, 3045) === false);
+  checar("jogo sem declaração vale em qualquer concurso",
+    R.jogoCobre({}, 1) === true);
+
+  /* ---- os dois formatos de resposta ---- */
+  checar("entende o formato da Caixa",
+    (R.normalizar({numero: 3048, listaDezenas: ["01","02","03"]}) || {}).concurso === 3048);
+  checar("e o formato do espelho",
+    (R.normalizar({concurso: 3048, dezenas: [1,2,3]}) || {}).concurso === 3048);
+  checar("e recusa resposta sem dezenas em vez de inventar",
+    R.normalizar({numero: 3048, listaDezenas: []}) === null);
+
+  /* ---- o evento que guarda o estado ---- */
+  await new Promise((pronto) => {
+    eventos.guardarEstado((v) => pronto(v), () => pronto(),
+      {estado: JSON.stringify({ligado: true, jogos: [], modalidades: {}})});
+  });
+  checar("o app manda o estado e o executor o grava no KV",
+    !!kv["lotolab:bg:estado"], kv["lotolab:bg:estado"] ? "gravado" : "vazio");
+
+  /* ---- sem rede, não avisa e não quebra ---- */
+  kv["lotolab:bg:estado"] = JSON.stringify({
+    ligado: true,
+    modalidades: {"mega-sena": {slug:"megasena", nome:"Mega-Sena", faixas:[4,5,6]}},
+    jogos: [{id:"a", modalidade:"mega-sena", dezenas:[1,2,3,4,5,6]}],
+  });
+  avisados.length = 0;
+  await new Promise((pronto) => eventos.conferirSorteios(() => pronto(), () => pronto()));
+  checar("sem rede o executor termina limpo e não avisa nada",
+    avisados.length === 0);
+
+  /* ---- com rede: avisa uma vez, e não repete no mesmo concurso ---- */
+  ctxRunner.fetch = () => Promise.resolve({ok: true, json: async () => ({
+    numero: 3048, listaDezenas: ["01","02","03","04","05","06"],
+  })});
+  avisados.length = 0;
+  await new Promise((pronto) => eventos.conferirSorteios(() => pronto(), () => pronto()));
+  /* O detalhe traz título e corpo, e NÃO o objeto inteiro: o id do aviso vem
+     do relógio, e imprimi-lo fazia duas execuções seguidas darem saídas
+     diferentes. O passo "os testes são reprodutíveis" da esteira pegou isso —
+     é exatamente o que ele existe para pegar, e eu o violei. */
+  checar("com o sorteio novo, o aviso sai mesmo com o app fechado",
+    avisados.length === 1,
+    avisados.length === 1 ? `${avisados[0].title} — ${avisados[0].body}` : "nenhum");
+  checar("e o texto fala em coincidência, nunca em prêmio",
+    avisados.length === 1 && /coincid/i.test(avisados[0].title + avisados[0].body) &&
+    !/prêmio|premio|ganhou/i.test(avisados[0].title + avisados[0].body),
+    avisados[0] && avisados[0].title);
+
+  avisados.length = 0;
+  await new Promise((pronto) => eventos.conferirSorteios(() => pronto(), () => pronto()));
+  checar("o mesmo concurso não avisa duas vezes", avisados.length === 0);
+
+  /* ---- desligado é desligado ---- */
+  kv["lotolab:bg:vistos"] = JSON.stringify({});
+  kv["lotolab:bg:estado"] = JSON.stringify({
+    ligado: false,
+    modalidades: {"mega-sena": {slug:"megasena", nome:"Mega-Sena", faixas:[4,5,6]}},
+    jogos: [{id:"a", modalidade:"mega-sena", dezenas:[1,2,3,4,5,6]}],
+  });
+  avisados.length = 0;
+  await new Promise((pronto) => eventos.conferirSorteios(() => pronto(), () => pronto()));
+  checar("quem desliga a busca automática não recebe aviso fechado",
+    avisados.length === 0);
+
+  /* ---- a etiqueta tem de bater com a do capacitor.config.json ---- */
+  {
+    const cfg = JSON.parse(readFileSync(new URL("../capacitor.config.json", import.meta.url), "utf8"));
+    const br = (cfg.plugins || {}).BackgroundRunner || {};
+    checar("a etiqueta do app é a mesma do capacitor.config.json",
+      br.label === contexto.ETIQUETA_SEGUNDO_PLANO,
+      `${br.label} vs ${contexto.ETIQUETA_SEGUNDO_PLANO}`);
+    checar("o evento configurado é o que o executor escuta",
+      typeof eventos[br.event] === "function", br.event);
+    checar("o src aponta para um arquivo que existe dentro de www/",
+      (() => { try { readFileSync(new URL("../www/" + br.src, import.meta.url)); return true; }
+               catch(e){ return false; } })(), "www/" + br.src);
+    /* O WorkManager do Android não roda período menor que 15 minutos: pedir
+       menos não deixa mais rápido, só engana quem lê a configuração. */
+    checar("o intervalo respeita o mínimo do WorkManager",
+      br.interval >= 15, `${br.interval} min`);
+  }
+}
+
+/* ==================================================================
+   45. Repetir dezena recente é o acaso, não defeito
+
+   O dono do app estranhou que os jogos gerados repetissem dezenas de sorteios
+   recentes. A tela mostrava o jogo sem mostrar quanta repetição o acaso
+   produz — e sem o segundo número o primeiro não significa nada.
+
+   A conta é hipergeométrica: das N dezenas do volante, K apareceram nos
+   últimos concursos; um jogo de n dezenas encosta em n*K/N delas, em média.
+   ================================================================== */
+secao("45. Repetir dezena recente é o acaso, não defeito");
+{
+  const S = motor.S;
+  const g = {r: S.resultados, m: S.modalidade};
+
+  /* Cinco concursos de Mega-Sena com 26 dezenas distintas — o mesmo retrato
+     dos dados reais no dia em que isto foi escrito. */
+  const cinco = [
+    [1,2,3,4,5,6], [7,8,9,10,11,12], [13,14,15,16,17,18],
+    [19,20,21,22,23,24], [25,26,1,2,3,4],
+  ];
+  const porMega = () => cinco.map((dz, i) => ({
+    concurso: 3040 + i, data: `2026-08-0${i+1}`, modalidade: "mega-sena", dezenas: dz,
+  }));
+  S.resultados = porMega();
+  S.modalidade = "mega-sena";
+
+  checar("junta as dezenas dos concursos recentes, sem repetir",
+    contexto.dezenasRecentes("mega-sena", 5).size === 26,
+    `${contexto.dezenasRecentes("mega-sena", 5).size} distintas`);
+  checar("e olhar menos concursos junta menos dezenas",
+    contexto.dezenasRecentes("mega-sena", 1).size === 6);
+
+  const base = contexto.sobreposicaoDoAcaso("mega-sena", 6, 5);
+  checar("a média do acaso é tam × K/N",
+    Math.abs(base.media - 6 * 26 / 60) < 1e-9, base.media.toFixed(3));
+  checar("e o desvio usa a correção de população finita",
+    Math.abs(base.dp - Math.sqrt(6 * (26/60) * (1 - 26/60) * ((60 - 6) / 59))) < 1e-9,
+    base.dp.toFixed(3));
+
+  /* A prova que vale: a fórmula tem de bater com o sorteio de verdade. Sem
+     isto eu conferiria minha própria álgebra contra ela mesma. */
+  {
+    let soma = 0; const n = 40000;
+    for(let i = 0; i < n; i++)
+      soma += contexto.repeticaoDoJogo("mega-sena",
+        contexto.gerarUniforme("mega-sena", 1, 6)[0], 5).repetidas;
+    const medido = soma / n;
+    checar("e a fórmula bate com 40 mil sorteios uniformes de verdade",
+      Math.abs(medido - base.media) < 0.05,
+      `fórmula ${base.media.toFixed(2)}, medido ${medido.toFixed(2)}`);
+  }
+
+  checar("jogo todo dentro das recentes marca o máximo",
+    contexto.repeticaoDoJogo("mega-sena", [1,2,3,4,5,6], 5).repetidas === 6);
+  checar("jogo todo fora marca zero",
+    contexto.repeticaoDoJogo("mega-sena", [55,56,57,58,59,60], 5).repetidas === 0);
+
+  const texto = contexto.vereditoDaRepeticao("mega-sena", [[1,2,3,50,51,52]], 5);
+  checar("o veredito põe a faixa do acaso ao lado do que saiu",
+    /acaso\s+sozinho produz/.test(texto) && /2,6/.test(texto), texto.slice(0, 60));
+  checar("e diz que evitar recentes não altera a chance",
+    /não altera a chance/.test(texto));
+  checar("sem cair no vocabulário proibido",
+    !/mais prováveis|aumenta|vantagem|melhor jogo/i.test(texto));
+
+  /* Lotofácil: cinco concursos cobrem as 25 dezenas. Não existe jogo sem
+     repetição, e o app tem de dizer isso em vez de exibir uma faixa. */
+  S.resultados = [0,1,2,3,4].map(i => ({
+    concurso: 3760 + i, data: `2026-08-0${i+1}`, modalidade: "lotofacil",
+    dezenas: Array.from({length: 15}, (_, j) => ((i * 15 + j) % 25) + 1),
+  }));
+  S.modalidade = "lotofacil";
+  checar("na Lotofácil os recentes cobrem o volante inteiro",
+    contexto.dezenasRecentes("lotofacil", 5).size === 25);
+  checar("e por isso evitar é impossível",
+    contexto.daParaEvitar("lotofacil", 15, 5) === false);
+  checar("o app diz que não existe jogo sem repetição, em vez de fingir faixa",
+    /Não existe jogo/.test(
+      contexto.vereditoDaRepeticao("lotofacil",
+        [[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]], 5)));
+
+  /* Na Mega-Sena dá para evitar, e o método tem de evitar os CINCO. */
+  S.resultados = porMega();
+  S.modalidade = "mega-sena";
+  checar("na Mega-Sena ainda sobra volante para evitar",
+    contexto.daParaEvitar("mega-sena", 6, 5) === true);
+  {
+    const lote = contexto.gerarAntirepeticao("mega-sena", 5, 6, null, 5);
+    const pior = Math.max(...lote.map(j =>
+      contexto.repeticaoDoJogo("mega-sena", j, 5).repetidas));
+    checar("o método foge dos CINCO concursos, e não só do último",
+      pior === 0, `pior jogo repetiu ${pior}`);
+    const uniforme = contexto.gerarUniforme("mega-sena", 40, 6)
+      .map(j => contexto.repeticaoDoJogo("mega-sena", j, 5).repetidas)
+      .reduce((a,b)=>a+b,0) / 40;
+    checar("enquanto o uniforme repete o que o acaso manda",
+      uniforme > 1.5, `${uniforme.toFixed(2)} por jogo`);
+  }
+
+  /* A bancada continua podendo dizer QUAL concurso evitar — sem isso ela
+     testaria o método contra o próprio sorteio que mandou evitar. */
+  {
+    const lote = contexto.gerarAntirepeticao("mega-sena", 3, 6, [1,2,3,4,5,6]);
+    const pior = Math.max(...lote.map(j =>
+      j.filter(d => [1,2,3,4,5,6].includes(d)).length));
+    checar("o parâmetro explícito da bancada continua vencendo", pior === 0, `pior ${pior}`);
+  }
+
+  S.resultados = g.r; S.modalidade = g.m;
+}
+
+/* ==================================================================
+   46. A sugestão do sistema não pode virar um jogo fixo
+
+   O dono do app notou que a sugestão trazia 01 e 60 quase sempre. Medido com
+   o histórico real da Mega-Sena, em 200 sugestões: o 60 aparecia em 100% e o
+   01 em 88%, contra os 10% que o acaso daria.
+
+   A causa não era aleatoriedade quebrada, era o critério. Ele escolhia o
+   ARGMAX da medida mais rara, e o ótimo desse critério é determinístico: cai
+   no valor mais frequente de CADA medida. Entre as dez medidas estão "menor
+   dezena" e "maior dezena", e o valor mais frequente delas no histórico é
+   justamente 1 e 60 — nenhum outro mínimo ou máximo aparece tanto quanto os
+   extremos.
+
+   Isso não mexe na chance de acertar; mexe no que o app diz influenciar de
+   verdade — com quantas pessoas se dividiria, já que um jogo sempre igual e
+   feito dos números mais salientes do volante é fácil de outra pessoa marcar.
+   ================================================================== */
+secao("46. A sugestão do sistema não pode virar um jogo fixo");
+{
+  const S = motor.S;
+  const g = {r: S.resultados, m: S.modalidade};
+
+  /* Histórico grande e honesto, sorteado com semente: é o que dá às
+     distribuições por medida a forma que o app mede na vida real. */
+  S.resultados = historicoSemeado("mega-sena", 60, 6, 1200, 4242);
+  S.modalidade = "mega-sena";
+
+  const QUANTAS = 60, CANDIDATAS = 200;
+  const conta = new Map();
+  const menores = [];
+  let medianaAcaso = null;
+  for(let i = 0; i < QUANTAS; i++){
+    const s = motor.sugestaoDoSistema("mega-sena", 6,
+      {semente: 90000 + i, candidatas: CANDIDATAS});
+    if(s.erro){ checar("a sugestão roda", false, s.erro); break; }
+    for(const d of s.dezenas) conta.set(d, (conta.get(d) || 0) + 1);
+    menores.push(s.menor);
+    medianaAcaso = s.medianaDoAcaso;
+  }
+
+  const maior = [...conta.entries()].sort((a,b) => b[1] - a[1])[0] || [null, 0];
+  const fracao = maior[1] / QUANTAS;
+  /* O acaso põe cada dezena em 6/60 = 10% dos jogos. Com 60 amostras, uma
+     dezena chegar a 40% já é padrão, e não flutuação. */
+  checar("nenhuma dezena domina as sugestões",
+    fracao < 0.40, `a mais repetida é a ${maior[0]} em ${(100*fracao).toFixed(0)}%`);
+
+  /* E especificamente os extremos, que eram o sintoma relatado. Depois de
+     tirar "menor dezena" e "maior dezena" do critério, eles voltam à taxa do
+     acaso — 6/60 = 10% —, e não apenas "menos que antes". */
+  const extremos = ((conta.get(1) || 0) + (conta.get(60) || 0)) / (2 * QUANTAS);
+  checar("os extremos do volante voltam à taxa do acaso",
+    extremos < 0.22, `01 e 60 em ${(100*extremos).toFixed(0)}% das sugestões, acaso 10%`);
+
+  /* As duas continuam na tabela: elas descrevem o jogo, e isso é informação.
+     O que mudou é que deixaram de decidir qual jogo sai. */
+  {
+    const uma = motor.sugestaoDoSistema("mega-sena", 6,
+      {semente: 4321, candidatas: CANDIDATAS});
+    const ordem = uma.linhas.filter(l => l.id === "inicial" || l.id === "final");
+    checar("menor e maior dezena continuam aparecendo na tabela",
+      ordem.length === 2, `${ordem.length} de 2`);
+    checar("mas marcadas como fora do critério",
+      ordem.every(l => l.naoEscolhe === true));
+    /* A prova de que estão MESMO fora: em vários sorteios, alguma delas
+       precisa ficar ABAIXO da medida mais rara declarada. Se nunca ficasse, a
+       exclusão poderia ser coincidência — e o teste, decoração.
+
+       (A primeira versão desta asserção era `l.fracao >= menor || l.fracao <
+        menor`, que é verdade para qualquer número: um teste que não podia
+        falhar. Trocado por este, que pode.) */
+    let houveOrdemAbaixo = 0;
+    for(let k = 0; k < 20; k++){
+      const x = motor.sugestaoDoSistema("mega-sena", 6,
+        {semente: 70000 + k, candidatas: CANDIDATAS});
+      if(x.linhas.some(l => l.naoEscolhe && l.fracao < x.menor - 1e-12)) houveOrdemAbaixo++;
+    }
+    checar("uma estatística de ordem chega a ficar abaixo da mais rara declarada",
+      houveOrdemAbaixo > 0,
+      `em ${houveOrdemAbaixo} de 20 sugestões — prova que ela não trava o critério`);
+    const menorDasQueEscolhem = Math.min(...uma.linhas
+      .filter(l => !l.naoEscolhe).map(l => l.fracao));
+    checar("e a medida mais rara sai só das medidas que escolhem",
+      Math.abs(menorDasQueEscolhem - uma.menor) < 1e-12,
+      `${(100*menorDasQueEscolhem).toFixed(1)}% contra ${(100*uma.menor).toFixed(1)}%`);
+  }
+
+  /* A promessa da tela tem de continuar verdadeira: nenhuma medida do jogo
+     escolhido é rara. Trocar variedade por mentira não seria conserto. */
+  menores.sort((a,b) => a - b);
+  const pior = menores[0], mediana = menores[Math.floor(menores.length/2)];
+  checar("a medida mais rara do jogo segue bem acima do acaso",
+    pior > medianaAcaso, `pior ${(100*pior).toFixed(1)}% contra ${(100*medianaAcaso).toFixed(1)}% do acaso`);
+  checar("e a mediana das sugestões é claramente mais típica que o acaso",
+    mediana > medianaAcaso * 1.5,
+    `${(100*mediana).toFixed(1)}% contra ${(100*medianaAcaso).toFixed(1)}%`);
+
+  /* A semente continua reproduzindo: sem isso não dá para conferir uma
+     sugestão depois, e a tela promete que dá. */
+  const a = motor.sugestaoDoSistema("mega-sena", 6, {semente: 7, candidatas: CANDIDATAS});
+  const b = motor.sugestaoDoSistema("mega-sena", 6, {semente: 7, candidatas: CANDIDATAS});
+  checar("a mesma semente devolve a mesma sugestão",
+    a.dezenas.join("-") === b.dezenas.join("-"), a.dezenas.join("-"));
+  const c = motor.sugestaoDoSistema("mega-sena", 6, {semente: 8, candidatas: CANDIDATAS});
+  checar("e sementes diferentes devolvem jogos diferentes",
+    a.dezenas.join("-") !== c.dezenas.join("-"), c.dezenas.join("-"));
+
+  /* O jogo continua tendo o tamanho certo e dezenas válidas. */
+  checar("a sugestão tem o tamanho da modalidade", a.dezenas.length === 6);
+  checar("e só dezenas dentro do volante",
+    a.dezenas.every(d => d >= 1 && d <= 60 && Number.isInteger(d)));
+  checar("sem repetir dezena", new Set(a.dezenas).size === a.dezenas.length);
+
+  S.resultados = g.r; S.modalidade = g.m;
 }
 
 /* ---------- saída ---------- */
