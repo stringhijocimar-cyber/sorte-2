@@ -64,6 +64,28 @@ const dataBr = (s) => {
 /* Converte a resposta da Caixa no registro do app. Recusa o que não
    reconhece: gravar um concurso pela metade contamina o histórico
    permanentemente, e ninguém vai reparar. */
+/* Campos separados do volante: nunca misturar os dois sorteios ou inventar trevos. */
+function numerosComplementares(valor,min,max,limite){
+  if(valor==null)return null;
+  if(!Array.isArray(valor)||valor.length<min||valor.length>max||valor.some(x=>!/^\d{1,2}$/.test(String(x))))throw new Error('Campo adicional inválido. Confira os números na fonte.');
+  const ds=valor.map(Number);
+  if(new Set(ds).size!==ds.length||ds.some(d=>d<1||d>limite))throw new Error('Campo adicional com repetição ou número fora do volante.');
+  return ds.sort((a,b)=>a-b);
+}
+function complementosResultado(bruto,m){
+  const r={};
+  if(m==='mais-milionaria'){
+    const t=numerosComplementares(bruto.trevosSorteados??bruto.trevos,2,2,6);if(t)r.trevos=t;
+  }
+  if(m==='dupla-sena'){
+    const d=numerosComplementares(bruto.listaDezenasSegundoSorteio??bruto.dezenasSegundoSorteio,6,6,50);if(d)r.dezenasSegundoSorteio=d;
+  }
+  return r;
+}
+function faltamComplementos(r){
+  return (r.modalidade==='mais-milionaria'&&!r.trevos)||(r.modalidade==='dupla-sena'&&!r.dezenasSegundoSorteio);
+}
+
 function converter(bruto, modalidade) {
   const cfg = MODALIDADES[modalidade];
   const dezenas = (bruto.listaDezenas || [])
@@ -81,6 +103,7 @@ function converter(bruto, modalidade) {
     modalidade,
     origem: "caixa",
   };
+  Object.assign(r,complementosResultado(bruto,modalidade));
   const rateio = (bruto.listaRateioPremio || []).map((f) => ({
     faixa: parseInt(f.faixa, 10),
     descricao: String(f.descricaoFaixa || "").trim(),
@@ -146,6 +169,8 @@ function daFormaDoEspelho(j) {
     numero: j.concurso ?? j.numero,
     dataApuracao: j.data || j.dataApuracao,
     listaDezenas: dezenas,
+    trevosSorteados:j.trevosSorteados??j.trevos,
+    listaDezenasSegundoSorteio:j.listaDezenasSegundoSorteio??j.dezenasSegundoSorteio,
     listaRateioPremio: (j.premiacoes || []).map((p) => ({
       faixa: p.faixa,
       descricaoFaixa: p.descricao,
@@ -285,7 +310,7 @@ function avaliarAtraso(modalidade, concursos, agora) {
 /* As funções puras saem por aqui para poderem ser testadas sem rede. O resto do
    arquivo só roda quando ele é executado direto — importá-lo para testar o
    guarda de atraso não pode disparar oito buscas na Caixa. */
-export { intervaloTipico, atrasoEmDias, avaliarAtraso };
+export { intervaloTipico, atrasoEmDias, avaliarAtraso, converter, daFormaDoEspelho };
 
 const EXECUTANDO_DIRETO =
   process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];
@@ -307,8 +332,14 @@ for (const [modalidade, cfg] of Object.entries(MODALIDADES)) {
     continue;
   }
 
-  const novos = [];
+  const novos = [];let completados=0;
   if (!conhecidos.has(ultimo.concurso)) novos.push(ultimo);
+  else {
+    const alvo=dados.concursos.find(c=>c.concurso===ultimo.concurso);
+    if(alvo.dezenas.slice().sort().join()===ultimo.dezenas.slice().sort().join()){
+      for(const campo of ['trevos','dezenasSegundoSorteio'])if(ultimo[campo]&&JSON.stringify(alvo[campo])!==JSON.stringify(ultimo[campo])){alvo[campo]=ultimo[campo];completados++;}
+    }
+  }
 
   /* ---- sonda PARA A FRENTE ----
 
@@ -371,28 +402,30 @@ for (const [modalidade, cfg] of Object.entries(MODALIDADES)) {
   }
 
   /* Backfill do rateio nos concursos que já estavam no arquivo sem ele. */
-  let completados = 0;
   if (COMPLETAR) {
     const semRateio = dados.concursos
-      .filter((c) => !temGanhadores(c))
+      .filter((c) => !temGanhadores(c)||faltamComplementos({...c,modalidade}))
       .sort((a, b) => b.concurso - a.concurso)
       .slice(0, TETO_COMPLETAR);
     for (const alvo of semRateio) {
       try {
         const r = converter(await buscar(cfg.slug, alvo.concurso), modalidade);
-        if (!temGanhadores(r)) continue;
+        if(r.concurso!==alvo.concurso||r.dezenas.slice().sort().join()!==alvo.dezenas.slice().sort().join())continue;
+        const antes=JSON.stringify(alvo);
+        if(r.trevos)alvo.trevos=r.trevos;
+        if(r.dezenasSegundoSorteio)alvo.dezenasSegundoSorteio=r.dezenasSegundoSorteio;
         /* Mescla: o que já existia manda, o rateio e as cidades entram. Trocar
            o objeto inteiro apagaria campos que só o registro antigo tem. */
         if (r.rateio) alvo.rateio = r.rateio;
         if (r.cidades && r.cidades.length) alvo.cidades = r.cidades;
-        completados++;
+        if(JSON.stringify(alvo)!==antes)completados++;
       } catch (e) {
         console.error(`${modalidade} #${alvo.concurso} (rateio): ${e.message}`);
         break;
       }
     }
     if (completados) {
-      console.log(`${modalidade}: rateio preenchido em ${completados} concursos`);
+      console.log(`${modalidade}: detalhes preenchidos em ${completados} registros`);
     }
   }
 
