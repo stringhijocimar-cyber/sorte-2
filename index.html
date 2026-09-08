@@ -956,7 +956,7 @@ td{padding:6px 7px;border-bottom:1px solid var(--trama)}
 <link rel="stylesheet" href="ui/lotolab-ui-v4-3.css?v=4.3.0" data-lotolab-ui="4.3.0">
 <link rel="stylesheet" href="ui/inteligencia-v4-9.css?v=4.9.0">
 <link rel="stylesheet" href="ui/visual-metas-v4-10.css?v=4.10.0">
-<link rel="stylesheet" href="ui/visual-foco-v4-11.css?v=4.12.0">
+<link rel="stylesheet" href="ui/visual-foco-v4-11.css?v=4.13.0">
 </head>
 <body>
 <header>
@@ -2081,6 +2081,171 @@ function* intComparar(m,registros,opcoes={}){
     esperado:tam*c.k/c.N,custo:n*quantidade*custoDoJogo(m,tam),
     primeiro:hist[hist.length-n].concurso,ultimo:hist[hist.length-1].concurso};
 }
+/* Avaliação analítica 4.13: escolha anterior ao teste, referências repetidas
+   e unidade estatística por concurso. Nada daqui é salvo como aposta. */
+const AUD_METRICAS={media:"Acertos médios",melhor:"Melhor jogo do lote"};
+function audMedia(xs){return xs.reduce((a,b)=>a+b,0)/xs.length;}
+function audBase(m,registros){
+  const base=intHistorico(m,registros),h=base.hist;
+  let inicio=h.length? h.length-1:0;
+  while(inicio>0&&h[inicio].concurso===h[inicio-1].concurso+1)inicio--;
+  const consecutivos=h.slice(inicio);
+  return {...base,consecutivos,excluidosPorLacunas:inicio};
+}
+function audResumo(jogos,sorteadas){
+  const set=new Set(sorteadas),acertos=jogos.map(ds=>ds.filter(d=>set.has(d)).length);
+  return {media:audMedia(acertos),melhor:Math.max(...acertos)};
+}
+function audUniforme(m,tam,q,semente){
+  const rnd=geradorSemeado(intHash(semente)),vistos=new Set(),jogos=[];
+  while(jogos.length<q){
+    const ds=intAmostra(universo(m),tam,rnd),k=ds.join('.');
+    if(!vistos.has(k)){vistos.add(k);jogos.push(ds);}
+  }
+  return jogos;
+}
+function audIntervalo(xs,semente){
+  // Bootstrap móvel por concurso: jogos e réplicas não viram observações.
+  const rnd=geradorSemeado(intHash(semente)),n=xs.length,bloco=Math.min(5,n),medias=[];
+  for(let b=0;b<2000;b++){
+    let soma=0,feitos=0;
+    while(feitos<n){const i=Math.floor(rnd()*(n-bloco+1));
+      for(let j=0;j<bloco&&feitos<n;j++,feitos++)soma+=xs[i+j];}
+    medias.push(soma/n);
+  }
+  medias.sort((a,b)=>a-b);
+  return [medias[49],medias[1949]];
+}
+function audDiagnostico(serie,metrica,semente){
+  const ds=serie.map(r=>r.valor[metrica]-r.referencia[metrica]),n=ds.length;
+  const recortes=Array.from({length:3},(_,i)=>{
+    const parte=serie.slice(Math.floor(i*n/3),Math.floor((i+1)*n/3));
+    return {primeiro:parte[0].concurso,ultimo:parte.at(-1).concurso,n:parte.length,
+      delta:audMedia(parte.map(r=>r.valor[metrica]-r.referencia[metrica]))};
+  });
+  const intervalo=audIntervalo(ds,semente),delta=audMedia(ds);
+  return {n,delta,intervalo,recortes,positivos:recortes.filter(r=>r.delta>0).length,
+    estavel:delta>0&&intervalo[0]>0&&recortes.every(r=>r.delta>0)};
+}
+function audSelecionar(linhas,metrica){
+  // Empates conservam a referência; somente a seleção entra nesta decisão.
+  let escolhido='uniforme',melhor=0;
+  for(const modo of ['cobertura','equilibrado']){
+    const delta=audMedia(linhas[modo].map(r=>r.valor[metrica]-r.referencia[metrica]));
+    if(delta>melhor+1e-12){escolhido=modo;melhor=delta;}
+  }
+  return {modo:escolhido,delta:melhor};
+}
+function* intAuditar(m,registros,opcoes={}){
+  const c=MODALIDADES[m];if(!c)throw new Error('Modalidade inválida.');
+  const tam=opcoes.tam??c.min,q=opcoes.quantidade??3;
+  const treino=40,selecao=20,teste=opcoes.concursos??30,replicas=opcoes.replicas??32;
+  const metrica=opcoes.metrica??'melhor',semente=String(opcoes.semente??'lotolab-4.13').slice(0,80);
+  if(!Number.isInteger(tam)||tam<c.min||tam>c.max)throw new Error('Quantidade de dezenas inválida.');
+  if(!Number.isInteger(q)||q<1||q>10)throw new Error('A avaliação aceita de 1 a 10 jogos por concurso.');
+  if(!Number.isInteger(teste)||teste<30||teste>60)throw new Error('O teste final precisa de 30 a 60 concursos.');
+  if(!Number.isInteger(replicas)||replicas<8||replicas>64)throw new Error('Use de 8 a 64 referências aleatórias.');
+  if(!AUD_METRICAS[metrica])throw new Error('Métrica inválida.');
+  const base=audBase(m,registros),necessarios=treino+selecao+teste;
+  if(base.consecutivos.length<necessarios)throw new Error(`A avaliação precisa de ${necessarios} concursos consecutivos recentes. Há ${base.consecutivos.length}; complete o histórico em Resultados.`);
+  const hist=base.consecutivos.slice(-necessarios),linhas=Object.fromEntries(Object.keys(INT_METODOS).map(k=>[k,[]]));
+  let escolha=null;
+  for(let i=treino;i<hist.length;i++){
+    if(i===treino+selecao)escolha=audSelecionar(linhas,metrica);
+    const alvo=hist[i],anteriores=hist.slice(0,i),referencias=[];
+    const lotes={};
+    for(let b=0;b<replicas;b++)referencias.push(audResumo(audUniforme(m,tam,q,`${semente}:referencia:${m}:${alvo.concurso}:${b}`),alvo.dezenas));
+    const referencia={media:audMedia(referencias.map(r=>r.media)),melhor:audMedia(referencias.map(r=>r.melhor))};
+    // Controles usam uma sequência independente, nunca uma das réplicas.
+    lotes.uniforme=audUniforme(m,tam,q,`${semente}:controle:${m}:${alvo.concurso}`);
+    for(const modo of ['cobertura','equilibrado'])lotes[modo]=intGerarLote(m,tam,q,{modo,historico:anteriores,janela:100,semente:String(intHash(`${semente}:${m}:${modo}:${alvo.concurso}`))}).jogos;
+    for(const modo of Object.keys(linhas))linhas[modo].push({concurso:alvo.concurso,treinoAte:anteriores.at(-1).concurso,
+      assinaturaTreino:intHistorico(m,anteriores).assinatura,jogos:lotes[modo],
+      valor:audResumo(lotes[modo],alvo.dezenas),referencia,
+      faixasReferencia:Array.from({length:c.k+1},(_,h)=>referencias.filter(r=>r.melhor===h).length/replicas)});
+    yield {feitos:i-treino+1,total:selecao+teste,etapa:i<treino+selecao?'seleção anterior':'teste final'};
+  }
+  const serie=linhas[escolha.modo].slice(selecao),diagnostico=audDiagnostico(serie,metrica,semente+':intervalo');
+  // O número de réplicas mede precisão Monte Carlo, não tamanho da amostra.
+  const final={...diagnostico,modo:escolha.modo,media:audMedia(serie.map(r=>r.valor.media)),
+    melhor:audMedia(serie.map(r=>r.valor.melhor)),serie,
+    faixas:Array.from({length:c.k+1},(_,h)=>({acertos:h,concursos:serie.filter(r=>r.valor.melhor===h).length,
+      referencia:serie.reduce((s,r)=>s+r.faixasReferencia[h],0)}))};
+  const comparacao=Object.entries(linhas).map(([modo,rs])=>({modo,
+    selecao:audMedia(rs.slice(0,selecao).map(r=>r.valor[metrica]-r.referencia[metrica])),
+    teste:audMedia(rs.slice(selecao).map(r=>r.valor[metrica]-r.referencia[metrica]))}));
+  const positivo=escolha.modo!=='uniforme'&&final.estavel;
+  return {versao:'4.13',modalidade:m,tam,quantidade:q,replicas,semente,metrica,escolha,final,comparacao,
+    status:positivo?'diferenca-exploratoria':escolha.modo==='uniforme'?'referencia-mantida':'nao-confirmada',
+    custoPorEstrategia:teste*q*custoDoJogo(m,tam),custoUnitario:custoDoJogo(m,tam),
+    etapas:{treino:{n:treino,primeiro:hist[0].concurso,ultimo:hist[treino-1].concurso},
+      selecao:{n:selecao,primeiro:hist[treino].concurso,ultimo:hist[treino+selecao-1].concurso},
+      teste:{n:teste,primeiro:hist[treino+selecao].concurso,ultimo:hist.at(-1).concurso}},
+    base:{assinatura:intHistorico(m,hist).assinatura,ultimo:hist.at(-1).concurso,usados:hist.length,
+      invalidos:base.invalidos,conflitos:base.conflitos,lacunas:base.lacunas,consecutivos:base.consecutivos.length},
+    parametros:{treino,selecao,teste,replicas,tam,quantidade:q,metrica,semente}};
+}
+function audRenderResultado(r){
+  const f=r.final,titulos={'diferenca-exploratoria':'Diferença consistente neste recorte','referencia-mantida':'A referência aleatória foi mantida','nao-confirmada':'O desempenho não se manteve no teste final'};
+  return `<div class="int-test-result aud-result"><h3>${titulos[r.status]}</h3>
+    <p class="int-help">Critério: ${esc(AUD_METRICAS[r.metrica])}. Escolha feita antes do teste: <b>${esc(INT_METODOS[r.escolha.modo])}</b>. ${f.positivos} de 3 períodos com diferença positiva.</p>
+    <div class="int-grid">${Object.entries(r.etapas).map(([k,e])=>`<div class="nota"><b>${({treino:'Treino inicial',selecao:'Seleção',teste:'Teste final'})[k]}</b><br>${e.n} concursos · ${e.primeiro}–${e.ultimo}</div>`).join('')}</div>
+    <p><b>Diferença frente à referência: ${nf(f.delta,3)}</b></p>
+    <p class="int-help">IC 95% aproximado: ${nf(f.intervalo[0],3)} a ${nf(f.intervalo[1],3)} acertos. ${r.replicas} lotes aleatórios independentes por concurso, cada um com ${r.quantidade} jogos de ${r.tam} dezenas. Custo equivalente no teste: ${brl(r.custoPorEstrategia)} por estratégia.</p>
+    ${f.recortes.map((e,i)=>`<p class="int-help">Período ${i+1} · concursos ${e.primeiro}–${e.ultimo}: diferença ${nf(e.delta,3)}.</p>`).join('')}
+    <details class="int-details"><summary>Acertos observados e comparação dos métodos</summary>
+      ${r.comparacao.map(l=>`<p class="int-help"><b>${esc(INT_METODOS[l.modo])}</b>: seleção ${nf(l.selecao,3)} · teste ${nf(l.teste,3)}. Diferenças na métrica escolhida.</p>`).join('')}
+      <div class="meta-faixas">${f.faixas.filter(x=>x.concursos||x.referencia).map(x=>`<span><b>${x.acertos} acertos</b>${x.concursos} concursos · referência ${nf(x.referencia,1)}</span>`).join('')}</div>
+      <p class="int-help">Contagem do melhor jogo de cada lote, somente dezenas principais. Zero ocorrências de uma faixa não significa chance zero. ${intExtraModalidade(r.modalidade)}</p></details>
+    <details class="int-details"><summary>Como interpretar esta avaliação</summary>
+      <p class="int-help">A estratégia é escolhida em 20 concursos anteriores ao teste final. No teste, ela continua usando apenas resultados anteriores a cada alvo; o método escolhido não muda. A incerteza usa reamostragem de blocos de cinco concursos, com 2.000 repetições. As referências aleatórias não aumentam a amostra: são ${f.n} concursos no teste.</p>
+      <p class="int-help">Resultado exploratório de um recorte histórico, sem validação prospectiva. O intervalo não corrige novas tentativas em outras sementes, métricas ou períodos. Nenhum método é aplicado automaticamente aos seus jogos.</p>
+      <p class="int-help">Base ${esc(r.base.assinatura)} · código ${esc(r.semente)}. A avaliação usa os últimos ${r.base.usados} concursos consecutivos disponíveis. O custo compara os volantes a preços atuais; não calcula lucro.</p></details>
+    <button class="acao secundaria" id="aud-exportar">Exportar avaliação</button><div id="aud-exportacao" role="status"></div></div>`;
+}
+let audTrabalho=0;
+function audRenderPainel(m){
+  const base=audBase(m,S.resultados),r=(S.auditorias||{})[m];
+  const atual=r&&r.base.assinatura===intHistorico(m,base.consecutivos.slice(-r.base.usados)).assinatura;
+  return `<section class="carta aud-painel"><span class="int-eyebrow">AVALIAÇÃO ANALÍTICA 4.13</span><h2>O desempenho se mantém?</h2>
+    <p class="int-help">Separe a escolha da estratégia do teste final e compare com 32 referências aleatórias de mesmo custo. ${base.consecutivos.length} concursos consecutivos recentes disponíveis.</p>
+    <div class="int-grid"><label class="campo" for="aud-metrica">Critério da avaliação<select id="aud-metrica">${Object.entries(AUD_METRICAS).map(([k,v])=>`<option value="${k}" ${k==='melhor'?'selected':''}>${v}</option>`).join('')}</select></label>
+    <label class="campo" for="aud-concursos">Concursos no teste final<select id="aud-concursos"><option value="30">30 concursos</option><option value="60">60 concursos</option></select></label></div>
+    <p class="int-help">Teste padrão: três jogos por concurso, com o tamanho escolhido nas sugestões, sem dezenas fixas ou excluídas. Treino inicial de 40 concursos e seleção em outros 20.</p>
+    <button class="acao secundaria" id="aud-iniciar" ${base.consecutivos.length<90?'disabled':''}>Avaliar em períodos separados</button>
+    ${base.consecutivos.length<90?'<p class="int-help">Complete pelo menos 90 concursos consecutivos em Resultados. Lacunas não são tratadas como sorteios observados.</p><button class="acao secundaria" data-atalho="resultados">Completar histórico</button>':''}
+    <div id="aud-resultado" role="status" aria-live="polite">${r?(atual?'':'<p class="nota atencao">O histórico mudou. Este resultado pertence à base anterior; execute a avaliação novamente.</p>')+audRenderResultado(r):''}</div></section>`;
+}
+function audLigarExportacao(m){
+  const b=$('#aud-exportar');if(!b)return;
+  b.onclick=()=>{
+    const r=S.auditorias?.[m];if(!r)return;
+    const texto=JSON.stringify(r,null,2);
+    if(typeof Capacitor!=='undefined'&&Capacitor.isNativePlatform?.()){
+      const saida=$('#aud-exportacao');saida.innerHTML='<label class="campo" for="aud-json">Avaliação em JSON<textarea id="aud-json" rows="5" readonly></textarea></label><button class="acao secundaria" id="aud-copiar">Copiar avaliação</button>';
+      $('#aud-json').value=texto;$('#aud-copiar').onclick=async()=>{try{await navigator.clipboard.writeText(texto);$('#aud-copiar').textContent='Avaliação copiada';}catch(e){$('#aud-json').select();$('#aud-copiar').textContent='Selecione Copiar no menu do aparelho';}};
+    }else{
+      const url=URL.createObjectURL(new Blob([texto],{type:'application/json'})),a=document.createElement('a');
+      a.href=url;a.download='LotoLab-analise-'+m+'-'+r.base.ultimo+'.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+    }
+  };
+}
+function audLigarAcoes(){
+  const b=$('#aud-iniciar');if(!b)return;const m=S.modalidade;
+  audLigarExportacao(m);
+  b.onclick=()=>{
+    const saida=$('#aud-resultado'),token=++audTrabalho;
+    const tarefa=intAuditar(m,S.resultados.slice(),{tam:Number($('#int-tam').value),concursos:Number($('#aud-concursos').value),metrica:$('#aud-metrica').value,semente:$('#int-semente').value||'lotolab-4.13'});
+    b.disabled=true;
+    const passo=()=>{
+      if(token!==audTrabalho||S.modalidade!==m||S.tela!=='sugestoes'||!saida.isConnected)return;
+      try{const r=tarefa.next();if(r.done){(S.auditorias||(S.auditorias={}))[m]=r.value;saida.innerHTML=audRenderResultado(r.value);b.disabled=false;audLigarExportacao(m);return;}
+        saida.innerHTML=barraProgresso(r.value.feitos,r.value.total,'Avaliando '+r.value.etapa);setTimeout(passo,0);
+      }catch(e){saida.textContent=e.message;b.disabled=false;}
+    };passo();
+  };
+}
+
 function intCsv(lote){
   const cel=v=>'"'+String(v??"").replace(/^[=+\-@]/,"'$&").replace(/"/g,'""')+'"';
   const linhas=[["Modalidade","Jogo","Dezenas","Estratégia","Semente","Histórico","Assinatura","Custo estimado R$","Fixas","Excluídas","Trevos"]];
@@ -2483,7 +2648,7 @@ T.sugestoes = () => {
       <button class="acao secundaria" id="int-comparar" ${base.total<50?"disabled":""}>Comparar com o aleatório</button>
       ${base.total<50?'<p class="int-help">Importe pelo menos 50 concursos em Resultados para liberar a comparação.</p>':""}
       <div id="int-comparacao" role="status" aria-live="polite">${S.intTestes[m]?intRenderTeste(S.intTestes[m]):""}</div>
-    </section>`;
+    </section>${audRenderPainel(m)}`;
 };
 function intMapaFrequencias(m,hist){
   if(!hist.length) return '<p class="int-help">Traga concursos em Resultados para visualizar frequências e intervalos.</p>';
@@ -2533,6 +2698,7 @@ function intRenderTeste(r){
 }
 function intLigarAcoes(){
   if(S.tela!=="sugestoes") return;
+  audLigarAcoes();
   const m=S.modalidade,o=intConfig(m);
   const ler=()=>{
     for(const k of ["tam","quantidade","janela"]) o[k]=Number($("#int-"+k).value);
@@ -3342,7 +3508,7 @@ T.inicio = () => {
   const m=S.modalidade,c=MODALIDADES[m],r=ultimoResultado(m),concursos=historicoDe(m).length;
   const avisos=S.avisos.filter(a=>!a.lido).length;
   return `<div class="foco-inicio" style="--foco-cor:${FOCO_CORES[m]}">
-    <div class="foco-boasvindas"><div><span class="foco-label">SEU LABORATÓRIO</span><${podeVoltar()?'h2':'h1'}>Um concurso.<br>Uma meta clara.</${podeVoltar()?'h2':'h1'}></div><span class="foco-versao">4.12</span></div>
+    <div class="foco-boasvindas"><div><span class="foco-label">SEU LABORATÓRIO</span><${podeVoltar()?'h2':'h1'}>Um concurso.<br>Uma meta clara.</${podeVoltar()?'h2':'h1'}></div><span class="foco-versao">4.13</span></div>
     <div class="foco-modalidades" role="group" aria-label="Modalidades na tela inicial">${Object.entries(MODALIDADES).map(([id,v])=>`<button data-mod="${id}" aria-pressed="${id===m}" style="--foco-cor:${FOCO_CORES[id]}">${esc(v.nome)}</button>`).join('')}</div>
     <section class="foco-hero"><div class="foco-hero-topo"><span class="foco-label">FOCO EM TODAS AS DEZENAS</span><span class="foco-tag">${esc(c.nome)}</span></div>
       <div class="foco-objetivo"><div><h2>Seu próximo jogo<br>começa pela meta.</h2><p>Cobertura verificada, limite definido e acompanhamento do concurso escolhido.</p></div><div class="foco-alvo" aria-label="Meta de ${c.k} dezenas"><strong>${c.k}</strong><span>${c.trevos?"+ 2 trevos":"de "+c.k+" dezenas"}</span></div></div>
@@ -5372,18 +5538,13 @@ function conferenciaAutomatica(){
   todos.forEach(j => {
     j.conferencias = j.conferencias || [];
     const jaFeitas = new Set(j.conferencias.map(cf => cf.concurso));
-    /* As dezenas do jogo viram conjunto UMA vez por jogo. Antes era
-       `filter(d => r.dezenas.includes(d))` a cada concurso: uma varredura
-       dentro da outra, repetida para os milhares de concursos que o jogo
-       cobre. */
-    const minhas = new Set(j.dezenas);
     concursosDoJogo(j).forEach(r => {
       const cf=metaValidarConferencia(metaConferencia(j,r));if(!cf)return;
       const detalhes={...(r.trevos?{trevos:r.trevos}:{}),...(r.dezenasSegundoSorteio?{dezenasSegundoSorteio:r.dezenasSegundoSorteio}:{})};
       const acertos=cf.acertos;
       if(jaFeitas.has(r.concurso)){
         const antiga=j.conferencias.find(x=>x.concurso===r.concurso);
-        const atualizada={...antiga,data:r.data,dezenas:r.dezenas,acertos,...detalhes,...(j.modalidade==='mais-milionaria'?{acertosTrevos:cf.acertosTrevos}:{}),...(j.modalidade==='dupla-sena'?{acertosSegundo:cf.acertosSegundo}:{})};
+        const atualizada={...antiga,data:r.data,dezenas:r.dezenas,acertos,...(j.modalidade==='mais-milionaria'?{trevos:r.trevos,acertosTrevos:cf.acertosTrevos}:{}),...(j.modalidade==='dupla-sena'?{dezenasSegundoSorteio:r.dezenasSegundoSorteio,acertosSegundo:cf.acertosSegundo}:{})};
         if(JSON.stringify(antiga)===JSON.stringify(atualizada))return;
         Object.assign(antiga,atualizada);enriquecidas++;
       }else{
@@ -5396,16 +5557,16 @@ function conferenciaAutomatica(){
       const faixa = j.modalidade==='mais-milionaria'
         ? (cf.acertosTrevos===null?null:((acertos>=4||(acertos>=2&&cf.acertosTrevos>=1))?acertos:null))
         : faixaAtingida(j.modalidade, maior);
+      const nome = MODALIDADES[j.modalidade].nome;
+      const titulo=`${nome}: ${metaTituloAcertos(cf)}`,texto=`Concurso ${r.concurso} — ${metaTituloAcertos(cf)}. Confira os dados no bilhete oficial.`,chave=`coincidencia:${j.id}:${r.concurso}`;
+      const anterior=S.avisos.find(a=>a.chave===chave);
+      if(anterior){Object.assign(anterior,{titulo,texto,conferencia:cf});_avisosSujos=true;}
       if(faixa !== null){
         /* Guarda o melhor achado da rodada para a notificação poder dizer
            QUANTO foi. Melhor = mais acertos; empate fica com o primeiro. */
         if(!melhor || metaOrdemAcerto(cf) > metaOrdemAcerto(melhor))
           melhor = cf;
-        const nome = MODALIDADES[j.modalidade].nome;
-        const novoAviso=avisar("premio", `${nome}: ${metaTituloAcertos(cf)}`,
-          `Concurso ${r.concurso} — ${metaTituloAcertos(cf)}. Confira o bilhete oficial para confirmar a premiação.`,
-          `coincidencia:${j.id}:${r.concurso}`, metaConferencia(j,r));
-        if(novoAviso)premios++;
+        if(!anterior&&avisar("premio",titulo,texto,chave,cf))premios++;
       }
     });
   });
@@ -6923,14 +7084,29 @@ function avaliarHipotese(h, dados, indices){
 
    Com a média, uma hipótese que acerta muito num recorte e erra nos outros
    ganha da que é consistente — e é exatamente a primeira que não se sustenta
-   fora da amostra. Usar o pior recorte é exigir que funcione sempre, que é o
-   que "robusto" quer dizer. O afastamento de 0,5 é o que interessa: uma
-   hipótese que separa ao contrário separa igual, e o sinal dela é só uma
-   convenção. */
+   fora da amostra. A direção é fixada pelos recortes de desenvolvimento.
+   Uma hipótese inversa consistente é válida como hipótese; alternar entre
+   direção direta e inversa produz margem negativa, mesmo com AUC absoluto alto. */
+function pesquisaMigrar(memoria){
+  if(!memoria||typeof memoria!=='object'||Array.isArray(memoria))return {};
+  for(const mem of Object.values(memoria)){
+    if(mem&&typeof mem==='object'&&mem.versaoAnalitica!=='4.13'){
+      mem.conclusao=null;mem.assinatura=null;
+    }
+  }
+  return memoria;
+}
+function pesquisaEstabilidade(recortes,validacao){
+  if(!recortes.length||recortes.some(a=>!Number.isFinite(a)||a<0||a>1))return {sentido:0,margem:0,consistente:false,testeCoerente:false};
+  const sentido=audMedia(recortes)>=.5?1:-1;
+  const margem=Math.min(...recortes.map(a=>(a-.5)*sentido));
+  return {sentido,margem,consistente:margem>0,
+    testeCoerente:Number.isFinite(validacao)&&(validacao-.5)*sentido>0};
+}
 function aptidao(h, dados){
   const porRecorte = dados.recortes.map(r => avaliarHipotese(h, dados, r));
-  const afastamentos = porRecorte.map(a => Math.abs(a - 0.5));
-  const pior = Math.min(...afastamentos);
+  const estabilidade = pesquisaEstabilidade(porRecorte);
+  const pior = estabilidade.margem;
   /* Punição por complexidade: entre duas hipóteses que explicam igual, a mais
      simples é a que tem chance de não ser coincidência. */
   const punicao = 0.0015 * h.genes.length;
@@ -7072,6 +7248,7 @@ function rodarGeracao(modalidade, opcoes){
     .slice(-HISTORICO_GERACOES);
 
   S.pesquisaAdaptativa[modalidade] = {
+    versaoAnalitica:'4.13',
     geracao, populacao: proxima, historico,
     hipotesesTestadas: (memoria.hipotesesTestadas || 0) + novas,
     /* O funil desta geração. Fica na memória porque a tela precisa dele e a
@@ -7168,7 +7345,7 @@ function concluirPesquisa(modalidade, opcoes){
      e não só a última geração. */
   const familia = Math.max(1, memoria.hipotesesTestadas);
   const limiar = 0.05 / familia;
-  const sobreviveu = p <= limiar;
+  const significativo = p <= limiar;
 
   /* Estabilidade: o campeão se comporta igual nos recortes de desenvolvimento?
      Um campeão que só funciona num recorte é ruído com sorte. */
@@ -7185,7 +7362,10 @@ function concluirPesquisa(modalidade, opcoes){
     ? Math.min(...memoria.campeaoDev.aucPorRecorte.map(a => Math.abs(a - 0.5))) : 0;
   const degradacao = afastamentoDev > 0 ? 1 - (afastamento / afastamentoDev) : 1;
 
+  const estabilidade=pesquisaEstabilidade(porRecorte,aucValidacao);
+  const sobreviveu=significativo&&estabilidade.consistente&&estabilidade.testeCoerente;
   const conclusao = {
+    significativo,estabilidade,
     aucValidacao, afastamento, p, pEmpirico, z, mediaNulo, dpNulo,
     limiar, familia, sobreviveu,
     percentilNaNuvem, nulosNuvem: o.nulos, permutacoes: o.permutacoes,
@@ -7224,6 +7404,9 @@ function descreverHipotese(entrada){
 function vereditoPesquisa(c, opcoes){
   const o = Object.assign({manchete:true}, opcoes || {});
   if(!c || c.erro) return esc((c && c.erro) || "sem conclusão");
+  if(c.significativo&&!c.sobreviveu){
+    return `${o.manchete ? "<strong>A hipótese não manteve o comportamento.</strong> " : ""}A diferença estatística não foi suficiente: o sinal mudou de direção entre os períodos de desenvolvimento ou no teste final. A hipótese foi descartada como resultado estável.`;
+  }
   if(!c.sobreviveu){
     return `${o.manchete ? "<strong>Nenhuma hipótese sobreviveu.</strong> " : ""}A melhor de
       ${inf(c.familia)} hipótese${c.familia > 1 ? "s" : ""} testada${c.familia > 1 ? "s" : ""}
@@ -9256,8 +9439,9 @@ function acoes(){
     const anterior = S.resultados.find(r =>
       r.concurso === concurso && r.modalidade === S.modalidade);
     S.resultados = S.resultados.filter(r => !(r.concurso===concurso && r.modalidade===S.modalidade));
+    const mesmos=anterior&&anterior.dezenas.slice().sort((a,b)=>a-b).join()===dezenas.slice().sort((a,b)=>a-b).join();
     S.resultados.push(Object.assign({}, anterior || {},
-      {concurso, data, dezenas, modalidade:S.modalidade}));
+      {concurso, data, dezenas, modalidade:S.modalidade},mesmos?{}:{trevos:undefined,dezenasSegundoSorteio:undefined}));
     Guardar.gravar("jogos", S.jogos); Guardar.gravar("resultados", S.resultados);
 
     const media = soma/alvo.length, esperado = somaEsperado/alvo.length;
@@ -9401,7 +9585,7 @@ const SECOES = [
    algum lugar de onde a pessoa de fato veio.                              */
 
 function irParaTela(id, opcoes){
-  intTrabalho++;
+  intTrabalho++; audTrabalho++;
   const empilhar = !(opcoes && opcoes.lateral);
   if(empilhar && id !== S.tela){
     S.pilha = (S.pilha || []).concat([S.tela]);
@@ -9481,7 +9665,7 @@ function navegacao(){
    mockup os desenha. É a MESMA escolha global — trocar num lugar troca no
    outro, porque `data-mod` é lido por um só tratador. */
 function trocarModalidade(mod){
-  intTrabalho++;
+  intTrabalho++; audTrabalho++;
   if(!MODALIDADES[mod] || mod === S.modalidade) return;
   S.modalidade = mod; S.tamanho = null; REFERENCIA = {};
   Guardar.gravar("modalidade", S.modalidade);
@@ -9746,7 +9930,7 @@ function ligarControlesCabecalho(){
   S.calibracao = Guardar.ler("calibracao", {});
   S.buscaAutomatica = Guardar.ler("buscaAutomatica", true);
   S.avisarSorteio = Guardar.ler("avisarSorteio", true);
-  S.pesquisaAdaptativa = Guardar.ler("pesquisaAdaptativa", {});
+  S.pesquisaAdaptativa = pesquisaMigrar(Guardar.ler("pesquisaAdaptativa", {}));
   S.pesquisaAutomatica = Guardar.ler("pesquisaAutomatica", true);
   S.bancadaAlvos = Guardar.ler("bancadaAlvos", 10);
   S.ultimaBusca = Guardar.ler("ultimaBusca", {});

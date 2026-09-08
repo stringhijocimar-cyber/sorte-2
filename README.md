@@ -1,3 +1,16 @@
+# LotoLab 4.13 — avaliação analítica por períodos
+
+- **Escolha antes do teste:** 40 concursos de treino inicial, 20 para selecionar o método e 30 ou 60 posteriores para testar a escolha. O método permanece fixo durante o teste final.
+- **Referência repetida:** 32 lotes aleatórios por concurso, com o mesmo tamanho, quantidade e custo de cada estratégia. As réplicas não multiplicam a amostra estatística.
+- **Estabilidade:** diferença de acertos, intervalo de incerteza por concurso e três recortes temporais. Pode avaliar acertos médios ou o melhor jogo do lote.
+- **Qualidade da base:** exige concursos consecutivos recentes; informa lacunas e sinaliza quando uma avaliação pertence a uma base anterior.
+- **Pesquisa adaptativa:** hipóteses que mudam de sentido entre períodos perdem aptidão; um sinal estatístico com direção invertida no teste final não é classificado como estável.
+- **Avisos corrigidos:** resultados completados ou corrigidos atualizam os avisos existentes e removem detalhes antigos inconsistentes.
+
+Abra **Sugestões → O desempenho se mantém?**. A análise padrão precisa de pelo menos 90 concursos consecutivos; exporta a avaliação em JSON para conferência. A tela não muda seus jogos nem aplica automaticamente o método escolhido. [Método, limites e validação](docs/analitica-4.13.md).
+
+---
+
 # LotoLab 4.12 — trevos e dois sorteios na conferência
 
 - **+Milionária:** as sugestões e os fechamentos incluem dois trevos por jogo, gerados pelo código de reprodução ou definidos por você. Salvar, copiar e exportar conserva os pares. Na cartela de um jogo antigo, é possível completar os trevos.

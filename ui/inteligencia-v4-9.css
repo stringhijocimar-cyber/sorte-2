@@ -75,3 +75,5 @@ html[data-tema="claro"] .segmento button{color:#5c6980!important}
 html[data-tema="claro"] .segmento button[aria-selected="true"]{color:#fff!important}
 html[data-tema="claro"] .int-form input,html[data-tema="claro"] .int-form select{background:#f6f8fb!important;color:#172434!important;border-color:#cbd5e1!important}
 html[data-tema="claro"] .int-hero .nota{background:#eef4f8!important;color:#40546b!important;border-color:#d1dee8!important}
+/* Avaliação 4.13: códigos de reprodução e exportação cabem no celular. */
+.aud-painel{min-width:0}.aud-painel .int-help{overflow-wrap:anywhere}.aud-painel textarea{max-width:100%;box-sizing:border-box}

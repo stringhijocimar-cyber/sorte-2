@@ -2716,7 +2716,8 @@ secao("25. Motor de pesquisa adaptativa");
     const rnd = contexto.geradorSemeado(99);
     const h = contexto.hipoteseAleatoria(rnd, 1, "aleatória");
     const ap = contexto.aptidao(h, dd);
-    const afast = ap.porRecorte.map(a => Math.abs(a - 0.5));
+    const sentido = ap.porRecorte.reduce((a,b)=>a+b,0)/ap.porRecorte.length >= .5 ? 1 : -1;
+    const afast = ap.porRecorte.map(a => (a - 0.5) * sentido);
     checar("a aptidão parte do pior recorte, e não da média",
       Math.abs(ap.pior - Math.min(...afast)) < 1e-12,
       `pior ${ap.pior.toFixed(4)} · média seria ${(afast.reduce((a,b)=>a+b,0)/afast.length).toFixed(4)}`);

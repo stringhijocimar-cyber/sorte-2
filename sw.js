@@ -30,7 +30,7 @@
 /* 9: a conferência passou a guardar o número do concurso como número, e a
    abertura junta as duplicatas que a versão anterior deixou gravadas. Quem
    usa pelo navegador precisa receber o index.html novo, não o do cache. */
-const VERSAO = "15";
+const VERSAO = "16";
 const CACHE = `lotolab-v${VERSAO}`;
 
 //: A casca mínima para o app abrir offline.

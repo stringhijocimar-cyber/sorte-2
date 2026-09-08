@@ -61,7 +61,7 @@ public class ConferenciaWorker extends Worker {
                     String data=iso(r.getString("dataApuracao"));JSONArray dezenas=r.getJSONArray("listaDezenas");
                     int[] sorteio=NotificacaoColorida.numeros(dezenas),regra=NotificacaoColorida.regra(m);
                     if(!ConferenciaRegras.validos(sorteio,regra[2],regra[2],regra[0],regra[1]))continue;
-                    JSONObject melhor=null;int maior=-1;
+                    JSONObject melhor=null;int maior=Integer.MIN_VALUE;
                     for(int i=0;i<jogos.length();i++){
                         JSONObject j=jogos.getJSONObject(i);if(!m.equals(j.optString("modalidade")))continue;
                         if(!ConferenciaRegras.cobre(j.optInt("concursoAlvo",0),j.optInt("deConcurso",0),j.optInt("concursos",0),j.optString("data"),n,data))continue;

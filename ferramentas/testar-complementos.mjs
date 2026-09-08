@@ -72,8 +72,8 @@ test('enriquecimento preserva conferências e avisos sem repetir; fonte parcial 
   const cheio={...r,dezenasSegundoSorteio:j.dezenas};a.guardarResultados([cheio]);
   assert.equal(a.conferenciaAutomatica().novas,0);assert.equal(j.conferencias.length,1);assert.equal(j.conferencias[0].acertosSegundo,6);assert.equal(a.S.avisos.length,avisos);
   a.guardarResultados([r]);assert.deepEqual(limpar(a.S.resultados[0].dezenasSegundoSorteio),j.dezenas);
-  const aviso=a.metaAvisoDados(a.S.avisos[0]);assert.equal(aviso.acertosSegundo,6);
-  a.guardarResultados([{...r,dezenas:[7,8,9,10,11,12]}]);assert.equal(a.S.resultados[0].dezenasSegundoSorteio,undefined);
+  const aviso=a.metaAvisoDados(a.S.avisos[0]);assert.equal(aviso.acertosSegundo,6);assert.match(a.S.avisos[0].titulo,/2º: 6/);
+  a.guardarResultados([{...r,dezenas:[7,8,9,10,11,12]}]);assert.equal(a.S.resultados[0].dezenasSegundoSorteio,undefined);a.conferenciaAutomatica();assert.equal(j.conferencias[0].acertos,0);assert.equal(j.conferencias[0].dezenasSegundoSorteio,undefined);assert.match(a.S.avisos[0].titulo,/1º: 0 · 2º: pendente/);
 });
 test('notificações separam bolinhas de trevos e dois sorteios; dados ausentes não ficam vermelhos',()=>{
   const {a}=contexto(),m='mais-milionaria',j={...jogo(m),trevos:[1,2]},r={modalidade:m,concurso:100,dezenas:[1,2,3,7,8,9],trevos:[1,6]};

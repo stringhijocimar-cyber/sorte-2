@@ -1,6 +1,6 @@
 {
   "name": "lotolab",
-  "version": "4.12.0",
+  "version": "4.13.0",
   "description": "Monta jogos das loterias brasileiras, guarda no aparelho e confere contra os concursos, mostrando o desempenho comparado ao acaso.",
   "private": true,
   "scripts": {
@@ -10,7 +10,8 @@
     "android:sync": "cap sync android",
     "android:open": "cap open android",
     "android:build": "cap sync android && cd android && ./gradlew assembleDebug",
-    "test:inteligencia": "node ferramentas/testar-inteligencia.mjs"
+    "test:inteligencia": "node ferramentas/testar-inteligencia.mjs",
+    "test:analitica": "node ferramentas/testar-analitica.mjs"
   },
   "devDependencies": {
     "@capacitor/cli": "^6.1.2"
