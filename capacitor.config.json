@@ -8,5 +8,15 @@
   },
   "server": {
     "androidScheme": "https"
+  },
+  "plugins": {
+    "BackgroundRunner": {
+      "label": "app.lotolab.jogos.conferencia",
+      "src": "runner/segundo-plano.js",
+      "event": "conferirSorteios",
+      "repeat": true,
+      "interval": 30,
+      "autoStart": true
+    }
   }
 }
