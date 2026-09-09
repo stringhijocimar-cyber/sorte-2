@@ -733,7 +733,7 @@ await capturar("central-atividades");
 /* A folha rola; a faixa de chips só ganha o esmaecimento quando de fato
    transborda. Aplicá-lo sempre apagaria a borda de um chip que cabe. */
 const faixa = await js(`
-  const c = document.querySelector(".chips");
+  const c = document.querySelector("#corpo-avisos .chips");
   return {transborda: c.scrollWidth > c.clientWidth + 1, rola: c.classList.contains("rola")};
 `);
 checar("o esmaecimento da faixa combina com o transbordo real",
@@ -1816,6 +1816,7 @@ await js(`S.modalidade='mega-sena';S.jogos=[];S.teimosinhas=[];S.avisos=[];S.int
 checar('as cinco ações principais têm destino direto',await js(`return [...document.querySelectorAll('#abas [data-secao]')].map(b=>b.dataset.secao).join(',')==='inicio,sugestoes,jogos,resultados,analise'`));
 await tocar('#abas [data-secao="sugestoes"]');
 checar('Sugestões abre o formulário com um toque',await js(`return S.tela==='sugestoes'&&!!document.querySelector('#int-gerar')`));
+checar('trocar de seção começa no topo com menu e sino visíveis',await js(`const h=document.querySelector('header').getBoundingClientRect();return scrollY===0&&h.top>=-1&&h.bottom<innerHeight`));
 await js(`const s=document.querySelector('#ux-modalidade');s.value='quina';s.dispatchEvent(new Event('change'));return true;`);
 checar('seletor visível muda modalidade, tamanho e custo juntos',await js(`return S.modalidade==='quina'&&document.querySelector('#int-tam').value==='5'&&document.querySelector('#int-preco').textContent===brl(custoDoJogo('quina',5)*3)`));
 checar('ajustes avançados começam recolhidos',await js(`return !document.querySelector('#int-avancado').open`));
@@ -1851,6 +1852,10 @@ for(const tema of ['escuro','claro'])for(const width of [360,412,1024]){
   for(const rota of ['inicio','sugestoes','jogos','resultados','pesquisa']){
     await js(`irParaTela(${JSON.stringify(rota)},{lateral:true});return true;`);await dormir(350);
     checar(rota+' 4.14 cabe em '+width+'px no '+tema,await js('return document.documentElement.scrollWidth<=innerWidth+1'));
+    if(tema==='claro'&&width===412&&rota==='sugestoes'){
+      const contraste=await js(`const s=getComputedStyle(document.querySelector('.segmento [aria-selected="true"]'));const lum=c=>{const rgb=c.match(/[\\d.]+/g).slice(0,3).map(Number).map(x=>x/255).map(x=>x<=.04045?x/12.92:((x+.055)/1.055)**2.4);return rgb[0]*.2126+rgb[1]*.7152+rgb[2]*.0722;};const a=lum(s.color),b=lum(s.backgroundColor);return (Math.max(a,b)+.05)/(Math.min(a,b)+.05);`);
+      checar('aba selecionada tem contraste de leitura no tema claro',contraste>=4.5,contraste.toFixed(2)+':1');
+    }
     if(width===412)await capturar('experiencia-414-'+rota+'-'+tema);
   }
 }

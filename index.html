@@ -2618,7 +2618,7 @@ function intExtraModalidade(m){
 }
 T.sugestoes = () => {
   const m=S.modalidade,c=MODALIDADES[m],o=intConfig(m),base=intHistorico(m,S.resultados,o.janela);
-  return `<div class="ux-sugestoes-intro" aria-label="Como criar sugestões"><span>1. Defina seu lote</span><span>2. Veja os jogos</span><span>3. Salve e acompanhe</span></div>
+  return `<div class="ux-sugestoes-intro" aria-label="Como criar sugestões"><span>1. Defina</span><span>2. Confira</span><span>3. Salve</span></div>
     <section class="carta int-form ux-form"><div class="int-section-title"><h2>Do seu jeito</h2><span>${esc(c.nome)}</span></div>
       <label class="campo" for="int-modo">Critério de seleção
         <select id="int-modo">${Object.entries(INT_METODOS).map(([v,n])=>`<option value="${v}" ${o.modo===v?"selected":""}>${n}</option>`).join("")}</select></label>
@@ -3526,7 +3526,7 @@ T.inicio = () => {
     <div class="ux-escolha"><div><span class="foco-label">ESCOLHA A MODALIDADE</span><small>Deslize para ver todas →</small></div>
     <div class="foco-modalidades" role="group" aria-label="Modalidades na tela inicial">${Object.entries(MODALIDADES).map(([id,v])=>`<button data-mod="${id}" aria-pressed="${id===m}" style="--foco-cor:${FOCO_CORES[id]}">${esc(v.nome)}</button>`).join('')}</div></div>
     <section class="foco-hero"><div class="foco-hero-topo"><span class="foco-label">UM PLANO PARA CADA CONCURSO</span><span class="foco-tag">${esc(c.nome)}</span></div>
-      <div class="foco-objetivo"><div><h2>Crie jogos.<br>Acompanhe cada acerto.</h2><p>Defina seus critérios e seu limite. O LotoLab organiza e confere.</p></div><div class="foco-alvo" aria-label="Meta de ${c.k} dezenas"><strong>${c.k}</strong><span>${c.trevos?"+ 2 trevos":"dezenas"}</span></div></div>
+      <div class="foco-objetivo"><div><h2>Crie seus jogos.<br>Veja os acertos.</h2><p>Defina seus critérios e seu limite. O LotoLab organiza e confere.</p></div><div class="foco-alvo" aria-label="Meta de ${c.k} dezenas"><strong>${c.k}</strong><span>${c.trevos?"+ 2 trevos":"dezenas"}</span></div></div>
       <button class="acao foco-primary" data-atalho="sugestoes">Criar sugestões <span aria-hidden="true">→</span></button>
       <button class="foco-secundaria" data-atalho="plano" data-meta-maxima>Definir meta de ${c.trevos?"6 dezenas + 2 trevos":c.k+" acertos"} <span aria-hidden="true">↗</span></button>
       <div class="ux-etapas" aria-label="Planeje, crie e confira"><span><i>1</i> Planeje</span><b></b><span><i>2</i> Crie</span><b></b><span><i>3</i> Confira</span></div>
@@ -9596,8 +9596,8 @@ function irParaTela(id, opcoes){
     S.pilha = [];
   }
   S.tela = id;
-  window.scrollTo(0, 0);
   pintar();
+  window.scrollTo(0, 0);
 }
 
 function podeVoltar(){ return !!(S.pilha && S.pilha.length); }
@@ -9605,8 +9605,8 @@ function podeVoltar(){ return !!(S.pilha && S.pilha.length); }
 function voltar(){
   if(!podeVoltar()) return false;
   S.tela = S.pilha.pop();
-  window.scrollTo(0, 0);
   pintar();
+  window.scrollTo(0, 0);
   return true;
 }
 
@@ -9796,7 +9796,8 @@ function pintar(){
   const contexto=usaChips?"":`<div class="ux-contexto"><label for="ux-modalidade">Modalidade</label><select id="ux-modalidade">${Object.entries(MODALIDADES).map(([k,v])=>`<option value="${k}" ${k===S.modalidade?'selected':''}>${esc(v.nome)}</option>`).join('')}</select></div>`;
   $("#tela").dataset.rota=tela.id;
   $("#tela").innerHTML = (tela.id==="inicio"&&!podeVoltar()?"":cabecalho) + segmento + contexto +
-    (comProximo.includes(tela.id) ? cartaoProximo(S.modalidade) : "") +
+    (tela.id==='resultados'?`<details class="carta ux-explorar ux-proximo"><summary>Próximo concurso</summary><div>${cartaoProximo(S.modalidade)}</div></details>`:
+      comProximo.includes(tela.id)&&!(tela.id==='jogos'&&!S.jogos.some(j=>j.modalidade===S.modalidade))?cartaoProximo(S.modalidade):"") +
     T[tela.id]() +
     `<div class="aviso-fixo">Nenhum método aumenta a chance de acertar.<br>
      Loteria é gasto de entretenimento, não investimento.</div>`;
