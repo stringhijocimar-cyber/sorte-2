@@ -982,7 +982,7 @@ await cmd("Page.navigate", { url: ENDERECO });
 await dormir(2500);
 
 const identidade = await js(`
-  const l = document.querySelector('link[href*="sorte2-ui-final.css"]');
+  const l = document.querySelector('link[href*="experiencia-v4-14.css"]');
   return {
     titulo: document.title,
     marca: document.querySelector('.marca-titulo b')?.textContent || "",
@@ -999,7 +999,7 @@ const identidade = await js(`
 checar("título é o da edição", identidade.titulo === EDICAO.titulo, identidade.titulo);
 checar("marca no cabeçalho é a da edição", identidade.marca === EDICAO.marca, identidade.marca);
 checar("tema escuro é o padrão", identidade.tema === "escuro", String(identidade.tema));
-checar("a folha da V4 carregou e tem regras", identidade.temLink && identidade.regrasDaFolha > 100,
+checar("a folha visual 4.14 carregou e tem regras", identidade.temLink && identidade.regrasDaFolha > 100,
   `${identidade.regrasDaFolha} regras`);
 
 /* Não basta a folha carregar: as regras precisam VALER — e "valer" se mede no
@@ -1012,8 +1012,8 @@ checar("a folha da V4 carregou e tem regras", identidade.temLink && identidade.r
    a V4. Então a lista abaixo é curta, escolhida à mão, e cada linha diz o
    valor computado que se espera de fato. */
 const VALORES_DA_V4 = [
-  { o_que: "fundo da página",        js: `getComputedStyle(document.documentElement).backgroundColor`, espera: "rgb(2, 10, 16)" },
-  { o_que: "cor-base da V4",         js: `getComputedStyle(document.documentElement).getPropertyValue('--s2-bg').trim()`, espera: "#061521" },
+  { o_que: "fundo da página",        js: `getComputedStyle(document.documentElement).backgroundColor`, espera: "rgb(12, 16, 32)" },
+  { o_que: "cor-base da V4",         js: `getComputedStyle(document.documentElement).getPropertyValue('--s2-bg').trim()`, espera: "#0c1020" },
   /* 44px, e não os 40px de antes: a V4.3 subiu os dois ícones do cabeçalho
      para o mínimo de alvo de toque. A expectativa muda aqui porque a mudança
      foi intencional e medida — não para o teste parar de reclamar. E, para
@@ -1035,14 +1035,14 @@ for (const v of VALORES_DA_V4) {
    desligada a folha, o fundo tem de deixar de ser o da V4. Um teste que só
    confere o valor final passaria igual se o <link> não existisse. */
 const semAFolha = await js(`
-  const l = document.querySelector('link[href*="sorte2-ui-final.css"]');
+  const l = document.querySelector('link[href*="experiencia-v4-14.css"]');
   l.sheet.disabled = true;
   const cor = getComputedStyle(document.documentElement).backgroundColor;
   l.sheet.disabled = false;
   return { desligada: cor, religada: getComputedStyle(document.documentElement).backgroundColor };
 `);
-checar("o fundo vem da folha da V4, não do CSS embutido",
-  semAFolha.desligada !== "rgb(2, 10, 16)" && semAFolha.religada === "rgb(2, 10, 16)",
+checar("o fundo vem da folha 4.14",
+  semAFolha.desligada !== "rgb(12, 16, 32)" && semAFolha.religada === "rgb(12, 16, 32)",
   `sem a folha: ${semAFolha.desligada} · com a folha: ${semAFolha.religada}`);
 
 /* A cor do manifesto é a tela de partida do app instalado. Divergir da
@@ -1068,7 +1068,7 @@ const corDoManifesto = await js(`
 `);
 checar("o manifesto é JSON válido", !corDoManifesto.erro,
   corDoManifesto.erro ? `${corDoManifesto.erro} — começa com "${corDoManifesto.inicio}"` : "");
-checar("manifesto usa a cor da V4",
+checar("manifesto e tela de partida usam a paleta 4.14",
   corDoManifesto.fundo === identidade.themeColor &&
   corDoManifesto.tema === identidade.themeColor,
   `manifesto ${corDoManifesto.fundo}/${corDoManifesto.tema} vs meta ${identidade.themeColor}`);

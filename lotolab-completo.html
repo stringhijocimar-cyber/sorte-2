@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#061521">
+<meta name="theme-color" content="#0c1020">
 <meta name="description" content="Gerador e conferidor de jogos das loterias brasileiras, com comparação honesta contra o acaso.">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icone.svg" type="image/svg+xml">
@@ -2172,6 +2172,72 @@ html[data-tema="claro"] .ux-contexto select{background:#f4f0fa!important;color:#
 @media(min-width:650px){main{padding-inline:26px!important}.ux-inicio .foco-boasvindas :is(h1,h2){font-size:2rem}.ux-inicio .foco-hero{padding:28px}.ux-inicio .foco-objetivo{grid-template-columns:minmax(0,1fr) 94px}.ux-inicio .foco-alvo{width:88px;height:88px}.ux-inicio .foco-objetivo h2{font-size:2rem}.ux-acessos button{padding:19px;min-height:92px}.ux-form.int-form{padding:26px!important}}
 @media(max-width:370px){main{padding-inline:14px!important}.ux-inicio .foco-boasvindas :is(h1,h2){font-size:1.48rem}.ux-inicio .foco-hero{padding:18px}.ux-inicio .foco-objetivo{gap:12px;grid-template-columns:minmax(0,1fr) 57px}.ux-inicio .foco-alvo{width:57px;height:57px}.ux-inicio .foco-objetivo h2{font-size:1.33rem}.ux-acessos button{gap:7px;padding:12px 9px;grid-template-columns:31px minmax(0,1fr)}.ux-acessos b{font-size:.74rem}.ux-icone{width:31px}.ux-form.int-form{padding:16px!important}.ux-etapas{font-size:.61rem}}
 @media(prefers-reduced-motion:reduce){.ux-inicio *{scroll-behavior:auto!important}}
+
+/* Paleta revisada: azul profundo, superfícies legíveis e um acento roxo.
+   A camada antiga também usa s2-*. Os aliases recebem os mesmos valores. */
+html[data-tema="escuro"]{
+  --s2-bg:#0c1020;--s2-bg-deep:#090d18;--s2-panel:#151b2c;--s2-panel-2:#1c2438;--s2-panel-3:#242e45;
+  --s2-line:#303a53;--s2-line-hot:#5b4b82;--s2-text:#f2f4fc;--s2-muted:#a9b4c9;--s2-teal:#b39aee;--s2-teal-2:#8056d5;
+  --fundo:#0c1020!important;--carta:#151b2c!important;--trama:#1c2438!important;--linha:#303a53!important;
+  --tinta:#f2f4fc!important;--secundaria:#a9b4c9!important;--acaso:#b39aee!important;--acaso-fundo:#8056d5!important;
+  --seu:#dfb775!important;--alerta:#f0a0ae!important;--ganhou:#4abd8a!important;--ganhou-tinta:#a4dfbd;
+  --acumulou:#d5ab60;--acumulou-tinta:#e9c888;--ux-acento:#bfa8f4;--ux-suave:#2a2142;--ux-borda:#594675;
+  background:#0c1020!important;color-scheme:dark;
+}
+html[data-tema="escuro"] body{background:radial-gradient(700px 430px at 80% 0,#523d7125,transparent 75%),#0c1020!important;color:#f2f4fc!important}
+html[data-tema="escuro"] header{background:#0c1020f5!important;border-color:#252e45!important;box-shadow:0 5px 22px #00000012!important}
+html[data-tema="escuro"] :is(.menu,.sino,.voltar,.acao-tela){background:#171e30!important;border-color:#323d56!important;color:#e4e8f6!important}
+html[data-tema="escuro"] :is(.carta,.panel,.ficha,.kpi,.mini-card,.item,.draw-card,.concurso,.pq-grafico){background:#151b2c!important;border-color:#303a53!important;box-shadow:0 5px 20px #03061412!important}
+html[data-tema="escuro"] :is(.ux-acessos button,.foco-acompanhamento,.foco-ultimo,.ux-contexto,.ux-vazio,.ux-menu-links button){background:#151b2c!important;border-color:#303a53!important}
+html[data-tema="escuro"] .foco-hero{background:radial-gradient(ellipse at 95% 0,#785fa93b,transparent 65%),linear-gradient(135deg,#302442,#1d2135)!important;border-color:#72518d!important;box-shadow:0 9px 30px #05081624}
+html[data-tema="escuro"] .foco-objetivo p{color:#d3c9e4}.foco-hero .foco-label{color:#c9adeb!important}
+html[data-tema="escuro"] :is(.gaveta .corpo,.folha .corpo,.activity-sheet){background:#101626!important;border-color:#303a53!important}
+html[data-tema="escuro"] .gaveta-mods button{background:#192136!important;border-color:#303a53!important;color:#bec8dd!important}
+html[data-tema="escuro"] .gaveta-mods button[aria-pressed="true"]{background:#302644!important;border-color:#8566ad!important;color:#f2edfc!important}
+html[data-tema="escuro"] :is(input,select,textarea){background:#111829!important;border-color:#3a455f!important;color:#f2f4fc!important}
+html[data-tema="escuro"] :is(input,textarea)::placeholder{color:#8793ab;opacity:1}
+html[data-tema="escuro"] .acao.secundaria,html[data-tema="escuro"] .acao.contorno{background:#1a2236!important;border-color:#3b4661!important;color:#dde3f2!important;box-shadow:none!important}
+.acao:not(.contorno):not(.secundaria):not(.perigo),.foco-hero .acao.foco-primary{background:linear-gradient(110deg,#7b50cf,#6740ba)!important;border-color:#a080dc!important;color:#fff!important;box-shadow:0 5px 15px #4b267d24!important}
+html[data-tema="escuro"] .chip{background:#192136!important;border-color:#35405a!important;color:#b9c3d8!important}
+html[data-tema="escuro"] .chip[aria-pressed="true"]{background:#35264e!important;border-color:#8164a8!important;color:#eadffb!important;box-shadow:none!important}
+html[data-tema="escuro"] .chip i{background:#263248!important;color:#bdc9df!important}
+html[data-tema="escuro"] .chip[aria-pressed="true"] i{background:#bc9deb!important;color:#25143e!important}
+html[data-tema="escuro"] .chips{background:transparent!important;border-color:#303a53!important}
+html[data-tema="escuro"] .ux-inicio .foco-modalidades button{background:#171f32!important;border-color:#343e56!important;color:#b9c3d8!important}
+html[data-tema="escuro"] .ux-inicio .foco-modalidades button[aria-pressed="true"]{background:color-mix(in srgb,var(--foco-cor) 18%,#151b2c)!important;border-color:color-mix(in srgb,var(--foco-cor) 70%,#bac6db)!important;color:#f2f4fc!important}
+html[data-tema="escuro"] .concurso.acumulou,html[data-tema="escuro"] .item.acumulou{background:linear-gradient(120deg,#272532,#171f30)!important;border-color:#61503a!important;box-shadow:inset 3px 0 #d5ab60!important}
+html[data-tema="escuro"] .concurso.ganhou,html[data-tema="escuro"] .item.ganhou{background:linear-gradient(120deg,#19312d,#171f30)!important;border-color:#386c5a!important;box-shadow:inset 3px 0 #4abd8a!important}
+html[data-tema="escuro"] .concurso .concurso-topo b{color:#edf0fa!important}
+html[data-tema="escuro"] .selo-ganho.acumulou{background:#d5ab6015!important;border-color:#806941!important;color:#e5c58c!important}
+html[data-tema="escuro"] .selo-ganho.ganhou{background:#4abd8a14!important;border-color:#3c7d60!important;color:#a4dfbd!important}
+html[data-tema="escuro"] .pilula.oficial{background:#202b40!important;border-color:#465876!important;color:#b9cce8!important}
+html[data-tema="escuro"] body:has([data-mod][aria-pressed="true"]) .bola,html[data-tema="escuro"] body:has([data-mod][aria-pressed="true"]) .dz.sorteada{background:#3a2b55!important;border-color:#80639f!important;color:#f5efff!important;box-shadow:inset 0 1px #ffffff16!important;font-style:normal!important}
+html[data-tema="escuro"] .proximo{background:linear-gradient(120deg,#24334a,#23334c)!important;color:#f1f4fa!important;border:1px solid #435472!important;box-shadow:none!important}
+html[data-tema="escuro"] .proximo :is(.premio,.valor,.data,.mod,.estado){color:inherit!important}
+html[data-tema="escuro"] .int-hero,html[data-tema="escuro"] .pq-hero{background:linear-gradient(135deg,#27203d,#181f31)!important;border-color:#594675!important}
+html[data-tema="escuro"] .int-ticket{background:#171e30;border-color:#35405a}
+html[data-tema="escuro"] .int-ticket .dz.marcada{background:#39294f!important;border-color:#8964a6!important;color:#f6efff!important;box-shadow:none!important}
+html[data-tema="escuro"] .ux-inicio .foco-bolas span{background:#3a2b55;border-color:#80639f;color:#f5efff;box-shadow:none}
+html[data-tema="claro"]{--fundo:#f3f4fa;--carta:#fff;--trama:#f0f2f8;--linha:#dce1ed;--tinta:#202940;--secundaria:#5d6b85;--acaso:#6744b3;--acaso-fundo:#7550cb;--ux-acento:#6840af;--ux-suave:#eee8f8;--ux-borda:#d1bee7;background:#f3f4fa!important;color-scheme:light}
+html[data-tema="claro"] body{background:#f3f4fa!important;color:#202940!important}
+html[data-tema="claro"] #abas{box-shadow:0 -5px 20px #3641630d!important;background:#fbfbfef7!important;border-color:#dce1ed!important}
+html[data-tema="claro"] .ux-contexto,html[data-tema="claro"] .ux-acessos button{border-color:#dce1ed!important}
+html[data-tema="claro"] .ux-inicio .foco-modalidades button{background:#fff!important;border-color:#dce1ed!important;color:#5a6680!important}
+html[data-tema="claro"] .ux-inicio .foco-modalidades button[aria-pressed="true"]{background:#eee8f8!important;border-color:#aa90d0!important;color:#5c358f!important;box-shadow:inset 0 -2px var(--foco-cor)!important}
+html[data-tema="claro"] .chip{background:#f3f1f8!important;color:#5d6880!important;border-color:#ded8e9!important}
+html[data-tema="claro"] .chip[aria-pressed="true"]{background:#ede4f8!important;color:#613991!important;border-color:#ba9bd5!important;box-shadow:none!important}
+html[data-tema="claro"] .chip i{background:#e1e6f0!important;color:#526078!important}
+html[data-tema="claro"] .chip[aria-pressed="true"] i{background:#7550ad!important;color:#fff!important}
+html[data-tema="claro"] .concurso{background:#fff!important;border-color:#dce1ed!important;box-shadow:0 4px 16px #17234008!important}
+html[data-tema="claro"] .concurso.acumulou{background:#fffcf6!important;border-color:#e4d4b8!important;box-shadow:inset 3px 0 #c99a48!important}
+html[data-tema="claro"] .concurso.ganhou{background:#f5fbf7!important;border-color:#bad9c7!important;box-shadow:inset 3px 0 #408866!important}
+html[data-tema="claro"] .concurso .concurso-topo b{color:#26334a!important}
+html[data-tema="claro"] .selo-ganho.acumulou{background:#f8edd7!important;color:#77571b!important;border-color:#dfc995!important}
+html[data-tema="claro"] .selo-ganho.ganhou{background:#e4f2e9!important;color:#296346!important;border-color:#aecdbb!important}
+html[data-tema="claro"] body:has([data-mod][aria-pressed="true"]) .bola,html[data-tema="claro"] body:has([data-mod][aria-pressed="true"]) .dz.sorteada{background:#ede5f7!important;border-color:#c6b2df!important;color:#543273!important;box-shadow:none!important;font-style:normal!important}
+html[data-tema="claro"] .pilula.oficial{background:#edf2f9!important;border-color:#c5d3e5!important;color:#425c7b!important}
+html[data-tema="claro"] .proximo{background:#eaf0fa!important;border:1px solid #c6d3e7!important;color:#263951!important;box-shadow:none!important}
+html[data-tema="claro"] .acao.secundaria,html[data-tema="claro"] .acao.contorno{background:#f7f6fb!important;border-color:#d3cde2!important;color:#57426f!important;box-shadow:none!important}
 
 </style>
 </head>
@@ -10820,7 +10886,7 @@ function irParaTela(id, opcoes){
   }
   S.tela = id;
   pintar();
-  window.scrollTo(0, 0);
+  window.scrollTo({top:0,left:0,behavior:'instant'});
 }
 
 function podeVoltar(){ return !!(S.pilha && S.pilha.length); }
@@ -10829,7 +10895,7 @@ function voltar(){
   if(!podeVoltar()) return false;
   S.tela = S.pilha.pop();
   pintar();
-  window.scrollTo(0, 0);
+  window.scrollTo({top:0,left:0,behavior:'instant'});
   return true;
 }
 

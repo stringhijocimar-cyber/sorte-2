@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#061521">
+<meta name="theme-color" content="#0c1020">
 <meta name="description" content="Gerador e conferidor de jogos das loterias brasileiras, com comparação honesta contra o acaso.">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icone.svg" type="image/svg+xml">
@@ -9597,7 +9597,7 @@ function irParaTela(id, opcoes){
   }
   S.tela = id;
   pintar();
-  window.scrollTo(0, 0);
+  window.scrollTo({top:0,left:0,behavior:'instant'});
 }
 
 function podeVoltar(){ return !!(S.pilha && S.pilha.length); }
@@ -9606,7 +9606,7 @@ function voltar(){
   if(!podeVoltar()) return false;
   S.tela = S.pilha.pop();
   pintar();
-  window.scrollTo(0, 0);
+  window.scrollTo({top:0,left:0,behavior:'instant'});
   return true;
 }
 
