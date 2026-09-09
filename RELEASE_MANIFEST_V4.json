@@ -1,12 +1,12 @@
 {
   "product": "LotoLab",
-  "version": "4.13.0",
-  "versionLabel": "V4.13",
+  "version": "4.14.0",
+  "versionLabel": "V4.14",
   "sourceBranch": "codex/inteligencia-sugestoes-v4.9",
-  "visualLayer": "Visual 4.12 com avaliação analítica por períodos",
+  "visualLayer": "Experiência 4.14 com avaliação analítica 4.13",
   "android": {
-    "versionCode": 21,
-    "versionName": "4.13.0"
+    "versionCode": 22,
+    "versionName": "4.14.0"
   },
   "versionFiles": [
     "VERSION",
@@ -15,7 +15,7 @@
     "android/app/build.gradle"
   ],
   "releaseState": "source-ready",
-  "notes": "Comparação com 32 referências, seleção temporal antes do teste final, estabilidade por períodos e correção dos avisos ao completar resultados.",
+  "notes": "Navegação direta, sugestões simplificadas, custo ao digitar, acesso à avaliação por períodos e importação de resultados.",
   "editions": [
     {
       "name": "LotoLab 4.3.0",

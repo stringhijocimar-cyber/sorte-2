@@ -1,3 +1,11 @@
+# LotoLab 4.14 — mais fácil de usar
+
+Sugestões e Meus jogos estão na barra inferior. A tela inicial reúne ações diretas; o formulário mostra o custo enquanto você digita e recolhe os ajustes avançados. Avaliar estratégias, importar histórico e começar uma lista de jogos agora têm caminhos visíveis. Temas claro e escuro com leitura e áreas de toque revisadas.
+
+A avaliação analítica 4.13 e as conferências de trevos e dos dois sorteios continuam incluídas. [Mudanças de navegação e validação](docs/experiencia-4.14.md).
+
+---
+
 # LotoLab 4.13 — avaliação analítica por períodos
 
 - **Escolha antes do teste:** 40 concursos de treino inicial, 20 para selecionar o método e 30 ou 60 posteriores para testar a escolha. O método permanece fixo durante o teste final.

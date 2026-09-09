@@ -2072,6 +2072,103 @@ html[data-tema="claro"] .foco-texto-btn{color:#6c3da3}
 .resultado-resumo{flex-wrap:wrap;gap:6px}.resultado-resumo b{line-height:1.6}
 
 </style>
+<style data-folha="ui/experiencia-v4-14.css">
+/* LotoLab 4.14: ações diretas, leitura confortável e detalhes sob demanda. */
+:root{--ux-acento:#b89aff;--ux-suave:#211b36;--ux-borda:#403153;--barra:72px}
+html[data-tema="claro"]{--ux-acento:#7143b7;--ux-suave:#f1eafa;--ux-borda:#d4c4e8}
+html[data-tema="escuro"]{--fundo:#0a0d15;--carta:#121822;--trama:#19202d;--linha:#293342;--secundaria:#adb7c7}
+html[data-tema="escuro"] body{background:radial-gradient(650px 550px at 100% 0,#402b6322,transparent 75%),#0a0d15!important}
+main{padding:20px 18px calc(100px + var(--base))!important}
+header{padding-inline:18px!important}
+.cabeca{grid-template-columns:44px 1fr 44px;gap:14px}
+.menu,.sino{width:44px!important;height:44px!important;border-radius:15px!important}
+.marca-titulo b{font-size:1.5rem!important}.marca-titulo span{font-size:.56rem!important;letter-spacing:.12em!important}
+.titulo{margin:5px 0 18px}.titulo h1{font-size:1.6rem;line-height:1.2}
+.titulo p{font-size:.82rem!important;line-height:1.55;margin-top:7px}
+.titulo.com-volta h1{font-size:1.35rem}
+#abas{padding:7px 8px calc(7px + var(--base))!important;background:color-mix(in srgb,var(--fundo) 96%,transparent)!important;border-color:var(--linha)!important;gap:3px}
+#abas button{min-height:54px;min-width:0;border-radius:14px;padding:7px 1px!important;gap:5px;font-size:.65rem!important;letter-spacing:0;color:var(--secundaria)!important}
+#abas button[aria-current="page"]{color:var(--ux-acento)!important;background:var(--ux-suave)!important}
+#abas button::before,#abas button::after{display:none!important}
+#abas svg{width:22px;height:22px;filter:none!important}
+.segmento{display:flex!important;overflow-x:auto;scrollbar-width:none;background:var(--carta)!important;padding:5px!important;gap:5px!important;border:1px solid var(--linha)!important;margin-bottom:20px!important;scroll-padding:5px}
+.segmento::-webkit-scrollbar{display:none}
+.segmento button{flex:1 0 auto;white-space:nowrap;min-height:44px!important;padding:8px 12px!important;font-size:.75rem!important}
+.segmento button[aria-selected="true"]{background:var(--ux-suave)!important;color:var(--ux-acento)!important;box-shadow:none!important}
+.ux-contexto{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 14px;border:1px solid var(--linha);border-radius:14px;background:var(--carta);margin-bottom:18px}
+.ux-contexto label{font-size:.73rem;color:var(--secundaria);font-weight:650}
+.ux-contexto select{min-width:0;max-width:65%;min-height:44px;padding:7px 30px 7px 10px;font-size:.87rem;font-weight:700;border:1px solid var(--ux-borda);border-radius:10px;background:var(--ux-suave);color:var(--tinta)}
+.ux-inicio{gap:19px;padding:0}
+.ux-inicio .foco-boasvindas{padding:0 1px;gap:10px;align-items:center}
+.ux-inicio .foco-boasvindas :is(h1,h2){font-size:1.65rem;line-height:1.17;font-weight:750;letter-spacing:-.035em;margin:5px 0 0;text-transform:none!important}
+.ux-inicio .foco-label{font-size:.61rem;letter-spacing:.11em}
+.ux-inicio .foco-versao{font-size:.65rem;padding:5px 9px;border-radius:20px}
+.ux-escolha{min-width:0}.ux-escolha>div:first-child{display:flex;justify-content:space-between;align-items:center;margin-bottom:9px}
+.ux-escolha small{font-size:.66rem;color:var(--secundaria)}
+.ux-inicio .foco-modalidades{display:flex;overflow-x:auto;gap:7px;padding:2px 1px 6px;scrollbar-width:none}
+.ux-inicio .foco-modalidades button{flex:0 0 auto;min-height:43px;padding:9px 14px;font-size:.77rem;border-radius:12px;background:var(--carta);color:var(--secundaria);border-color:var(--linha);white-space:nowrap}
+.ux-inicio .foco-modalidades button[aria-pressed="true"]{background:color-mix(in srgb,var(--foco-cor) 20%,var(--carta));border-color:var(--foco-cor);color:var(--tinta);box-shadow:inset 0 -2px var(--foco-cor)!important}
+.ux-inicio .foco-hero{position:relative;padding:22px;border-radius:24px;background:radial-gradient(ellipse at 100% 0,#8a5ed545,transparent 65%),linear-gradient(125deg,#27203d,#171b2b);border-color:#695080}
+.ux-inicio .foco-objetivo{grid-template-columns:minmax(0,1fr) 64px;gap:18px;margin:16px 0 19px}
+.ux-inicio .foco-objetivo h2{font-size:1.55rem;text-transform:none!important;font-weight:750;letter-spacing:-.035em;line-height:1.15;margin:0 0 10px}
+.ux-inicio .foco-objetivo p{font-size:.8rem;line-height:1.6;color:#d2c9e4}
+.ux-inicio .foco-alvo{width:64px;height:64px;outline:7px solid #ba8ee80d;border-width:2px}.ux-inicio .foco-alvo strong{font-size:1.6rem}.ux-inicio .foco-alvo span{font-size:.5rem}
+.ux-inicio .foco-primary{min-height:50px!important;font-size:.87rem!important;border-radius:13px!important}
+.ux-inicio .foco-secundaria{font-size:.77rem;margin-top:6px;padding:6px 2px;color:#dac9f8;min-height:44px}
+.ux-etapas{display:flex;align-items:center;gap:6px;margin:15px 0 0;color:#bdb0d2;font-size:.65rem}
+.ux-etapas span{display:flex;align-items:center;gap:5px;white-space:nowrap}.ux-etapas i{display:grid;place-items:center;font-size:.56rem;font-style:normal;width:18px;height:18px;border:1px solid #a28bb64d;border-radius:50%}.ux-etapas>b{height:1px;flex:1;background:#a28bb630}
+.ux-acessos{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.ux-acessos button{display:grid;grid-template-columns:35px minmax(0,1fr);align-items:center;gap:10px;min-height:82px;min-width:0;padding:14px 11px;text-align:left;border:1px solid var(--linha);border-radius:17px;background:var(--carta);color:var(--tinta);cursor:pointer}
+.ux-acessos svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.ux-icone{width:35px;height:37px;display:grid;place-items:center;border-radius:11px;background:var(--ux-suave);color:var(--ux-acento)}
+.ux-acessos b{display:block;font-size:.79rem;font-weight:700;line-height:1.3}.ux-acessos small{display:block;font-size:.65rem;color:var(--secundaria);margin-top:5px;line-height:1.4}
+.ux-acessos button:hover{border-color:var(--ux-acento)}
+.ux-inicio .foco-ultimo,.ux-inicio .foco-acompanhamento{border-color:var(--linha);padding:19px;background:var(--carta);border-radius:20px}
+.ux-inicio .foco-data{font-size:.75rem}.ux-inicio .foco-bolas{gap:8px}.ux-inicio .foco-bolas span{width:34px;height:34px;font-size:.84rem}
+.ux-inicio .foco-texto-btn{font-size:.74rem;color:var(--ux-acento)}
+.ux-base-aviso{color:var(--seu);font-size:.73rem;line-height:1.55;margin:12px 0 0}
+.ux-menu-links{display:grid;gap:7px;padding-bottom:17px;margin-bottom:17px;border-bottom:1px solid var(--linha)}
+.ux-menu-links button{display:flex;justify-content:space-between;align-items:center;min-height:46px;padding:11px 13px;background:var(--carta);color:var(--tinta);font-size:.83rem;border:1px solid var(--linha);border-radius:11px;text-align:left}
+.ux-menu-links button span{color:var(--ux-acento)}
+.ux-vazio{padding:27px 20px!important;text-align:center;background:var(--carta)!important;border:1px dashed var(--ux-borda)!important;border-radius:20px!important;margin-bottom:15px}
+.ux-vazio .ux-icone{margin:0 auto 15px;width:50px;height:50px;border-radius:16px}.ux-vazio svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:1.7}
+.ux-vazio h2{font-size:1.23rem!important;text-transform:none!important;letter-spacing:-.025em!important;color:var(--tinta)!important;line-height:1.3}
+.ux-vazio p{font-size:.83rem;line-height:1.65;color:var(--secundaria);max-width:38ch;margin:12px auto 20px}.ux-vazio .acao{width:100%;min-height:47px!important}.ux-vazio .acao+.acao{margin-top:8px}
+.ux-sugestoes-intro{display:flex;align-items:center;gap:8px;margin:0 0 17px;flex-wrap:wrap}
+.ux-sugestoes-intro span{font-size:.7rem;color:var(--secundaria);padding:6px 9px;background:var(--carta);border:1px solid var(--linha);border-radius:20px}.ux-sugestoes-intro span:first-child{color:var(--ux-acento);background:var(--ux-suave);border-color:var(--ux-borda)}
+.ux-form.int-form{padding:20px!important;border-radius:21px!important}
+.ux-form .int-section-title{margin-bottom:18px}.ux-form .int-section-title h2{font-size:1.15rem!important;letter-spacing:-.025em!important;text-transform:none!important}.ux-form .int-section-title span{font-size:.69rem}
+.ux-form .campo{font-size:.79rem;gap:7px;margin-bottom:15px}
+.ux-form input,.ux-form select{font-size:.9rem!important;min-height:48px!important;padding:10px 12px!important}
+.ux-form .int-help{font-size:.76rem;line-height:1.6}
+.ux-form .int-grid{gap:12px}.ux-form .int-grid .campo{min-width:0}
+.ux-form .int-details{border:1px solid var(--linha);padding:0 13px;border-radius:13px;margin:9px 0 16px;background:color-mix(in srgb,var(--trama) 45%,transparent)}
+.ux-form .int-details summary{display:flex;align-items:center;gap:8px;min-height:48px;font-size:.78rem;color:var(--tinta);list-style:none;cursor:pointer;font-weight:650}.ux-form .int-details summary::after{content:"+";margin-left:auto;font-size:1.15rem;color:var(--ux-acento)}
+.ux-form .int-details[open] summary::after{content:"−"}.ux-form .int-details[open] summary{margin-bottom:9px}
+.ux-form .int-price{padding:14px 0;border:0;border-top:1px solid var(--linha);background:transparent!important;border-radius:0;gap:15px}.ux-form .int-price span{font-size:.76rem}.ux-form .int-price strong{font-size:1.42rem;white-space:nowrap;letter-spacing:-.03em}
+.ux-form .int-primary{width:100%;font-size:.94rem!important;min-height:52px!important}.ux-form #int-mensagem:not(:empty){padding:12px 0;font-size:.82rem;line-height:1.55}
+.ux-fonte{font-size:.66rem!important;margin:12px 0 0!important;color:var(--secundaria)}
+.ux-links{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:0 0 20px}
+.ux-links button{min-height:52px;display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:.75rem;font-weight:650;padding:11px 13px;border:1px solid var(--linha);border-radius:13px;background:var(--carta);color:var(--tinta);text-align:left}.ux-links button span{color:var(--ux-acento)}
+.aud-painel{scroll-margin-top:100px;padding:20px!important;border-color:var(--ux-borda)!important}
+.aud-painel>h2{font-size:1.35rem!important;line-height:1.25;color:var(--tinta)!important;text-transform:none!important;letter-spacing:-.03em;margin-top:8px}
+.aud-painel .int-help{font-size:.78rem;line-height:1.65}.aud-painel select{max-width:100%;font-size:.79rem;min-height:46px}.aud-painel .campo{min-width:0}
+.ux-explorar{padding:0!important;overflow:hidden}.ux-explorar>summary{min-height:64px;display:flex;align-items:center;justify-content:space-between;gap:12px;list-style:none;padding:17px 20px;cursor:pointer;font-size:.86rem;font-weight:650;color:var(--tinta)}
+.ux-explorar>summary::after{content:"+";font-size:1.2rem;color:var(--ux-acento)}.ux-explorar[open]>summary::after{content:"−"}.ux-explorar>div{padding:0 20px 20px}
+.ux-resultado-acoes{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:4px 0 15px;flex-wrap:wrap}
+.ux-resultado-acoes>span{font-size:.73rem;color:var(--secundaria)}.ux-resultado-acoes>div{display:flex;gap:7px}.ux-resultado-acoes .acao{min-height:44px!important;font-size:.74rem!important;padding:9px 12px!important}
+.chips-mod{gap:7px!important;padding:3px 0 10px!important;background:transparent!important}.chips-mod .chip{min-height:42px!important;font-size:.73rem!important;border-radius:11px!important}
+.concurso .concurso-topo b{font-size:.9rem!important}.concurso .concurso-topo time{font-size:.7rem!important}.concurso{padding:17px!important}.concurso .concurso-detalhe{margin-top:13px}
+.aviso-fixo{font-size:.69rem!important;line-height:1.6;opacity:.85;margin-top:24px}
+#corpo-avisos>div:first-child{align-items:flex-start!important;flex-wrap:wrap}
+#corpo-avisos>div:first-child h2{font-size:1.25rem!important;text-transform:none!important;letter-spacing:-.02em!important;line-height:1.4;color:var(--tinta)!important}
+#corpo-avisos .item .txt>b{font-size:.86rem!important;line-height:1.5}#corpo-avisos .item .quando{font-size:.66rem!important}
+#corpo-avisos .chips .chip{min-height:43px!important;font-size:.76rem!important}
+@media(min-width:650px){main{padding-inline:26px!important}.ux-inicio .foco-boasvindas :is(h1,h2){font-size:2rem}.ux-inicio .foco-hero{padding:28px}.ux-inicio .foco-objetivo{grid-template-columns:minmax(0,1fr) 94px}.ux-inicio .foco-alvo{width:88px;height:88px}.ux-inicio .foco-objetivo h2{font-size:2rem}.ux-acessos button{padding:19px;min-height:92px}.ux-form.int-form{padding:26px!important}}
+@media(max-width:370px){main{padding-inline:14px!important}.ux-inicio .foco-boasvindas :is(h1,h2){font-size:1.48rem}.ux-inicio .foco-hero{padding:18px}.ux-inicio .foco-objetivo{gap:12px;grid-template-columns:minmax(0,1fr) 57px}.ux-inicio .foco-alvo{width:57px;height:57px}.ux-inicio .foco-objetivo h2{font-size:1.33rem}.ux-acessos button{gap:7px;padding:12px 9px;grid-template-columns:31px minmax(0,1fr)}.ux-acessos b{font-size:.74rem}.ux-icone{width:31px}.ux-form.int-form{padding:16px!important}.ux-etapas{font-size:.61rem}}
+@media(prefers-reduced-motion:reduce){.ux-inicio *{scroll-behavior:auto!important}}
+
+</style>
 </head>
 <body>
 <header>
@@ -2125,6 +2222,13 @@ html[data-tema="claro"] .foco-texto-btn{color:#6c3da3}
         <span style="color:var(--tinta)">loto</span><span>lab</span>
       </div>
       <button class="acao contorno mini" data-fechar="1">fechar</button>
+    </div>
+    <div class="ux-menu-links" aria-label="Atalhos do menu">
+      <button data-atalho="sugestoes">Criar sugestões <span aria-hidden="true">↗</span></button>
+      <button data-atalho="plano">Meu plano e minhas metas <span aria-hidden="true">↗</span></button>
+      <button data-atalho="montar">Montar jogo à mão <span aria-hidden="true">↗</span></button>
+      <button data-abrir-analitica>Avaliar estratégias <span aria-hidden="true">↗</span></button>
+      <button data-atalho="entender">Como usar o LotoLab <span aria-hidden="true">↗</span></button>
     </div>
     <div class="titulo-painel" style="margin-bottom:8px">modalidade</div>
     <div class="gaveta-mods" id="gaveta-mods"></div>
@@ -3329,7 +3433,7 @@ let audTrabalho=0;
 function audRenderPainel(m){
   const base=audBase(m,S.resultados),r=(S.auditorias||{})[m];
   const atual=r&&r.base.assinatura===intHistorico(m,base.consecutivos.slice(-r.base.usados)).assinatura;
-  return `<section class="carta aud-painel"><span class="int-eyebrow">AVALIAÇÃO ANALÍTICA 4.13</span><h2>O desempenho se mantém?</h2>
+  return `<section class="carta aud-painel" id="ux-analitica" tabindex="-1"><span class="int-eyebrow">AVALIAÇÃO ANALÍTICA 4.13</span><h2>O desempenho se mantém?</h2>
     <p class="int-help">Separe a escolha da estratégia do teste final e compare com 32 referências aleatórias de mesmo custo. ${base.consecutivos.length} concursos consecutivos recentes disponíveis.</p>
     <div class="int-grid"><label class="campo" for="aud-metrica">Critério da avaliação<select id="aud-metrica">${Object.entries(AUD_METRICAS).map(([k,v])=>`<option value="${k}" ${k==='melhor'?'selected':''}>${v}</option>`).join('')}</select></label>
     <label class="campo" for="aud-concursos">Concursos no teste final<select id="aud-concursos"><option value="30">30 concursos</option><option value="60">60 concursos</option></select></label></div>
@@ -3732,12 +3836,8 @@ function intExtraModalidade(m){
 }
 T.sugestoes = () => {
   const m=S.modalidade,c=MODALIDADES[m],o=intConfig(m),base=intHistorico(m,S.resultados,o.janela);
-  return `<section class="int-hero"><span class="int-eyebrow">LOTO LAB / SUGESTÕES</span>
-    <h2>Seu próximo lote,<br>com critérios claros.</h2>
-    <p>Escolha o perfil. Defina seus limites. Compare a diversidade dos jogos antes de salvar.</p>
-    ${intStatusBase(base)}</section>
-    <a class="meta-link" href="#plano" data-atalho="plano">Plano de participação e cobertura por meta →</a>
-    <section class="carta int-form"><div class="int-section-title"><h2>Montar sugestões</h2><span>${esc(c.nome)}</span></div>
+  return `<div class="ux-sugestoes-intro" aria-label="Como criar sugestões"><span>1. Defina seu lote</span><span>2. Veja os jogos</span><span>3. Salve e acompanhe</span></div>
+    <section class="carta int-form ux-form"><div class="int-section-title"><h2>Do seu jeito</h2><span>${esc(c.nome)}</span></div>
       <label class="campo" for="int-modo">Critério de seleção
         <select id="int-modo">${Object.entries(INT_METODOS).map(([v,n])=>`<option value="${v}" ${o.modo===v?"selected":""}>${n}</option>`).join("")}</select></label>
       <p class="int-help" id="int-modo-desc">${o.modo==="equilibrado"
@@ -3746,31 +3846,35 @@ T.sugestoes = () => {
       <div class="int-grid"><label class="campo" for="int-tam">Dezenas por jogo
         <select id="int-tam">${Array.from({length:c.max-c.min+1},(_,i)=>i+c.min).map(t=>`<option ${o.tam===t?"selected":""}>${t}</option>`).join("")}</select></label>
         <label class="campo" for="int-quantidade">Quantidade de jogos<input id="int-quantidade" type="number" min="1" max="60" value="${o.quantidade}"></label>
-        <label class="campo" for="int-orcamento">Limite do lote (R$)<input id="int-orcamento" type="number" inputmode="decimal" min="0" step="0.50" placeholder="Opcional" value="${esc(o.orcamento)}"></label>
-        <label class="campo" for="int-janela">Janela do histórico<select id="int-janela">${[[50,"50 concursos"],[100,"100 concursos"],[300,"300 concursos"],[0,"Todo o histórico"]].map(([v,n])=>`<option value="${v}" ${o.janela===v?"selected":""}>${n}</option>`).join("")}</select></label></div>
+        </div>
+      <label class="campo" for="int-orcamento">Quanto deseja gastar, no máximo? (R$)<input id="int-orcamento" type="number" inputmode="decimal" min="0" step="0.50" placeholder="Opcional · ajusta a quantidade de jogos" value="${esc(o.orcamento)}"></label>
       ${c.trevos?campoTrevos("int-trevos",o.trevos):""}
-      <details class="int-details"><summary>Personalizar dezenas e repetir uma simulação</summary>
+      <details class="int-details" id="int-avancado" ${o.avancado?'open':''}><summary>Ajustes avançados do lote</summary>
+        <label class="campo" for="int-janela">Histórico usado no perfil<select id="int-janela">${[[50,"50 concursos"],[100,"100 concursos"],[300,"300 concursos"],[0,"Todo o histórico"]].map(([v,n])=>`<option value="${v}" ${o.janela===v?"selected":""}>${n}</option>`).join("")}</select></label>
+        <label class="campo" for="int-concurso">Concurso para acompanhar<input id="int-concurso" type="number" min="1" step="1" inputmode="numeric" value="${esc(o.concurso||"")}" placeholder="Vazio: acompanhar resultados futuros"></label>
         <label class="campo" for="int-fixas">Dezenas fixas<input id="int-fixas" value="${esc(o.fixas)}" placeholder="Ex.: 03 12" maxlength="299"></label>
         <label class="campo" for="int-excluidas">Dezenas excluídas<input id="int-excluidas" value="${esc(o.excluidas)}" placeholder="Ex.: 07 19" maxlength="299"></label>
         <label class="campo" for="int-semente">Código de reprodução<input id="int-semente" value="${esc(o.semente)}" placeholder="Em branco: novo lote a cada toque" maxlength="80"></label>
         <p class="int-help">Mesmo código, parâmetros e base reproduzem o mesmo lote. Fixar ou excluir dezenas limita a variedade; não altera a chance de cada combinação.</p>
       </details>
       <div class="int-price"><span>Estimativa antes do limite</span><strong id="int-preco">${brl(custoDoJogo(m,o.tam)*o.quantidade)}</strong></div>
-      <label class="campo" for="int-concurso">Concurso para acompanhar (opcional)<input id="int-concurso" type="number" min="1" step="1" inputmode="numeric" value="${esc(o.concurso||"")}" placeholder="Vazio: acompanhar resultados futuros"></label>
       <button class="acao int-primary" id="int-gerar">Criar sugestões</button>
       <div id="int-mensagem" role="status" aria-live="polite"></div>
-      <p class="int-help">Preços consultados em 05/09/2026 · <a href="https://loterias.caixa.gov.br/Paginas/${INT_FONTES[m]}.aspx" target="_blank" rel="noopener noreferrer">regras da modalidade</a>.</p>
+      <p class="int-help ux-fonte">Salvar no app não registra uma aposta. Preços de 05/09/2026 · <a href="https://loterias.caixa.gov.br/Paginas/${INT_FONTES[m]}.aspx" target="_blank" rel="noopener noreferrer">regras da modalidade</a>.</p>
     </section>
     <div id="int-lote">${S.intLotes[m]?intRenderLote(S.intLotes[m]):""}</div>
-    <section class="carta"><div class="int-section-title"><h2>O histórico em números</h2><span>Descritivo</span></div>
+    <div class="ux-links"><button data-atalho="plano">Plano e metas <span aria-hidden="true">↗</span></button><button data-abrir-analitica>Avaliar estratégias <span aria-hidden="true">↓</span></button></div>
+    ${audRenderPainel(m)}
+    <details class="carta ux-explorar"><summary>Explorar o histórico em números</summary><div>
+      ${intStatusBase(base)}
       ${intMapaFrequencias(m,base.hist)}
-      <button class="acao secundaria" data-atalho="estatisticas">Explorar todas as estatísticas</button></section>
-    <section class="carta int-compare"><span class="int-eyebrow">TESTE FORA DA AMOSTRA</span>
+      <button class="acao secundaria" data-atalho="estatisticas">Explorar todas as estatísticas</button></div></details>
+    <details class="carta ux-explorar int-compare"><summary>Comparação rápida de métodos</summary><div><span class="int-eyebrow">TESTE FORA DA AMOSTRA</span>
       <h2>A estratégia se sustenta?</h2><p class="int-help">30 concursos recentes. Teste padrão sem dezenas fixas ou excluídas: três jogos por estratégia em cada concurso, com o mesmo tamanho e custo. Cada geração conhece somente os resultados anteriores.</p>
       <button class="acao secundaria" id="int-comparar" ${base.total<50?"disabled":""}>Comparar com o aleatório</button>
       ${base.total<50?'<p class="int-help">Importe pelo menos 50 concursos em Resultados para liberar a comparação.</p>':""}
       <div id="int-comparacao" role="status" aria-live="polite">${S.intTestes[m]?intRenderTeste(S.intTestes[m]):""}</div>
-    </section>${audRenderPainel(m)}`;
+    </div></details>`;
 };
 function intMapaFrequencias(m,hist){
   if(!hist.length) return '<p class="int-help">Traga concursos em Resultados para visualizar frequências e intervalos.</p>';
@@ -3832,6 +3936,12 @@ function intLigarAcoes(){
     if(el.id==="int-modo"||el.id==="int-janela") {intTrabalho++;pintar();}
     else $("#int-preco").textContent=brl(custoDoJogo(m,o.tam)*o.quantidade);
   });
+  const avancado=$('#int-avancado');
+  if(avancado) avancado.ontoggle=()=>{o.avancado=avancado.open;};
+  for(const id of ['int-quantidade','int-orcamento']) $('#'+id).oninput=()=>{
+    ler();const custo=custoDoJogo(m,o.tam)*o.quantidade;
+    $('#int-preco').textContent=Number.isFinite(custo)&&custo>=0?brl(custo):'Confira a quantidade';
+  };
   $("#int-gerar").onclick=()=>{
     ler(); const parametros={...o,historico:S.resultados.slice()};
     const token=++intTrabalho,botao=$("#int-gerar");
@@ -4128,8 +4238,8 @@ function ultimasConferencias(limite){
 }
 
 T.jogos = () => {
-  if(!S.jogos.length) return `<div class="vazio">Nenhum jogo salvo ainda.<br>
-    Gere jogos na primeira aba e toque em <strong>Salvar</strong>.</div>`;
+  const vazio=()=>`<section class="ux-vazio"><span class="ux-icone" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="3"/><path d="M8 9h8M8 14h5"/></svg></span><h2>Seus jogos começam aqui</h2><p>Nenhum jogo salvo de ${esc(MODALIDADES[S.modalidade].nome)}. Crie sugestões ou marque suas dezenas. Depois, salve para acompanhar os acertos.</p><button class="acao" data-atalho="sugestoes">Criar minhas sugestões</button><button class="acao secundaria" data-atalho="montar">Montar um jogo à mão</button></section>`;
+  if(!S.jogos.length) return chipsDeModalidade()+vazio();
 
   /* Filtra pela modalidade escolhida no cabeçalho. Sem isto a tela empilhava
      Mega-Sena, Lotofácil e Quina numa lista só — e como cada modalidade tem
@@ -4153,8 +4263,7 @@ T.jogos = () => {
      tela para ver" — apontando para um seletor que não existia aqui. */
   const chips = chipsDeModalidade();
 
-  if(!meus.length) return chips + `<div class="vazio">Nenhum jogo salvo de
-    <strong>${esc(MODALIDADES[S.modalidade].nome)}</strong>.</div>` + rodape;
+  if(!meus.length) return chips + vazio() + rodape;
 
   const porLote = {};
   meus.forEach(j => (porLote[j.lote] = porLote[j.lote] || []).push(j));
@@ -4629,23 +4738,28 @@ const FOCO_CORES={'mega-sena':'#27894d',lotofacil:'#9257de',quina:'#4560d7',loto
 T.inicio = () => {
   const m=S.modalidade,c=MODALIDADES[m],r=ultimoResultado(m),concursos=historicoDe(m).length;
   const avisos=S.avisos.filter(a=>!a.lido).length;
-  return `<div class="foco-inicio" style="--foco-cor:${FOCO_CORES[m]}">
-    <div class="foco-boasvindas"><div><span class="foco-label">SEU LABORATÓRIO</span><${podeVoltar()?'h2':'h1'}>Um concurso.<br>Uma meta clara.</${podeVoltar()?'h2':'h1'}></div><span class="foco-versao">4.13</span></div>
-    <div class="foco-modalidades" role="group" aria-label="Modalidades na tela inicial">${Object.entries(MODALIDADES).map(([id,v])=>`<button data-mod="${id}" aria-pressed="${id===m}" style="--foco-cor:${FOCO_CORES[id]}">${esc(v.nome)}</button>`).join('')}</div>
-    <section class="foco-hero"><div class="foco-hero-topo"><span class="foco-label">FOCO EM TODAS AS DEZENAS</span><span class="foco-tag">${esc(c.nome)}</span></div>
-      <div class="foco-objetivo"><div><h2>Seu próximo jogo<br>começa pela meta.</h2><p>Cobertura verificada, limite definido e acompanhamento do concurso escolhido.</p></div><div class="foco-alvo" aria-label="Meta de ${c.k} dezenas"><strong>${c.k}</strong><span>${c.trevos?"+ 2 trevos":"de "+c.k+" dezenas"}</span></div></div>
-      <button class="acao foco-primary" data-atalho="plano" data-meta-maxima>Definir meta de ${c.trevos?"6 dezenas + 2 trevos":c.k+" acertos"} <span aria-hidden="true">→</span></button>
-      <button class="foco-secundaria" data-atalho="sugestoes">Criar sugestões com meus critérios <span aria-hidden="true">↗</span></button>
+  const meus=S.jogos.filter(j=>j.modalidade===m).length,idade=idadeDoHistorico(m);
+  return `<div class="foco-inicio ux-inicio" style="--foco-cor:${FOCO_CORES[m]}">
+    <div class="foco-boasvindas"><div><span class="foco-label">BEM-VINDO AO SEU LABORATÓRIO</span><${podeVoltar()?'h2':'h1'}>Seu jogo,<br>bem planejado.</${podeVoltar()?'h2':'h1'}></div><span class="foco-versao">4.14</span></div>
+    <div class="ux-escolha"><div><span class="foco-label">ESCOLHA A MODALIDADE</span><small>Deslize para ver todas →</small></div>
+    <div class="foco-modalidades" role="group" aria-label="Modalidades na tela inicial">${Object.entries(MODALIDADES).map(([id,v])=>`<button data-mod="${id}" aria-pressed="${id===m}" style="--foco-cor:${FOCO_CORES[id]}">${esc(v.nome)}</button>`).join('')}</div></div>
+    <section class="foco-hero"><div class="foco-hero-topo"><span class="foco-label">UM PLANO PARA CADA CONCURSO</span><span class="foco-tag">${esc(c.nome)}</span></div>
+      <div class="foco-objetivo"><div><h2>Crie jogos.<br>Acompanhe cada acerto.</h2><p>Defina seus critérios e seu limite. O LotoLab organiza e confere.</p></div><div class="foco-alvo" aria-label="Meta de ${c.k} dezenas"><strong>${c.k}</strong><span>${c.trevos?"+ 2 trevos":"dezenas"}</span></div></div>
+      <button class="acao foco-primary" data-atalho="sugestoes">Criar sugestões <span aria-hidden="true">→</span></button>
+      <button class="foco-secundaria" data-atalho="plano" data-meta-maxima>Definir meta de ${c.trevos?"6 dezenas + 2 trevos":c.k+" acertos"} <span aria-hidden="true">↗</span></button>
+      <div class="ux-etapas" aria-label="Planeje, crie e confira"><span><i>1</i> Planeje</span><b></b><span><i>2</i> Crie</span><b></b><span><i>3</i> Confira</span></div>
     </section>
-    ${focoAcompanhamento(m)}
+    <section class="ux-acessos" aria-label="Acesso rápido">
+      <button data-atalho="jogos"><span class="ux-icone"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="3"/><path d="M8 9h8M8 14h5"/></svg></span><span><b>Meus jogos</b><small>${meus?meus+' de '+esc(c.nome):'Salve seu primeiro jogo'}</small></span></button>
+      <button data-atalho="resultados"><span class="ux-icone"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4M8 15h3"/></svg></span><span><b>Resultados</b><small>${r?'Último na base: '+r.concurso:'Trazer os concursos'}</small></span></button>
+      <button data-abrir-analitica><span class="ux-icone"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V11M10 19V5M16 19v-7M21 21H2"/></svg></span><span><b>Avaliar estratégias</b><small>Comparar por períodos</small></span></button>
+      <button data-abrir-avisos><span class="ux-icone"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 8-3 8h18s-3-1-3-8M10 21h4"/></svg></span><span><b>Notificações</b><small>${avisos?avisos+' não lidas':'Ver conferências'}</small></span></button>
+    </section>
     <section class="foco-ultimo"><div class="foco-section-title"><div><span class="foco-label">ÚLTIMO RESULTADO NA BASE</span><h3>${esc(c.nome)}</h3></div><button class="foco-texto-btn" data-atalho="resultados">Ver todos ↗</button></div>
       ${r?`<p class="foco-data">Concurso ${r.concurso} · ${esc(String(r.data||'').split('-').reverse().join('/'))}</p><div class="foco-bolas" aria-label="Dezenas do último resultado">${r.dezenas.map(d=>`<span>${pad(d)}</span>`).join('')}</div>${resultadoExtrasHtml(r)}`:'<p class="foco-data">Importe ou atualize os concursos em Resultados para mostrar as dezenas aqui.</p>'}
+      ${idade?.avaliavel&&idade.parado?'<p class="ux-base-aviso">O histórico pode estar atrasado. Abra Resultados para atualizar.</p>':''}
     </section>
-    <section class="foco-acessos" aria-label="Acesso rápido">
-      <button data-atalho="pesquisa"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><b>Análises</b><span>Comparar hipóteses</span></button>
-      <button data-atalho="jogos"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="3"/><path d="M8 9h8M8 14h5"/></svg><b>Meus jogos</b><span>${S.jogos.length} salvos no aparelho</span></button>
-      <button data-abrir-avisos><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 8-3 8h18s-3-1-3-8M10 21h4"/></svg><b>Notificações</b><span>${avisos?avisos+' não lidas':'Ver conferências'}</span></button>
-    </section>
+    ${focoAcompanhamento(m)}
     <div class="foco-rodape"><span><b>${inf(concursos)}</b> concursos de ${esc(c.nome)} na base</span><span>8 modalidades</span></div>
   </div>`;
 };
@@ -6987,7 +7101,7 @@ function pintarAvisos(){
   const perm = (typeof Notification !== "undefined") ? Notification.permission : "indisponível";
   const cabeca = `<div style="display:flex;justify-content:space-between;align-items:center;
       gap:10px;margin-bottom:12px">
-      <h2 style="margin:0">atividades</h2>
+      <h2 style="margin:0">Notificações</h2>
       <div class="botoes">
         ${perm === "granted" ? "" :
           `<button class="acao contorno mini" id="a-permitir">permitir notificação</button>`}
@@ -9674,7 +9788,7 @@ T.resultados = () => {
   /* O botão "atualizar" saiu daqui: virou o ícone de recarregar no cabeçalho da
      tela, como no mockup. O id continua "r-caixa", então o tratador não mudou
      de lugar nem de nome. */
-  return chips + alerta + `<div id="r-saida"></div>` + cartoes + `
+  return chips + `<div class="ux-resultado-acoes"><span>${inf(meus.length)} concursos na base</span><div><button class="acao secundaria" data-ux-atualizar ${temServico?'':'disabled'}>Atualizar</button><button class="acao secundaria" data-ux-historico>Importar histórico</button></div></div>` + alerta + `<div id="r-saida" role="status" aria-live="polite"></div>` + cartoes + `
   <details class="ajustes" id="r-ajustes" ${S.ajustesAbertos ? "open" : ""}>
     <summary>Trazer resultados e ajustes</summary>
     <div class="carta">
@@ -10266,6 +10380,17 @@ function acoesNovas(){
 
 function acoes(){
   acoesNovas();
+  const seletor=$('#ux-modalidade');
+  if(seletor)seletor.onchange=e=>trocarModalidade(e.target.value);
+  const fecharMenu=()=>{$('#gaveta').dataset.aberta='0';$('#btn-menu').setAttribute('aria-expanded','false');};
+  document.querySelectorAll('[data-abrir-analitica]').forEach(b=>b.onclick=()=>{
+    fecharMenu();if(S.tela!=='sugestoes')irParaTela('sugestoes');
+    const painel=$('#ux-analitica');if(painel){painel.focus({preventScroll:true});painel.scrollIntoView({block:'start',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});}
+  });
+  document.querySelectorAll('[data-ux-atualizar]').forEach(b=>b.onclick=()=>$('#r-caixa')?.click());
+  document.querySelectorAll('[data-ux-historico]').forEach(b=>b.onclick=()=>{
+    const ajustes=$('#r-ajustes');if(ajustes){ajustes.open=true;S.ajustesAbertos=true;ajustes.scrollIntoView({block:'start'});$('#r-tudo')?.focus({preventScroll:true});}
+  });
   const tam = $("#g-tam");
   if(tam) tam.onchange = e => { S.tamanho = +e.target.value; REFERENCIA = {}; pintar(); };
   const qtd = $("#g-qtd");
@@ -10283,7 +10408,8 @@ function acoes(){
   document.querySelectorAll('[data-abrir-avisos]').forEach(b=>b.onclick=()=>$('#btn-avisos').click());
 
   /* --- motor de pesquisa --- */
-  document.querySelectorAll("[data-atalho]").forEach(b => b.onclick = () => {
+  document.querySelectorAll("[data-atalho]").forEach(b => b.onclick = e => {
+    e?.preventDefault();fecharMenu();
     if(b.hasAttribute('data-meta-maxima')){
       const o=metaConfig(S.modalidade);o.meta=MODALIDADES[S.modalidade].k;
       Guardar.gravar('metaConfig',S.metaConfig);
@@ -10629,63 +10755,33 @@ function acoes(){
    combinações e testar métodos contra o sorteio. Meus jogos e a teimosinha
    foram para "Mais" junto com o Entender — são o que a pessoa consulta, não o
    que ela faz todo dia. */
+/* Cinco destinos de uso frequente; as demais telas vivem em subtelas. */
 const SECOES = [
-  {id:"inicio", nome:"Início",
-   icone:'<path d="M3 10.5 12 3l9 7.5"/><path d="M5.5 9.5V20h13V9.5"/>',
-   telas:[
-     {id:"inicio", nome:"Início", titulo:"LotoLab",
-      sub:"Laboratório Estatístico. O motor de pesquisa, seus jogos e os concursos."}
-   ]},
-  {id:"analise", nome:"Análise",
-   icone:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
-   telas:[
-     {id:"pesquisa", nome:"IA Adaptativa", titulo:"Motor de pesquisa",
-      sub:"Cria hipóteses sozinho, testa, descarta as ruins e cruza as que sobram. É um laboratório: não produz dezenas para apostar."},
-     {id:"aprendizado", nome:"Aprendizado", titulo:"Aprendizado por modalidade",
-      sub:"Treina um modelo em cada modalidade separadamente e mede, fora da amostra, se ele aprendeu algo."},
-     {id:"placar", nome:"Placar", titulo:"Placar",
-      sub:"Seu resultado acumulado, comparado com o que o acaso teria feito com o mesmo dinheiro."},
-     {id:"estatisticas", nome:"Estatísticas", titulo:"Estatísticas do histórico",
-      sub:"O retrato do que já saiu, sempre ao lado do que o acaso produziria. Descreve o passado; não prevê o próximo."}
-   ]},
-  /* "Jogos" ocupa o terceiro lugar da barra, como no mockup. Aqui moram as
-     telas que giram em torno do que a pessoa salvou: os jogos, a conferência
-     deles e a teimosinha. */
-  {id:"jogos", nome:"Jogos",
-   icone:'<rect x="3.5" y="4" width="17" height="17" rx="2.5"/><path d="M8 9.5h8M8 14h5"/>',
-   telas:[
-     {id:"jogos", nome:"Jogos Salvos", titulo:"Meus Jogos",
-      sub:"Tudo o que você salvou, conferido automaticamente contra os resultados que o app conhece."},
-     {id:"conferir", nome:"Conferência", titulo:"Conferir",
-      sub:"O último sorteio que o app conhece, comparado com os seus jogos salvos. A conferência é automática."},
-     {id:"teimosinha", nome:"Teimosinha", titulo:"Teimosinha",
-      sub:"Repete o mesmo jogo por vários concursos seguidos. O app acompanha o custo total e confere cada concurso sozinho."}
-   ]},
-  {id:"resultados", nome:"Resultados",
-   icone:'<rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9.5h18M8 3v3M16 3v3"/>',
-   telas:[
-     {id:"resultados", nome:"Concursos", titulo:"Resultados",
-      sub:"Últimos concursos"}
-   ]},
-  /* "Mais" recolhe o que saiu da barra: montar jogos, a bancada e o Entender.
-     Nenhuma tela ficou sem porta — é a regra que a bateria de interface cobra
-     a cada push, e reorganizar navegação é exatamente onde recurso some. */
-  {id:"mais", nome:"Mais",
-   icone:'<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>',
-   telas:[
-     {id:"gerar", nome:"Gerar", titulo:"Gerar jogos",
-      sub:"Monta combinações válidas por método. Compare os critérios e a variedade entre os jogos."},
-     {id:"sugestoes", nome:"Sugestões", titulo:"Central de sugestões",
-      sub:"Lotes explicados, diversidade e comparação com o acaso."},
-     {id:"plano", nome:"Plano & metas", titulo:"Plano de jogos",
-      sub:"Metas de acertos, cobertura verificada e participação com limite."},
-     {id:"montar", nome:"Montar", titulo:"Montar à mão",
-      sub:"Marque as dezenas que quiser. O app mostra as características do jogo e como elas se comparam ao esperado do acaso."},
-     {id:"bancada", nome:"Bancada", titulo:"Bancada de testes",
-      sub:"Roda todos os métodos contra o mesmo sorteio e mede se algum se distingue do acaso."},
-     {id:"entender", nome:"Entender", titulo:"Entender",
-      sub:"O que este app faz, o que ele não faz, e por quê."}
-   ]}
+  {id:"inicio",nome:"Início",icone:'<path d="M3 10.5 12 3l9 7.5"/><path d="M5.5 9.5V20h13V9.5"/>',telas:[
+    {id:"inicio",nome:"Início",titulo:"LotoLab",sub:"Planeje, crie e acompanhe seus jogos."}
+  ]},
+  {id:"sugestoes",nome:"Sugestões",icone:'<path d="m15 4 1.8 4.2L21 10l-4.2 1.8L15 16l-1.8-4.2L9 10l4.2-1.8L15 4ZM4 14v6M1 17h6M5 3v5M2.5 5.5h5"/>',telas:[
+    {id:"sugestoes",nome:"Sugestões",titulo:"Criar sugestões",sub:"Escolha seus critérios, confira o custo e salve seus jogos."},
+    {id:"plano",nome:"Plano e metas",titulo:"Plano de jogos",sub:"Defina sua meta, seu limite e o concurso que deseja acompanhar."},
+    {id:"gerar",nome:"Outros métodos",titulo:"Gerar jogos",sub:"Compare métodos de montagem e a variedade das combinações."},
+    {id:"montar",nome:"À mão",titulo:"Montar à mão",sub:"Marque suas dezenas e veja as características do jogo."}
+  ]},
+  {id:"jogos",nome:"Meus jogos",icone:'<rect x="3.5" y="4" width="17" height="17" rx="2.5"/><path d="M8 9.5h8M8 14h5"/>',telas:[
+    {id:"jogos",nome:"Salvos",titulo:"Meus jogos",sub:"Seus jogos e os acertos conferidos com os resultados da base."},
+    {id:"conferir",nome:"Conferir",titulo:"Conferir",sub:"Veja como seus jogos se saíram no último resultado disponível."},
+    {id:"teimosinha",nome:"Teimosinha",titulo:"Teimosinha",sub:"Acompanhe o mesmo jogo em vários concursos e veja o custo total."}
+  ]},
+  {id:"resultados",nome:"Resultados",icone:'<rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9.5h18M8 3v3M16 3v3"/>',telas:[
+    {id:"resultados",nome:"Concursos",titulo:"Resultados",sub:"Atualize os concursos. Toque em um resultado para conferir seus jogos."}
+  ]},
+  {id:"analise",nome:"Análise",icone:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',telas:[
+    {id:"pesquisa",nome:"Pesquisa IA",titulo:"Motor de pesquisa",sub:"Cria e testa hipóteses. Descarta as que falham ao repetir a avaliação."},
+    {id:"aprendizado",nome:"Aprendizado",titulo:"Aprendizado por modalidade",sub:"Mede em resultados posteriores se um modelo aprendeu algum padrão."},
+    {id:"placar",nome:"Meu placar",titulo:"Placar",sub:"Seus resultados comparados com o acaso, com custos equivalentes."},
+    {id:"estatisticas",nome:"Estatísticas",titulo:"Estatísticas do histórico",sub:"O que já saiu, ao lado da referência aleatória. Não prevê o próximo resultado."},
+    {id:"bancada",nome:"Bancada",titulo:"Bancada de testes",sub:"Compare métodos no mesmo sorteio e procure diferenças perante o acaso."},
+    {id:"entender",nome:"Como funciona",titulo:"Entender",sub:"Conheça as ferramentas e os limites da análise."}
+  ]}
 ];
 
 
@@ -10772,13 +10868,11 @@ function navegacao(){
   const sec = secaoAtual();
   $("#abas").innerHTML = SECOES.map(s=>`
     <button data-secao="${s.id}" ${s.id===sec.id?'aria-current="page"':""}>
-      <svg viewBox="0 0 24 24">${s.icone}</svg>${esc(s.nome)}</button>`).join("");
+      <svg viewBox="0 0 24 24" aria-hidden="true">${s.icone}</svg>${esc(s.nome)}</button>`).join("");
   document.querySelectorAll("[data-secao]").forEach(b => b.onclick = () => {
     const s = SECOES.find(x => x.id === b.dataset.secao);
-    /* Entrar numa seção leva à primeira tela dela, salvo quando já se está
-       nela — aí o clique é um "voltar ao topo", não uma troca de tela.
-       Em qualquer dos casos é movimento LATERAL: zera a pilha. */
-    irParaTela(s.id !== sec.id ? s.telas[0].id : S.tela, {lateral:true});
+    /* Um destino da barra sempre abre sua tela principal e limpa a pilha. */
+    irParaTela(s.telas[0].id, {lateral:true});
   });
 }
 
@@ -10916,7 +11010,10 @@ function pintar(){
        </div>`
     : `<div class="titulo"><h1>${esc(tela.titulo)}</h1><p>${esc(tela.sub)}</p></div>`;
 
-  $("#tela").innerHTML = segmento + (tela.id==="inicio"&&!podeVoltar()?"":cabecalho) +
+  const usaChips=["inicio","jogos","conferir","teimosinha","resultados"].includes(tela.id);
+  const contexto=usaChips?"":`<div class="ux-contexto"><label for="ux-modalidade">Modalidade</label><select id="ux-modalidade">${Object.entries(MODALIDADES).map(([k,v])=>`<option value="${k}" ${k===S.modalidade?'selected':''}>${esc(v.nome)}</option>`).join('')}</select></div>`;
+  $("#tela").dataset.rota=tela.id;
+  $("#tela").innerHTML = (tela.id==="inicio"&&!podeVoltar()?"":cabecalho) + segmento + contexto +
     (comProximo.includes(tela.id) ? cartaoProximo(S.modalidade) : "") +
     T[tela.id]() +
     `<div class="aviso-fixo">Nenhum método aumenta a chance de acertar.<br>
@@ -10933,6 +11030,10 @@ function pintar(){
   acoes();
   intLigarAcoes();
   metaLigarAcoes();
+  for(const lista of document.querySelectorAll('.foco-modalidades,.segmento')){
+    const ativo=lista.querySelector('[aria-pressed="true"],[aria-selected="true"]');
+    if(ativo)lista.scrollLeft=Math.max(0,ativo.offsetLeft-lista.offsetLeft-8);
+  }
 }
 
 async function carregarCalibracao(){

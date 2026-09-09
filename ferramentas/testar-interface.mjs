@@ -269,7 +269,7 @@ checar("ausência de pesos.json não quebra o app",
 /* As cinco rotas do mockup. Os nomes mudaram — o que NÃO pode mudar é o
    número de telas alcançáveis: reorganizar navegação é onde recurso some
    calado, então o teste confere as duas coisas. */
-const ROTAS = ['início','análise','jogos','resultados','mais'];
+const ROTAS = ['início','sugestões','meus jogos','resultados','análise'];
 checar("as cinco abas estão presentes",
   await js(`
     const t = document.body.innerText.toLowerCase();
@@ -1810,6 +1810,55 @@ checar('corrigir o histórico identifica avaliação anterior',await js(`return 
 await js(`delete S.auditorias['mega-sena'];document.querySelector('#aud-iniciar').click();trocarModalidade('lotofacil');return true;`);
 await dormir(250);
 checar('trocar de modalidade cancela a avaliação em andamento',await js(`return S.modalidade==='lotofacil'&&!S.auditorias['mega-sena']&&!document.querySelector('.aud-result')`));
+
+secao('Q. Navegação e experiência 4.14');
+await js(`S.modalidade='mega-sena';S.jogos=[];S.teimosinhas=[];S.avisos=[];S.intConfig={};S.intLotes={};S.metaConfig={};S.ajustesAbertos=false;irParaTela('inicio',{lateral:true});return true;`);
+checar('as cinco ações principais têm destino direto',await js(`return [...document.querySelectorAll('#abas [data-secao]')].map(b=>b.dataset.secao).join(',')==='inicio,sugestoes,jogos,resultados,analise'`));
+await tocar('#abas [data-secao="sugestoes"]');
+checar('Sugestões abre o formulário com um toque',await js(`return S.tela==='sugestoes'&&!!document.querySelector('#int-gerar')`));
+await js(`const s=document.querySelector('#ux-modalidade');s.value='quina';s.dispatchEvent(new Event('change'));return true;`);
+checar('seletor visível muda modalidade, tamanho e custo juntos',await js(`return S.modalidade==='quina'&&document.querySelector('#int-tam').value==='5'&&document.querySelector('#int-preco').textContent===brl(custoDoJogo('quina',5)*3)`));
+checar('ajustes avançados começam recolhidos',await js(`return !document.querySelector('#int-avancado').open`));
+await tocar('#int-avancado summary');
+await js(`const f=document.querySelector('#int-fixas');f.value='03';f.dispatchEvent(new Event('change'));const s=document.querySelector('#int-janela');s.value='50';s.dispatchEvent(new Event('change'));return true;`);
+checar('alterar histórico mantém ajustes abertos e dezenas escolhidas',await js(`return document.querySelector('#int-avancado').open&&document.querySelector('#int-fixas').value==='03'`));
+await tocar('#int-avancado summary');
+await js(`const q=document.querySelector('#int-quantidade');q.value='4';q.dispatchEvent(new Event('input'));return true;`);
+checar('custo acompanha a digitação sem sair do campo',await js(`return document.querySelector('#int-preco').textContent===brl(custoDoJogo('quina',5)*4)`));
+await tocar('#int-gerar');await dormir(600);
+checar('gerar conserva restrições dos ajustes recolhidos',await js(`return S.intLotes.quina?.jogos.length===4&&S.intLotes.quina.jogos.every(j=>j.includes(3))`));
+await tocar('#int-salvar');
+checar('salvar leva à lista da modalidade correta',await js(`return S.tela==='jogos'&&S.modalidade==='quina'&&S.jogos.length===4`));
+await tocar('#btn-menu');
+await tocar('#gaveta [data-atalho="plano"]');
+checar('atalho do menu abre a tela e fecha a sobreposição',await js(`return S.tela==='plano'&&document.querySelector('#gaveta').dataset.aberta==='0'&&document.querySelector('#btn-menu').getAttribute('aria-expanded')==='false'`));
+await tocar('#abas [data-secao="sugestoes"]');
+checar('aba Sugestões retorna ao formulário a partir de Plano',await js(`return S.tela==='sugestoes'`));
+await tocar('#abas [data-secao="inicio"]');
+await tocar('.ux-acessos [data-abrir-analitica]');await dormir(500);
+checar('atalho da avaliação chega ao painel com foco e botão visível',await js(`const p=document.querySelector('#ux-analitica'),r=p.getBoundingClientRect();return S.tela==='sugestoes'&&document.activeElement===p&&r.top>=0&&r.top<innerHeight/2`));
+await tocar('#abas [data-secao="resultados"]');
+await tocar('[data-ux-historico]');
+checar('importação fica acessível sem percorrer a lista de concursos',await js(`return document.querySelector('#r-ajustes').open&&document.activeElement.id==='r-tudo'`));
+await js(`S.jogos=[];irParaTela('jogos');return true;`);
+await tocar('#tela [data-atalho="sugestoes"]');
+checar('estado sem jogos oferece um caminho funcional',await js(`return S.tela==='sugestoes'`));
+const reais414=JSON.parse(readFileSync(join(RAIZ,'dados/mega-sena.json'),'utf8')).concursos.slice(-120).map(r=>({...r,modalidade:'mega-sena'}));
+await js(`S.modalidade='mega-sena';S.resultados=${JSON.stringify(reais414)};S.intConfig={};S.intLotes={};S.auditorias={};S.avisos=[];S.jogos=[];irParaTela('inicio',{lateral:true});return true;`);
+for(const tema of ['escuro','claro'])for(const width of [360,412,1024]){
+  await cmd('Emulation.setDeviceMetricsOverride',{width,height:915,deviceScaleFactor:2,mobile:width<600});
+  await js(`document.documentElement.dataset.tema=${JSON.stringify(tema)};return true;`);
+  for(const rota of ['inicio','sugestoes','jogos','resultados','pesquisa']){
+    await js(`irParaTela(${JSON.stringify(rota)},{lateral:true});return true;`);await dormir(350);
+    checar(rota+' 4.14 cabe em '+width+'px no '+tema,await js('return document.documentElement.scrollWidth<=innerWidth+1'));
+    if(width===412)await capturar('experiencia-414-'+rota+'-'+tema);
+  }
+}
+await cmd('Emulation.setDeviceMetricsOverride',{width:412,height:915,deviceScaleFactor:2,mobile:true});
+await js(`document.documentElement.dataset.tema='escuro';irParaTela('inicio',{lateral:true});return true;`);
+await tocar('#btn-avisos');await tocar('#meta-testar-aviso');
+await capturar('experiencia-414-notificacoes');
+await tocar('#folha-avisos [data-fechar]:not(.fundo)');
 
 /* ---------- fim ---------- */
 console.log(linhas.join("\n"));
