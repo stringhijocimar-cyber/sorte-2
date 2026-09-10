@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0c1020">
+<meta name="theme-color" content="#050a12">
 <meta name="description" content="Gerador e conferidor de jogos das loterias brasileiras, com comparação honesta contra o acaso.">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icone.svg" type="image/svg+xml">
@@ -2173,71 +2173,142 @@ html[data-tema="claro"] .ux-contexto select{background:#f4f0fa!important;color:#
 @media(max-width:370px){main{padding-inline:14px!important}.ux-inicio .foco-boasvindas :is(h1,h2){font-size:1.48rem}.ux-inicio .foco-hero{padding:18px}.ux-inicio .foco-objetivo{gap:12px;grid-template-columns:minmax(0,1fr) 57px}.ux-inicio .foco-alvo{width:57px;height:57px}.ux-inicio .foco-objetivo h2{font-size:1.33rem}.ux-acessos button{gap:7px;padding:12px 9px;grid-template-columns:31px minmax(0,1fr)}.ux-acessos b{font-size:.74rem}.ux-icone{width:31px}.ux-form.int-form{padding:16px!important}.ux-etapas{font-size:.61rem}}
 @media(prefers-reduced-motion:reduce){.ux-inicio *{scroll-behavior:auto!important}}
 
-/* Paleta revisada: azul profundo, superfícies legíveis e um acento roxo.
-   A camada antiga também usa s2-*. Os aliases recebem os mesmos valores. */
+</style>
+<style data-folha="ui/modalidades-v4-15.css">
+/* LotoLab 4.15 — a modalidade selecionada colore a interface inteira.
+   Acerto/erro e o estado do concurso continuam sendo sinais independentes. */
+html[data-modalidade="mega-sena"]{--mod-cor:#35b86b}
+html[data-modalidade="lotofacil"]{--mod-cor:#a451d1}
+html[data-modalidade="quina"]{--mod-cor:#446be3}
+html[data-modalidade="lotomania"]{--mod-cor:#ef7617}
+html[data-modalidade="dupla-sena"]{--mod-cor:#d83b37}
+html[data-modalidade="dia-de-sorte"]{--mod-cor:#d7a108}
+html[data-modalidade="timemania"]{--mod-cor:#85b92f}
+html[data-modalidade="mais-milionaria"]{--mod-cor:#6f35c7}
 html[data-tema="escuro"]{
-  --s2-bg:#0c1020;--s2-bg-deep:#090d18;--s2-panel:#151b2c;--s2-panel-2:#1c2438;--s2-panel-3:#242e45;
-  --s2-line:#303a53;--s2-line-hot:#5b4b82;--s2-text:#f2f4fc;--s2-muted:#a9b4c9;--s2-teal:#b39aee;--s2-teal-2:#8056d5;
-  --fundo:#0c1020!important;--carta:#151b2c!important;--trama:#1c2438!important;--linha:#303a53!important;
-  --tinta:#f2f4fc!important;--secundaria:#a9b4c9!important;--acaso:#b39aee!important;--acaso-fundo:#8056d5!important;
-  --seu:#dfb775!important;--alerta:#f0a0ae!important;--ganhou:#4abd8a!important;--ganhou-tinta:#a4dfbd;
-  --acumulou:#d5ab60;--acumulou-tinta:#e9c888;--ux-acento:#bfa8f4;--ux-suave:#2a2142;--ux-borda:#594675;
-  background:#0c1020!important;color-scheme:dark;
+  --fundo:#050a12!important;--carta:#0b111b!important;--trama:#101824!important;
+  --linha:#26313d!important;--tinta:#f5f7fa!important;--secundaria:#a9b6c0!important;
+  --s2-bg:#050a12;--s2-bg-deep:#050a12;--s2-panel:#0b111b;--s2-panel-2:#101824;
+  --s2-panel-3:#172230;--s2-line:#26313d;--s2-text:#f5f7fa;--s2-muted:#a9b6c0;
+  --mod-acento:color-mix(in srgb,var(--mod-cor) 64%,white);
+  --mod-suave:color-mix(in srgb,var(--mod-cor) 15%,#0b111b);
+  --mod-borda:color-mix(in srgb,var(--mod-cor) 46%,#26313d);
+  background:#050a12!important;color-scheme:dark;
 }
-html[data-tema="escuro"] body{background:radial-gradient(700px 430px at 80% 0,#523d7125,transparent 75%),#0c1020!important;color:#f2f4fc!important}
-html[data-tema="escuro"] header{background:#0c1020f5!important;border-color:#252e45!important;box-shadow:0 5px 22px #00000012!important}
-html[data-tema="escuro"] :is(.menu,.sino,.voltar,.acao-tela){background:#171e30!important;border-color:#323d56!important;color:#e4e8f6!important}
-html[data-tema="escuro"] :is(.carta,.panel,.ficha,.kpi,.mini-card,.item,.draw-card,.concurso,.pq-grafico){background:#151b2c!important;border-color:#303a53!important;box-shadow:0 5px 20px #03061412!important}
-html[data-tema="escuro"] :is(.ux-acessos button,.foco-acompanhamento,.foco-ultimo,.ux-contexto,.ux-vazio,.ux-menu-links button){background:#151b2c!important;border-color:#303a53!important}
-html[data-tema="escuro"] .foco-hero{background:radial-gradient(ellipse at 95% 0,#785fa93b,transparent 65%),linear-gradient(135deg,#302442,#1d2135)!important;border-color:#72518d!important;box-shadow:0 9px 30px #05081624}
-html[data-tema="escuro"] .foco-objetivo p{color:#d3c9e4}.foco-hero .foco-label{color:#c9adeb!important}
-html[data-tema="escuro"] :is(.gaveta .corpo,.folha .corpo,.activity-sheet){background:#101626!important;border-color:#303a53!important}
-html[data-tema="escuro"] .gaveta-mods button{background:#192136!important;border-color:#303a53!important;color:#bec8dd!important}
-html[data-tema="escuro"] .gaveta-mods button[aria-pressed="true"]{background:#302644!important;border-color:#8566ad!important;color:#f2edfc!important}
-html[data-tema="escuro"] :is(input,select,textarea){background:#111829!important;border-color:#3a455f!important;color:#f2f4fc!important}
-html[data-tema="escuro"] :is(input,textarea)::placeholder{color:#8793ab;opacity:1}
-html[data-tema="escuro"] .acao.secundaria,html[data-tema="escuro"] .acao.contorno{background:#1a2236!important;border-color:#3b4661!important;color:#dde3f2!important;box-shadow:none!important}
-.acao:not(.contorno):not(.secundaria):not(.perigo),.foco-hero .acao.foco-primary{background:linear-gradient(110deg,#7b50cf,#6740ba)!important;border-color:#a080dc!important;color:#fff!important;box-shadow:0 5px 15px #4b267d24!important}
-html[data-tema="escuro"] .chip{background:#192136!important;border-color:#35405a!important;color:#b9c3d8!important}
-html[data-tema="escuro"] .chip[aria-pressed="true"]{background:#35264e!important;border-color:#8164a8!important;color:#eadffb!important;box-shadow:none!important}
-html[data-tema="escuro"] .chip i{background:#263248!important;color:#bdc9df!important}
-html[data-tema="escuro"] .chip[aria-pressed="true"] i{background:#bc9deb!important;color:#25143e!important}
-html[data-tema="escuro"] .chips{background:transparent!important;border-color:#303a53!important}
-html[data-tema="escuro"] .ux-inicio .foco-modalidades button{background:#171f32!important;border-color:#343e56!important;color:#b9c3d8!important}
-html[data-tema="escuro"] .ux-inicio .foco-modalidades button[aria-pressed="true"]{background:color-mix(in srgb,var(--foco-cor) 18%,#151b2c)!important;border-color:color-mix(in srgb,var(--foco-cor) 70%,#bac6db)!important;color:#f2f4fc!important}
-html[data-tema="escuro"] .concurso.acumulou,html[data-tema="escuro"] .item.acumulou{background:linear-gradient(120deg,#272532,#171f30)!important;border-color:#61503a!important;box-shadow:inset 3px 0 #d5ab60!important}
-html[data-tema="escuro"] .concurso.ganhou,html[data-tema="escuro"] .item.ganhou{background:linear-gradient(120deg,#19312d,#171f30)!important;border-color:#386c5a!important;box-shadow:inset 3px 0 #4abd8a!important}
-html[data-tema="escuro"] .concurso .concurso-topo b{color:#edf0fa!important}
-html[data-tema="escuro"] .selo-ganho.acumulou{background:#d5ab6015!important;border-color:#806941!important;color:#e5c58c!important}
-html[data-tema="escuro"] .selo-ganho.ganhou{background:#4abd8a14!important;border-color:#3c7d60!important;color:#a4dfbd!important}
-html[data-tema="escuro"] .pilula.oficial{background:#202b40!important;border-color:#465876!important;color:#b9cce8!important}
-html[data-tema="escuro"] body:has([data-mod][aria-pressed="true"]) .bola,html[data-tema="escuro"] body:has([data-mod][aria-pressed="true"]) .dz.sorteada{background:#3a2b55!important;border-color:#80639f!important;color:#f5efff!important;box-shadow:inset 0 1px #ffffff16!important;font-style:normal!important}
-html[data-tema="escuro"] .proximo{background:linear-gradient(120deg,#24334a,#23334c)!important;color:#f1f4fa!important;border:1px solid #435472!important;box-shadow:none!important}
-html[data-tema="escuro"] .proximo :is(.premio,.valor,.data,.mod,.estado){color:inherit!important}
-html[data-tema="escuro"] .int-hero,html[data-tema="escuro"] .pq-hero{background:linear-gradient(135deg,#27203d,#181f31)!important;border-color:#594675!important}
-html[data-tema="escuro"] .int-ticket{background:#171e30;border-color:#35405a}
-html[data-tema="escuro"] .int-ticket .dz.marcada{background:#39294f!important;border-color:#8964a6!important;color:#f6efff!important;box-shadow:none!important}
-html[data-tema="escuro"] .ux-inicio .foco-bolas span{background:#3a2b55;border-color:#80639f;color:#f5efff;box-shadow:none}
-html[data-tema="claro"]{--fundo:#f3f4fa;--carta:#fff;--trama:#f0f2f8;--linha:#dce1ed;--tinta:#202940;--secundaria:#5d6b85;--acaso:#6744b3;--acaso-fundo:#7550cb;--ux-acento:#6840af;--ux-suave:#eee8f8;--ux-borda:#d1bee7;background:#f3f4fa!important;color-scheme:light}
-html[data-tema="claro"] body{background:#f3f4fa!important;color:#202940!important}
-html[data-tema="claro"] #abas{box-shadow:0 -5px 20px #3641630d!important;background:#fbfbfef7!important;border-color:#dce1ed!important}
-html[data-tema="claro"] .ux-contexto,html[data-tema="claro"] .ux-acessos button{border-color:#dce1ed!important}
-html[data-tema="claro"] .ux-inicio .foco-modalidades button{background:#fff!important;border-color:#dce1ed!important;color:#5a6680!important}
-html[data-tema="claro"] .ux-inicio .foco-modalidades button[aria-pressed="true"]{background:#eee8f8!important;border-color:#aa90d0!important;color:#5c358f!important;box-shadow:inset 0 -2px var(--foco-cor)!important}
-html[data-tema="claro"] .chip{background:#f3f1f8!important;color:#5d6880!important;border-color:#ded8e9!important}
-html[data-tema="claro"] .chip[aria-pressed="true"]{background:#ede4f8!important;color:#613991!important;border-color:#ba9bd5!important;box-shadow:none!important}
-html[data-tema="claro"] .chip i{background:#e1e6f0!important;color:#526078!important}
-html[data-tema="claro"] .chip[aria-pressed="true"] i{background:#7550ad!important;color:#fff!important}
-html[data-tema="claro"] .concurso{background:#fff!important;border-color:#dce1ed!important;box-shadow:0 4px 16px #17234008!important}
-html[data-tema="claro"] .concurso.acumulou{background:#fffcf6!important;border-color:#e4d4b8!important;box-shadow:inset 3px 0 #c99a48!important}
-html[data-tema="claro"] .concurso.ganhou{background:#f5fbf7!important;border-color:#bad9c7!important;box-shadow:inset 3px 0 #408866!important}
-html[data-tema="claro"] .concurso .concurso-topo b{color:#26334a!important}
-html[data-tema="claro"] .selo-ganho.acumulou{background:#f8edd7!important;color:#77571b!important;border-color:#dfc995!important}
-html[data-tema="claro"] .selo-ganho.ganhou{background:#e4f2e9!important;color:#296346!important;border-color:#aecdbb!important}
-html[data-tema="claro"] body:has([data-mod][aria-pressed="true"]) .bola,html[data-tema="claro"] body:has([data-mod][aria-pressed="true"]) .dz.sorteada{background:#ede5f7!important;border-color:#c6b2df!important;color:#543273!important;box-shadow:none!important;font-style:normal!important}
-html[data-tema="claro"] .pilula.oficial{background:#edf2f9!important;border-color:#c5d3e5!important;color:#425c7b!important}
-html[data-tema="claro"] .proximo{background:#eaf0fa!important;border:1px solid #c6d3e7!important;color:#263951!important;box-shadow:none!important}
-html[data-tema="claro"] .acao.secundaria,html[data-tema="claro"] .acao.contorno{background:#f7f6fb!important;border-color:#d3cde2!important;color:#57426f!important;box-shadow:none!important}
+html[data-tema="claro"]{
+  --fundo:#f1f4f8!important;--carta:#fff!important;--trama:#edf2f6!important;
+  --linha:#cfd9e2!important;--tinta:#172434!important;--secundaria:#4a5c6c!important;
+  --mod-acento:color-mix(in srgb,var(--mod-cor) 52%,#101820);
+  --mod-suave:color-mix(in srgb,var(--mod-cor) 10%,white);
+  --mod-borda:color-mix(in srgb,var(--mod-cor) 42%,#cfd9e2);
+  background:#f1f4f8!important;color-scheme:light;
+}
+html[data-modalidade][data-tema] body{
+  --ll-mod:var(--mod-cor)!important;--ll-mod-soft:var(--mod-suave)!important;
+  --ll-mod-border:var(--mod-borda)!important;--ll-mod-text:var(--mod-acento)!important;
+  --ll43-purple:var(--mod-cor)!important;--ll43-purple-2:var(--mod-botao)!important;
+  --ll43-purple-soft:var(--mod-suave)!important;
+  --ux-acento:var(--mod-acento);--ux-suave:var(--mod-suave);--ux-borda:var(--mod-borda);
+  --mod-botao:color-mix(in srgb,var(--mod-cor) 60%,#080e16);
+  --mod-botao-fim:color-mix(in srgb,var(--mod-cor) 44%,#080e16);
+  color:var(--tinta)!important;min-height:100dvh;
+  background:linear-gradient(0deg,color-mix(in srgb,var(--mod-cor) 11%,var(--fundo)) 0%,color-mix(in srgb,var(--mod-cor) 4%,var(--fundo)) 38%,var(--fundo) 76%)!important;
+  background-attachment:fixed!important;
+}
+html[data-tema="escuro"] header{background:#050a12f5!important;border-color:#26313d!important}
+html[data-tema="escuro"] :is(.menu,.sino,.voltar,.acao-tela){background:#0b111b!important;border-color:#26313d!important;color:#e5edf2!important}
+html[data-tema="escuro"] :is(.gaveta .corpo,.folha .corpo,.activity-sheet){background:linear-gradient(180deg,#0b111b,#050a12)!important;border-color:var(--linha)!important}
+html[data-tema="escuro"] :is(.ux-acessos button,.ux-vazio,.ux-menu-links button,.foco-acompanhamento,.foco-ultimo){background:linear-gradient(180deg,#101824,#0a111b)!important;border-color:var(--linha)!important}
+html[data-tema="escuro"] :is(input,select,textarea){background:#0a111b!important;border-color:#344353!important;color:var(--tinta)!important}
+html[data-tema="claro"] :is(input,select,textarea){background:#f7f9fb!important;border-color:#bfccd8!important;color:var(--tinta)!important}
+html[data-tema] :is(input,textarea)::placeholder{color:var(--secundaria)!important;opacity:1}
+html[data-tema] :is(.titulo p,.ux-acessos small,.ux-form .campo,.ux-form .int-help,.aud-painel .int-help,.foco-data,.concurso time){color:var(--secundaria)!important}
+html[data-tema] :is(.segmento button:not([aria-selected="true"]),#abas button:not([aria-current="page"])){color:var(--secundaria)!important}
+
+/* O mesmo menu 4 × 2 em todas as telas, sem rolagem lateral. */
+html[data-tema] #tela>.mod-seletor{
+  display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr));gap:3px!important;
+  margin:0 0 18px!important;padding:5px!important;border:1px solid var(--linha)!important;
+  border-radius:12px;background:var(--fundo)!important;overflow:visible!important;
+}
+html[data-tema] .mod-seletor .chip{
+  display:flex!important;align-items:center;justify-content:flex-start;gap:5px;
+  min-width:0!important;min-height:44px!important;padding:7px 5px!important;
+  font-size:.62rem!important;line-height:1.2;white-space:normal;overflow-wrap:anywhere;text-align:left;
+  border:1px solid transparent!important;border-radius:10px!important;
+  background:transparent!important;color:var(--secundaria)!important;font-weight:500!important;
+  box-shadow:none!important;
+}
+html[data-tema] .mod-seletor .chip::before{
+  content:"";display:block!important;width:7px!important;height:7px!important;
+  margin:0!important;border-radius:50%;flex:0 0 7px;background:var(--ll-chip)!important;box-shadow:none!important;
+}
+html[data-tema] .mod-seletor .chip[aria-pressed="true"],
+html[data-tema] .gaveta-mods button[aria-pressed="true"]{
+  background:linear-gradient(160deg,var(--mod-botao),var(--mod-botao-fim))!important;
+  border-color:var(--mod-borda)!important;color:#fff!important;font-weight:700!important;
+  box-shadow:inset 3px 0 var(--mod-cor)!important;
+}
+html[data-tema] .gaveta-mods button{color:var(--secundaria)!important;background:var(--carta)!important;border-color:var(--linha)!important}
+html[data-modalidade] :is(button,input,select,textarea,summary,a):focus-visible{outline:2px solid var(--mod-acento)!important;outline-offset:3px!important}
+html[data-modalidade] :is(input,select,textarea):focus{border-color:var(--mod-acento)!important;box-shadow:0 0 0 3px var(--mod-suave)!important}
+
+/* Destaques, indicadores e navegação seguem a escolha global. */
+html[data-tema] #abas button[aria-current="page"],
+html[data-tema] .segmento button[aria-selected="true"],
+html[data-tema] .chip[aria-pressed="true"]{
+  color:var(--mod-acento)!important;background:var(--mod-suave)!important;border-color:var(--mod-borda)!important;
+}
+html[data-tema] .mod-seletor .chip[aria-pressed="true"]{color:#fff!important;background:linear-gradient(160deg,var(--mod-botao),var(--mod-botao-fim))!important}
+html[data-tema] #abas{background:color-mix(in srgb,var(--fundo) 97%,transparent)!important;border-color:var(--linha)!important}
+html[data-modalidade] .acao:not(.contorno):not(.secundaria):not(.perigo),
+html[data-modalidade] .foco-hero .acao.foco-primary{
+  background:linear-gradient(120deg,var(--mod-botao),var(--mod-botao-fim))!important;
+  color:#fff!important;border-color:var(--mod-borda)!important;box-shadow:0 5px 16px #00000020!important;
+}
+html[data-tema] .acao.secundaria,html[data-tema] .acao.contorno{color:var(--mod-acento)!important;border-color:var(--mod-borda)!important;background:var(--carta)!important;box-shadow:none!important}
+html[data-modalidade] :is(.kpi .val,.metric b,.int-summary b,.int-price strong,.foco-alvo strong,.foco-alvo span,.foco-secundaria,.foco-texto-btn,.ux-icone,.ux-links button span,.ux-menu-links button span){color:var(--mod-acento)!important}
+html[data-modalidade] :is(.foco-versao,.pq-selo,.good-banner){color:var(--mod-acento)!important;background:var(--mod-suave)!important;border-color:var(--mod-borda)!important}
+html[data-tema] :is(.ux-inicio .foco-hero,.int-hero,.pq-hero,.analysis-card){
+  background:linear-gradient(145deg,color-mix(in srgb,var(--mod-cor) 11%,var(--carta)),var(--carta))!important;
+  border-color:var(--mod-borda)!important;
+}
+html[data-tema] .foco-hero .foco-label{color:var(--mod-acento)!important}
+html[data-tema] .foco-hero :is(h2,p,.foco-tag){color:var(--tinta)!important}
+html[data-tema] .ux-inicio .foco-alvo{border-color:var(--mod-acento)!important;background:var(--mod-suave)!important;outline-color:color-mix(in srgb,var(--mod-cor) 7%,transparent)!important;box-shadow:none!important}
+html[data-tema] .proximo{background:linear-gradient(145deg,var(--mod-suave),var(--carta))!important;color:var(--tinta)!important;border:1px solid var(--mod-borda)!important;box-shadow:none!important}
+html[data-tema] .proximo :is(.premio,.valor){color:var(--mod-acento)!important}
+html[data-tema] .proximo :is(.data,.mod,.estado){color:var(--tinta)!important}
+html[data-tema] .ux-etapas{color:var(--secundaria)!important}.ux-etapas i{border-color:var(--mod-borda)}.ux-etapas>b{background:var(--mod-borda)}
+html[data-modalidade] .pq-orbe{background:radial-gradient(circle at 34% 28%,color-mix(in srgb,var(--mod-cor) 30%,white),var(--mod-cor) 36%,var(--mod-botao) 100%)!important;box-shadow:0 0 0 7px var(--mod-suave)!important}
+html[data-modalidade] :is(.curve,.linha-evolucao){stroke:var(--mod-acento)!important}
+html[data-modalidade] :is(.dot,.ponto-evolucao){fill:var(--mod-acento)!important}
+html[data-modalidade] :is(.int-heatmap .int-above,.int-entry,.extras-volante){background:var(--mod-suave)!important;border-color:var(--mod-borda)!important}
+html[data-modalidade] :is(.ic-aviso,.activity-icon,.ponto-lido.novo){color:var(--mod-acento)!important;background:var(--mod-suave)!important}
+html[data-modalidade] .ponto-lido.novo{background:var(--mod-acento)!important;box-shadow:0 0 0 3px var(--mod-suave)!important}
+
+/* Dezenas publicadas: amarelo em qualquer modalidade. O texto grafite tem
+   contraste alto em toda a extensão do degradê (inclusive no tema claro).
+   Não alcança .dz.acertou/.dz.errou: a conferência conserva seus sinais. */
+html[data-modalidade][data-tema] body #tela .concurso .bola,
+html[data-modalidade][data-tema] body #tela .concurso .extras-volante .trevo,
+html[data-modalidade][data-tema] body #tela .concurso .extras-volante .dz,
+html[data-modalidade][data-tema] body #tela .foco-bolas span{
+  background:linear-gradient(155deg,#ffe99a,#f3c64c)!important;
+  border:1px solid #ffe59a!important;color:#26200f!important;
+  font-weight:800!important;font-style:normal!important;
+  box-shadow:inset 0 1px 0 #fff6cf,0 3px 9px #00000024!important;
+  font-variant-numeric:tabular-nums;
+}
+html[data-tema="claro"] .concurso.acumulou{background:linear-gradient(180deg,#fff5d7,#fffaf0)!important;border-color:#d2ad4c!important;box-shadow:inset 4px 0 #d2a22e!important}
+html[data-tema="claro"] .concurso.ganhou{background:linear-gradient(180deg,#e5f6e8,#f4fbf5)!important;border-color:#7abb8a!important;box-shadow:inset 4px 0 #3c8b51!important}
+html[data-tema="claro"] .concurso.acumulou .concurso-topo b{color:#695013!important}
+html[data-tema="claro"] .concurso.ganhou .concurso-topo b{color:#235f35!important}
+html[data-tema="claro"] .selo-ganho.acumulou{color:#74551b!important;background:#f7e7ba!important}
+html[data-tema="claro"] .selo-ganho.ganhou{color:#235f35!important;background:#dcf0df!important}
+html[data-tema="claro"] :is(.concurso,.item) .pilula{color:#4a5c6c!important;border-color:#9aabb8!important}
+@media(max-width:370px){html[data-tema] .mod-seletor .chip{font-size:.58rem!important;padding-inline:3px!important;gap:4px}}
+@media(min-width:650px){html[data-tema] .mod-seletor .chip{font-size:.7rem!important;min-height:48px!important;padding-inline:8px!important;gap:6px}}
 
 </style>
 </head>
@@ -4310,7 +4381,7 @@ function ultimasConferencias(limite){
 
 T.jogos = () => {
   const vazio=()=>`<section class="ux-vazio"><span class="ux-icone" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="3"/><path d="M8 9h8M8 14h5"/></svg></span><h2>Seus jogos começam aqui</h2><p>Nenhum jogo salvo de ${esc(MODALIDADES[S.modalidade].nome)}. Crie sugestões ou marque suas dezenas. Depois, salve para acompanhar os acertos.</p><button class="acao" data-atalho="sugestoes">Criar minhas sugestões</button><button class="acao secundaria" data-atalho="montar">Montar um jogo à mão</button></section>`;
-  if(!S.jogos.length) return chipsDeModalidade()+vazio();
+  if(!S.jogos.length) return vazio();
 
   /* Filtra pela modalidade escolhida no cabeçalho. Sem isto a tela empilhava
      Mega-Sena, Lotofácil e Quina numa lista só — e como cada modalidade tem
@@ -4330,15 +4401,11 @@ T.jogos = () => {
       `<strong>${esc(MODALIDADES[k].nome)}</strong> (${n})`).join(", ")}.
     Troque no topo da tela para ver.</div>`;
 
-  /* A tira vem antes da lista. O rodapé desta tela já dizia "troque no topo da
-     tela para ver" — apontando para um seletor que não existia aqui. */
-  const chips = chipsDeModalidade();
-
-  if(!meus.length) return chips + vazio() + rodape;
+  if(!meus.length) return vazio() + rodape;
 
   const porLote = {};
   meus.forEach(j => (porLote[j.lote] = porLote[j.lote] || []).push(j));
-  return chips + resumoDeMeusJogos(meus) + Object.entries(porLote).reverse().map(([lote, jogos])=>{
+  return resumoDeMeusJogos(meus) + Object.entries(porLote).reverse().map(([lote, jogos])=>{
     const p = jogos[0];
     return `<h2 style="margin:14px 0 8px">${esc(MODALIDADES[p.modalidade].nome)} ·
       ${esc(p.data)} · ${esc(p.metodo)}</h2>
@@ -4805,15 +4872,14 @@ function atalhos(){
 }
 
 /* Painel 4.11: modalidade, objetivo e resultado disponíveis na primeira tela. */
-const FOCO_CORES={'mega-sena':'#27894d',lotofacil:'#9257de',quina:'#4560d7',lotomania:'#d66e20','dupla-sena':'#c74651','dia-de-sorte':'#a87a16',timemania:'#558322','mais-milionaria':'#773acd'};
+/* Uma cor por modalidade, compartilhada por todas as telas e controles. */
+const FOCO_CORES={'mega-sena':'#35b86b',lotofacil:'#a451d1',quina:'#446be3',lotomania:'#ef7617','dupla-sena':'#d83b37','dia-de-sorte':'#d7a108',timemania:'#85b92f','mais-milionaria':'#6f35c7'};
 T.inicio = () => {
   const m=S.modalidade,c=MODALIDADES[m],r=ultimoResultado(m),concursos=historicoDe(m).length;
   const avisos=S.avisos.filter(a=>!a.lido).length;
   const meus=S.jogos.filter(j=>j.modalidade===m).length,idade=idadeDoHistorico(m);
   return `<div class="foco-inicio ux-inicio" style="--foco-cor:${FOCO_CORES[m]}">
-    <div class="foco-boasvindas"><div><span class="foco-label">BEM-VINDO AO SEU LABORATÓRIO</span><${podeVoltar()?'h2':'h1'}>Seu jogo,<br>bem planejado.</${podeVoltar()?'h2':'h1'}></div><span class="foco-versao">4.14</span></div>
-    <div class="ux-escolha"><div><span class="foco-label">ESCOLHA A MODALIDADE</span><small>Deslize para ver todas →</small></div>
-    <div class="foco-modalidades" role="group" aria-label="Modalidades na tela inicial">${Object.entries(MODALIDADES).map(([id,v])=>`<button data-mod="${id}" aria-pressed="${id===m}" style="--foco-cor:${FOCO_CORES[id]}">${esc(v.nome)}</button>`).join('')}</div></div>
+    <div class="foco-boasvindas"><div><span class="foco-label">BEM-VINDO AO SEU LABORATÓRIO</span><${podeVoltar()?'h2':'h1'}>Seu jogo,<br>bem planejado.</${podeVoltar()?'h2':'h1'}></div><span class="foco-versao">4.15</span></div>
     <section class="foco-hero"><div class="foco-hero-topo"><span class="foco-label">UM PLANO PARA CADA CONCURSO</span><span class="foco-tag">${esc(c.nome)}</span></div>
       <div class="foco-objetivo"><div><h2>Crie seus jogos.<br>Veja os acertos.</h2><p>Defina seus critérios e seu limite. O LotoLab organiza e confere.</p></div><div class="foco-alvo" aria-label="Meta de ${c.k} dezenas"><strong>${c.k}</strong><span>${c.trevos?"+ 2 trevos":"dezenas"}</span></div></div>
       <button class="acao foco-primary" data-atalho="sugestoes">Criar sugestões <span aria-hidden="true">→</span></button>
@@ -9803,7 +9869,8 @@ T.resultados = () => {
      e empurravam a lista para fora da primeira tela — quem entra em
      "Resultados" quer ver resultado, não configurar como buscá-los. Eles
      continuam aqui, recolhidos num <details> no fim. */
-  const chips = chipsDeModalidade();
+  // O seletor compartilhado é renderizado por pintar(), acima do título.
+  const chips = "";
 
   /* Aviso de dado velho.
 
@@ -10451,8 +10518,6 @@ function acoesNovas(){
 
 function acoes(){
   acoesNovas();
-  const seletor=$('#ux-modalidade');
-  if(seletor)seletor.onchange=e=>trocarModalidade(e.target.value);
   const fecharMenu=()=>{$('#gaveta').dataset.aberta='0';$('#btn-menu').setAttribute('aria-expanded','false');};
   document.querySelectorAll('[data-abrir-analitica]').forEach(b=>b.onclick=()=>{
     fecharMenu();if(S.tela!=='sugestoes')irParaTela('sugestoes');
@@ -10947,10 +11012,8 @@ function navegacao(){
   });
 }
 
-/* A modalidade saiu da trilha fixa no topo e passou a viver em dois lugares:
-   a gaveta do ☰ (sempre disponível) e os chips da tela Resultados, onde o
-   mockup os desenha. É a MESMA escolha global — trocar num lugar troca no
-   outro, porque `data-mod` é lido por um só tratador. */
+/* A escolha é global: seletor no topo de toda tela e gaveta compartilham o
+   mesmo estado, inclusive depois de recarregar o app. */
 function trocarModalidade(mod){
   intTrabalho++; audTrabalho++;
   if(!MODALIDADES[mod] || mod === S.modalidade) return;
@@ -11005,7 +11068,7 @@ function meusJogosNoConcurso(r){
 }
 
 function chipsDeModalidade(){
-  return `<div class="chips chips-mod" role="group" aria-label="Modalidade">
+  return `<div class="chips chips-mod mod-seletor" role="group" aria-label="Modalidade">
     ${Object.entries(MODALIDADES).map(([k,v]) =>
       `<button class="chip" data-mod="${k}" aria-pressed="${k===S.modalidade}"
         >${esc(v.nome)}</button>`).join("")}</div>`;
@@ -11015,12 +11078,15 @@ function trilhaModalidade(){
   const gav = $("#gaveta-mods");
   if(gav) gav.innerHTML = Object.entries(MODALIDADES).map(([k,v])=>
     `<button data-mod="${k}" aria-pressed="${k===S.modalidade}">${esc(v.nome)}</button>`).join("");
-  document.querySelectorAll("[data-mod]").forEach(b => b.onclick = () =>
-    trocarModalidade(b.dataset.mod));
+  document.querySelectorAll("button[data-mod]").forEach(b => b.onclick = e => {
+    trocarModalidade(b.dataset.mod);
+    if(e.detail===0) document.querySelector('.mod-seletor [aria-pressed="true"]')?.focus({preventScroll:true});
+  });
 }
 
 function pintar(){
   const sec = secaoAtual(), tela = telaAtual();
+  document.documentElement.dataset.modalidade = S.modalidade;
   /* O recado da busca vale para a visita atual à tela. Sair dela o descarta,
      senão reaparece dias depois falando de uma conferência esquecida. */
   if(tela.id !== "conferir") S.avisoConferir = null;
@@ -11081,10 +11147,8 @@ function pintar(){
        </div>`
     : `<div class="titulo"><h1>${esc(tela.titulo)}</h1><p>${esc(tela.sub)}</p></div>`;
 
-  const usaChips=["inicio","jogos","conferir","teimosinha","resultados"].includes(tela.id);
-  const contexto=usaChips?"":`<div class="ux-contexto"><label for="ux-modalidade">Modalidade</label><select id="ux-modalidade">${Object.entries(MODALIDADES).map(([k,v])=>`<option value="${k}" ${k===S.modalidade?'selected':''}>${esc(v.nome)}</option>`).join('')}</select></div>`;
   $("#tela").dataset.rota=tela.id;
-  $("#tela").innerHTML = (tela.id==="inicio"&&!podeVoltar()?"":cabecalho) + segmento + contexto +
+  $("#tela").innerHTML = chipsDeModalidade() + (tela.id==="inicio"&&!podeVoltar()?"":cabecalho) + segmento +
     (tela.id==='resultados'?`<details class="carta ux-explorar ux-proximo"><summary>Próximo concurso</summary><div>${cartaoProximo(S.modalidade)}</div></details>`:
       comProximo.includes(tela.id)&&!(tela.id==='jogos'&&!S.jogos.some(j=>j.modalidade===S.modalidade))?cartaoProximo(S.modalidade):"") +
     T[tela.id]() +
@@ -11102,7 +11166,7 @@ function pintar(){
   acoes();
   intLigarAcoes();
   metaLigarAcoes();
-  for(const lista of document.querySelectorAll('.foco-modalidades,.segmento')){
+  for(const lista of document.querySelectorAll('.segmento')){
     const ativo=lista.querySelector('[aria-pressed="true"],[aria-selected="true"]');
     if(ativo)lista.scrollLeft=Math.max(0,ativo.offsetLeft-lista.offsetLeft-8);
   }

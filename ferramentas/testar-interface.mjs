@@ -982,7 +982,7 @@ await cmd("Page.navigate", { url: ENDERECO });
 await dormir(2500);
 
 const identidade = await js(`
-  const l = document.querySelector('link[href*="experiencia-v4-14.css"]');
+  const l = document.querySelector('link[href*="modalidades-v4-15.css"]');
   return {
     titulo: document.title,
     marca: document.querySelector('.marca-titulo b')?.textContent || "",
@@ -999,7 +999,7 @@ const identidade = await js(`
 checar("título é o da edição", identidade.titulo === EDICAO.titulo, identidade.titulo);
 checar("marca no cabeçalho é a da edição", identidade.marca === EDICAO.marca, identidade.marca);
 checar("tema escuro é o padrão", identidade.tema === "escuro", String(identidade.tema));
-checar("a folha visual 4.14 carregou e tem regras", identidade.temLink && identidade.regrasDaFolha > 100,
+checar("a folha visual 4.15 carregou e tem regras", identidade.temLink && identidade.regrasDaFolha > 40,
   `${identidade.regrasDaFolha} regras`);
 
 /* Não basta a folha carregar: as regras precisam VALER — e "valer" se mede no
@@ -1012,8 +1012,8 @@ checar("a folha visual 4.14 carregou e tem regras", identidade.temLink && identi
    a V4. Então a lista abaixo é curta, escolhida à mão, e cada linha diz o
    valor computado que se espera de fato. */
 const VALORES_DA_V4 = [
-  { o_que: "fundo da página",        js: `getComputedStyle(document.documentElement).backgroundColor`, espera: "rgb(12, 16, 32)" },
-  { o_que: "cor-base da V4",         js: `getComputedStyle(document.documentElement).getPropertyValue('--s2-bg').trim()`, espera: "#0c1020" },
+  { o_que: "fundo da página",        js: `getComputedStyle(document.documentElement).backgroundColor`, espera: "rgb(5, 10, 18)" },
+  { o_que: "cor-base da V4",         js: `getComputedStyle(document.documentElement).getPropertyValue('--s2-bg').trim()`, espera: "#050a12" },
   /* 44px, e não os 40px de antes: a V4.3 subiu os dois ícones do cabeçalho
      para o mínimo de alvo de toque. A expectativa muda aqui porque a mudança
      foi intencional e medida — não para o teste parar de reclamar. E, para
@@ -1035,14 +1035,14 @@ for (const v of VALORES_DA_V4) {
    desligada a folha, o fundo tem de deixar de ser o da V4. Um teste que só
    confere o valor final passaria igual se o <link> não existisse. */
 const semAFolha = await js(`
-  const l = document.querySelector('link[href*="experiencia-v4-14.css"]');
+  const l = document.querySelector('link[href*="modalidades-v4-15.css"]');
   l.sheet.disabled = true;
   const cor = getComputedStyle(document.documentElement).backgroundColor;
   l.sheet.disabled = false;
   return { desligada: cor, religada: getComputedStyle(document.documentElement).backgroundColor };
 `);
-checar("o fundo vem da folha 4.14",
-  semAFolha.desligada !== "rgb(12, 16, 32)" && semAFolha.religada === "rgb(12, 16, 32)",
+checar("o fundo vem da folha 4.15",
+  semAFolha.desligada !== "rgb(5, 10, 18)" && semAFolha.religada === "rgb(5, 10, 18)",
   `sem a folha: ${semAFolha.desligada} · com a folha: ${semAFolha.religada}`);
 
 /* A cor do manifesto é a tela de partida do app instalado. Divergir da
@@ -1068,7 +1068,7 @@ const corDoManifesto = await js(`
 `);
 checar("o manifesto é JSON válido", !corDoManifesto.erro,
   corDoManifesto.erro ? `${corDoManifesto.erro} — começa com "${corDoManifesto.inicio}"` : "");
-checar("manifesto e tela de partida usam a paleta 4.14",
+checar("manifesto e tela de partida usam a paleta 4.15",
   corDoManifesto.fundo === identidade.themeColor &&
   corDoManifesto.tema === identidade.themeColor,
   `manifesto ${corDoManifesto.fundo}/${corDoManifesto.tema} vs meta ${identidade.themeColor}`);
@@ -1221,19 +1221,17 @@ for (const larguraTela of [360, 390, 430]) {
     medida.larguraDoc <= larguraTela + 1, `documento ${medida.larguraDoc}px`);
 }
 
-/* O roxo é a identidade global da V4.3: a cor da modalidade informa contexto,
-   mas não pode repintar a interface inteira como fazia na V4.2. */
+/* A modalidade selecionada deve repintar os destaques em toda tela. */
 const acentos = await js(`
-  const fora = [];
-  for(const el of document.querySelectorAll('[data-mod]')){
-    el.click();
-    const acento = getComputedStyle(document.body).getPropertyValue('--ll-mod').trim();
-    if(acento.toUpperCase() !== '#8B5CF6') fora.push(el.dataset.mod + '=' + acento);
+  const fora=[];
+  for(const mod of Object.keys(MODALIDADES)){
+    document.querySelector('.mod-seletor [data-mod="'+mod+'"]').click();
+    const cor=getComputedStyle(document.body).getPropertyValue('--ll-mod').trim();
+    if(cor.toLowerCase()!==FOCO_CORES[mod])fora.push(mod+'='+cor);
   }
   return fora;
 `);
-checar("o acento global é o roxo em qualquer modalidade", acentos.length === 0,
-  acentos.join(", "));
+checar("o acento acompanha a modalidade selecionada",acentos.length===0,acentos.join(', '));
 
 /* A cor da modalidade continua viva onde ela informa. Se esta checagem cair
    junto com a de cima, foi porque o roxo comeu o contexto — que é o outro
@@ -1728,7 +1726,7 @@ for(const retorno of ['objeto','promessa','falha']){
   checar(retorno+': toque fecha notificações',await js(`return document.querySelector('#folha-avisos').dataset.aberta==='0'`));
   if(retorno==='objeto'){
     await capturar('inicio-foco-411');
-    await tocar('.foco-modalidades [data-mod="lotofacil"]');
+    await tocar('.mod-seletor [data-mod="lotofacil"]');
     checar('troca de modalidade pelo novo painel',await js(`return S.modalidade==='lotofacil'&&document.querySelector('[data-meta-maxima]').textContent.includes('15 acertos')`));
     await tocar('[data-meta-maxima]');
     checar('atalho inicia a meta de todas as dezenas sem criar gasto',await js(`return S.tela==='plano'&&document.querySelector('#meta-alvo').value==='15'&&document.querySelector('#meta-limite').value===''&&S.jogos.length===0`));
@@ -1817,7 +1815,7 @@ checar('as cinco ações principais têm destino direto',await js(`return [...do
 await tocar('#abas [data-secao="sugestoes"]');
 checar('Sugestões abre o formulário com um toque',await js(`return S.tela==='sugestoes'&&!!document.querySelector('#int-gerar')`));
 checar('trocar de seção começa no topo com menu e sino visíveis',await js(`const h=document.querySelector('header').getBoundingClientRect();return scrollY===0&&h.top>=-1&&h.bottom<innerHeight`));
-await js(`const s=document.querySelector('#ux-modalidade');s.value='quina';s.dispatchEvent(new Event('change'));return true;`);
+await tocar('.mod-seletor [data-mod="quina"]');
 checar('seletor visível muda modalidade, tamanho e custo juntos',await js(`return S.modalidade==='quina'&&document.querySelector('#int-tam').value==='5'&&document.querySelector('#int-preco').textContent===brl(custoDoJogo('quina',5)*3)`));
 checar('ajustes avançados começam recolhidos',await js(`return !document.querySelector('#int-avancado').open`));
 await tocar('#int-avancado summary');
@@ -1853,7 +1851,7 @@ for(const tema of ['escuro','claro'])for(const width of [360,412,1024]){
     await js(`irParaTela(${JSON.stringify(rota)},{lateral:true});return true;`);await dormir(350);
     checar(rota+' 4.14 cabe em '+width+'px no '+tema,await js('return document.documentElement.scrollWidth<=innerWidth+1'));
     if(tema==='claro'&&width===412&&rota==='sugestoes'){
-      const contraste=await js(`const s=getComputedStyle(document.querySelector('.segmento [aria-selected="true"]'));const lum=c=>{const rgb=c.match(/[\\d.]+/g).slice(0,3).map(Number).map(x=>x/255).map(x=>x<=.04045?x/12.92:((x+.055)/1.055)**2.4);return rgb[0]*.2126+rgb[1]*.7152+rgb[2]*.0722;};const a=lum(s.color),b=lum(s.backgroundColor);return (Math.max(a,b)+.05)/(Math.min(a,b)+.05);`);
+      const contraste=await js(`const s=getComputedStyle(document.querySelector('.segmento [aria-selected="true"]'));const ctx=document.createElement('canvas').getContext('2d');const lum=c=>{ctx.fillStyle=c;ctx.fillRect(0,0,1,1);const a=[...ctx.getImageData(0,0,1,1).data].slice(0,3).map(x=>x/255).map(x=>x<=.04045?x/12.92:((x+.055)/1.055)**2.4);return a[0]*.2126+a[1]*.7152+a[2]*.0722;};const a=lum(s.color),b=lum(s.backgroundColor);return (Math.max(a,b)+.05)/(Math.min(a,b)+.05);`);
       checar('aba selecionada tem contraste de leitura no tema claro',contraste>=4.5,contraste.toFixed(2)+':1');
     }
     if(width===412)await capturar('experiencia-414-'+rota+'-'+tema);
@@ -1864,6 +1862,75 @@ await js(`document.documentElement.dataset.tema='escuro';irParaTela('inicio',{la
 await tocar('#btn-avisos');await tocar('#meta-testar-aviso');
 await capturar('experiencia-414-notificacoes');
 await tocar('#folha-avisos [data-fechar]:not(.fundo)');
+
+/* R. O seletor deve existir uma vez em CADA tela, manter a escolha global e
+   continuar legível nas oito modalidades. Confere o DOM e as cores renderizadas. */
+secao('R. Modalidades e resultados 4.15');
+await js(`S.autoAnalise=false;S.pesquisaAutomatica=false;S.buscaAutomatica=false;return true;`);
+for(const tema of ['escuro','claro']){
+  await js(`document.documentElement.dataset.tema=${JSON.stringify(tema)};return true;`);
+  for(const width of [320,412,1024]){
+    await cmd('Emulation.setDeviceMetricsOverride',{width,height:915,deviceScaleFactor:2,mobile:width<600});
+    const audit=await js(`
+      const erros=[],cores=new Set();
+      const ctx=document.createElement('canvas').getContext('2d');
+      const rgb=c=>{ctx.clearRect(0,0,1,1);ctx.fillStyle=c;ctx.fillRect(0,0,1,1);return [...ctx.getImageData(0,0,1,1).data].slice(0,3)};
+      const lum=c=>{const a=rgb(c).map(x=>x/255).map(x=>x<=.04045?x/12.92:((x+.055)/1.055)**2.4);return a[0]*.2126+a[1]*.7152+a[2]*.0722};
+      const contraste=(a,b)=>(Math.max(lum(a),lum(b))+.05)/(Math.min(lum(a),lum(b))+.05);
+      const gradiente=s=>s.backgroundImage.match(/color\\(srgb [^)]+\\)|rgba?\\([^)]+\\)/g)||[s.backgroundColor];
+      const telas=SECOES.flatMap(s=>s.telas.map(t=>t.id));
+      for(const mod of Object.keys(MODALIDADES)){
+        trocarModalidade(mod);
+        for(const rota of (${width}===412?telas:['inicio','resultados'])){
+          irParaTela(rota,{lateral:true});
+          const menu=document.querySelectorAll('#tela>.mod-seletor');
+          const bs=[...document.querySelectorAll('#tela .mod-seletor button')];
+          const b=bs.find(b=>b.getAttribute('aria-pressed')==='true');
+          if(menu.length!==1||bs.length!==8||b?.dataset.mod!==mod)erros.push(mod+'/'+rota+': seletor');
+          if(bs.some(b=>b.getBoundingClientRect().height<44||b.scrollWidth>b.clientWidth+1))erros.push(mod+'/'+rota+': toque ou rótulo');
+          if(new Set(bs.map(b=>Math.round(b.getBoundingClientRect().top))).size!==2)erros.push(mod+'/'+rota+': não são duas linhas');
+          const estilo=getComputedStyle(b);if(gradiente(estilo).some(c=>contraste(estilo.color,c)<4.5))erros.push(mod+'/'+rota+': contraste do seletor');
+          const nav=getComputedStyle(document.querySelector('#abas [aria-current="page"]'));
+          if(contraste(nav.color,nav.backgroundColor)<4.5)erros.push(mod+'/'+rota+': contraste da navegação');
+          cores.add(nav.color);
+          if(!getComputedStyle(document.body).backgroundImage.startsWith('linear-gradient(0deg'))erros.push(mod+'/'+rota+': degradê invertido');
+          if(document.documentElement.scrollWidth>innerWidth+1)erros.push(mod+'/'+rota+': largura');
+          if(rota==='inicio'){
+            const p=getComputedStyle(document.querySelector('.foco-primary'));
+            if(gradiente(p).some(c=>contraste(p.color,c)<4.5))erros.push(mod+': contraste da ação');
+          }
+        }
+      }
+      irParaTela('resultados',{lateral:true});trocarModalidade('mega-sena');
+      const bola=document.querySelector('.concurso .bola'),estilo=getComputedStyle(bola);
+      const cs=gradiente(estilo),amarelas=cs.every(c=>{const [r,g,b]=rgb(c);return r>230&&g>175&&b<175});
+      return {erros,cores:cores.size,amarelas,contrasteBola:Math.min(...cs.map(c=>contraste(estilo.color,c)))};
+    `);
+    checar('15 telas / 8 modalidades / '+tema+' em '+width+'px',audit.erros.length===0,audit.erros.join(' · '));
+    checar('oito destaques distintos no '+tema+' em '+width+'px',audit.cores===8,String(audit.cores));
+    checar('bolinhas amarelas e números com contraste alto no '+tema,audit.amarelas&&audit.contrasteBola>=7,audit.contrasteBola.toFixed(2)+':1');
+  }
+}
+
+/* Capturas da versão efetivamente executada, com a base do repositório e
+   jogos demonstrativos criados só no perfil descartável deste teste. */
+await cmd('Emulation.setDeviceMetricsOverride',{width:412,height:915,deviceScaleFactor:2,mobile:true});
+await js(`document.documentElement.dataset.tema='escuro';S.resultados=${JSON.stringify(reais414)};S.jogos=[];return true;`);
+for(const mod of ['mega-sena','lotofacil','quina','lotomania','dupla-sena','dia-de-sorte','timemania','mais-milionaria']){
+  await js(`trocarModalidade(${JSON.stringify(mod)});irParaTela('inicio',{lateral:true});return true;`);await dormir(300);
+  await capturar('LotoLab-4.15-Inicio-'+mod);
+}
+await js(`trocarModalidade('mega-sena');const r=ultimoResultado('mega-sena');S.jogos=[{id:'exemplo-visual',modalidade:'mega-sena',dezenas:[3,12,25,33,47,58],data:r.data,lote:'exemplo-visual',metodo:'demonstração',concursoAlvo:r.concurso,conferencias:[]}];conferenciaAutomatica();return true;`);
+for(const rota of ['sugestoes','jogos','resultados','pesquisa']){
+  await js(`irParaTela(${JSON.stringify(rota)},{lateral:true});return true;`);await dormir(300);
+  await capturar('LotoLab-4.15-'+rota+'-mega-sena');
+}
+await js(`trocarModalidade('lotofacil');irParaTela('pesquisa',{lateral:true});return true;`);await dormir(300);
+await capturar('LotoLab-4.15-Analise-lotofacil');
+await js(`document.documentElement.dataset.tema='claro';irParaTela('inicio',{lateral:true});return true;`);await dormir(300);
+await capturar('LotoLab-4.15-Tema-Claro-lotofacil');
+await js(`document.documentElement.dataset.tema='escuro';trocarModalidade('mega-sena');irParaTela('inicio',{lateral:true});return true;`);
+await tocar('#btn-avisos');await tocar('#meta-testar-aviso');await capturar('LotoLab-4.15-Notificacoes');
 
 /* ---------- fim ---------- */
 console.log(linhas.join("\n"));

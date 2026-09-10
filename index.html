@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0c1020">
+<meta name="theme-color" content="#050a12">
 <meta name="description" content="Gerador e conferidor de jogos das loterias brasileiras, com comparação honesta contra o acaso.">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icone.svg" type="image/svg+xml">
@@ -957,7 +957,8 @@ td{padding:6px 7px;border-bottom:1px solid var(--trama)}
 <link rel="stylesheet" href="ui/inteligencia-v4-9.css?v=4.9.0">
 <link rel="stylesheet" href="ui/visual-metas-v4-10.css?v=4.10.0">
 <link rel="stylesheet" href="ui/visual-foco-v4-11.css?v=4.13.0">
-<link rel="stylesheet" href="ui/experiencia-v4-14.css?v=4.14.0">
+<link rel="stylesheet" href="ui/experiencia-v4-14.css?v=4.15.0">
+<link rel="stylesheet" href="ui/modalidades-v4-15.css?v=4.15.0">
 </head>
 <body>
 <header>
@@ -3021,7 +3022,7 @@ function ultimasConferencias(limite){
 
 T.jogos = () => {
   const vazio=()=>`<section class="ux-vazio"><span class="ux-icone" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="3"/><path d="M8 9h8M8 14h5"/></svg></span><h2>Seus jogos começam aqui</h2><p>Nenhum jogo salvo de ${esc(MODALIDADES[S.modalidade].nome)}. Crie sugestões ou marque suas dezenas. Depois, salve para acompanhar os acertos.</p><button class="acao" data-atalho="sugestoes">Criar minhas sugestões</button><button class="acao secundaria" data-atalho="montar">Montar um jogo à mão</button></section>`;
-  if(!S.jogos.length) return chipsDeModalidade()+vazio();
+  if(!S.jogos.length) return vazio();
 
   /* Filtra pela modalidade escolhida no cabeçalho. Sem isto a tela empilhava
      Mega-Sena, Lotofácil e Quina numa lista só — e como cada modalidade tem
@@ -3041,15 +3042,11 @@ T.jogos = () => {
       `<strong>${esc(MODALIDADES[k].nome)}</strong> (${n})`).join(", ")}.
     Troque no topo da tela para ver.</div>`;
 
-  /* A tira vem antes da lista. O rodapé desta tela já dizia "troque no topo da
-     tela para ver" — apontando para um seletor que não existia aqui. */
-  const chips = chipsDeModalidade();
-
-  if(!meus.length) return chips + vazio() + rodape;
+  if(!meus.length) return vazio() + rodape;
 
   const porLote = {};
   meus.forEach(j => (porLote[j.lote] = porLote[j.lote] || []).push(j));
-  return chips + resumoDeMeusJogos(meus) + Object.entries(porLote).reverse().map(([lote, jogos])=>{
+  return resumoDeMeusJogos(meus) + Object.entries(porLote).reverse().map(([lote, jogos])=>{
     const p = jogos[0];
     return `<h2 style="margin:14px 0 8px">${esc(MODALIDADES[p.modalidade].nome)} ·
       ${esc(p.data)} · ${esc(p.metodo)}</h2>
@@ -3516,15 +3513,14 @@ function atalhos(){
 }
 
 /* Painel 4.11: modalidade, objetivo e resultado disponíveis na primeira tela. */
-const FOCO_CORES={'mega-sena':'#27894d',lotofacil:'#9257de',quina:'#4560d7',lotomania:'#d66e20','dupla-sena':'#c74651','dia-de-sorte':'#a87a16',timemania:'#558322','mais-milionaria':'#773acd'};
+/* Uma cor por modalidade, compartilhada por todas as telas e controles. */
+const FOCO_CORES={'mega-sena':'#35b86b',lotofacil:'#a451d1',quina:'#446be3',lotomania:'#ef7617','dupla-sena':'#d83b37','dia-de-sorte':'#d7a108',timemania:'#85b92f','mais-milionaria':'#6f35c7'};
 T.inicio = () => {
   const m=S.modalidade,c=MODALIDADES[m],r=ultimoResultado(m),concursos=historicoDe(m).length;
   const avisos=S.avisos.filter(a=>!a.lido).length;
   const meus=S.jogos.filter(j=>j.modalidade===m).length,idade=idadeDoHistorico(m);
   return `<div class="foco-inicio ux-inicio" style="--foco-cor:${FOCO_CORES[m]}">
-    <div class="foco-boasvindas"><div><span class="foco-label">BEM-VINDO AO SEU LABORATÓRIO</span><${podeVoltar()?'h2':'h1'}>Seu jogo,<br>bem planejado.</${podeVoltar()?'h2':'h1'}></div><span class="foco-versao">4.14</span></div>
-    <div class="ux-escolha"><div><span class="foco-label">ESCOLHA A MODALIDADE</span><small>Deslize para ver todas →</small></div>
-    <div class="foco-modalidades" role="group" aria-label="Modalidades na tela inicial">${Object.entries(MODALIDADES).map(([id,v])=>`<button data-mod="${id}" aria-pressed="${id===m}" style="--foco-cor:${FOCO_CORES[id]}">${esc(v.nome)}</button>`).join('')}</div></div>
+    <div class="foco-boasvindas"><div><span class="foco-label">BEM-VINDO AO SEU LABORATÓRIO</span><${podeVoltar()?'h2':'h1'}>Seu jogo,<br>bem planejado.</${podeVoltar()?'h2':'h1'}></div><span class="foco-versao">4.15</span></div>
     <section class="foco-hero"><div class="foco-hero-topo"><span class="foco-label">UM PLANO PARA CADA CONCURSO</span><span class="foco-tag">${esc(c.nome)}</span></div>
       <div class="foco-objetivo"><div><h2>Crie seus jogos.<br>Veja os acertos.</h2><p>Defina seus critérios e seu limite. O LotoLab organiza e confere.</p></div><div class="foco-alvo" aria-label="Meta de ${c.k} dezenas"><strong>${c.k}</strong><span>${c.trevos?"+ 2 trevos":"dezenas"}</span></div></div>
       <button class="acao foco-primary" data-atalho="sugestoes">Criar sugestões <span aria-hidden="true">→</span></button>
@@ -8514,7 +8510,8 @@ T.resultados = () => {
      e empurravam a lista para fora da primeira tela — quem entra em
      "Resultados" quer ver resultado, não configurar como buscá-los. Eles
      continuam aqui, recolhidos num <details> no fim. */
-  const chips = chipsDeModalidade();
+  // O seletor compartilhado é renderizado por pintar(), acima do título.
+  const chips = "";
 
   /* Aviso de dado velho.
 
@@ -9162,8 +9159,6 @@ function acoesNovas(){
 
 function acoes(){
   acoesNovas();
-  const seletor=$('#ux-modalidade');
-  if(seletor)seletor.onchange=e=>trocarModalidade(e.target.value);
   const fecharMenu=()=>{$('#gaveta').dataset.aberta='0';$('#btn-menu').setAttribute('aria-expanded','false');};
   document.querySelectorAll('[data-abrir-analitica]').forEach(b=>b.onclick=()=>{
     fecharMenu();if(S.tela!=='sugestoes')irParaTela('sugestoes');
@@ -9658,10 +9653,8 @@ function navegacao(){
   });
 }
 
-/* A modalidade saiu da trilha fixa no topo e passou a viver em dois lugares:
-   a gaveta do ☰ (sempre disponível) e os chips da tela Resultados, onde o
-   mockup os desenha. É a MESMA escolha global — trocar num lugar troca no
-   outro, porque `data-mod` é lido por um só tratador. */
+/* A escolha é global: seletor no topo de toda tela e gaveta compartilham o
+   mesmo estado, inclusive depois de recarregar o app. */
 function trocarModalidade(mod){
   intTrabalho++; audTrabalho++;
   if(!MODALIDADES[mod] || mod === S.modalidade) return;
@@ -9716,7 +9709,7 @@ function meusJogosNoConcurso(r){
 }
 
 function chipsDeModalidade(){
-  return `<div class="chips chips-mod" role="group" aria-label="Modalidade">
+  return `<div class="chips chips-mod mod-seletor" role="group" aria-label="Modalidade">
     ${Object.entries(MODALIDADES).map(([k,v]) =>
       `<button class="chip" data-mod="${k}" aria-pressed="${k===S.modalidade}"
         >${esc(v.nome)}</button>`).join("")}</div>`;
@@ -9726,12 +9719,15 @@ function trilhaModalidade(){
   const gav = $("#gaveta-mods");
   if(gav) gav.innerHTML = Object.entries(MODALIDADES).map(([k,v])=>
     `<button data-mod="${k}" aria-pressed="${k===S.modalidade}">${esc(v.nome)}</button>`).join("");
-  document.querySelectorAll("[data-mod]").forEach(b => b.onclick = () =>
-    trocarModalidade(b.dataset.mod));
+  document.querySelectorAll("button[data-mod]").forEach(b => b.onclick = e => {
+    trocarModalidade(b.dataset.mod);
+    if(e.detail===0) document.querySelector('.mod-seletor [aria-pressed="true"]')?.focus({preventScroll:true});
+  });
 }
 
 function pintar(){
   const sec = secaoAtual(), tela = telaAtual();
+  document.documentElement.dataset.modalidade = S.modalidade;
   /* O recado da busca vale para a visita atual à tela. Sair dela o descarta,
      senão reaparece dias depois falando de uma conferência esquecida. */
   if(tela.id !== "conferir") S.avisoConferir = null;
@@ -9792,10 +9788,8 @@ function pintar(){
        </div>`
     : `<div class="titulo"><h1>${esc(tela.titulo)}</h1><p>${esc(tela.sub)}</p></div>`;
 
-  const usaChips=["inicio","jogos","conferir","teimosinha","resultados"].includes(tela.id);
-  const contexto=usaChips?"":`<div class="ux-contexto"><label for="ux-modalidade">Modalidade</label><select id="ux-modalidade">${Object.entries(MODALIDADES).map(([k,v])=>`<option value="${k}" ${k===S.modalidade?'selected':''}>${esc(v.nome)}</option>`).join('')}</select></div>`;
   $("#tela").dataset.rota=tela.id;
-  $("#tela").innerHTML = (tela.id==="inicio"&&!podeVoltar()?"":cabecalho) + segmento + contexto +
+  $("#tela").innerHTML = chipsDeModalidade() + (tela.id==="inicio"&&!podeVoltar()?"":cabecalho) + segmento +
     (tela.id==='resultados'?`<details class="carta ux-explorar ux-proximo"><summary>Próximo concurso</summary><div>${cartaoProximo(S.modalidade)}</div></details>`:
       comProximo.includes(tela.id)&&!(tela.id==='jogos'&&!S.jogos.some(j=>j.modalidade===S.modalidade))?cartaoProximo(S.modalidade):"") +
     T[tela.id]() +
@@ -9813,7 +9807,7 @@ function pintar(){
   acoes();
   intLigarAcoes();
   metaLigarAcoes();
-  for(const lista of document.querySelectorAll('.foco-modalidades,.segmento')){
+  for(const lista of document.querySelectorAll('.segmento')){
     const ativo=lista.querySelector('[aria-pressed="true"],[aria-selected="true"]');
     if(ativo)lista.scrollLeft=Math.max(0,ativo.offsetLeft-lista.offsetLeft-8);
   }
