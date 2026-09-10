@@ -1,0 +1,73 @@
+/* LotoLab 4.10: superfícies discretas, roxo de navegação e cores de resultado. */
+:root{--meta-roxo:#8250df;--meta-verde:#157d47;--meta-erro:#fce6e8;--meta-erro-tinta:#922d3c}
+html[data-tema="escuro"]{--fundo:#080c13;--carta:#111821;--trama:#151f2b;--linha:#2a3444;--tinta:#f6f7fc;--secundaria:#a6b0c3;--acaso:#9d80e9;--acaso-fundo:#7750cf}
+html[data-tema="escuro"] body{background:radial-gradient(ellipse at 100% 0,rgba(107,60,186,.09),transparent 55%),#080c13!important}
+html[data-tema="escuro"] .carta,html[data-tema="escuro"] .panel,html[data-tema="escuro"] .ficha,html[data-tema="escuro"] .kpi{background:linear-gradient(145deg,#131b25,#0e151e)!important;border-color:#283342!important}
+.carta,.panel,.ficha{border-radius:18px!important}
+.marca-titulo b{font-size:1.65rem!important;letter-spacing:-.045em!important}
+.marca-titulo span{letter-spacing:.14em!important;font-size:.57rem!important}
+.hero-card.hero-card{border:1px solid #5d4288!important;background:radial-gradient(ellipse at 93% 5%,#624696 0,transparent 65%),linear-gradient(130deg,#20172f,#121925)!important;border-radius:22px!important;padding:24px!important;overflow:hidden}
+.hero-card.hero-card h2{font-size:1.08rem!important;letter-spacing:.05em!important;color:#f9f6ff!important}
+.hero-card.hero-card p{color:#d1c6e4!important}
+.hero-card .int-home-link{color:#e2d4ff!important;text-align:left;font-weight:650}
+.primary-btn,.acao:not(.contorno):not(.secundaria){background:linear-gradient(110deg,#7844d0,#5931a7)!important;border-color:#9062d8!important;color:white!important;box-shadow:0 5px 15px #35235322!important}
+.acao,.campo input,.campo select,.campo textarea{border-radius:11px!important}
+.dz{border-radius:50%!important;aspect-ratio:1;align-items:center;justify-content:center;font-weight:750!important;font-variant-numeric:tabular-nums}
+.dz.acertou,.resultado-bolas .dz.acertou{background:#157d47!important;border:1px solid #258c58!important;color:#fff!important;-webkit-text-fill-color:#fff!important;box-shadow:inset 0 1px 0 #ffffff29,0 3px 8px #0b673e24!important}
+.dz.errou,.resultado-bolas .dz.errou{background:#fce6e8!important;border:1px solid #e6aeb6!important;color:#922d3c!important;-webkit-text-fill-color:#922d3c!important;box-shadow:none!important}
+.dz.acertou::after,.dz.errou::after{display:none!important}
+.resultado-bolas{gap:9px!important;padding:8px 0!important;flex-wrap:wrap}
+.resultado-bolas .dz{width:36px!important;height:36px!important;min-width:36px!important;font-size:.84rem!important;position:relative;overflow:visible}
+.resultado-bolas .dz i{position:absolute;right:-3px;bottom:-3px;display:grid;place-items:center;background:inherit;color:inherit;border:1px solid currentColor;border-radius:50%;width:13px;height:13px;font-size:8px;font-style:normal;line-height:1}
+.resultado-legenda{display:flex;flex-wrap:wrap;gap:14px;font-size:.68rem;margin:9px 0 12px;color:var(--secundaria)}
+.resultado-resumo{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:.72rem;margin-bottom:5px}
+.resultado-resumo b{color:var(--tinta)!important;font-size:.88rem}
+.aviso-resultado{margin-top:14px;border-top:1px solid var(--linha);padding-top:12px}
+#corpo-avisos .item{grid-template-columns:30px minmax(0,1fr) auto!important;position:relative;padding:16px 13px!important;column-gap:11px!important;align-items:start;border-radius:16px!important;margin-bottom:9px}
+#corpo-avisos .item .marca-cor{position:absolute;left:0;top:17px;bottom:17px;width:3px;background:#7854c1;border-radius:3px}
+#corpo-avisos .item.ok .marca-cor{background:#239b62}
+#corpo-avisos .item .txt{min-width:0;overflow-wrap:anywhere}
+#corpo-avisos .item .txt>span{display:block;line-height:1.55;margin-top:5px;font-size:.76rem;color:var(--secundaria)}
+#corpo-avisos .item .quando{font-size:.59rem;white-space:nowrap}
+#corpo-avisos .item .ponto-lido{position:absolute;right:13px;top:36px}
+#corpo-avisos .item .ic-aviso{width:29px;height:29px;border-radius:9px}
+.folha .corpo{border-radius:24px 24px 0 0!important;max-height:90dvh!important}
+.meta-hero{position:relative;border:1px solid #715394;border-radius:22px;background:radial-gradient(ellipse at 100% 0,#5d4382,transparent 65%),linear-gradient(125deg,#251738,#131d29);padding:26px 22px;margin-bottom:18px;overflow:hidden}
+.meta-hero h2{font-size:1.85rem;line-height:1.12;color:#fff!important;letter-spacing:-.04em;text-transform:none;font-weight:800;margin:14px 0}
+.meta-hero p{font-size:.8rem;line-height:1.65;color:#d5c9e8;margin:0;position:relative;max-width:280px}
+.meta-hero .int-eyebrow{color:#dcc4ff}
+.meta-orbita{position:absolute;right:-26px;top:38px;width:150px;height:150px;border:1px solid #ffffff21;border-radius:50%;transform:rotate(-18deg);pointer-events:none}
+.meta-orbita span{position:absolute;width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:#8257b6;border:1px solid #bc93e8;color:#fff;font-size:1rem;font-weight:700;box-shadow:0 7px 15px #0003}
+.meta-orbita span:nth-child(1){top:-14px;left:22px}.meta-orbita span:nth-child(2){top:63px;left:-19px}.meta-orbita span:nth-child(3){bottom:-7px;right:9px}
+.meta-form input,.meta-form select,.meta-form textarea,#meta-pool,#meta-alvo{min-height:46px;width:100%;background:var(--trama)!important;color:var(--tinta)!important;border:1px solid var(--linha)!important;padding:12px;font-size:.88rem}
+#meta-pool{resize:vertical;border-radius:11px;line-height:1.5;font-variant-numeric:tabular-nums}
+.meta-link{display:flex;align-items:center;min-height:48px;padding:9px 14px;margin:-2px 0 16px;border:1px solid var(--linha);border-radius:12px;font-size:.76rem;color:var(--tinta);text-decoration:none;background:var(--carta)}
+.meta-tabela{font-size:.73rem}.meta-tabela th{text-align:left;font-size:.65rem}.meta-tabela td{padding:12px 10px}.meta-tabela .meta-atual{background:#8b5cf617}
+.meta-certificado{margin-top:18px;padding:17px;border:1px solid #7856ac;border-radius:15px;background:#8b5cf60b}
+.meta-certificado h3{font-size:1.15rem;margin:8px 0}.meta-certificado>p{font-size:.79rem;line-height:1.6}
+.meta-jogo{padding:14px 0;border-top:1px solid var(--linha)}.meta-jogo>b{font-size:.75rem;color:var(--secundaria)}.meta-jogo .dezenas{margin-top:8px}
+.meta-fontes{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}.meta-fontes a{display:flex;align-items:center;min-height:44px;color:var(--tinta);font-size:.73rem;text-underline-offset:4px}
+#meta-progresso:not(:empty),#meta-salvou:not(:empty){margin-top:13px;font-size:.8rem;line-height:1.55}
+.meta-faixas{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}.meta-faixas span{display:grid;gap:4px;border:1px solid var(--linha);background:var(--carta);padding:8px;border-radius:9px;font-size:.65rem}.meta-faixas b{font-size:.69rem}
+html[data-tema="claro"] .meta-form input,html[data-tema="claro"] #meta-pool,html[data-tema="claro"] #meta-alvo{background:#f6f7fb!important;border-color:#d1d7e4!important}
+html[data-tema="claro"] .item,html[data-tema="claro"] .folha .corpo{background:#fff!important;color:#172434!important}
+html[data-tema="claro"] .meta-certificado h3{color:#32234a!important}
+@media(min-width:600px){.meta-hero{padding:32px}.meta-hero h2{font-size:2.25rem}.meta-orbita{right:28px;top:30px;width:170px;height:170px}.meta-hero p{max-width:400px}}
+@media(max-width:370px){.resultado-bolas{gap:8px!important}.resultado-bolas .dz{width:31px!important;height:31px!important;min-width:31px!important;font-size:.74rem!important}.meta-hero{padding:23px 17px}.meta-orbita{opacity:.4}.meta-hero p{max-width:245px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation:none!important}}
+
+/* Na cartela, só as dezenas marcadas que já foram conferidas recebem sinal. */
+.casa.acertou,.casa.errou{background:transparent!important}
+.casa.acertou::before{background:#157d47!important;border-radius:50%!important;box-shadow:none!important;inset:8%!important}
+.casa.errou::before{background:#fce6e8!important;border:1px solid #e6aeb6;border-radius:50%!important;inset:8%!important}
+.casa.acertou span{color:#fff!important}.casa.errou span{color:#922d3c!important}
+
+/* A mesma escala de superfícies em toda a aplicação. As bolinhas têm raio próprio. */
+:root{--ll43-r-superficie:18px}
+.hero-card.hero-card,.carta,.panel,.painel,.nota,.ficha,.kpi,.card,.activity-item,.item,.draw-card,.concurso,.metric,.sum-card,.chart-card,.pq-grafico,.mini-card.mini-card,.resumo .kpi{border-radius:18px!important}
+
+/* O texto da lista de avisos não pode desfazer o alinhamento das dezenas. */
+#corpo-avisos .resultado-bolas .dz{display:inline-flex!important;align-items:center!important;justify-content:center!important;text-align:center!important;line-height:1!important;padding:0!important;font-size:.84rem!important}
+.meta-form .int-section-title h2,.meta-guia>h2{font-size:1rem!important;letter-spacing:-.02em!important;line-height:1.3}
+.meta-form .int-section-title>span{white-space:nowrap;flex-shrink:0}
+@media(max-width:599px){.meta-orbita{display:none}.meta-hero p{max-width:none}}

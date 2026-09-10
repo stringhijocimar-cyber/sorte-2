@@ -1,0 +1,134 @@
+/* LotoLab 4.15 — a modalidade selecionada colore a interface inteira.
+   Acerto/erro e o estado do concurso continuam sendo sinais independentes. */
+html[data-modalidade="mega-sena"]{--mod-cor:#35b86b}
+html[data-modalidade="lotofacil"]{--mod-cor:#a451d1}
+html[data-modalidade="quina"]{--mod-cor:#446be3}
+html[data-modalidade="lotomania"]{--mod-cor:#ef7617}
+html[data-modalidade="dupla-sena"]{--mod-cor:#d83b37}
+html[data-modalidade="dia-de-sorte"]{--mod-cor:#d7a108}
+html[data-modalidade="timemania"]{--mod-cor:#85b92f}
+html[data-modalidade="mais-milionaria"]{--mod-cor:#6f35c7}
+html[data-tema="escuro"]{
+  --fundo:#050a12!important;--carta:#0b111b!important;--trama:#101824!important;
+  --linha:#26313d!important;--tinta:#f5f7fa!important;--secundaria:#a9b6c0!important;
+  --s2-bg:#050a12;--s2-bg-deep:#050a12;--s2-panel:#0b111b;--s2-panel-2:#101824;
+  --s2-panel-3:#172230;--s2-line:#26313d;--s2-text:#f5f7fa;--s2-muted:#a9b6c0;
+  --mod-acento:color-mix(in srgb,var(--mod-cor) 64%,white);
+  --mod-suave:color-mix(in srgb,var(--mod-cor) 15%,#0b111b);
+  --mod-borda:color-mix(in srgb,var(--mod-cor) 46%,#26313d);
+  background:#050a12!important;color-scheme:dark;
+}
+html[data-tema="claro"]{
+  --fundo:#f1f4f8!important;--carta:#fff!important;--trama:#edf2f6!important;
+  --linha:#cfd9e2!important;--tinta:#172434!important;--secundaria:#4a5c6c!important;
+  --mod-acento:color-mix(in srgb,var(--mod-cor) 52%,#101820);
+  --mod-suave:color-mix(in srgb,var(--mod-cor) 10%,white);
+  --mod-borda:color-mix(in srgb,var(--mod-cor) 42%,#cfd9e2);
+  background:#f1f4f8!important;color-scheme:light;
+}
+html[data-modalidade][data-tema] body{
+  --ll-mod:var(--mod-cor)!important;--ll-mod-soft:var(--mod-suave)!important;
+  --ll-mod-border:var(--mod-borda)!important;--ll-mod-text:var(--mod-acento)!important;
+  --ll43-purple:var(--mod-cor)!important;--ll43-purple-2:var(--mod-botao)!important;
+  --ll43-purple-soft:var(--mod-suave)!important;
+  --ux-acento:var(--mod-acento);--ux-suave:var(--mod-suave);--ux-borda:var(--mod-borda);
+  --mod-botao:color-mix(in srgb,var(--mod-cor) 60%,#080e16);
+  --mod-botao-fim:color-mix(in srgb,var(--mod-cor) 44%,#080e16);
+  color:var(--tinta)!important;min-height:100dvh;
+  background:linear-gradient(0deg,color-mix(in srgb,var(--mod-cor) 11%,var(--fundo)) 0%,color-mix(in srgb,var(--mod-cor) 4%,var(--fundo)) 38%,var(--fundo) 76%)!important;
+  background-attachment:fixed!important;
+}
+html[data-tema="escuro"] header{background:#050a12f5!important;border-color:#26313d!important}
+html[data-tema="escuro"] :is(.menu,.sino,.voltar,.acao-tela){background:#0b111b!important;border-color:#26313d!important;color:#e5edf2!important}
+html[data-tema="escuro"] :is(.gaveta .corpo,.folha .corpo,.activity-sheet){background:linear-gradient(180deg,#0b111b,#050a12)!important;border-color:var(--linha)!important}
+html[data-tema="escuro"] :is(.ux-acessos button,.ux-vazio,.ux-menu-links button,.foco-acompanhamento,.foco-ultimo){background:linear-gradient(180deg,#101824,#0a111b)!important;border-color:var(--linha)!important}
+html[data-tema="escuro"] :is(input,select,textarea){background:#0a111b!important;border-color:#344353!important;color:var(--tinta)!important}
+html[data-tema="claro"] :is(input,select,textarea){background:#f7f9fb!important;border-color:#bfccd8!important;color:var(--tinta)!important}
+html[data-tema] :is(input,textarea)::placeholder{color:var(--secundaria)!important;opacity:1}
+html[data-tema] :is(.titulo p,.ux-acessos small,.ux-form .campo,.ux-form .int-help,.aud-painel .int-help,.foco-data,.concurso time){color:var(--secundaria)!important}
+html[data-tema] :is(.segmento button:not([aria-selected="true"]),#abas button:not([aria-current="page"])){color:var(--secundaria)!important}
+
+/* O mesmo menu 4 × 2 em todas as telas, sem rolagem lateral. */
+html[data-tema] #tela>.mod-seletor{
+  display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr));gap:3px!important;
+  margin:0 0 18px!important;padding:5px!important;border:1px solid var(--linha)!important;
+  border-radius:12px;background:var(--fundo)!important;overflow:visible!important;
+}
+html[data-tema] .mod-seletor .chip{
+  display:flex!important;align-items:center;justify-content:flex-start;gap:5px;
+  min-width:0!important;min-height:44px!important;padding:7px 5px!important;
+  font-size:.62rem!important;line-height:1.2;white-space:normal;overflow-wrap:anywhere;text-align:left;
+  border:1px solid transparent!important;border-radius:10px!important;
+  background:transparent!important;color:var(--secundaria)!important;font-weight:500!important;
+  box-shadow:none!important;
+}
+html[data-tema] .mod-seletor .chip::before{
+  content:"";display:block!important;width:7px!important;height:7px!important;
+  margin:0!important;border-radius:50%;flex:0 0 7px;background:var(--ll-chip)!important;box-shadow:none!important;
+}
+html[data-tema] .mod-seletor .chip[aria-pressed="true"],
+html[data-tema] .gaveta-mods button[aria-pressed="true"]{
+  background:linear-gradient(160deg,var(--mod-botao),var(--mod-botao-fim))!important;
+  border-color:var(--mod-borda)!important;color:#fff!important;font-weight:700!important;
+  box-shadow:inset 3px 0 var(--mod-cor)!important;
+}
+html[data-tema] .gaveta-mods button{color:var(--secundaria)!important;background:var(--carta)!important;border-color:var(--linha)!important}
+html[data-modalidade] :is(button,input,select,textarea,summary,a):focus-visible{outline:2px solid var(--mod-acento)!important;outline-offset:3px!important}
+html[data-modalidade] :is(input,select,textarea):focus{border-color:var(--mod-acento)!important;box-shadow:0 0 0 3px var(--mod-suave)!important}
+
+/* Destaques, indicadores e navegação seguem a escolha global. */
+html[data-tema] #abas button[aria-current="page"],
+html[data-tema] .segmento button[aria-selected="true"],
+html[data-tema] .chip[aria-pressed="true"]{
+  color:var(--mod-acento)!important;background:var(--mod-suave)!important;border-color:var(--mod-borda)!important;
+}
+html[data-tema] .mod-seletor .chip[aria-pressed="true"]{color:#fff!important;background:linear-gradient(160deg,var(--mod-botao),var(--mod-botao-fim))!important}
+html[data-tema] #abas{background:color-mix(in srgb,var(--fundo) 97%,transparent)!important;border-color:var(--linha)!important}
+html[data-modalidade] .acao:not(.contorno):not(.secundaria):not(.perigo),
+html[data-modalidade] .foco-hero .acao.foco-primary{
+  background:linear-gradient(120deg,var(--mod-botao),var(--mod-botao-fim))!important;
+  color:#fff!important;border-color:var(--mod-borda)!important;box-shadow:0 5px 16px #00000020!important;
+}
+html[data-tema] .acao.secundaria,html[data-tema] .acao.contorno{color:var(--mod-acento)!important;border-color:var(--mod-borda)!important;background:var(--carta)!important;box-shadow:none!important}
+html[data-modalidade] :is(.kpi .val,.metric b,.int-summary b,.int-price strong,.foco-alvo strong,.foco-alvo span,.foco-secundaria,.foco-texto-btn,.ux-icone,.ux-links button span,.ux-menu-links button span){color:var(--mod-acento)!important}
+html[data-modalidade] :is(.foco-versao,.pq-selo,.good-banner){color:var(--mod-acento)!important;background:var(--mod-suave)!important;border-color:var(--mod-borda)!important}
+html[data-tema] :is(.ux-inicio .foco-hero,.int-hero,.pq-hero,.analysis-card){
+  background:linear-gradient(145deg,color-mix(in srgb,var(--mod-cor) 11%,var(--carta)),var(--carta))!important;
+  border-color:var(--mod-borda)!important;
+}
+html[data-tema] .foco-hero .foco-label{color:var(--mod-acento)!important}
+html[data-tema] .foco-hero :is(h2,p,.foco-tag){color:var(--tinta)!important}
+html[data-tema] .ux-inicio .foco-alvo{border-color:var(--mod-acento)!important;background:var(--mod-suave)!important;outline-color:color-mix(in srgb,var(--mod-cor) 7%,transparent)!important;box-shadow:none!important}
+html[data-tema] .proximo{background:linear-gradient(145deg,var(--mod-suave),var(--carta))!important;color:var(--tinta)!important;border:1px solid var(--mod-borda)!important;box-shadow:none!important}
+html[data-tema] .proximo :is(.premio,.valor){color:var(--mod-acento)!important}
+html[data-tema] .proximo :is(.data,.mod,.estado){color:var(--tinta)!important}
+html[data-tema] .ux-etapas{color:var(--secundaria)!important}.ux-etapas i{border-color:var(--mod-borda)}.ux-etapas>b{background:var(--mod-borda)}
+html[data-modalidade] .pq-orbe{background:radial-gradient(circle at 34% 28%,color-mix(in srgb,var(--mod-cor) 30%,white),var(--mod-cor) 36%,var(--mod-botao) 100%)!important;box-shadow:0 0 0 7px var(--mod-suave)!important}
+html[data-modalidade] :is(.curve,.linha-evolucao){stroke:var(--mod-acento)!important}
+html[data-modalidade] :is(.dot,.ponto-evolucao){fill:var(--mod-acento)!important}
+html[data-modalidade] :is(.int-heatmap .int-above,.int-entry,.extras-volante){background:var(--mod-suave)!important;border-color:var(--mod-borda)!important}
+html[data-modalidade] :is(.ic-aviso,.activity-icon,.ponto-lido.novo){color:var(--mod-acento)!important;background:var(--mod-suave)!important}
+html[data-modalidade] .ponto-lido.novo{background:var(--mod-acento)!important;box-shadow:0 0 0 3px var(--mod-suave)!important}
+
+/* Dezenas publicadas: amarelo em qualquer modalidade. O texto grafite tem
+   contraste alto em toda a extensão do degradê (inclusive no tema claro).
+   Não alcança .dz.acertou/.dz.errou: a conferência conserva seus sinais. */
+html[data-modalidade][data-tema] body #tela .concurso .bola,
+html[data-modalidade][data-tema] body #tela .concurso .extras-volante .trevo,
+html[data-modalidade][data-tema] body #tela .concurso .extras-volante .dz,
+html[data-modalidade][data-tema] body #tela .foco-bolas span{
+  background:linear-gradient(155deg,#ffe99a,#f3c64c)!important;
+  border:1px solid #ffe59a!important;color:#26200f!important;
+  font-weight:800!important;font-style:normal!important;
+  box-shadow:inset 0 1px 0 #fff6cf,0 3px 9px #00000024!important;
+  font-variant-numeric:tabular-nums;
+}
+html[data-tema="claro"] .concurso.acumulou{background:linear-gradient(180deg,#fff5d7,#fffaf0)!important;border-color:#d2ad4c!important;box-shadow:inset 4px 0 #d2a22e!important}
+html[data-tema="claro"] .concurso.ganhou{background:linear-gradient(180deg,#e5f6e8,#f4fbf5)!important;border-color:#7abb8a!important;box-shadow:inset 4px 0 #3c8b51!important}
+html[data-tema="claro"] .concurso.acumulou .concurso-topo b{color:#695013!important}
+html[data-tema="claro"] .concurso.ganhou .concurso-topo b{color:#235f35!important}
+html[data-tema="claro"] .selo-ganho.acumulou{color:#74551b!important;background:#f7e7ba!important}
+html[data-tema="claro"] .selo-ganho.ganhou{color:#235f35!important;background:#dcf0df!important}
+html[data-tema="claro"] :is(.concurso,.item) .pilula{color:#4a5c6c!important;border-color:#9aabb8!important}
+@media(max-width:370px){html[data-tema] .mod-seletor .chip{font-size:.58rem!important;padding-inline:3px!important;gap:4px}}
+@media(min-width:650px){html[data-tema] .mod-seletor .chip{font-size:.7rem!important;min-height:48px!important;padding-inline:8px!important;gap:6px}}

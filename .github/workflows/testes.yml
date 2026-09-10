@@ -5,8 +5,7 @@
 # a v10 — a compilação falhou, e a única pista era um log de release. Testar no
 # push transforma isso num aviso de trinta segundos, no lugar certo.
 #
-# Não compila o APK: compilar leva minutos e depende do Android SDK. Aqui só
-# roda o que é rápido e pega quase tudo.
+# O APK de revisão só é compilado após os testes aprovarem o código.
 
 name: Testes
 
@@ -47,9 +46,23 @@ jobs:
           cmp sw.js www/sw.js
           cmp manifest.webmanifest www/manifest.webmanifest
           diff -r ui www/ui
+          # O executor em segundo plano entra no APK pela pasta www/. Editar
+          # só a raiz produziria um APK que confere com regra antiga — e o
+          # sintoma seria aviso errado no aparelho, sem nada vermelho aqui.
+          diff -r runner www/runner
 
       - name: Testes do motor
         run: node ferramentas/testar-motor.mjs
+
+      - name: Testes da inteligência de sugestões
+        run: |
+          node ferramentas/testar-inteligencia.mjs
+          node ferramentas/testar-analitica.mjs
+
+      - name: Metas, orçamento, cobertura e conferência colorida
+        run: |
+          node ferramentas/testar-metas.mjs
+          node ferramentas/testar-complementos.mjs
 
       - name: Testes da interface
         # Estes existiam desde sempre e não rodavam em lugar nenhum: nem aqui,
@@ -133,3 +146,64 @@ jobs:
             diff <(head -c 4000 ferramentas/douradas.json) <(head -c 4000 /tmp/douradas-agora.json) || true
             exit 1
           fi
+
+  apk-preview:
+    name: APK para revisão
+    if: github.event_name == 'pull_request'
+    needs: motor
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Preparar Android
+        run: |
+          npm ci
+          npx cap sync android
+      - name: Compilar APK de revisão
+        working-directory: android
+        run: ./gradlew testDebugUnitTest assembleDebug --no-daemon
+      - name: Conferir conteúdo do APK
+        run: |
+          python3 ferramentas/conferir-apk.py android/app/build/outputs/apk/debug/app-debug.apk
+          unzip -p android/app/build/outputs/apk/debug/app-debug.apk assets/public/index.html > /tmp/index-apk.html
+          cmp index.html /tmp/index-apk.html
+          cp android/app/build/outputs/apk/debug/app-debug.apk LotoLab-4.15.0-preview.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: LotoLab-4.15.0-preview
+          path: LotoLab-4.15.0-preview.apk
+          retention-days: 14
+
+      - name: Disponibilizar APK para download direto
+        if: github.head_ref == 'codex/inteligencia-sugestoes-v4.9'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          LOTOLAB_TAG: v4.15.0-rc.${{ github.run_number }}
+        run: |
+          cat > /tmp/lotolab-release.md <<'NOTAS'
+          LotoLab 4.15.0 — base escura anterior, seletor de modalidades em
+          duas linhas nas 15 telas e destaques na cor da loteria escolhida.
+          A página recebe um degradê suave de baixo para cima.
+          Os resultados usam bolinhas amarelas com números grafite.
+          Conferências preservam acertos verdes e erros em vermelho suave.
+          Inclui as melhorias de navegação e avaliação analítica da 4.14.
+
+          Baixe LotoLab-4.15.0-preview.apk abaixo. APK assinado para depuração.
+          A assinatura pode ser diferente da instalação anterior: não desinstale
+          seu aplicativo sem antes preservar seus jogos e resultados.
+
+          Inicialização nativa simulada e toques validados em Chrome; instalação em aparelho
+          físico ainda requer conferência. Não prevê resultados de loterias.
+          NOTAS
+          gh release create "$LOTOLAB_TAG" LotoLab-4.15.0-preview.apk \
+            --target "$GITHUB_SHA" --prerelease \
+            --title "LotoLab 4.15.0 — teste" --notes-file /tmp/lotolab-release.md
