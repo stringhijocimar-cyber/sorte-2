@@ -957,8 +957,8 @@ td{padding:6px 7px;border-bottom:1px solid var(--trama)}
 <link rel="stylesheet" href="ui/inteligencia-v4-9.css?v=4.9.0">
 <link rel="stylesheet" href="ui/visual-metas-v4-10.css?v=4.10.0">
 <link rel="stylesheet" href="ui/visual-foco-v4-11.css?v=4.13.0">
-<link rel="stylesheet" href="ui/experiencia-v4-14.css?v=4.15.0">
-<link rel="stylesheet" href="ui/modalidades-v4-15.css?v=4.15.0">
+<link rel="stylesheet" href="ui/experiencia-v4-14.css?v=4.16.0">
+<link rel="stylesheet" href="ui/modalidades-v4-15.css?v=4.16.0">
 </head>
 <body>
 <header>
@@ -2113,7 +2113,7 @@ function audUniforme(m,tam,q,semente){
   }
   return jogos;
 }
-function audIntervalo(xs,semente){
+function audIntervalo(xs,semente,alpha=.05){
   // Bootstrap móvel por concurso: jogos e réplicas não viram observações.
   const rnd=geradorSemeado(intHash(semente)),n=xs.length,bloco=Math.min(5,n),medias=[];
   for(let b=0;b<2000;b++){
@@ -2123,7 +2123,7 @@ function audIntervalo(xs,semente){
     medias.push(soma/n);
   }
   medias.sort((a,b)=>a-b);
-  return [medias[49],medias[1949]];
+  return [medias[Math.ceil(2000*alpha/2)-1],medias[Math.ceil(2000*(1-alpha/2))-1]];
 }
 function audDiagnostico(serie,metrica,semente){
   const ds=serie.map(r=>r.valor[metrica]-r.referencia[metrica]),n=ds.length;
@@ -2145,10 +2145,27 @@ function audSelecionar(linhas,metrica){
   }
   return {modo:escolhido,delta:melhor};
 }
+function audSelecionarRobusto(linhas,metrica,semente){
+  // Dois métodos candidatos: intervalos individuais de 97,5% (Bonferroni).
+  // É um filtro exploratório conservador, não uma prova de previsão.
+  const candidatos=['cobertura','equilibrado'].map(modo=>{
+    const rs=linhas[modo],d=audDiagnostico(rs,metrica,semente+':'+modo);
+    const intervalo=audIntervalo(rs.map(r=>r.valor[metrica]-r.referencia[metrica]),semente+':'+modo+':ajuste',.025);
+    return {modo,delta:d.delta,intervalo,recortes:d.recortes,
+      apto:d.positivos===3&&intervalo[0]>0,
+      motivo:d.positivos<3?'Não se manteve nos três períodos':intervalo[0]<=0?'Diferença ainda incerta':'Consistência na seleção'};
+  });
+  let escolhido=null;
+  for(const r of candidatos)if(r.apto&&(!escolhido||r.intervalo[0]>escolhido.intervalo[0]+1e-12))escolhido=r;
+  return {modo:escolhido?.modo||'uniforme',delta:escolhido?.delta||0,
+    criterio:'consistencia-em-tres-periodos',candidatos};
+}
 function* intAuditar(m,registros,opcoes={}){
   const c=MODALIDADES[m];if(!c)throw new Error('Modalidade inválida.');
   const tam=opcoes.tam??c.min,q=opcoes.quantidade??3;
-  const treino=40,selecao=20,teste=opcoes.concursos??30,replicas=opcoes.replicas??32;
+  const rigor=opcoes.rigor??'basico';
+  if(!['basico','ampliado'].includes(rigor))throw new Error('Profundidade de avaliação inválida.');
+  const treino=40,selecao=rigor==='ampliado'?90:20,teste=opcoes.concursos??30,replicas=opcoes.replicas??32;
   const metrica=opcoes.metrica??'melhor',semente=String(opcoes.semente??'lotolab-4.13').slice(0,80);
   if(!Number.isInteger(tam)||tam<c.min||tam>c.max)throw new Error('Quantidade de dezenas inválida.');
   if(!Number.isInteger(q)||q<1||q>10)throw new Error('A avaliação aceita de 1 a 10 jogos por concurso.');
@@ -2160,7 +2177,7 @@ function* intAuditar(m,registros,opcoes={}){
   const hist=base.consecutivos.slice(-necessarios),linhas=Object.fromEntries(Object.keys(INT_METODOS).map(k=>[k,[]]));
   let escolha=null;
   for(let i=treino;i<hist.length;i++){
-    if(i===treino+selecao)escolha=audSelecionar(linhas,metrica);
+    if(i===treino+selecao)escolha=rigor==='ampliado'?audSelecionarRobusto(linhas,metrica,semente+':selecao'):audSelecionar(linhas,metrica);
     const alvo=hist[i],anteriores=hist.slice(0,i),referencias=[];
     const lotes={};
     for(let b=0;b<replicas;b++)referencias.push(audResumo(audUniforme(m,tam,q,`${semente}:referencia:${m}:${alvo.concurso}:${b}`),alvo.dezenas));
@@ -2184,7 +2201,7 @@ function* intAuditar(m,registros,opcoes={}){
     selecao:audMedia(rs.slice(0,selecao).map(r=>r.valor[metrica]-r.referencia[metrica])),
     teste:audMedia(rs.slice(selecao).map(r=>r.valor[metrica]-r.referencia[metrica]))}));
   const positivo=escolha.modo!=='uniforme'&&final.estavel;
-  return {versao:'4.13',modalidade:m,tam,quantidade:q,replicas,semente,metrica,escolha,final,comparacao,
+  return {versao:'4.16',modalidade:m,tam,quantidade:q,replicas,semente,metrica,rigor,escolha,final,comparacao,
     status:positivo?'diferenca-exploratoria':escolha.modo==='uniforme'?'referencia-mantida':'nao-confirmada',
     custoPorEstrategia:teste*q*custoDoJogo(m,tam),custoUnitario:custoDoJogo(m,tam),
     etapas:{treino:{n:treino,primeiro:hist[0].concurso,ultimo:hist[treino-1].concurso},
@@ -2192,12 +2209,62 @@ function* intAuditar(m,registros,opcoes={}){
       teste:{n:teste,primeiro:hist[treino+selecao].concurso,ultimo:hist.at(-1).concurso}},
     base:{assinatura:intHistorico(m,hist).assinatura,ultimo:hist.at(-1).concurso,usados:hist.length,
       invalidos:base.invalidos,conflitos:base.conflitos,lacunas:base.lacunas,consecutivos:base.consecutivos.length},
-    parametros:{treino,selecao,teste,replicas,tam,quantidade:q,metrica,semente}};
+    parametros:{treino,selecao,teste,replicas,tam,quantidade:q,metrica,semente,rigor}};
+}
+/* Memória compacta: todas as tentativas recentes, inclusive as negativas.
+   Os resumos não são somados como novas amostras nem promovem um gerador. */
+function audLerMemoria(v){
+  const entradas=Array.isArray(v?.entradas)?v.entradas:[];
+  const vistas=new Set();
+  return {versao:1,entradas:entradas.filter(r=>{
+    const ok=r&&typeof r.chave==='string'&&r.chave.length<500&&!vistas.has(r.chave)
+      &&Object.hasOwn(MODALIDADES,r.modalidade)&&Object.hasOwn(INT_METODOS,r.modo)
+      &&Object.hasOwn(AUD_METRICAS,r.metrica)&&['basico','ampliado'].includes(r.rigor)
+      &&['diferenca-exploratoria','referencia-mantida','nao-confirmada'].includes(r.status)
+      &&[r.delta,r.n,r.primeiro,r.ultimo,r.tam,r.quantidade,r.repeticoes].every(Number.isFinite)
+      &&Number.isInteger(r.n)&&r.n>=30&&r.n<=60&&r.ultimo-r.primeiro+1===r.n
+      &&Number.isInteger(r.primeiro)&&r.primeiro>0&&r.repeticoes>=1
+      &&Array.isArray(r.intervalo)&&r.intervalo.length===2&&r.intervalo.every(Number.isFinite)
+      &&typeof r.assinatura==='string'&&r.assinatura.length<200
+      &&typeof r.semente==='string'&&r.semente.length<=80&&typeof r.quando==='string'&&r.quando.length<40;
+    if(ok)vistas.add(r.chave);return ok;
+  }).slice(-40)};
+}
+function audRegistrar(memoria,r,quando=new Date().toISOString()){
+  const entradas=audLerMemoria(memoria).entradas.slice();
+  const chave=JSON.stringify([r.versao,r.modalidade,r.base.assinatura,r.base.usados,r.base.ultimo,
+    r.tam,r.quantidade,r.replicas,r.semente,r.metrica,r.rigor,r.final.n]);
+  const i=entradas.findIndex(x=>x.chave===chave),anterior=i<0?null:entradas.splice(i,1)[0];
+  entradas.push({chave,modalidade:r.modalidade,modo:r.escolha.modo,metrica:r.metrica,rigor:r.rigor,
+    status:r.status,delta:r.final.delta,intervalo:r.final.intervalo.slice(),n:r.final.n,
+    primeiro:r.etapas.teste.primeiro,ultimo:r.etapas.teste.ultimo,tam:r.tam,quantidade:r.quantidade,
+    assinatura:r.base.assinatura,semente:r.semente,quando,repeticoes:(anterior?.repeticoes||0)+1});
+  return {versao:1,entradas:entradas.slice(-40)};
+}
+function audCompararMemoria(entradas,m){
+  const rs=entradas.filter(r=>r.modalidade===m),atual=rs.at(-1);
+  if(!atual)return {reutilizados:0,anterior:null,perdeuConsistencia:false};
+  const anteriores=rs.slice(0,-1),vistos=new Set();
+  for(const r of anteriores)for(let n=Math.max(r.primeiro,atual.primeiro);n<=Math.min(r.ultimo,atual.ultimo);n++)vistos.add(n);
+  const anterior=anteriores.slice().reverse().find(r=>r.modo===atual.modo&&r.metrica===atual.metrica
+    &&r.tam===atual.tam&&r.quantidade===atual.quantidade&&r.rigor===atual.rigor);
+  return {reutilizados:vistos.size,anterior,
+    perdeuConsistencia:!!anterior&&anterior.status==='diferenca-exploratoria'&&atual.status==='nao-confirmada'};
+}
+function audRenderMemoria(m){
+  const memoria=audLerMemoria(S.audMemoria),rs=memoria.entradas.filter(r=>r.modalidade===m),d=audCompararMemoria(memoria.entradas,m);
+  return `<h3>Memória das avaliações</h3><p class="int-help">${rs.length} ${rs.length===1?'avaliação diferente':'avaliações diferentes'} nesta modalidade · repetições da mesma configuração e base: ${rs.reduce((n,r)=>n+r.repeticoes-1,0)}.</p>
+    ${S.audMemoriaFalha?'<p class="nota atencao">Não foi possível guardar a memória neste aparelho. Estes resultados estão disponíveis apenas nesta sessão; exporte antes de fechar.</p>':''}
+    ${d.reutilizados?`<p class="nota">O teste mais recente reutiliza ${d.reutilizados} concursos de avaliações anteriores. Isso não é uma confirmação independente.</p>`:''}
+    ${d.perdeuConsistencia?'<p class="nota atencao">O método que apresentou diferença consistente antes não a manteve nesta avaliação.</p>':''}
+    ${rs.length?`<details class="int-details"><summary>Ver avaliações recentes</summary>${rs.slice(-5).reverse().map(r=>`<p class="int-help"><b>Concursos ${r.primeiro}–${r.ultimo}</b> · ${esc(INT_METODOS[r.modo])}<br>${r.status==='diferenca-exploratoria'?'Diferença exploratória':r.status==='referencia-mantida'?'Referência aleatória mantida':'Desempenho não confirmado'} · diferença ${nf(r.delta,3)} · ${esc(AUD_METRICAS[r.metrica])}.</p>`).join('')}</details><button class="acao secundaria" id="aud-exportar-memoria">Exportar memória</button><div id="aud-exportacao-memoria" role="status"></div>`:'<p class="int-help">As próximas avaliações ficarão registradas aqui, incluindo as que não confirmarem diferença.</p>'}
+    <p class="int-help">Guarda os últimos 40 resumos no aparelho, entre todas as modalidades. Repetições não aumentam a amostra. A memória registra tentativas; não comprova previsão.</p>`;
 }
 function audRenderResultado(r){
   const f=r.final,titulos={'diferenca-exploratoria':'Diferença consistente neste recorte','referencia-mantida':'A referência aleatória foi mantida','nao-confirmada':'O desempenho não se manteve no teste final'};
   return `<div class="int-test-result aud-result"><h3>${titulos[r.status]}</h3>
-    <p class="int-help">Critério: ${esc(AUD_METRICAS[r.metrica])}. Escolha feita antes do teste: <b>${esc(INT_METODOS[r.escolha.modo])}</b>. ${f.positivos} de 3 períodos com diferença positiva.</p>
+    <p class="int-help">Critério: ${esc(AUD_METRICAS[r.metrica])}. Escolha feita antes do teste: <b>${esc(INT_METODOS[r.escolha.modo])}</b>. ${f.positivos} de 3 períodos do teste com diferença positiva.</p>
+    ${r.escolha.candidatos?`<details class="int-details"><summary>Por que o app fez esta escolha?</summary><p class="int-help">Cada método precisa apresentar diferença positiva nos três períodos de seleção e um intervalo ajustado acima de zero. O desempate favorece o maior limite inferior; se nenhum passar, fica o uniforme.</p>${r.escolha.candidatos.map(c=>`<p class="int-help"><b>${esc(INT_METODOS[c.modo])}</b>: ${esc(c.motivo)}. Diferenças por período: ${c.recortes.map(x=>nf(x.delta,3)).join(' · ')}. Intervalo aproximado ajustado: ${nf(c.intervalo[0],3)} a ${nf(c.intervalo[1],3)}.</p>`).join('')}<p class="int-help">Intervalos de 97,5% para os dois candidatos na seleção, com ajuste de Bonferroni. O ajuste não cobre outras sementes, métricas ou tentativas.</p></details>`:''}
     <div class="int-grid">${Object.entries(r.etapas).map(([k,e])=>`<div class="nota"><b>${({treino:'Treino inicial',selecao:'Seleção',teste:'Teste final'})[k]}</b><br>${e.n} concursos · ${e.primeiro}–${e.ultimo}</div>`).join('')}</div>
     <p><b>Diferença frente à referência: ${nf(f.delta,3)}</b></p>
     <p class="int-help">IC 95% aproximado: ${nf(f.intervalo[0],3)} a ${nf(f.intervalo[1],3)} acertos. ${r.replicas} lotes aleatórios independentes por concurso, cada um com ${r.quantidade} jogos de ${r.tam} dezenas. Custo equivalente no teste: ${brl(r.custoPorEstrategia)} por estratégia.</p>
@@ -2207,7 +2274,7 @@ function audRenderResultado(r){
       <div class="meta-faixas">${f.faixas.filter(x=>x.concursos||x.referencia).map(x=>`<span><b>${x.acertos} acertos</b>${x.concursos} concursos · referência ${nf(x.referencia,1)}</span>`).join('')}</div>
       <p class="int-help">Contagem do melhor jogo de cada lote, somente dezenas principais. Zero ocorrências de uma faixa não significa chance zero. ${intExtraModalidade(r.modalidade)}</p></details>
     <details class="int-details"><summary>Como interpretar esta avaliação</summary>
-      <p class="int-help">A estratégia é escolhida em 20 concursos anteriores ao teste final. No teste, ela continua usando apenas resultados anteriores a cada alvo; o método escolhido não muda. A incerteza usa reamostragem de blocos de cinco concursos, com 2.000 repetições. As referências aleatórias não aumentam a amostra: são ${f.n} concursos no teste.</p>
+      <p class="int-help">A estratégia é escolhida em ${r.etapas.selecao.n} concursos anteriores ao teste final. No teste, ela continua usando apenas resultados anteriores a cada alvo; o método escolhido não muda. A incerteza usa reamostragem de blocos de cinco concursos, com 2.000 repetições. As referências aleatórias não aumentam a amostra: são ${f.n} concursos no teste.</p>
       <p class="int-help">Resultado exploratório de um recorte histórico, sem validação prospectiva. O intervalo não corrige novas tentativas em outras sementes, métricas ou períodos. Nenhum método é aplicado automaticamente aos seus jogos.</p>
       <p class="int-help">Base ${esc(r.base.assinatura)} · código ${esc(r.semente)}. A avaliação usa os últimos ${r.base.usados} concursos consecutivos disponíveis. O custo compara os volantes a preços atuais; não calcula lucro.</p></details>
     <button class="acao secundaria" id="aud-exportar">Exportar avaliação</button><div id="aud-exportacao" role="status"></div></div>`;
@@ -2216,41 +2283,63 @@ let audTrabalho=0;
 function audRenderPainel(m){
   const base=audBase(m,S.resultados),r=(S.auditorias||{})[m];
   const atual=r&&r.base.assinatura===intHistorico(m,base.consecutivos.slice(-r.base.usados)).assinatura;
-  return `<section class="carta aud-painel" id="ux-analitica" tabindex="-1"><span class="int-eyebrow">AVALIAÇÃO ANALÍTICA 4.13</span><h2>O desempenho se mantém?</h2>
+  const rigor=base.consecutivos.length>=160?'ampliado':'basico';
+  return `<section class="carta aud-painel" id="ux-analitica" tabindex="-1"><span class="int-eyebrow">AVALIAÇÃO ANALÍTICA 4.16</span><h2>O desempenho se mantém?</h2>
     <p class="int-help">Separe a escolha da estratégia do teste final e compare com 32 referências aleatórias de mesmo custo. ${base.consecutivos.length} concursos consecutivos recentes disponíveis.</p>
+    <label class="campo" for="aud-rigor">Profundidade da análise<select id="aud-rigor"><option value="ampliado" ${rigor==='ampliado'?'selected':''}>Ampliada · consistência em três períodos</option><option value="basico" ${rigor==='basico'?'selected':''}>Básica · seleção em 20 concursos</option></select></label>
     <div class="int-grid"><label class="campo" for="aud-metrica">Critério da avaliação<select id="aud-metrica">${Object.entries(AUD_METRICAS).map(([k,v])=>`<option value="${k}" ${k==='melhor'?'selected':''}>${v}</option>`).join('')}</select></label>
     <label class="campo" for="aud-concursos">Concursos no teste final<select id="aud-concursos"><option value="30">30 concursos</option><option value="60">60 concursos</option></select></label></div>
-    <p class="int-help">Teste padrão: três jogos por concurso, com o tamanho escolhido nas sugestões, sem dezenas fixas ou excluídas. Treino inicial de 40 concursos e seleção em outros 20.</p>
+    <p class="int-help">Teste padrão: três jogos por concurso, com o tamanho escolhido nas sugestões, sem dezenas fixas ou excluídas. Treino inicial de 40 concursos.</p>
+    <p class="int-help" id="aud-requisitos" role="status"></p>
     <button class="acao secundaria" id="aud-iniciar" ${base.consecutivos.length<90?'disabled':''}>Avaliar em períodos separados</button>
     ${base.consecutivos.length<90?'<p class="int-help">Complete pelo menos 90 concursos consecutivos em Resultados. Lacunas não são tratadas como sorteios observados.</p><button class="acao secundaria" data-atalho="resultados">Completar histórico</button>':''}
-    <div id="aud-resultado" role="status" aria-live="polite">${r?(atual?'':'<p class="nota atencao">O histórico mudou. Este resultado pertence à base anterior; execute a avaliação novamente.</p>')+audRenderResultado(r):''}</div></section>`;
+    <div id="aud-resultado" role="status" aria-live="polite">${r?(atual?'':'<p class="nota atencao">O histórico mudou. Este resultado pertence à base anterior; execute a avaliação novamente.</p>')+audRenderResultado(r):''}</div>
+    <div id="aud-memoria">${audRenderMemoria(m)}</div></section>`;
+}
+function audExportarJson(dados,nome,seletor){
+  const texto=JSON.stringify(dados,null,2);
+  if(typeof Capacitor!=='undefined'&&Capacitor.isNativePlatform?.()){
+    const saida=$(seletor),mem=seletor.endsWith('-memoria'),id=mem?'aud-json-memoria':'aud-json';
+    saida.innerHTML=`<label class="campo" for="${id}">Avaliação em JSON<textarea id="${id}" rows="5" readonly></textarea></label><button class="acao secundaria" id="${id}-copiar">Copiar avaliação</button>`;
+    $('#'+id).value=texto;$('#'+id+'-copiar').onclick=async()=>{try{await navigator.clipboard.writeText(texto);$('#'+id+'-copiar').textContent='Avaliação copiada';}catch(e){$('#'+id).select();$('#'+id+'-copiar').textContent='Selecione Copiar no menu do aparelho';}};
+  }else{
+    const url=URL.createObjectURL(new Blob([texto],{type:'application/json'})),a=document.createElement('a');
+    a.href=url;a.download=nome;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+  }
 }
 function audLigarExportacao(m){
-  const b=$('#aud-exportar');if(!b)return;
-  b.onclick=()=>{
+  const mem=$('#aud-exportar-memoria');
+  if(mem)mem.onclick=()=>audExportarJson(audLerMemoria(S.audMemoria),'LotoLab-memoria-analitica.json','#aud-exportacao-memoria');
+  const b=$('#aud-exportar');if(b)b.onclick=()=>{
     const r=S.auditorias?.[m];if(!r)return;
-    const texto=JSON.stringify(r,null,2);
-    if(typeof Capacitor!=='undefined'&&Capacitor.isNativePlatform?.()){
-      const saida=$('#aud-exportacao');saida.innerHTML='<label class="campo" for="aud-json">Avaliação em JSON<textarea id="aud-json" rows="5" readonly></textarea></label><button class="acao secundaria" id="aud-copiar">Copiar avaliação</button>';
-      $('#aud-json').value=texto;$('#aud-copiar').onclick=async()=>{try{await navigator.clipboard.writeText(texto);$('#aud-copiar').textContent='Avaliação copiada';}catch(e){$('#aud-json').select();$('#aud-copiar').textContent='Selecione Copiar no menu do aparelho';}};
-    }else{
-      const url=URL.createObjectURL(new Blob([texto],{type:'application/json'})),a=document.createElement('a');
-      a.href=url;a.download='LotoLab-analise-'+m+'-'+r.base.ultimo+'.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
-    }
+    audExportarJson(r,'LotoLab-analise-'+m+'-'+r.base.ultimo+'.json','#aud-exportacao');
   };
 }
 function audLigarAcoes(){
   const b=$('#aud-iniciar');if(!b)return;const m=S.modalidade;
   audLigarExportacao(m);
+  const requisitos=()=>{
+    const ampliado=$('#aud-rigor').value==='ampliado',selecao=ampliado?90:20,teste=Number($('#aud-concursos').value),n=audBase(m,S.resultados).consecutivos.length;
+    b.disabled=n<40+selecao+teste;
+    $('#aud-requisitos').textContent=`${selecao} concursos para seleção${ampliado?' em três períodos de 30':''} e ${teste} separados para teste. Precisa de ${40+selecao+teste} concursos consecutivos; há ${n}.`;
+  };
+  $('#aud-rigor').onchange=requisitos;$('#aud-concursos').onchange=requisitos;requisitos();
   b.onclick=()=>{
     const saida=$('#aud-resultado'),token=++audTrabalho;
-    const tarefa=intAuditar(m,S.resultados.slice(),{tam:Number($('#int-tam').value),concursos:Number($('#aud-concursos').value),metrica:$('#aud-metrica').value,semente:$('#int-semente').value||'lotolab-4.13'});
+    const tarefa=intAuditar(m,S.resultados.slice(),{tam:Number($('#int-tam').value),concursos:Number($('#aud-concursos').value),metrica:$('#aud-metrica').value,rigor:$('#aud-rigor').value,semente:$('#int-semente').value||'lotolab-4.13'});
     b.disabled=true;
+    const controles=['#aud-rigor','#aud-concursos','#aud-metrica'];controles.forEach(s=>$(s).disabled=true);
+    const liberar=()=>{controles.forEach(s=>$(s).disabled=false);requisitos();};
     const passo=()=>{
       if(token!==audTrabalho||S.modalidade!==m||S.tela!=='sugestoes'||!saida.isConnected)return;
-      try{const r=tarefa.next();if(r.done){(S.auditorias||(S.auditorias={}))[m]=r.value;saida.innerHTML=audRenderResultado(r.value);b.disabled=false;audLigarExportacao(m);return;}
+      try{const r=tarefa.next();if(r.done){
+        (S.auditorias||(S.auditorias={}))[m]=r.value;
+        S.audMemoria=audRegistrar(S.audMemoria,r.value);S.audMemoriaFalha=!Guardar.gravar('audMemoria',S.audMemoria);
+        const base=audBase(m,S.resultados),atual=r.value.base.assinatura===intHistorico(m,base.consecutivos.slice(-r.value.base.usados)).assinatura;
+        saida.innerHTML=(atual?'':'<p class="nota atencao">O histórico mudou durante a avaliação. Este resultado pertence à base anterior.</p>')+audRenderResultado(r.value);
+        $('#aud-memoria').innerHTML=audRenderMemoria(m);liberar();audLigarExportacao(m);return;}
         saida.innerHTML=barraProgresso(r.value.feitos,r.value.total,'Avaliando '+r.value.etapa);setTimeout(passo,0);
-      }catch(e){saida.textContent=e.message;b.disabled=false;}
+      }catch(e){saida.textContent=e.message;liberar();}
     };passo();
   };
 }
@@ -3520,7 +3609,7 @@ T.inicio = () => {
   const avisos=S.avisos.filter(a=>!a.lido).length;
   const meus=S.jogos.filter(j=>j.modalidade===m).length,idade=idadeDoHistorico(m);
   return `<div class="foco-inicio ux-inicio" style="--foco-cor:${FOCO_CORES[m]}">
-    <div class="foco-boasvindas"><div><span class="foco-label">BEM-VINDO AO SEU LABORATÓRIO</span><${podeVoltar()?'h2':'h1'}>Seu jogo,<br>bem planejado.</${podeVoltar()?'h2':'h1'}></div><span class="foco-versao">4.15</span></div>
+    <div class="foco-boasvindas"><div><span class="foco-label">BEM-VINDO AO SEU LABORATÓRIO</span><${podeVoltar()?'h2':'h1'}>Seu jogo,<br>bem planejado.</${podeVoltar()?'h2':'h1'}></div><span class="foco-versao">4.16</span></div>
     <section class="foco-hero"><div class="foco-hero-topo"><span class="foco-label">UM PLANO PARA CADA CONCURSO</span><span class="foco-tag">${esc(c.nome)}</span></div>
       <div class="foco-objetivo"><div><h2>Crie seus jogos.<br>Veja os acertos.</h2><p>Defina seus critérios e seu limite. O LotoLab organiza e confere.</p></div><div class="foco-alvo" aria-label="Meta de ${c.k} dezenas"><strong>${c.k}</strong><span>${c.trevos?"+ 2 trevos":"dezenas"}</span></div></div>
       <button class="acao foco-primary" data-atalho="sugestoes">Criar sugestões <span aria-hidden="true">→</span></button>
@@ -9916,6 +10005,7 @@ function ligarControlesCabecalho(){
 }
 
 (function iniciar(){
+  S.audMemoria = audLerMemoria(Guardar.ler('audMemoria',{}));
   S.metaConfig = Guardar.ler("metaConfig", {});
   S.jogos = Guardar.ler("jogos", []);
   S.resultados = Guardar.ler("resultados", []);

@@ -176,34 +176,35 @@ jobs:
           python3 ferramentas/conferir-apk.py android/app/build/outputs/apk/debug/app-debug.apk
           unzip -p android/app/build/outputs/apk/debug/app-debug.apk assets/public/index.html > /tmp/index-apk.html
           cmp index.html /tmp/index-apk.html
-          cp android/app/build/outputs/apk/debug/app-debug.apk LotoLab-4.15.0-preview.apk
+          cp android/app/build/outputs/apk/debug/app-debug.apk LotoLab-4.16.0-preview.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: LotoLab-4.15.0-preview
-          path: LotoLab-4.15.0-preview.apk
+          name: LotoLab-4.16.0-preview
+          path: LotoLab-4.16.0-preview.apk
           retention-days: 14
 
       - name: Disponibilizar APK para download direto
         if: github.head_ref == 'codex/inteligencia-sugestoes-v4.9'
         env:
           GH_TOKEN: ${{ github.token }}
-          LOTOLAB_TAG: v4.15.0-rc.${{ github.run_number }}
+          LOTOLAB_TAG: v4.16.0-rc.${{ github.run_number }}
         run: |
           cat > /tmp/lotolab-release.md <<'NOTAS'
-          LotoLab 4.15.0 — base escura anterior, seletor de modalidades em
+          LotoLab 4.16.0 — base escura anterior, seletor de modalidades em
           duas linhas nas 15 telas e destaques na cor da loteria escolhida.
           A página recebe um degradê suave de baixo para cima.
           Os resultados usam bolinhas amarelas com números grafite.
           Conferências preservam acertos verdes e erros em vermelho suave.
-          Inclui as melhorias de navegação e avaliação analítica da 4.14.
+          Inclui análise ampliada com 90 concursos de seleção em três períodos,
+          teste final separado e memória das avaliações no aparelho.
 
-          Baixe LotoLab-4.15.0-preview.apk abaixo. APK assinado para depuração.
+          Baixe LotoLab-4.16.0-preview.apk abaixo. APK assinado para depuração.
           A assinatura pode ser diferente da instalação anterior: não desinstale
           seu aplicativo sem antes preservar seus jogos e resultados.
 
           Inicialização nativa simulada e toques validados em Chrome; instalação em aparelho
           físico ainda requer conferência. Não prevê resultados de loterias.
           NOTAS
-          gh release create "$LOTOLAB_TAG" LotoLab-4.15.0-preview.apk \
+          gh release create "$LOTOLAB_TAG" LotoLab-4.16.0-preview.apk \
             --target "$GITHUB_SHA" --prerelease \
-            --title "LotoLab 4.15.0 — teste" --notes-file /tmp/lotolab-release.md
+            --title "LotoLab 4.16.0 — teste" --notes-file /tmp/lotolab-release.md

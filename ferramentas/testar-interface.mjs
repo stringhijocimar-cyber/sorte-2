@@ -1796,7 +1796,7 @@ checar('avaliar não cria jogos nem muda a estratégia do usuário',await js(`re
 await js(`document.querySelector('#aud-resultado').scrollIntoView({block:'start'});return true;`);
 await capturar('analitica-413-resultado');
 await tocar('#aud-exportar');
-checar('exportação Android conserva configuração e amostra real',await js(`const d=JSON.parse(document.querySelector('#aud-json').value);return d.versao==='4.13'&&d.final.n===30&&d.replicas===32&&d.etapas.selecao.ultimo<d.etapas.teste.primeiro`));
+checar('exportação Android conserva configuração e amostra real',await js(`const d=JSON.parse(document.querySelector('#aud-json').value);return d.versao==='4.16'&&d.final.n===30&&d.replicas===32&&d.etapas.selecao.ultimo<d.etapas.teste.primeiro`));
 for(const tema of ['escuro','claro'])for(const width of [360,412,1024]){
   await cmd('Emulation.setDeviceMetricsOverride',{width,height:915,deviceScaleFactor:1,mobile:width<600});
   await js(`document.documentElement.dataset.tema=${JSON.stringify(tema)};return true;`);
@@ -1918,19 +1918,59 @@ await cmd('Emulation.setDeviceMetricsOverride',{width:412,height:915,deviceScale
 await js(`document.documentElement.dataset.tema='escuro';S.resultados=${JSON.stringify(reais414)};S.jogos=[];return true;`);
 for(const mod of ['mega-sena','lotofacil','quina','lotomania','dupla-sena','dia-de-sorte','timemania','mais-milionaria']){
   await js(`trocarModalidade(${JSON.stringify(mod)});irParaTela('inicio',{lateral:true});return true;`);await dormir(300);
-  await capturar('LotoLab-4.15-Inicio-'+mod);
+  await capturar('LotoLab-4.16-Inicio-'+mod);
 }
 await js(`trocarModalidade('mega-sena');const r=ultimoResultado('mega-sena');S.jogos=[{id:'exemplo-visual',modalidade:'mega-sena',dezenas:[3,12,25,33,47,58],data:r.data,lote:'exemplo-visual',metodo:'demonstração',concursoAlvo:r.concurso,conferencias:[]}];conferenciaAutomatica();return true;`);
 for(const rota of ['sugestoes','jogos','resultados','pesquisa']){
   await js(`irParaTela(${JSON.stringify(rota)},{lateral:true});return true;`);await dormir(300);
-  await capturar('LotoLab-4.15-'+rota+'-mega-sena');
+  await capturar('LotoLab-4.16-'+rota+'-mega-sena');
 }
 await js(`trocarModalidade('lotofacil');irParaTela('pesquisa',{lateral:true});return true;`);await dormir(300);
-await capturar('LotoLab-4.15-Analise-lotofacil');
+await capturar('LotoLab-4.16-Analise-lotofacil');
 await js(`document.documentElement.dataset.tema='claro';irParaTela('inicio',{lateral:true});return true;`);await dormir(300);
-await capturar('LotoLab-4.15-Tema-Claro-lotofacil');
+await capturar('LotoLab-4.16-Tema-Claro-lotofacil');
 await js(`document.documentElement.dataset.tema='escuro';trocarModalidade('mega-sena');irParaTela('inicio',{lateral:true});return true;`);
-await tocar('#btn-avisos');await tocar('#meta-testar-aviso');await capturar('LotoLab-4.15-Notificacoes');
+await tocar('#btn-avisos');await tocar('#meta-testar-aviso');await capturar('LotoLab-4.16-Notificacoes');
+
+secao('S. Análise ampliada e memória 4.16');
+await tocar('#folha-avisos [data-fechar]:not(.fundo)');
+// Trecho real e contínuo da base; a ponta recente do arquivo tem lacunas.
+const reais416=JSON.parse(readFileSync(join(RAIZ,'dados/mega-sena.json'),'utf8')).concursos.filter(r=>r.concurso>=2638&&r.concurso<=2797).sort((a,b)=>a.concurso-b.concurso).map(r=>({...r,modalidade:'mega-sena'}));
+await js(`S.resultados=${JSON.stringify(reais416)};S.audMemoria={versao:1,entradas:[]};S.auditorias={};S.jogos=[];S.intConfig={};S.modalidade='mega-sena';irParaTela('sugestoes',{lateral:true});return true;`);
+checar('histórico suficiente escolhe a análise ampliada',await js(`return document.querySelector('#aud-rigor').value==='ampliado'&&!document.querySelector('#aud-iniciar').disabled`));
+await js(`document.querySelector('#aud-concursos').value='60';document.querySelector('#aud-concursos').dispatchEvent(new Event('change'));return true;`);
+checar('ampliar o teste exige 190 concursos sem reduzir o rigor em silêncio',await js(`return document.querySelector('#aud-iniciar').disabled&&document.querySelector('#aud-requisitos').textContent.includes('190 concursos')`));
+await js(`document.querySelector('#aud-concursos').value='30';document.querySelector('#aud-concursos').dispatchEvent(new Event('change'));document.querySelector('#int-semente').value='avaliacao-real-416';return true;`);
+await tocar('#aud-iniciar');
+checar('os critérios ficam fixos durante a análise',await js(`return document.querySelector('#aud-rigor').disabled&&document.querySelector('#aud-metrica').disabled`));
+let ampliado416=false;
+for(let i=0;i<225;i++){
+  ampliado416=await js(`return !!S.auditorias['mega-sena']&&!document.querySelector('#aud-iniciar').disabled`);
+  if(ampliado416)break;await dormir(200);
+}
+checar('avaliação ampliada termina e explica o motivo da escolha',ampliado416&&await js(`const r=S.auditorias['mega-sena'];return r.etapas.selecao.n===90&&r.final.n===30&&document.querySelector('#aud-resultado').textContent.includes('Por que o app fez esta escolha')`));
+if(!ampliado416)throw new Error('Análise ampliada não concluiu: '+await js(`return document.querySelector('#aud-resultado').textContent+' / '+document.querySelector('#aud-requisitos').textContent`));
+checar('memória registra também a decisão de manter a referência',await js(`const m=JSON.parse(localStorage.getItem('lotolab:audMemoria'));return m.entradas.length===1&&m.entradas[0].status===S.auditorias['mega-sena'].status&&S.jogos.length===0`));
+for(const tema of ['escuro','claro'])for(const width of [320,412]){
+  await cmd('Emulation.setDeviceMetricsOverride',{width,height:915,deviceScaleFactor:2,mobile:true});
+  await js(`document.documentElement.dataset.tema=${JSON.stringify(tema)};return true;`);
+  checar('análise ampliada cabe em '+width+'px no '+tema,await js(`return document.documentElement.scrollWidth<=innerWidth+1`));
+}
+await cmd('Emulation.setDeviceMetricsOverride',{width:412,height:915,deviceScaleFactor:2,mobile:true});
+await js(`document.documentElement.dataset.tema='escuro';const e=document.querySelector('#ux-analitica');window.scrollTo({top:scrollY+e.getBoundingClientRect().top-document.querySelector('header').getBoundingClientRect().height-12,behavior:'instant'});return true;`);
+await dormir(250);
+await capturar('LotoLab-4.16-Analise-ampliada');
+await js(`const e=document.querySelector('#aud-resultado');e.querySelector('details').open=true;window.scrollTo({top:scrollY+e.getBoundingClientRect().top-document.querySelector('header').getBoundingClientRect().height-12,behavior:'instant'});return true;`);
+await dormir(250);
+await capturar('LotoLab-4.16-Diagnostico');
+await tocar('#aud-exportar-memoria');
+checar('memória pode ser exportada no Android',await js(`const m=JSON.parse(document.querySelector('#aud-json-memoria').value);return m.entradas.length===1&&m.entradas[0].n===30`));
+await js(`for(const k of ['autoAnalise','pesquisaAutomatica','buscaAutomatica'])Guardar.gravar(k,false);Guardar.gravar('modalidade','mega-sena');Guardar.gravar('resultados',S.resultados);return true;`);
+await cmd('Page.reload');await dormir(2200);
+await js(`irParaTela('sugestoes',{lateral:true});return true;`);
+checar('a memória das avaliações sobrevive a fechar e reabrir o app',await js(`return S.audMemoria.entradas.length===1&&document.querySelector('#aud-memoria').textContent.includes('1 avaliação diferente')`));
+await js(`trocarModalidade('lotofacil');return true;`);
+checar('outra modalidade não herda resultados de avaliação da Mega-Sena',await js(`return document.querySelector('#aud-memoria').textContent.includes('0 avaliações diferentes')`));
 
 /* ---------- fim ---------- */
 console.log(linhas.join("\n"));

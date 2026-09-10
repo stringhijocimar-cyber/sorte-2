@@ -5,7 +5,7 @@ import vm from 'node:vm';
 const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
 const ctx=vm.createContext({console});
 vm.runInContext(html.slice(html.indexOf('<script>')+8,html.indexOf('(function iniciar(){')),ctx);
-const api=vm.runInContext('({MODALIDADES,intAuditar,audBase,audResumo,audUniforme,audDiagnostico,audSelecionar,pesquisaMigrar,pesquisaEstabilidade,aptidao,vereditoPesquisa,audRenderResultado})',ctx);
+const api=vm.runInContext('({MODALIDADES,intAuditar,audBase,audResumo,audUniforme,audDiagnostico,audSelecionar,audSelecionarRobusto,audRegistrar,audLerMemoria,audCompararMemoria,pesquisaMigrar,pesquisaEstabilidade,aptidao,vereditoPesquisa,audRenderResultado})',ctx);
 const plain=x=>JSON.parse(JSON.stringify(x));
 function terminar(g){let r;do{r=g.next();}while(!r.done);return r.value;}
 function historico(m,n=100,seed=123){
@@ -126,4 +126,78 @@ test('pesquisa antiga perde conclusão em cache sem apagar sua população',()=>
   const m=api.pesquisaMigrar({antigo,atual});
   assert.equal(m.antigo.conclusao,null);assert.equal(m.antigo.assinatura,null);assert.equal(m.antigo.geracao,3);assert.equal(m.antigo.populacao.length,1);
   assert.equal(m.atual.conclusao.sobreviveu,false);assert.equal(m.atual.assinatura,'90:100');
+});
+
+test('seleção ampliada rejeita um ganho médio que se inverte no último período',()=>{
+  const linha=xs=>xs.map((d,i)=>({concurso:i+1,valor:{melhor:3+d},referencia:{melhor:3}}));
+  const instavel=linha([...Array(60).fill(2),...Array(30).fill(-.2)]),zero=linha(Array(90).fill(0));
+  assert.equal(api.audSelecionar({cobertura:instavel,equilibrado:zero},'melhor').modo,'cobertura');
+  const r=api.audSelecionarRobusto({cobertura:instavel,equilibrado:zero},'melhor','robusto');
+  assert.equal(r.modo,'uniforme');assert.equal(r.candidatos[0].apto,false);
+  const estavel=linha(Array(90).fill(.25));
+  assert.equal(api.audSelecionarRobusto({cobertura:instavel,equilibrado:estavel},'melhor','robusto').modo,'equilibrado');
+});
+
+test('seleção ampliada mantém referência quando não há diferença ou há incerteza',()=>{
+  const linha=xs=>xs.map((d,i)=>({concurso:i+1,valor:{media:3+d},referencia:{media:3}}));
+  const zero=linha(Array(90).fill(0));
+  assert.equal(api.audSelecionarRobusto({cobertura:zero,equilibrado:zero},'media','zero').modo,'uniforme');
+  const fraca=linha(Array.from({length:90},(_,i)=>i%30===0?.1:0));
+  assert.equal(api.audSelecionarRobusto({cobertura:fraca,equilibrado:zero},'media','fraca').modo,'uniforme');
+});
+
+test('90 concursos de seleção ficam separados do teste e não enxergam seu futuro',()=>{
+  const hist=historico('mega-sena',160),opc={...op,rigor:'ampliado',quantidade:1};
+  const r=terminar(api.intAuditar('mega-sena',hist,opc));
+  assert.deepEqual(plain(r.etapas),{treino:{n:40,primeiro:1,ultimo:40},selecao:{n:90,primeiro:41,ultimo:130},teste:{n:30,primeiro:131,ultimo:160}});
+  const outro=terminar(api.intAuditar('mega-sena',hist.map(x=>x.concurso>130?{...x,dezenas:[1,2,3,4,5,6]}:x),opc));
+  assert.deepEqual(plain(outro.escolha),plain(r.escolha));
+  assert.deepEqual(plain(outro.final.serie[0].jogos),plain(r.final.serie[0].jogos));
+  assert.equal(r.final.n,30);assert.equal(r.custoPorEstrategia,30*6);
+  assert.deepEqual(plain(terminar(api.intAuditar('mega-sena',hist.slice().reverse(),opc))),plain(r));
+  assert.throws(()=>terminar(api.intAuditar('mega-sena',hist.slice(1),opc)),/160 concursos/);
+  assert.throws(()=>terminar(api.intAuditar('mega-sena',hist,{...opc,rigor:'ignorar'})),/inválida/);
+});
+
+test('memória guarda tentativas negativas e reconhece repetição exata sem inflar contagem',()=>{
+  const m1=api.audRegistrar({},padrao,'2026-09-10T10:00:00Z');
+  const m2=api.audRegistrar(m1,padrao,'2026-09-10T11:00:00Z');
+  assert.equal(m2.entradas.length,1);assert.equal(m2.entradas[0].repeticoes,2);
+  assert.equal(m1.entradas[0].repeticoes,1);
+  const m3=api.audRegistrar(m2,{...padrao,semente:'outra tentativa',status:'nao-confirmada'});
+  assert.equal(m3.entradas.length,2);assert.equal(m3.entradas[1].status,'nao-confirmada');
+  assert.equal(api.audCompararMemoria(m3.entradas,'mega-sena').reutilizados,30);
+  assert.deepEqual(plain(api.audLerMemoria(JSON.parse(JSON.stringify(m3)))),plain(m3));
+});
+
+test('memória distingue período novo, sobreposição parcial e perda de consistência',()=>{
+  const r={...padrao,status:'diferenca-exploratoria',escolha:{modo:'cobertura'}};
+  let m=api.audRegistrar({},r);
+  const novo={...r,status:'nao-confirmada',base:{...r.base,ultimo:115},etapas:{...r.etapas,teste:{n:30,primeiro:86,ultimo:115}}};
+  m=api.audRegistrar(m,novo);
+  const cmp=api.audCompararMemoria(m.entradas,'mega-sena');
+  assert.equal(cmp.reutilizados,15);assert.equal(cmp.perdeuConsistencia,true);
+  const independente={...novo,base:{...novo.base,ultimo:145},etapas:{...novo.etapas,teste:{n:30,primeiro:116,ultimo:145}}};
+  m=api.audRegistrar(m,independente);
+  assert.equal(api.audCompararMemoria(m.entradas,'mega-sena').reutilizados,0);
+  assert.equal(api.audCompararMemoria(m.entradas,'lotofacil').reutilizados,0);
+});
+
+test('memória rejeita estado corrompido e tem tamanho limitado',()=>{
+  for(const v of [null,[],{entradas:[null,{}, {modalidade:'__proto__'}]}])assert.equal(api.audLerMemoria(v).entradas.length,0);
+  let mem={};for(let i=0;i<45;i++)mem=api.audRegistrar(mem,{...padrao,semente:'tentativa-'+i});
+  assert.equal(mem.entradas.length,40);assert.equal(mem.entradas[0].semente,'tentativa-5');
+  assert.ok(JSON.stringify(mem).length<80000);
+  assert.equal(api.audLerMemoria({entradas:[{...mem.entradas[0],ultimo:1e10}]}).entradas.length,0);
+});
+
+test('análise ampliada funciona nas oito modalidades com amostra real e mesmo custo',()=>{
+  for(const [m,c] of Object.entries(api.MODALIDADES)){
+    const r=terminar(api.intAuditar(m,historico(m,160),{...op,rigor:'ampliado',quantidade:1}));
+    assert.equal(r.final.n,30);assert.equal(r.etapas.selecao.n,90);
+    assert.equal(r.custoPorEstrategia,30*c.preco);
+    for(const x of r.final.serie){assert.ok(x.treinoAte<x.concurso);assert.equal(x.jogos[0].length,c.min);}
+    const html=api.audRenderResultado(r);
+    assert.match(html,/97,5%/);assert.match(html,/Por que o app fez esta escolha/);
+  }
 });
