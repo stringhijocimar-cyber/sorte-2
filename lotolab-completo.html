@@ -2311,6 +2311,34 @@ html[data-tema="claro"] :is(.concurso,.item) .pilula{color:#4a5c6c!important;bor
 @media(min-width:650px){html[data-tema] .mod-seletor .chip{font-size:.7rem!important;min-height:48px!important;padding-inline:8px!important;gap:6px}}
 
 </style>
+<style data-folha="ui/recorrencia-v4-17.css">
+/* A recorrência usa os acentos da modalidade e superfícies do tema atual. */
+.rec-painel { scroll-margin-top: 96px; }
+.rec-painel .campo { min-width: 0; }
+.rec-painel select, .rec-painel input { max-width: 100%; min-height: 46px; }
+.rec-painel .int-grid { grid-template-columns: 1fr; }
+.rec-painel h3 { margin-top: 24px; }
+.rec-dezenas { margin-top: 20px; }
+.rec-dezenas .dz { width: 34px; height: 34px; font-size: .85rem; }
+.rec-tabela { margin: 18px 0; max-width: 100%; }
+.rec-tabela table { width: 100%; min-width: 0; font-size: .76rem; border-collapse: collapse; }
+.rec-tabela caption { text-align: left; font-weight: 700; padding-bottom: 12px; color: var(--tinta); }
+.rec-tabela th, .rec-tabela td { padding: 10px 5px; text-align: left; white-space: normal; overflow-wrap: anywhere; border-bottom: 1px solid var(--linha); }
+.rec-tabela th small { display: block; font-weight: 400; color: var(--secundaria); }
+.rec-tabela tbody th { color: var(--mod-acento); }
+.rec-painel .rec-metricas { grid-template-columns: 1fr 1fr; }
+.rec-metricas .nota { margin: 0; min-width: 0; }
+.rec-metricas b { display: block; color: var(--mod-acento); font-size: 1.5rem; }
+.rec-metricas span { display: block; font-size: .78rem; }
+.rec-resumo-grupos { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; margin: 16px 0; }
+.rec-resumo-grupos > div { border: 1px solid var(--linha); border-radius: 14px; padding: 12px; }
+.rec-resumo-grupos b { display: block; color: var(--mod-acento); font-size: 1.4rem; }
+.rec-resumo-grupos span { display: block; color: var(--secundaria); font-size: .8rem; }
+.rec-abrir { margin-top: 12px; min-height: 44px; white-space: normal; }
+#rec-mensagem { margin-top: 12px; color: var(--alerta); }
+@media(min-width:680px) { .rec-painel .int-grid { grid-template-columns: 1fr 1fr; } .rec-resumo-grupos { grid-template-columns: repeat(4,minmax(0,1fr)); } }
+
+</style>
 </head>
 <body>
 <header>
@@ -3287,6 +3315,147 @@ function intChancePrincipal(m,tam){
   const p=combinacoes(tam,c.k)/combinacoes(c.N,c.k);
   return c.trevos ? p/combinacoes(c.trevos.N,c.trevos.k) : p;
 }
+/* Recorrência 4.17: histórico descritivo, sem privilegiar ou excluir jogos.
+   Concurso analisado e resultados posteriores nunca entram na comparação. */
+const REC_LIMITE_GRUPOS=2000;
+function recBase(m,registros,op={}){
+  if(!Object.hasOwn(MODALIDADES,m))throw new Error('Modalidade inválida.');
+  const antes=op.antesDe??null,sorteio=op.sorteio??1;
+  if(antes!==null&&(!Number.isSafeInteger(antes)||antes<1))throw new Error('Concurso de referência inválido.');
+  if(![1,2].includes(sorteio)||(sorteio===2&&m!=='dupla-sena'))throw new Error('Sorteio inválido.');
+  const registrosAntes=registros.filter(r=>r?.modalidade===m&&(antes===null||Number(r.concurso)<antes));
+  const base=intHistorico(m,sorteio===2?registrosAntes.map(r=>({...r,dezenas:r.dezenasSegundoSorteio})):registrosAntes);
+  let bloco=0;
+  const hist=base.hist.map((r,i,rs)=>{if(i&&r.concurso!==rs[i-1].concurso+1)bloco++;return {...r,bloco};});
+  return {...base,hist,antesDe:antes,sorteio,
+    faltantesNoFinal:antes!==null&&hist.length?Math.max(0,antes-1-hist.at(-1).concurso):0};
+}
+function recAcumulador(){return {vezes:0,ultimo:null,indice:-1,bloco:-1,intervalos:0,soma:0,minimo:null,maximo:null,incompletos:0,recentes:[]};}
+function recAdicionar(a,r,i){
+  if(a.vezes){if(a.bloco===r.bloco){const v=r.concurso-a.ultimo;a.intervalos++;a.soma+=v;a.minimo=a.minimo===null?v:Math.min(a.minimo,v);a.maximo=Math.max(a.maximo||0,v);}else a.incompletos++;}
+  a.vezes++;a.ultimo=r.concurso;a.indice=i;a.bloco=r.bloco;
+  a.recentes.push(r.concurso);if(a.recentes.length>8)a.recentes.shift();
+}
+function recResumo(a,base){
+  const ultima=base.hist.at(-1),continuo=a.vezes&&ultima?.bloco===a.bloco&&!base.faltantesNoFinal;
+  return {vezes:a.vezes,ultimo:a.ultimo,desdeUltima:continuo?ultima.concurso-a.ultimo:null,
+    observadosDesdeUltima:base.hist.length-1-a.indice,
+    intervalos:a.intervalos,intervaloMedio:a.intervalos?a.soma/a.intervalos:null,
+    intervaloMinimo:a.minimo,intervaloMaximo:a.maximo,intervalosIncompletos:a.incompletos,
+    recentes:a.recentes.slice().reverse()};
+}
+function recValidarDezenas(m,entrada){
+  if(!Object.hasOwn(MODALIDADES,m))throw new Error('Modalidade inválida.');
+  const c=MODALIDADES[m],partes=Array.isArray(entrada)?entrada:String(entrada??'').trim().split(/[\s,;]+/).filter(Boolean);
+  const ds=intDezenas(partes,m);
+  if(ds.length!==partes.length)throw new Error('Remova as dezenas repetidas.');
+  if(!ds.length||ds.length>Math.max(c.max,c.k))throw new Error(`Informe de 1 a ${Math.max(c.max,c.k)} dezenas.`);
+  return ds;
+}
+function recAnalisar(m,entrada,registros,op={}){
+  const dezenas=recValidarDezenas(m,entrada),c=MODALIDADES[m],base=recBase(m,registros,op),set=new Set(dezenas);
+  const exatos=Array.from({length:c.k+1},recAcumulador),minimos=Array.from({length:c.k+1},recAcumulador);
+  const intersecoes=base.hist.map((r,i)=>{const ds=r.dezenas.filter(d=>set.has(d));recAdicionar(exatos[ds.length],r,i);for(let h=0;h<=ds.length;h++)recAdicionar(minimos[h],r,i);return ds;});
+  const dist=intDistribuicao(m,dezenas.length);
+  return {versao:'4.17',modalidade:m,dezenas,base,intersecoes,
+    faixas:dist.map(f=>({acertos:f.acertos,faltam:c.k-f.acertos,exatos:recResumo(exatos[f.acertos],base),minimos:recResumo(minimos[f.acertos],base),
+      pExata:f.p,pMinima:Math.min(1,dist.filter(x=>x.acertos>=f.acertos).reduce((s,x)=>s+x.p,0))}))};
+}
+function recGrupos(r,tamanho){
+  const c=MODALIDADES[r.modalidade],n=r.dezenas.length;
+  if(!Number.isInteger(tamanho)||tamanho<1||tamanho>Math.min(n,c.k))throw new Error('Tamanho de grupo inválido.');
+  const quantidade=combinacoes(n,tamanho);
+  if(quantidade>REC_LIMITE_GRUPOS)throw new Error(`Este tamanho exige ${inf(quantidade)} grupos. Escolha um tamanho com até ${REC_LIMITE_GRUPOS} grupos para analisar no aparelho.`);
+  const grupos=combinacoesDe(r.dezenas,tamanho).map(ds=>({dezenas:ds,acumulador:recAcumulador()})),mapa=new Map(grupos.map(g=>[g.dezenas.join('.'),g]));
+  r.intersecoes.forEach((ds,i)=>{if(ds.length<tamanho)return;for(const sub of combinacoesDe(ds,tamanho))recAdicionar(mapa.get(sub.join('.')).acumulador,r.base.hist[i],i);});
+  const linhas=grupos.map(g=>({dezenas:g.dezenas,...recResumo(g.acumulador,r.base)}));
+  const categorias=[0,1,2,3].map(n=>({vezes:n,grupos:linhas.filter(g=>n===3?g.vezes>=3:g.vezes===n).length}));
+  linhas.sort((a,b)=>b.vezes-a.vezes||a.dezenas.join('.').localeCompare(b.dezenas.join('.')));
+  return {tamanho,quantidade,categorias,linhas};
+}
+function recCoberturaRecente(r){
+  const vistos=new Set(),janelas=Array(r.dezenas.length+1).fill(null),hist=r.base.hist;
+  if(!hist.length||r.base.faltantesNoFinal)return janelas;
+  for(let i=hist.length-1;i>=0&&hist[i].bloco===hist.at(-1).bloco;i--){
+    r.intersecoes[i].forEach(d=>vistos.add(d));
+    for(let h=1;h<=vistos.size;h++)if(janelas[h]===null)janelas[h]=hist.length-i;
+  }
+  return janelas;
+}
+function recConfig(m){
+  if(!S.recConfig)S.recConfig={};
+  return S.recConfig[m]||(S.recConfig[m]={texto:'',antesDe:null,sorteio:1,contagem:'exatos',faixa:MODALIDADES[m].k,grupo:null,pagina:0});
+}
+function recBotao(m,ds,antes=null,sorteio=1){
+  return `<button class="acao secundaria rec-abrir" data-rec-dezenas="${esc(ds.join(' '))}" data-rec-mod="${esc(m)}" data-rec-antes="${antes===null?'':esc(antes)}" data-rec-sorteio="${sorteio}">Histórico desta combinação${m==='dupla-sena'?` · ${sorteio}º sorteio`:''}</button>`;
+}
+function recTempo(a){return !a.vezes?'Não observada':a.desdeUltima===null?'Indeterminado: lacunas':`${a.desdeUltima} concursos`;}
+function recRenderResultado(r){
+  const o=recConfig(r.modalidade),base=r.base,n=base.hist.length,c=MODALIDADES[r.modalidade];
+  if(!n)return '<p class="nota">Nenhum concurso válido no recorte. Traga histórico em Resultados.</p>';
+  const selecionada=r.faixas.find(f=>f.acertos===Number(o.faixa))||r.faixas.at(-1),a=selecionada[o.contagem];
+  const p=o.contagem==='exatos'?selecionada.pExata:selecionada.pMinima;
+  return `<div class="dezenas rec-dezenas">${r.dezenas.map(d=>`<span class="dz marcada">${pad(d)}</span>`).join('')}</div>
+    <p class="int-help">${n} concursos consultados · ${base.hist[0].concurso}–${base.hist.at(-1).concurso}${base.antesDe!==null?` · somente anteriores ao concurso ${base.antesDe}`:''}${r.modalidade==='dupla-sena'?` · ${base.sorteio}º sorteio`:''}.</p>
+    ${base.lacunas||base.faltantesNoFinal?`<p class="nota atencao">Recorte incompleto: ${base.lacunas+base.faltantesNoFinal} números de concurso sem registro entre o início da base e o corte solicitado. Um corte futuro também pode incluir concursos ainda não realizados. As contagens são do que está disponível; intervalos que atravessam lacunas ficam indeterminados.</p>`:''}
+    ${base.invalidos||base.conflitos?`<p class="int-help">Excluídos: ${base.invalidos} registros inválidos e ${base.conflitos} concursos conflitantes.</p>`:''}
+    <div class="int-grid"><label class="campo" for="rec-contagem">Contar concursos com<select id="rec-contagem"><option value="exatos" ${o.contagem==='exatos'?'selected':''}>Exatamente estes acertos</option><option value="minimos" ${o.contagem==='minimos'?'selected':''}>Pelo menos estes acertos</option></select></label>
+    <label class="campo" for="rec-faixa">Detalhar uma faixa<select id="rec-faixa">${r.faixas.slice().reverse().map(f=>`<option value="${f.acertos}" ${f.acertos===selecionada.acertos?'selected':''}>${f.acertos} acertos · ${f.faltam} sorteadas fora</option>`).join('')}</select></label></div>
+    <div class="rolagem rec-tabela"><table><caption>Histórico de acertos · ${o.contagem==='exatos'?'contagens exatas':'contagens acumuladas'}</caption><thead><tr><th>Acertos</th><th>Vezes</th><th>Último concurso</th><th>Desde a última</th></tr></thead><tbody>${r.faixas.slice().reverse().map(f=>{const x=f[o.contagem];return `<tr><th scope="row">${f.acertos} <small>(${f.faltam} fora)</small></th><td>${x.vezes}</td><td>${x.ultimo??'—'}</td><td>${recTempo(x)}</td></tr>`;}).join('')}</tbody></table></div>
+    <p class="int-help">“Fora” indica quantas das ${c.k} sorteadas não estavam no grupo. “Desde a última” vai até o último concurso consultado. Não observada significa zero nos registros consultados.</p>
+    <details class="int-details" open><summary>Intervalos de ${selecionada.acertos} acertos</summary>
+      <div class="int-grid rec-metricas"><div class="nota"><b>${a.intervaloMedio===null?'—':nf(a.intervaloMedio,1)}</b><span>intervalo médio</span></div><div class="nota"><b>${a.intervaloMaximo??'—'}</b><span>maior intervalo completo</span></div></div>
+      <p class="int-help">${a.intervalos} intervalos completos em trechos contínuos; ${a.intervalosIncompletos} ignorados por lacunas. Intervalo é a diferença entre os números dos concursos. A ausência atual não entra na média.</p>
+      <p class="int-help">Concursos mais recentes com essa contagem: ${a.recentes.length?a.recentes.join(', '):'nenhum observado'}.</p>
+      <p class="int-help">Referência teórica por sorteio: ${p?'1 em '+inf(Math.round(1/p)):'impossível para este tamanho'}. Esperado em ${n} concursos: ${nf(n*p,3)} ocorrências. Isso não estima a próxima data.</p></details>
+    <div id="rec-grupos">${recRenderGrupos(r)}</div>
+    <details class="int-details"><summary>Em quantos concursos essas dezenas apareceram, mesmo separadas?</summary><p class="int-help">Janela mais curta terminando no último concurso consultado, usando somente o trecho recente sem lacunas. As dezenas podem aparecer em sorteios diferentes: isso não é repetição da combinação no mesmo sorteio.</p>${recCoberturaRecente(r).map((v,h)=>h?`<p class="int-help"><b>${h} das ${r.dezenas.length} dezenas</b>: ${v===null?'não cobertas no trecho contínuo disponível':v+' concurso'+(v===1?'':'s')}.</p>`:'').reverse().join('')}</details>
+    <p class="nota">Uma combinação já ter saído não reduz sua chance no próximo sorteio. Ausência prolongada também não cria prioridade. ${r.dezenas.length!==c.k?'Volantes ampliados e grupos menores são comparados por interseção; não são repetições de um resultado completo.':''}</p>
+    <p class="int-help">Somente dezenas principais; não avalia trevos, mês ou time. Estes acertos históricos não são conferências de apostas nem premiações.</p>`;
+}
+function recRenderGrupos(r){
+  const o=recConfig(r.modalidade),max=Math.min(r.dezenas.length,MODALIDADES[r.modalidade].k);
+  if(!o.grupo||o.grupo>max){o.grupo=Math.max(1,max-1);while(o.grupo>1&&combinacoes(r.dezenas.length,o.grupo)>REC_LIMITE_GRUPOS)o.grupo--;}
+  const g=recGrupos(r,o.grupo),paginas=Math.ceil(g.linhas.length/20);o.pagina=Math.min(o.pagina||0,paginas-1);
+  return `<h3>Grupos dentro da combinação</h3><label class="campo" for="rec-grupo">Tamanho do grupo<select id="rec-grupo">${Array.from({length:max},(_,i)=>max-i).map(t=>`<option value="${t}" ${t===o.grupo?'selected':''} ${combinacoes(r.dezenas.length,t)>REC_LIMITE_GRUPOS?'disabled':''}>${t} dezenas · ${inf(combinacoes(r.dezenas.length,t))} grupos</option>`).join('')}</select></label>
+    <div class="rec-resumo-grupos">${g.categorias.map(x=>`<div><b>${x.grupos}</b><span>${x.vezes===0?'não observados':x.vezes===3?'3 vezes ou mais':x.vezes+' vez'+(x.vezes===1?'':'es')}</span></div>`).join('')}</div>
+    <p class="int-help">Conta cada grupo específico quando todas as suas dezenas aparecem juntas, mesmo que o concurso tenha outros acertos. Um mesmo concurso pode conter vários grupos. Isso difere de contar concursos com exatamente ${g.tamanho} acertos.</p>
+    <details class="int-details"><summary>Ver os ${g.quantidade} grupos e suas ocorrências</summary><div class="rolagem rec-tabela"><table><thead><tr><th>Grupo</th><th>Vezes</th><th>Último</th></tr></thead><tbody>${g.linhas.slice(o.pagina*20,(o.pagina+1)*20).map(x=>`<tr><td>${x.dezenas.map(pad).join(' ')}</td><td>${x.vezes}</td><td>${x.ultimo??'—'}</td></tr>`).join('')}</tbody></table></div>
+      ${paginas>1?`<label class="campo" for="rec-pagina">Página dos grupos<select id="rec-pagina">${Array.from({length:paginas},(_,i)=>`<option value="${i}" ${i===o.pagina?'selected':''}>${i+1} de ${paginas}</option>`).join('')}</select></label>`:''}</details>
+    <p class="int-help">Análise exata limitada a ${REC_LIMITE_GRUPOS} grupos por tamanho; opções maiores ficam desativadas.</p>`;
+}
+function recPainel(m){
+  const o=recConfig(m),r=S.recResultados?.[m];
+  const mudou=r&&r.base.assinatura!==recBase(m,S.resultados,o).assinatura;
+  return `<section class="carta rec-painel" id="rec-painel" tabindex="-1"><span class="int-eyebrow">RECORRÊNCIA DE COMBINAÇÕES · 4.17</span><h2>Essa combinação já apareceu?</h2>
+    <p class="int-help">Veja repetições completas, acertos parciais e intervalos no histórico.</p>
+    <label class="campo" for="rec-dezenas">Dezenas para analisar<input id="rec-dezenas" inputmode="text" value="${esc(o.texto)}" placeholder="${m==='mega-sena'?'02 04 35 46 54 60':'Digite as dezenas separadas por espaço'}"></label>
+    <label class="campo" for="rec-antes">Somente antes do concurso (opcional)<input id="rec-antes" type="number" min="1" step="1" value="${o.antesDe??''}" placeholder="Em branco: todo o histórico disponível"></label>
+    ${m==='dupla-sena'?`<label class="campo" for="rec-sorteio">Sorteio analisado<select id="rec-sorteio"><option value="1" ${o.sorteio===1?'selected':''}>Primeiro sorteio</option><option value="2" ${o.sorteio===2?'selected':''}>Segundo sorteio</option></select></label>`:''}
+    <button class="acao" id="rec-analisar">Analisar combinação</button><div id="rec-mensagem" role="status"></div>
+    <div id="rec-resultado" aria-live="polite">${r?(mudou?'<p class="nota atencao">O histórico mudou. Analise novamente para atualizar as contagens.</p>':'')+recRenderResultado(r):''}</div></section>`;
+}
+function recLigarAcoes(){
+  document.querySelectorAll('[data-rec-dezenas]').forEach(b=>b.onclick=e=>{
+    e.stopPropagation();const m=b.dataset.recMod;if(!Object.hasOwn(MODALIDADES,m))return;
+    S.modalidade=m;Guardar.gravar('modalidade',m);Object.assign(recConfig(m),{texto:b.dataset.recDezenas,antesDe:b.dataset.recAntes?Number(b.dataset.recAntes):null,sorteio:Number(b.dataset.recSorteio)||1,grupo:null,pagina:0,faixa:MODALIDADES[m].k});
+    if(S.recResultados)delete S.recResultados[m];irParaTela('estatisticas');$('#rec-analisar').click();$('#rec-painel').focus({preventScroll:true});
+  });
+  const b=$('#rec-analisar');if(!b)return;const m=S.modalidade,o=recConfig(m);
+  const desenhar=()=>{$('#rec-resultado').innerHTML=recRenderResultado(S.recResultados[m]);ligarDetalhes();};
+  const ligarDetalhes=()=>{
+    for(const [id,chave] of [['rec-contagem','contagem'],['rec-faixa','faixa'],['rec-grupo','grupo'],['rec-pagina','pagina']]){
+      const el=$('#'+id);if(el)el.onchange=()=>{o[chave]=chave==='contagem'?el.value:Number(el.value);if(chave==='grupo')o.pagina=0;
+        const aberto=!!$('#rec-grupos details')?.open;desenhar();if(aberto&&$('#rec-grupos details'))$('#rec-grupos details').open=true;
+      };
+    }
+  };ligarDetalhes();
+  b.onclick=()=>{
+    o.texto=$('#rec-dezenas').value;o.antesDe=$('#rec-antes').value===''?null:Number($('#rec-antes').value);o.sorteio=Number($('#rec-sorteio')?.value||1);o.grupo=null;o.pagina=0;
+    try{const r=recAnalisar(m,o.texto,S.resultados,o);(S.recResultados||(S.recResultados={}))[m]=r;$('#rec-mensagem').textContent='';desenhar();}
+    catch(e){if(S.recResultados)delete S.recResultados[m];$('#rec-resultado').innerHTML='';$('#rec-mensagem').textContent=e.message;}
+  };
+}
 function intMedidas(dez,m){
   const c=MODALIDADES[m], largura=GRADE[m]||10;
   return [dez.reduce((a,b)=>a+b,0),dez.filter(d=>d%2===0).length,
@@ -4128,6 +4297,7 @@ function intRenderLote(r){
       <div class="dezenas">${ds.map(d=>`<span class="dz marcada ${r.fixas.includes(d)?"int-fixed":""}" ${r.fixas.includes(d)?'title="Dezena fixa"':""}>${pad(d)}</span>`).join("")}</div>
       ${r.trevos?trevosHtml(r.trevos[i]):""}
       <div class="int-ticket-meta"><span>Soma ${r.perfis[i].valores[0]}</span><span>${r.perfis[i].valores[1]} pares</span><span>${ds.length-r.perfis[i].valores[1]} ímpares</span></div>
+      ${recBotao(m,ds,r.concursoAlvo||null)}
       <details class="int-details"><summary>Como este jogo foi escolhido</summary>
         <p class="int-help">${r.modo==="equilibrado"?"Amostrado entre os 40% de perfis mais próximos à referência; a seleção do lote reduz a sobreposição.":r.modo==="cobertura"?"Selecionado pela menor sobreposição acumulada com os jogos já escolhidos.":"Amostrado sem preferência por perfil. As medidas abaixo apenas descrevem o jogo."} Referência: ${esc(r.modelo.origem)} (${r.modelo.n} amostras).</p>
         <div class="int-profile">${INT_MEDIDAS.map((n,j)=>`<div><span>${n}</span><strong>${r.perfis[i].valores[j]}</strong><small>média ${nf(r.modelo.media[j],1)}</small></div>`).join("")}</div>
@@ -4542,6 +4712,7 @@ function ficha(j){
         aria-expanded="${aberto}">${aberto?"fechar cartela":"ver na cartela"}</button>
     </div>
     ${!aberto ? "" : `<div style="margin-top:12px">
+      ${recBotao(j.modalidade,j.dezenas)}
       ${c.trevos?campoTrevos('j-trevos-'+j.id,(j.trevos||[]).join(' '),true)+'<button class="acao secundaria mini" data-salvar-trevos="'+esc(j.id)+'">Salvar trevos deste jogo</button><p id="j-trevos-erro-'+esc(j.id)+'" role="status"></p>':''}
       ${cartela(j.modalidade, j.dezenas, {
         sorteadas: ultima ? ultima.dezenas : null,
@@ -4968,7 +5139,7 @@ T.inicio = () => {
   const avisos=S.avisos.filter(a=>!a.lido).length;
   const meus=S.jogos.filter(j=>j.modalidade===m).length,idade=idadeDoHistorico(m);
   return `<div class="foco-inicio ux-inicio" style="--foco-cor:${FOCO_CORES[m]}">
-    <div class="foco-boasvindas"><div><span class="foco-label">BEM-VINDO AO SEU LABORATÓRIO</span><${podeVoltar()?'h2':'h1'}>Seu jogo,<br>bem planejado.</${podeVoltar()?'h2':'h1'}></div><span class="foco-versao">4.16</span></div>
+    <div class="foco-boasvindas"><div><span class="foco-label">BEM-VINDO AO SEU LABORATÓRIO</span><${podeVoltar()?'h2':'h1'}>Seu jogo,<br>bem planejado.</${podeVoltar()?'h2':'h1'}></div><span class="foco-versao">4.17</span></div>
     <section class="foco-hero"><div class="foco-hero-topo"><span class="foco-label">UM PLANO PARA CADA CONCURSO</span><span class="foco-tag">${esc(c.nome)}</span></div>
       <div class="foco-objetivo"><div><h2>Crie seus jogos.<br>Veja os acertos.</h2><p>Defina seus critérios e seu limite. O LotoLab organiza e confere.</p></div><div class="foco-alvo" aria-label="Meta de ${c.k} dezenas"><strong>${c.k}</strong><span>${c.trevos?"+ 2 trevos":"dezenas"}</span></div></div>
       <button class="acao foco-primary" data-atalho="sugestoes">Criar sugestões <span aria-hidden="true">→</span></button>
@@ -9018,7 +9189,7 @@ T.estatisticas = () => {
   const hist = historicoDe(S.modalidade);
   const tipo = S.tipoEstatistica || "dezenas";
 
-  if(hist.length < 5) return `<div class="vazio">
+  if(hist.length < 5) return recPainel(S.modalidade)+`<div class="vazio">
     Só ${hist.length} concurso${hist.length===1?"":"s"} de ${esc(c.nome)} no app.<br>
     Traga histórico em <strong>Conferir › Resultados</strong> — sem concursos não
     há estatística, e com poucos qualquer número engana.</div>`;
@@ -9154,7 +9325,7 @@ T.estatisticas = () => {
         problema do colecionador de figurinhas, e o acaso o cumpre sozinho.</div>`;
   }
 
-  return seletor + corpo +
+  return recPainel(S.modalidade) + seletor + corpo +
     `<div class="nota">Base: <strong>${hist.length} concursos</strong> de
       ${esc(c.nome)}, do ${hist[0].concurso} ao ${hist[hist.length-1].concurso}.
       Toda estatística acima descreve o que já saiu. Nenhuma delas muda a
@@ -10008,7 +10179,7 @@ T.resultados = () => {
           <span class="chevron" aria-hidden="true">
             <svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></span>
           ${S.concursoAberto === r.concurso
-            ? `<div class="concurso-jogos">${meusJogosNoConcurso(r)}</div>` : ""}
+            ? `<div class="concurso-jogos">${recBotao(S.modalidade,r.dezenas,Number(r.concurso))}${S.modalidade==='dupla-sena'&&r.dezenasSegundoSorteio?recBotao(S.modalidade,r.dezenasSegundoSorteio,Number(r.concurso),2):''}${meusJogosNoConcurso(r)}</div>` : ""}
         </article>`).join("")}</div>
       ${meus.length > 40 ? `<div class="pe">mostrando os 40 mais recentes</div>` : ""}`;
 
@@ -11254,6 +11425,7 @@ function pintar(){
   pintarContaAvisos();
   acoes();
   intLigarAcoes();
+  recLigarAcoes();
   metaLigarAcoes();
   for(const lista of document.querySelectorAll('.segmento')){
     const ativo=lista.querySelector('[aria-pressed="true"],[aria-selected="true"]');

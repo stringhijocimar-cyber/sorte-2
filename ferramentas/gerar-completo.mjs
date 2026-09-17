@@ -25,10 +25,12 @@ for (const f of readdirSync(join(RAIZ, "dados")).filter(x => x.endsWith(".json")
      arquivo passa de 2,4 MB e o navegador engasga ao interpretar o JSON de uma
      linha só — medido, trava; com este teto, carrega limpo.
 
-     E o corte não custa análise: o aprendizado precisa de 60 concursos, o
-     perfil do jogo de 20, e a estatística fica mais fiel ao presente com o
-     recorte recente do que com sorteios dos anos 1990. Quem quiser tudo puxa
-     em Conferir › Resultados, que traz o histórico completo do repositório. */
+     A recorrência da 4.17 descreve somente os registros disponíveis: esse
+     corte reduz o alcance das contagens e não pode ser chamado de histórico
+     completo. A interface mostra o tamanho, o intervalo e as lacunas da base.
+     Quem quiser ampliar consulta Resultados → Importar histórico. A análise
+     ampliada só usa trechos consecutivos suficientes para separar seleção e
+     teste. Não se presume que um recorte recente melhore a previsão. */
   dados[d.modalidade] = d.concursos.slice(-TETO_EMBUTIDO);
 }
 

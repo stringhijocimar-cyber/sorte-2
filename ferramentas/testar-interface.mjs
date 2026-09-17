@@ -1918,19 +1918,19 @@ await cmd('Emulation.setDeviceMetricsOverride',{width:412,height:915,deviceScale
 await js(`document.documentElement.dataset.tema='escuro';S.resultados=${JSON.stringify(reais414)};S.jogos=[];return true;`);
 for(const mod of ['mega-sena','lotofacil','quina','lotomania','dupla-sena','dia-de-sorte','timemania','mais-milionaria']){
   await js(`trocarModalidade(${JSON.stringify(mod)});irParaTela('inicio',{lateral:true});return true;`);await dormir(300);
-  await capturar('LotoLab-4.16-Inicio-'+mod);
+  await capturar('LotoLab-4.17-Inicio-'+mod);
 }
 await js(`trocarModalidade('mega-sena');const r=ultimoResultado('mega-sena');S.jogos=[{id:'exemplo-visual',modalidade:'mega-sena',dezenas:[3,12,25,33,47,58],data:r.data,lote:'exemplo-visual',metodo:'demonstração',concursoAlvo:r.concurso,conferencias:[]}];conferenciaAutomatica();return true;`);
 for(const rota of ['sugestoes','jogos','resultados','pesquisa']){
   await js(`irParaTela(${JSON.stringify(rota)},{lateral:true});return true;`);await dormir(300);
-  await capturar('LotoLab-4.16-'+rota+'-mega-sena');
+  await capturar('LotoLab-4.17-'+rota+'-mega-sena');
 }
 await js(`trocarModalidade('lotofacil');irParaTela('pesquisa',{lateral:true});return true;`);await dormir(300);
-await capturar('LotoLab-4.16-Analise-lotofacil');
+await capturar('LotoLab-4.17-Analise-lotofacil');
 await js(`document.documentElement.dataset.tema='claro';irParaTela('inicio',{lateral:true});return true;`);await dormir(300);
-await capturar('LotoLab-4.16-Tema-Claro-lotofacil');
+await capturar('LotoLab-4.17-Tema-Claro-lotofacil');
 await js(`document.documentElement.dataset.tema='escuro';trocarModalidade('mega-sena');irParaTela('inicio',{lateral:true});return true;`);
-await tocar('#btn-avisos');await tocar('#meta-testar-aviso');await capturar('LotoLab-4.16-Notificacoes');
+await tocar('#btn-avisos');await tocar('#meta-testar-aviso');await capturar('LotoLab-4.17-Notificacoes');
 
 secao('S. Análise ampliada e memória 4.16');
 await tocar('#folha-avisos [data-fechar]:not(.fundo)');
@@ -1959,10 +1959,10 @@ for(const tema of ['escuro','claro'])for(const width of [320,412]){
 await cmd('Emulation.setDeviceMetricsOverride',{width:412,height:915,deviceScaleFactor:2,mobile:true});
 await js(`document.documentElement.dataset.tema='escuro';const e=document.querySelector('#ux-analitica');window.scrollTo({top:scrollY+e.getBoundingClientRect().top-document.querySelector('header').getBoundingClientRect().height-12,behavior:'instant'});return true;`);
 await dormir(250);
-await capturar('LotoLab-4.16-Analise-ampliada');
+await capturar('LotoLab-4.17-Analise-ampliada');
 await js(`const e=document.querySelector('#aud-resultado');e.querySelector('details').open=true;window.scrollTo({top:scrollY+e.getBoundingClientRect().top-document.querySelector('header').getBoundingClientRect().height-12,behavior:'instant'});return true;`);
 await dormir(250);
-await capturar('LotoLab-4.16-Diagnostico');
+await capturar('LotoLab-4.17-Diagnostico');
 await tocar('#aud-exportar-memoria');
 checar('memória pode ser exportada no Android',await js(`const m=JSON.parse(document.querySelector('#aud-json-memoria').value);return m.entradas.length===1&&m.entradas[0].n===30`));
 await js(`for(const k of ['autoAnalise','pesquisaAutomatica','buscaAutomatica'])Guardar.gravar(k,false);Guardar.gravar('modalidade','mega-sena');Guardar.gravar('resultados',S.resultados);return true;`);
@@ -1971,6 +1971,55 @@ await js(`irParaTela('sugestoes',{lateral:true});return true;`);
 checar('a memória das avaliações sobrevive a fechar e reabrir o app',await js(`return S.audMemoria.entradas.length===1&&document.querySelector('#aud-memoria').textContent.includes('1 avaliação diferente')`));
 await js(`trocarModalidade('lotofacil');return true;`);
 checar('outra modalidade não herda resultados de avaliação da Mega-Sena',await js(`return document.querySelector('#aud-memoria').textContent.includes('0 avaliações diferentes')`));
+
+secao('T. Recorrência de combinações 4.17');
+const alvo417=[2,4,35,46,54,60];
+const linhas417=[alvo417,[2,4,35,46,54,59],[2,4,35,46,57,58],[2,4,35,55,56,57],[2,4,50,51,52,53],[1,3,5,7,9,11],alvo417];
+const hist417=linhas417.map((dezenas,i)=>({modalidade:'mega-sena',concurso:i+1,data:'2026-01-01',dezenas}));
+await js(`S.resultados=${JSON.stringify(hist417)};S.recConfig={};S.recResultados={};S.jogos=[];S.modalidade='mega-sena';irParaTela('estatisticas',{lateral:true});document.querySelector('#rec-dezenas').value='02 04 35 46 54 60';return true;`);
+await tocar('#rec-analisar');
+checar('recorrência calcula as contagens ao tocar no botão',await js(`const r=S.recResultados['mega-sena'];return r.faixas[6].exatos.vezes===2&&r.faixas[5].exatos.vezes===1&&document.querySelector('#rec-resultado table tbody tr').children[1].textContent==='2'`));
+await js(`document.querySelector('#rec-contagem').value='minimos';document.querySelector('#rec-contagem').dispatchEvent(new Event('change'));return true;`);
+checar('pelo menos cinco acertos inclui os dois concursos com seis',await js(`return document.querySelector('#rec-resultado table tbody tr:nth-child(2)').children[1].textContent==='3'`));
+checar('quintetos específicos distinguem cinco repetidos duas vezes e um três vezes',await js(`return [...document.querySelectorAll('.rec-resumo-grupos b')].map(e=>e.textContent).join()==='0,0,5,1'`));
+await js(`document.querySelector('#rec-dezenas').value='02 02 35 46 54 60';return true;`);await tocar('#rec-analisar');
+checar('entrada inválida explica o erro e remove a análise anterior',await js(`return document.querySelector('#rec-mensagem').textContent.includes('repetidas')&&!document.querySelector('#rec-resultado').textContent&&!S.recResultados['mega-sena']`));
+await js(`document.querySelector('#rec-dezenas').value='02 04 35 46 54 60';document.querySelector('#rec-antes').value='7';return true;`);await tocar('#rec-analisar');
+checar('recorte anterior exclui o próprio concurso',await js(`return S.recResultados['mega-sena'].base.hist.length===6&&S.recResultados['mega-sena'].faixas[6].exatos.vezes===1`));
+await js(`S.resultados=S.resultados.filter(r=>r.concurso!==3);pintar();return true;`);
+checar('alterar a base sinaliza que a análise precisa ser atualizada',await js(`return document.querySelector('#rec-resultado').textContent.includes('O histórico mudou')`));
+await tocar('#rec-analisar');
+checar('lacuna recebe aviso e não vira intervalo conhecido',await js(`return document.querySelector('#rec-resultado').textContent.includes('Recorte incompleto')&&S.recResultados['mega-sena'].faixas[6].exatos.desdeUltima===null`));
+await js(`S.resultados=${JSON.stringify(hist417)};S.concursoAberto=null;irParaTela('resultados',{lateral:true});return true;`);
+await tocar('[data-abrir-concurso="7"]');await tocar('[data-rec-dezenas]');
+checar('atalho do resultado abre a análise anterior ao sorteio sem contar ele mesmo',await js(`return S.tela==='estatisticas'&&S.recResultados['mega-sena'].base.antesDe===7&&S.recResultados['mega-sena'].faixas[6].exatos.vezes===1`));
+await js(`S.intLotes={};S.intConfig={};irParaTela('sugestoes',{lateral:true});document.querySelector('#int-quantidade').value='1';document.querySelector('#int-semente').value='recorrencia-ui';return true;`);
+await tocar('#int-gerar');await dormir(500);await tocar('#int-lote [data-rec-dezenas]');
+checar('sugestão tem histórico próprio e consultar não salva nem aposta o jogo',await js(`return S.tela==='estatisticas'&&S.recResultados['mega-sena'].dezenas.join()===S.intLotes['mega-sena'].jogos[0].join()&&S.jogos.length===0`));
+await js(`S.jogos=[{id:'rec417',modalidade:'mega-sena',dezenas:[2,4,35,46,54,60],data:'2026-01-01',metodo:'manual',lote:'rec417',conferencias:[]}];S.jogoAberto=null;irParaTela('jogos',{lateral:true});return true;`);
+await tocar('[data-abrir-jogo="rec417"]');await tocar('[data-rec-dezenas]');
+checar('jogo salvo também abre sua combinação sem modificá-lo',await js(`return S.tela==='estatisticas'&&S.recResultados['mega-sena'].dezenas.join()==='2,4,35,46,54,60'&&S.jogos.length===1&&S.jogos[0].conferencias.length===0`));
+await js(`S.resultados=[1,2].map(concurso=>({modalidade:'dupla-sena',concurso,data:'2026-01-01',dezenas:[1,2,3,4,5,6],dezenasSegundoSorteio:[10,11,12,13,14,15]}));S.modalidade='dupla-sena';S.concursoAberto=null;irParaTela('resultados',{lateral:true});return true;`);
+await tocar('[data-abrir-concurso="2"]');await tocar('[data-rec-sorteio="2"]');
+checar('atalho do segundo sorteio da Dupla Sena conserva sorteio e corte corretos',await js(`const r=S.recResultados['dupla-sena'];return r.base.sorteio===2&&r.base.hist.length===1&&r.faixas[6].exatos.vezes===1&&document.querySelector('#rec-sorteio').value==='2'`));
+await js(`trocarModalidade('lotofacil');return true;`);
+checar('mudar de modalidade não reutiliza as dezenas nem os resultados de outra',await js(`return document.querySelector('#rec-dezenas').value===''&&document.querySelector('#rec-resultado').textContent===''`));
+for(const m of ['mega-sena','lotofacil','quina','lotomania','dupla-sena','dia-de-sorte','timemania','mais-milionaria']){
+  await js(`S.modalidade=${JSON.stringify(m)};const c=MODALIDADES[S.modalidade];S.resultados=[1,2,3,4,5].map(concurso=>({modalidade:S.modalidade,concurso,data:'2026-01-01',dezenas:Array.from({length:c.k},(_,i)=>i+c.base)}));S.recConfig={};S.recResultados={};irParaTela('estatisticas',{lateral:true});document.querySelector('#rec-dezenas').value=Array.from({length:c.min},(_,i)=>i+c.base).join(' ');document.querySelector('#rec-analisar').click();return true;`);
+  checar('análise funciona na modalidade '+m,await js(`return S.recResultados[S.modalidade].faixas.find(f=>f.acertos===MODALIDADES[S.modalidade].k).exatos.vezes===5&&!document.querySelector('#rec-mensagem').textContent`));
+  for(const tema of ['escuro','claro'])for(const width of [320,412,1024]){
+    await cmd('Emulation.setDeviceMetricsOverride',{width,height:915,deviceScaleFactor:2,mobile:width<650});
+    await js(`document.documentElement.dataset.tema=${JSON.stringify(tema)};return true;`);
+    checar('recorrência '+m+' cabe em '+width+'px no '+tema,await js(`return document.documentElement.scrollWidth<=innerWidth+1&&[...document.querySelectorAll('.rec-painel input,.rec-painel select,.rec-painel button')].every(e=>e.getBoundingClientRect().height>=44)`));
+  }
+}
+const baseReal417=JSON.parse(readFileSync(join(RAIZ,'dados/mega-sena.json'),'utf8')).concursos.map(r=>({...r,modalidade:'mega-sena'}));
+await cmd('Emulation.setDeviceMetricsOverride',{width:412,height:915,deviceScaleFactor:2,mobile:true});
+await js(`S.modalidade='mega-sena';S.resultados=${JSON.stringify(baseReal417)};S.recConfig={};S.recResultados={};document.documentElement.dataset.tema='escuro';irParaTela('estatisticas',{lateral:true});document.querySelector('#rec-dezenas').value='02 04 35 46 54 60';document.querySelector('#rec-analisar').click();return true;`);
+checar('base real informa 218 lacunas e contagens calculadas por interseção independente',await js(`const r=S.recResultados['mega-sena'],alvo=new Set([2,4,35,46,54,60]);return r.base.hist.length===2835&&r.base.lacunas===218&&r.faixas.every(f=>f.exatos.vezes===S.resultados.filter(x=>x.dezenas.filter(d=>alvo.has(d)).length===f.acertos).length)`));
+await js(`window.scrollTo({top:scrollY+document.querySelector('#rec-painel').getBoundingClientRect().top-document.querySelector('header').getBoundingClientRect().height-12,behavior:'instant'});return true;`);await dormir(250);await capturar('LotoLab-4.17-Recorrencia');
+await js(`window.scrollTo({top:scrollY+document.querySelector('#rec-resultado').getBoundingClientRect().top-document.querySelector('header').getBoundingClientRect().height-12,behavior:'instant'});return true;`);await dormir(250);await capturar('LotoLab-4.17-Acertos');
+await js(`document.querySelector('#rec-grupo').value='4';document.querySelector('#rec-grupo').dispatchEvent(new Event('change'));document.querySelector('#rec-grupos details').open=true;window.scrollTo({top:scrollY+document.querySelector('#rec-grupos').getBoundingClientRect().top-document.querySelector('header').getBoundingClientRect().height-12,behavior:'instant'});return true;`);await dormir(250);await capturar('LotoLab-4.17-Quartetos');
 
 /* ---------- fim ---------- */
 console.log(linhas.join("\n"));
