@@ -1,0 +1,25 @@
+/* A recorrência usa os acentos da modalidade e superfícies do tema atual. */
+.rec-painel { scroll-margin-top: 96px; }
+.rec-painel .campo { min-width: 0; }
+.rec-painel select, .rec-painel input { max-width: 100%; min-height: 46px; }
+.rec-painel .int-grid { grid-template-columns: 1fr; }
+.rec-painel h3 { margin-top: 24px; }
+.rec-dezenas { margin-top: 20px; }
+.rec-dezenas .dz { width: 34px; height: 34px; font-size: .85rem; }
+.rec-tabela { margin: 18px 0; max-width: 100%; }
+.rec-tabela table { width: 100%; min-width: 0; font-size: .76rem; border-collapse: collapse; }
+.rec-tabela caption { text-align: left; font-weight: 700; padding-bottom: 12px; color: var(--tinta); }
+.rec-tabela th, .rec-tabela td { padding: 10px 5px; text-align: left; white-space: normal; overflow-wrap: anywhere; border-bottom: 1px solid var(--linha); }
+.rec-tabela th small { display: block; font-weight: 400; color: var(--secundaria); }
+.rec-tabela tbody th { color: var(--mod-acento); }
+.rec-painel .rec-metricas { grid-template-columns: 1fr 1fr; }
+.rec-metricas .nota { margin: 0; min-width: 0; }
+.rec-metricas b { display: block; color: var(--mod-acento); font-size: 1.5rem; }
+.rec-metricas span { display: block; font-size: .78rem; }
+.rec-resumo-grupos { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; margin: 16px 0; }
+.rec-resumo-grupos > div { border: 1px solid var(--linha); border-radius: 14px; padding: 12px; }
+.rec-resumo-grupos b { display: block; color: var(--mod-acento); font-size: 1.4rem; }
+.rec-resumo-grupos span { display: block; color: var(--secundaria); font-size: .8rem; }
+.rec-abrir { margin-top: 12px; min-height: 44px; white-space: normal; }
+#rec-mensagem { margin-top: 12px; color: var(--alerta); }
+@media(min-width:680px) { .rec-painel .int-grid { grid-template-columns: 1fr 1fr; } .rec-resumo-grupos { grid-template-columns: repeat(4,minmax(0,1fr)); } }

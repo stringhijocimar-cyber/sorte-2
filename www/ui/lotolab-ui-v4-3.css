@@ -138,6 +138,12 @@ body:has([data-mod][aria-pressed="true"]) .dz.sorteada{
 /* Listas de resultados mais densas e legíveis */
 .draws,.lista{gap:9px!important}
 .draw-card,.concurso{padding:13px!important}
+/* O cartão de concurso expande para mostrar como os jogos salvos foram nele.
+   Aberto, ele precisa de uma faixa livre embaixo: o chevron vira o gesto de
+   recolher e vai para o rodapé, e sem esta folga ele cai sobre a última ficha.
+   Vai com !important porque a regra vizinha usa !important — sem isso a
+   declaração de baixo perde para a de cima, que é mais fraca. */
+.concurso.aberto{padding-bottom:34px!important}
 .concurso-topo b,.draw-top b{font-size:.76rem!important;font-weight:760!important}
 .concurso-topo time,.draw-top time{color:#8D96A6!important}
 .bolas,.balls{gap:7px!important;margin-top:10px!important}

@@ -1,0 +1,61 @@
+/* LotoLab 4.11 — painel por concurso e controles sempre acessíveis. */
+.foco-inicio{display:grid;gap:16px;padding:4px 0}
+.foco-boasvindas{display:flex;align-items:flex-start;justify-content:space-between;padding:7px 2px 1px}
+.foco-label{display:block;font-size:.59rem;font-weight:750;letter-spacing:.12em;color:var(--secundaria);line-height:1.5}
+.foco-boasvindas :is(h1,h2){font-size:1.8rem;line-height:1.1;letter-spacing:-.045em;margin:8px 0 0;color:var(--tinta)}
+.foco-versao{font-size:.66rem;font-weight:750;color:#cbb4ff;border:1px solid #674497;background:#2c2044;padding:6px 10px;border-radius:9px}
+.foco-modalidades{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}
+.foco-modalidades button{min-width:0;min-height:44px;padding:6px 2px;border-radius:10px;border:1px solid color-mix(in srgb,var(--foco-cor) 60%,#293344);background:color-mix(in srgb,var(--foco-cor) 13%,#0e1521);color:#e2e7f1;font-size:.59rem;font-weight:650;line-height:1.25}
+.foco-modalidades button::before{display:none!important}
+.foco-modalidades button[aria-pressed="true"]{background:var(--foco-cor);color:white;border-color:#ffffff80;box-shadow:0 0 0 2px color-mix(in srgb,var(--foco-cor) 25%,transparent)}
+.foco-hero{padding:20px;border:1px solid #7751b2;border-radius:18px;background:radial-gradient(ellipse at 100% 0,#633ba455,transparent 70%),linear-gradient(135deg,#271d42,#141a2b);overflow:hidden}
+.foco-hero-topo{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.foco-hero .foco-label{color:#cfb4fc;font-size:.52rem}
+.foco-tag{font-size:.6rem;color:#f0e8ff;border:1px solid #ffffff30;background:#ffffff0b;border-radius:8px;padding:5px 8px;white-space:nowrap}
+.foco-objetivo{display:grid;grid-template-columns:minmax(0,1fr) 78px;gap:13px;align-items:center;margin:20px 0}
+.foco-objetivo h2{font-size:1.37rem;line-height:1.17;letter-spacing:-.035em;color:white;margin:0 0 10px}
+.foco-objetivo p{font-size:.72rem;line-height:1.65;color:#c7bfd7;margin:0}
+.foco-alvo{width:78px;height:78px;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:50%;border:3px solid #b58af2;outline:6px solid #9d71d711;background:#b587fb13;box-shadow:0 0 30px #8750d91a}
+.foco-alvo strong{font-size:1.85rem;line-height:1.1;color:white;letter-spacing:-.06em}
+.foco-alvo span{font-size:.47rem;color:#d7c4f4;margin-top:3px}
+.foco-hero .foco-primary{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;min-height:49px!important;font-size:.77rem!important;font-weight:750;letter-spacing:0!important}
+.foco-secundaria{width:100%;min-height:44px;display:flex;align-items:center;justify-content:space-between;gap:8px;background:transparent;border:0;color:#ded0f7;font-size:.69rem;font-weight:650;margin-top:7px;text-align:left}
+.foco-acompanhamento,.foco-ultimo{padding:18px;border-radius:18px;border:1px solid var(--linha);background:var(--carta)}
+.foco-acompanhamento h3,.foco-ultimo h3{font-size:.98rem;letter-spacing:-.02em;line-height:1.3;margin:5px 0 0;color:var(--tinta)}
+.foco-acompanhamento p{font-size:.75rem;line-height:1.6;color:var(--secundaria);margin:10px 0 0}
+.foco-acompanhamento small{display:block;font-size:.64rem;color:var(--secundaria);line-height:1.6;margin-top:10px}
+.foco-progresso{margin-top:12px;height:7px;border-radius:9px;overflow:hidden;background:var(--linha)}
+.foco-progresso i{display:block;height:100%;border-radius:inherit;background:#299862}
+.foco-section-title{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.foco-texto-btn{background:transparent;border:0;color:#bd9be9;min-height:44px;font-size:.68rem;font-weight:700;padding:0 0 0 7px;white-space:nowrap}
+.foco-data{font-size:.68rem;color:var(--secundaria);line-height:1.6;margin:10px 0 12px}
+.foco-bolas{display:flex;flex-wrap:wrap;gap:7px}
+.foco-bolas span{display:grid;place-items:center;width:31px;height:31px;border-radius:50%;background:var(--foco-cor);border:1px solid #ffffff33;color:white;font-size:.77rem;font-weight:750;font-variant-numeric:tabular-nums}
+.foco-acessos{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.foco-acessos button{display:flex;flex-direction:column;align-items:flex-start;gap:7px;min-height:105px;min-width:0;padding:13px 10px;text-align:left;color:var(--tinta);background:var(--carta);border:1px solid var(--linha);border-radius:14px}
+.foco-acessos svg{width:24px;height:24px;fill:none;stroke:#b590ed;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.foco-acessos b{font-size:.71rem;line-height:1.4}
+.foco-acessos span{font-size:.58rem;line-height:1.5;color:var(--secundaria)}
+.foco-rodape{display:flex;justify-content:space-between;align-items:center;gap:16px;font-size:.61rem;line-height:1.5;color:var(--secundaria);padding:0 2px}
+.foco-rodape b{color:var(--tinta)}
+.foco-chance{display:grid;gap:7px;padding:15px;border:1px solid #8160b9;border-radius:12px;background:#9264cf12;margin:16px 0}
+.foco-chance>b{font-size:.81rem}.foco-chance>strong{font-size:1.4rem;letter-spacing:-.03em;color:var(--tinta)}.foco-chance small{font-size:.72rem;line-height:1.6;color:var(--secundaria)}
+.meta-form{margin-top:16px}
+#btn-menu,#btn-avisos{touch-action:manipulation;position:relative;pointer-events:auto}
+#gaveta .corpo{left:0!important;right:auto!important;transform:none!important;margin:0!important;width:min(88vw,340px)!important;padding:calc(var(--topo) + 16px) 18px calc(20px + var(--base))!important}
+#corpo-avisos>.entre{align-items:flex-start;gap:12px}
+html[data-tema="claro"] .foco-versao{background:#eee5ff;color:#613599;border-color:#cab6e8}
+html[data-tema="claro"] .foco-modalidades button{background:color-mix(in srgb,var(--foco-cor) 7%,white);color:#233349;border-color:color-mix(in srgb,var(--foco-cor) 50%,#d6dfeb)}
+html[data-tema="claro"] .foco-modalidades button[aria-pressed="true"]{background:var(--foco-cor);color:white}
+html[data-tema="claro"] .foco-texto-btn{color:#6c3da3}
+@media(min-width:650px){.foco-boasvindas :is(h1,h2){font-size:2.2rem}.foco-hero{padding:26px}.foco-objetivo{grid-template-columns:minmax(0,1fr) 110px;gap:30px}.foco-alvo{width:100px;height:100px}.foco-alvo strong{font-size:2.4rem}.foco-objetivo h2{font-size:1.8rem}.foco-acessos button{padding:18px}.foco-modalidades button{font-size:.7rem}}
+@media(max-width:370px){.foco-hero{padding:16px}.foco-objetivo{grid-template-columns:minmax(0,1fr) 64px;gap:9px}.foco-alvo{width:64px;height:64px}.foco-objetivo h2{font-size:1.25rem}.foco-modalidades{gap:5px}.foco-modalidades button{font-size:.56rem}.foco-acessos button{padding:11px 8px}}
+
+/* Campos independentes do volante, 4.12. */
+.extras-volante{margin:12px 0 4px;padding:12px;border:1px solid #8f63d93d;border-radius:12px;background:#8b5bd90a;min-width:0}
+.extras-volante>b{display:block;margin-bottom:9px;font-size:.72rem;color:var(--tinta)}
+.extras-volante .campo{margin:0}.extras-volante .int-help{font-size:.68rem;line-height:1.6}
+.extras-volante .dezenas{margin:4px 0;gap:7px}.extras-volante .extras-volante{border:0;padding:0}
+.extras-volante .trevo{background:#643cb2;color:#fff;border-color:#a279e9;box-shadow:inset 0 0 0 2px #ffffff10}
+.foco-acompanhamento>.extras-volante{grid-column:1/-1;width:100%;box-sizing:border-box}
+.resultado-resumo{flex-wrap:wrap;gap:6px}.resultado-resumo b{line-height:1.6}
