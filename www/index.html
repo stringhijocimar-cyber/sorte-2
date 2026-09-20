@@ -957,9 +957,10 @@ td{padding:6px 7px;border-bottom:1px solid var(--trama)}
 <link rel="stylesheet" href="ui/inteligencia-v4-9.css?v=4.9.0">
 <link rel="stylesheet" href="ui/visual-metas-v4-10.css?v=4.10.0">
 <link rel="stylesheet" href="ui/visual-foco-v4-11.css?v=4.13.0">
-<link rel="stylesheet" href="ui/experiencia-v4-14.css?v=4.17.0">
-<link rel="stylesheet" href="ui/modalidades-v4-15.css?v=4.17.0">
-<link rel="stylesheet" href="ui/recorrencia-v4-17.css?v=4.17.0">
+<link rel="stylesheet" href="ui/experiencia-v4-14.css?v=4.18.0">
+<link rel="stylesheet" href="ui/modalidades-v4-15.css?v=4.18.0">
+<link rel="stylesheet" href="ui/recorrencia-v4-17.css?v=4.18.0">
+<link rel="stylesheet" href="ui/lab-v4-18.css?v=4.18.0">
 </head>
 <body>
 <header>
@@ -1038,6 +1039,9 @@ td{padding:6px 7px;border-bottom:1px solid var(--trama)}
   <div class="corpo"><div class="alca"></div><div id="corpo-avisos"></div></div>
 </div>
 
+<script src="ui/lab-core.js?v=4.18.0"></script>
+<script src="ui/lab-strategies.js?v=4.18.0"></script>
+<script src="ui/lab-ui.js?v=4.18.0"></script>
 <script>
 "use strict";
 
@@ -2043,7 +2047,7 @@ function recPainel(m){
   const mudou=r&&r.base.assinatura!==recBase(m,S.resultados,o).assinatura;
   return `<section class="carta rec-painel" id="rec-painel" tabindex="-1"><span class="int-eyebrow">RECORRÊNCIA DE COMBINAÇÕES · 4.17</span><h2>Essa combinação já apareceu?</h2>
     <p class="int-help">Veja repetições completas, acertos parciais e intervalos no histórico.</p>
-    <label class="campo" for="rec-dezenas">Dezenas para analisar<input id="rec-dezenas" inputmode="text" value="${esc(o.texto)}" placeholder="${m==='mega-sena'?'02 04 35 46 54 60':'Digite as dezenas separadas por espaço'}"></label>
+    <label class="campo" for="rec-dezenas">Dezenas para analisar<input id="rec-dezenas" type="text" inputmode="text" value="${esc(o.texto)}" placeholder="${m==='mega-sena'?'02 04 35 46 54 60':'Digite as dezenas separadas por espaço'}"></label>
     <label class="campo" for="rec-antes">Somente antes do concurso (opcional)<input id="rec-antes" type="number" min="1" step="1" value="${o.antesDe??''}" placeholder="Em branco: todo o histórico disponível"></label>
     ${m==='dupla-sena'?`<label class="campo" for="rec-sorteio">Sorteio analisado<select id="rec-sorteio"><option value="1" ${o.sorteio===1?'selected':''}>Primeiro sorteio</option><option value="2" ${o.sorteio===2?'selected':''}>Segundo sorteio</option></select></label>`:''}
     <button class="acao" id="rec-analisar">Analisar combinação</button><div id="rec-mensagem" role="status"></div>
@@ -3753,7 +3757,7 @@ T.inicio = () => {
   const avisos=S.avisos.filter(a=>!a.lido).length;
   const meus=S.jogos.filter(j=>j.modalidade===m).length,idade=idadeDoHistorico(m);
   return `<div class="foco-inicio ux-inicio" style="--foco-cor:${FOCO_CORES[m]}">
-    <div class="foco-boasvindas"><div><span class="foco-label">BEM-VINDO AO SEU LABORATÓRIO</span><${podeVoltar()?'h2':'h1'}>Seu jogo,<br>bem planejado.</${podeVoltar()?'h2':'h1'}></div><span class="foco-versao">4.17</span></div>
+    <div class="foco-boasvindas"><div><span class="foco-label">BEM-VINDO AO SEU LABORATÓRIO</span><${podeVoltar()?'h2':'h1'}>Seu jogo,<br>bem planejado.</${podeVoltar()?'h2':'h1'}></div><span class="foco-versao">4.18</span></div>
     <section class="foco-hero"><div class="foco-hero-topo"><span class="foco-label">UM PLANO PARA CADA CONCURSO</span><span class="foco-tag">${esc(c.nome)}</span></div>
       <div class="foco-objetivo"><div><h2>Crie seus jogos.<br>Veja os acertos.</h2><p>Defina seus critérios e seu limite. O LotoLab organiza e confere.</p></div><div class="foco-alvo" aria-label="Meta de ${c.k} dezenas"><strong>${c.k}</strong><span>${c.trevos?"+ 2 trevos":"dezenas"}</span></div></div>
       <button class="acao foco-primary" data-atalho="sugestoes">Criar sugestões <span aria-hidden="true">→</span></button>
@@ -6653,8 +6657,27 @@ function guardarResultados(novos){
   S.resultados.sort((a,b)=> a.modalidade === b.modalidade
     ? a.concurso - b.concurso : a.modalidade.localeCompare(b.modalidade));
   Guardar.gravar("resultados", S.resultados);
+  if(typeof LL18UI!=="undefined")LL18UI.historyChanged();
   return inseridos;
 }
+
+
+/* Integração preserva os jogos e as telas existentes. */
+const LL18_BRIDGE={
+  read:(k,p)=>Guardar.ler(k,p),write:(k,v)=>Guardar.gravar(k,v),
+  native:()=>typeof Capacitor!=='undefined'&&Capacitor.isNativePlatform?.(),
+  fetchJson:async url=>{const r=await buscarComLimite(url,12000);if(!r.ok)throw Error('Fonte respondeu HTTP '+r.status);return r.json();},
+  records:()=>S.resultados,
+  changeMode:m=>{if(MODALIDADES[m])trocarModalidade(m);},
+  games:m=>S.jogos.filter(j=>j.modalidade===m).flatMap(j=>{try{return [LL18.validateTicket(m,j)];}catch(e){return [];}}),
+  merge:novos=>{const n=guardarResultados(novos);aoMudarHistorico(n,'laboratório analítico');return n;},
+  loadHistory:async m=>{const lote=await baixarHistoricoDoRepositorio(m);const validos=LL18.history(m,lote);if(validos.meta.invalidos||validos.meta.conflitos)throw Error('Histórico contém registros inválidos ou conflitantes.');const n=guardarResultados(validos.rows);aoMudarHistorico(n,'histórico do laboratório');return n;},
+  saveGames:b=>{
+    if(!MODALIDADES[b.modalidade]||b.jogos.some(t=>(t.trevos?.length||2)>2))return false;
+    const id='L418'+Date.now().toString(36),novos=b.jogos.map((t,i)=>({...t,id:id+'-'+i,modalidade:b.modalidade,metodo:'int-lab418',data:hoje(),lote:id,conferencias:[],concursoAlvo:b.concursoAlvo,inteligencia:{versao:'4.18',semente:b.semente,modelo:b.modelo}}));
+    const todos=S.jogos.concat(novos);if(!Guardar.gravar('jogos',todos))return false;S.jogos=todos;return true;
+  }
+};
 
 /* ==================== aprendizado por modalidade ====================
    Um modelo POR MODALIDADE, treinado e avaliado separadamente. Juntar
@@ -7802,8 +7825,9 @@ T.estatisticas = () => {
   const c = MODALIDADES[S.modalidade];
   const hist = historicoDe(S.modalidade);
   const tipo = S.tipoEstatistica || "dezenas";
+  const laboratorio=typeof LL18UI!=="undefined"?LL18UI.panel(S.modalidade):"";
 
-  if(hist.length < 5) return recPainel(S.modalidade)+`<div class="vazio">
+  if(hist.length < 5) return laboratorio+recPainel(S.modalidade)+`<div class="vazio">
     Só ${hist.length} concurso${hist.length===1?"":"s"} de ${esc(c.nome)} no app.<br>
     Traga histórico em <strong>Conferir › Resultados</strong> — sem concursos não
     há estatística, e com poucos qualquer número engana.</div>`;
@@ -7939,7 +7963,7 @@ T.estatisticas = () => {
         problema do colecionador de figurinhas, e o acaso o cumpre sozinho.</div>`;
   }
 
-  return recPainel(S.modalidade) + seletor + corpo +
+  return laboratorio+recPainel(S.modalidade) + seletor + corpo +
     `<div class="nota">Base: <strong>${hist.length} concursos</strong> de
       ${esc(c.nome)}, do ${hist[0].concurso} ao ${hist[hist.length-1].concurso}.
       Toda estatística acima descreve o que já saiu. Nenhuma delas muda a
@@ -10040,6 +10064,7 @@ function pintar(){
   acoes();
   intLigarAcoes();
   recLigarAcoes();
+  if(typeof LL18UI!=="undefined")LL18UI.mount(LL18_BRIDGE);
   metaLigarAcoes();
   for(const lista of document.querySelectorAll('.segmento')){
     const ativo=lista.querySelector('[aria-pressed="true"],[aria-selected="true"]');

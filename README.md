@@ -1,3 +1,20 @@
+# LotoLab 4.18 — laboratório de combinações e estratégias
+
+Abra **Análise → Analisar combinação**. Informe qualquer jogo válido: o laboratório calcula acertos exatos e acumulados, percentuais, concursos correspondentes, repetições, frequência, atraso e todos os pares, trios, quartetos e quintetos por páginas. A aderência compara o perfil com 2.000 jogos uniformes e resultados históricos comparáveis; não representa chance futura.
+
+- Dez formatos, incluindo Mega da Virada identificada e Super Sete por coluna, com trevos, mês, time e segundo sorteio tratados separadamente.
+- Dez hipóteses de geração, orçamento, explicação de cada jogo e diversificação da carteira.
+- Comitê com desenvolvimento, validação e teste cronológicos; referências aleatórias equivalentes, intervalo de confiança, Holm, efeito, estabilidade e remoção de critérios.
+- Acompanhamento de lotes futuros após atualizações e ao reabrir o app; recomenda manter, ajustar ou substituir sem reagir a um único concurso. A adoção de outra hipótese continua explícita.
+- Monte Carlo reproduzível, detecção de mudança de perfil, importação validada e relatórios JSON. Ausências não viram resultados inventados.
+- Estilo escuro anterior, cores por modalidade e resultados com bolinhas amarelas e números grafite, preservando a navegação existente.
+
+**Limites dos dados:** o acervo incluído tem lacunas e muitos registros sem data/complementos. Super Sete e Mega da Virada precisam de importação identificada; ROI exige preços históricos e rateios completos. O acompanhamento desses novos formatos funciona no laboratório; notificações Java antigas conservam suas oito modalidades. Não há vantagem preditiva demonstrada.
+
+[Diagnóstico antes das alterações](docs/diagnostico-4.18.md) · [Implementação, comparação entre versões e execução](docs/laboratorio-4.18.md) · [Validação](docs/validacao-4.18.md)
+
+---
+
 # LotoLab 4.14 — mais fácil de usar
 
 Sugestões e Meus jogos estão na barra inferior. A tela inicial reúne ações diretas; o formulário mostra o custo enquanto você digita e recolhe os ajustes avançados. Avaliar estratégias, importar histórico e começar uma lista de jogos agora têm caminhos visíveis. Temas claro e escuro com leitura e áreas de toque revisadas.

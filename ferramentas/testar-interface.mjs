@@ -1918,19 +1918,19 @@ await cmd('Emulation.setDeviceMetricsOverride',{width:412,height:915,deviceScale
 await js(`document.documentElement.dataset.tema='escuro';S.resultados=${JSON.stringify(reais414)};S.jogos=[];return true;`);
 for(const mod of ['mega-sena','lotofacil','quina','lotomania','dupla-sena','dia-de-sorte','timemania','mais-milionaria']){
   await js(`trocarModalidade(${JSON.stringify(mod)});irParaTela('inicio',{lateral:true});return true;`);await dormir(300);
-  await capturar('LotoLab-4.17-Inicio-'+mod);
+  await capturar('LotoLab-4.18-Inicio-'+mod);
 }
 await js(`trocarModalidade('mega-sena');const r=ultimoResultado('mega-sena');S.jogos=[{id:'exemplo-visual',modalidade:'mega-sena',dezenas:[3,12,25,33,47,58],data:r.data,lote:'exemplo-visual',metodo:'demonstração',concursoAlvo:r.concurso,conferencias:[]}];conferenciaAutomatica();return true;`);
 for(const rota of ['sugestoes','jogos','resultados','pesquisa']){
   await js(`irParaTela(${JSON.stringify(rota)},{lateral:true});return true;`);await dormir(300);
-  await capturar('LotoLab-4.17-'+rota+'-mega-sena');
+  await capturar('LotoLab-4.18-'+rota+'-mega-sena');
 }
 await js(`trocarModalidade('lotofacil');irParaTela('pesquisa',{lateral:true});return true;`);await dormir(300);
-await capturar('LotoLab-4.17-Analise-lotofacil');
+await capturar('LotoLab-4.18-Analise-lotofacil');
 await js(`document.documentElement.dataset.tema='claro';irParaTela('inicio',{lateral:true});return true;`);await dormir(300);
-await capturar('LotoLab-4.17-Tema-Claro-lotofacil');
+await capturar('LotoLab-4.18-Tema-Claro-lotofacil');
 await js(`document.documentElement.dataset.tema='escuro';trocarModalidade('mega-sena');irParaTela('inicio',{lateral:true});return true;`);
-await tocar('#btn-avisos');await tocar('#meta-testar-aviso');await capturar('LotoLab-4.17-Notificacoes');
+await tocar('#btn-avisos');await tocar('#meta-testar-aviso');await capturar('LotoLab-4.18-Notificacoes');
 
 secao('S. Análise ampliada e memória 4.16');
 await tocar('#folha-avisos [data-fechar]:not(.fundo)');
@@ -1959,10 +1959,10 @@ for(const tema of ['escuro','claro'])for(const width of [320,412]){
 await cmd('Emulation.setDeviceMetricsOverride',{width:412,height:915,deviceScaleFactor:2,mobile:true});
 await js(`document.documentElement.dataset.tema='escuro';const e=document.querySelector('#ux-analitica');window.scrollTo({top:scrollY+e.getBoundingClientRect().top-document.querySelector('header').getBoundingClientRect().height-12,behavior:'instant'});return true;`);
 await dormir(250);
-await capturar('LotoLab-4.17-Analise-ampliada');
+await capturar('LotoLab-4.18-Analise-ampliada');
 await js(`const e=document.querySelector('#aud-resultado');e.querySelector('details').open=true;window.scrollTo({top:scrollY+e.getBoundingClientRect().top-document.querySelector('header').getBoundingClientRect().height-12,behavior:'instant'});return true;`);
 await dormir(250);
-await capturar('LotoLab-4.17-Diagnostico');
+await capturar('LotoLab-4.18-Diagnostico');
 await tocar('#aud-exportar-memoria');
 checar('memória pode ser exportada no Android',await js(`const m=JSON.parse(document.querySelector('#aud-json-memoria').value);return m.entradas.length===1&&m.entradas[0].n===30`));
 await js(`for(const k of ['autoAnalise','pesquisaAutomatica','buscaAutomatica'])Guardar.gravar(k,false);Guardar.gravar('modalidade','mega-sena');Guardar.gravar('resultados',S.resultados);return true;`);
@@ -2005,7 +2005,7 @@ checar('atalho do segundo sorteio da Dupla Sena conserva sorteio e corte correto
 await js(`trocarModalidade('lotofacil');return true;`);
 checar('mudar de modalidade não reutiliza as dezenas nem os resultados de outra',await js(`return document.querySelector('#rec-dezenas').value===''&&document.querySelector('#rec-resultado').textContent===''`));
 for(const m of ['mega-sena','lotofacil','quina','lotomania','dupla-sena','dia-de-sorte','timemania','mais-milionaria']){
-  await js(`S.modalidade=${JSON.stringify(m)};const c=MODALIDADES[S.modalidade];S.resultados=[1,2,3,4,5].map(concurso=>({modalidade:S.modalidade,concurso,data:'2026-01-01',dezenas:Array.from({length:c.k},(_,i)=>i+c.base)}));S.recConfig={};S.recResultados={};irParaTela('estatisticas',{lateral:true});document.querySelector('#rec-dezenas').value=Array.from({length:c.min},(_,i)=>i+c.base).join(' ');document.querySelector('#rec-analisar').click();return true;`);
+  await js(`S.modalidade=${JSON.stringify(m)};const c=MODALIDADES[S.modalidade];S.resultados=[1,2,3,4,5].map(concurso=>({modalidade:S.modalidade,concurso,data:'2026-01-01',dezenas:Array.from({length:c.k},(_,i)=>i+c.base)}));S.recConfig={};S.recResultados={};irParaTela('estatisticas',{lateral:true});document.querySelector('#rec-dezenas').value=Array.from({length:c.min},(_,i)=>i+c.base).join(' ');document.querySelector('#rec-analisar').click();document.querySelector('#rec-grupos details').open=true;return true;`);
   checar('análise funciona na modalidade '+m,await js(`return S.recResultados[S.modalidade].faixas.find(f=>f.acertos===MODALIDADES[S.modalidade].k).exatos.vezes===5&&!document.querySelector('#rec-mensagem').textContent`));
   for(const tema of ['escuro','claro'])for(const width of [320,412,1024]){
     await cmd('Emulation.setDeviceMetricsOverride',{width,height:915,deviceScaleFactor:2,mobile:width<650});
@@ -2017,9 +2017,50 @@ const baseReal417=JSON.parse(readFileSync(join(RAIZ,'dados/mega-sena.json'),'utf
 await cmd('Emulation.setDeviceMetricsOverride',{width:412,height:915,deviceScaleFactor:2,mobile:true});
 await js(`S.modalidade='mega-sena';S.resultados=${JSON.stringify(baseReal417)};S.recConfig={};S.recResultados={};document.documentElement.dataset.tema='escuro';irParaTela('estatisticas',{lateral:true});document.querySelector('#rec-dezenas').value='02 04 35 46 54 60';document.querySelector('#rec-analisar').click();return true;`);
 checar('base real informa 218 lacunas e contagens calculadas por interseção independente',await js(`const r=S.recResultados['mega-sena'],alvo=new Set([2,4,35,46,54,60]);return r.base.hist.length===2835&&r.base.lacunas===218&&r.faixas.every(f=>f.exatos.vezes===S.resultados.filter(x=>x.dezenas.filter(d=>alvo.has(d)).length===f.acertos).length)`));
-await js(`window.scrollTo({top:scrollY+document.querySelector('#rec-painel').getBoundingClientRect().top-document.querySelector('header').getBoundingClientRect().height-12,behavior:'instant'});return true;`);await dormir(250);await capturar('LotoLab-4.17-Recorrencia');
-await js(`window.scrollTo({top:scrollY+document.querySelector('#rec-resultado').getBoundingClientRect().top-document.querySelector('header').getBoundingClientRect().height-12,behavior:'instant'});return true;`);await dormir(250);await capturar('LotoLab-4.17-Acertos');
-await js(`document.querySelector('#rec-grupo').value='4';document.querySelector('#rec-grupo').dispatchEvent(new Event('change'));document.querySelector('#rec-grupos details').open=true;window.scrollTo({top:scrollY+document.querySelector('#rec-grupos').getBoundingClientRect().top-document.querySelector('header').getBoundingClientRect().height-12,behavior:'instant'});return true;`);await dormir(250);await capturar('LotoLab-4.17-Quartetos');
+await js(`window.scrollTo({top:scrollY+document.querySelector('#rec-painel').getBoundingClientRect().top-document.querySelector('header').getBoundingClientRect().height-12,behavior:'instant'});return true;`);await dormir(250);await capturar('LotoLab-4.18-Recorrencia');
+await js(`window.scrollTo({top:scrollY+document.querySelector('#rec-resultado').getBoundingClientRect().top-document.querySelector('header').getBoundingClientRect().height-12,behavior:'instant'});return true;`);await dormir(250);await capturar('LotoLab-4.18-Acertos');
+await js(`document.querySelector('#rec-grupo').value='4';document.querySelector('#rec-grupo').dispatchEvent(new Event('change'));document.querySelector('#rec-grupos details').open=true;window.scrollTo({top:scrollY+document.querySelector('#rec-grupos').getBoundingClientRect().top-document.querySelector('header').getBoundingClientRect().height-12,behavior:'instant'});return true;`);await dormir(250);await capturar('LotoLab-4.18-Quartetos');
+
+secao('U. Laboratório analítico 4.18');
+async function input418(id,value){await js(`const e=document.querySelector(${JSON.stringify(id)});e.value=${JSON.stringify(String(value))};e.dispatchEvent(new Event('input',{bubbles:true}));e.dispatchEvent(new Event('change',{bubbles:true}));return true;`);}
+async function wait418(limit=120000){const start=Date.now();while(Date.now()-start<limit){if(!await js(`return !!document.querySelector('[data-ll-action="cancelar"]')`))return;await dormir(250);}throw Error('Laboratório excedeu prazo');}
+async function tab418(id){await tocar('[data-ll-tab="'+id+'"]');}
+async function frame418(selector,name){await js(`const e=document.querySelector(${JSON.stringify(selector)});window.scrollTo({top:scrollY+e.getBoundingClientRect().top-document.querySelector('header').getBoundingClientRect().height-12,behavior:'instant'});return true;`);await dormir(200);await capturar(name);}
+const history418=JSON.parse(readFileSync(join(RAIZ,'dados/mega-sena.json'),'utf8')).concursos;
+await cmd('Emulation.setTouchEmulationEnabled',{enabled:true,maxTouchPoints:1});
+await cmd('Emulation.setDeviceMetricsOverride',{width:412,height:915,deviceScaleFactor:2,mobile:true});
+await js(`S.modalidade='mega-sena';S.resultados=${JSON.stringify(history418)};S.autoAnalise=false;S.buscaAutomatica=false;S.pesquisaAutomatica=false;document.documentElement.dataset.tema='escuro';irParaTela('estatisticas',{lateral:true});return true;`);
+checar('laboratório integrado preserva recorrência e oferece dez modalidades',await js(`return document.querySelectorAll('#ll-modalidade option').length===10&&!!document.querySelector('#rec-painel')`));
+await input418('#ll-texto','14 23 53 56 57 60');await input418('#ll-semente','revisao418');await tocar('[data-ll-action="analisar"]');await wait418();
+checar('worker analisa 2.835 registros reais e 2.000 referências',await js(`const t=document.querySelector('#ll-content').textContent;return t.includes('2.835')&&t.includes('2.000')&&t.includes('Distribuição completa')&&t.includes('218')`));
+checar('exatos, acumulados e aviso obrigatório permanecem distintos',await js(`const t=document.querySelector('#ll-content').textContent;return t.includes('Exatamente')&&t.includes('Pelo menos')&&t.includes(LL18.aviso)`));
+await frame418('#ll-lab','LotoLab-4.18-Laboratorio');await frame418('#ll-content .ll-metrics','LotoLab-4.18-Perfil-historico');await frame418('#ll-content h3:nth-of-type(2)','LotoLab-4.18-Distribuicao');
+await js(`document.querySelector('#ll-historico').open=true;return true;`);await input418('#ll-faixa','3');
+checar('histórico por faixa permite consultar coincidências e intervalos',await js(`const t=document.querySelector('#ll-concursos').textContent;return t.includes('30 concursos')&&t.includes('Coincidentes')&&t.includes('Não coincidentes')&&t.includes('Intervalo desde')`));
+await tab418('grupos');await input418('#ll-tamanho','4');await tocar('[data-ll-action="grupos"]');await wait418();
+checar('quinze quartetos do exemplo têm contagens, intervalos e períodos',await js(`const t=document.querySelector('#ll-content').textContent;return t.includes('15 grupos')&&t.includes('Repetições consecutivas')&&t.includes('Período')`));await frame418('#ll-content','LotoLab-4.18-Subconjuntos');
+await tab418('gerador');await input418('#ll-quantidade',3);await input418('#ll-candidatos',200);await input418('#ll-orcamento',18);await input418('#ll-maxSobreposicao',2);await tocar('[data-ll-action="gerar"]');await wait418();
+checar('gera três jogos com explicações e referências independentes',await js(`return document.querySelectorAll('.ll-game').length===3&&document.querySelector('#ll-content').textContent.includes('Referência independente: 2.000')`));await frame418('.ll-game','LotoLab-4.18-Jogos-explicados');
+await input418('#ll-alvo',3054);await tocar('[data-ll-action="salvar"]');
+checar('lote prospectivo salvo e integrado aos jogos existentes',await js(`const m=Guardar.ler('laboratorio418',{});return m.lotes.length===1&&m.lotes[0].concursoAlvo===3054&&m.lotes[0].geradoAte===3053&&S.jogos.filter(j=>j.inteligencia?.versao==='4.18').length===3`));
+await tab418('carteira');await tocar('[data-ll-action="acompanhar"]');await wait418();
+checar('amostra insuficiente não recomenda substituir',await js(`const t=document.querySelector('#ll-content').textContent;return t.includes('MANTER')&&t.includes('insuficiente')&&!t.includes('SUBSTITUIR ·')`));await frame418('#ll-content','LotoLab-4.18-Carteira');
+await tab418('comite');await input418('#ll-antes',2798);await input418('#ll-treino',40);await input418('#ll-validacao',30);await input418('#ll-teste',30);await input418('#ll-qTeste',1);await input418('#ll-poolTeste',12);await tocar('[data-ll-action="comite"]');await wait418(180000);
+checar('comitê real inclui Holm, ablações, sensibilidade e ausência financeira honesta',await js(`const t=document.querySelector('#ll-content').textContent;return t.includes('Champion:')&&t.includes('Holm')&&t.includes('sem-frequencia')&&t.includes('pesos-80')&&t.includes('ROI indisponível')`));await frame418('#ll-content h3:nth-of-type(2)','LotoLab-4.18-Comite');
+await tab418('simulacao');await input418('#ll-amostras',2000);await tocar('[data-ll-action="simular"]');await wait418();
+checar('simulações não viram resultados reais',await js(`return document.querySelector('#ll-content').textContent.includes('2.000 simulações')&&document.querySelector('#ll-content').textContent.includes('nunca gravados')&&S.resultados.length===2835`));
+await tab418('dados');checar('origem, ausências e importação ficam visíveis',await js(`return document.querySelector('#ll-content').textContent.includes('2.797 sem data')&&!!document.querySelector('#ll-arquivo')`));
+for(const m of Object.keys(await js('return LL18.rules'))){
+ await input418('#ll-modalidade',m);await tab418('analise');
+ const t=await js(`const m=${JSON.stringify(m)},t=LL18.randomTicket(m,LL18.rng('interface418')),c=LL18.cfg(m);return {texto:c.colunas?t.colunas.map(a=>a.join(' ')).join(' | '):t.dezenas.join(' '),extra:c.extra?(Array.isArray(t[c.extra])?t[c.extra].join(' '):String(t[c.extra])):''}`);
+ await input418('#ll-texto',t.texto);if(t.extra)await input418('#ll-extra',t.extra);await tocar('[data-ll-action="analisar"]');await wait418();
+ checar('analisa ou informa falta de base em '+m,await js(`return document.querySelector('#ll-content').textContent.includes('Distribuição completa')&&!/inválid|exige/.test(document.querySelector('#ll-status').textContent)`));
+ for(const theme of ['escuro','claro'])for(const width of [320,412,1024]){await cmd('Emulation.setDeviceMetricsOverride',{width,height:915,deviceScaleFactor:2,mobile:width<650});await js(`document.documentElement.dataset.tema=${JSON.stringify(theme)};return true;`);await js('return new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)))');checar('laboratório '+m+' '+theme+' '+width+'px',await js(`return document.documentElement.scrollWidth<=innerWidth+1&&[...document.querySelectorAll('#ll-lab input,#ll-lab select,#ll-lab button')].filter(e=>e.getBoundingClientRect().height>0).every(e=>e.getBoundingClientRect().height>=44)`));}
+}
+await cmd('Emulation.setDeviceMetricsOverride',{width:412,height:915,deviceScaleFactor:2,mobile:true});await js(`document.documentElement.dataset.tema='escuro';return true;`);await input418('#ll-modalidade','super-sete');await tab418('analise');await frame418('#ll-lab','LotoLab-4.18-Super-Sete');
+await input418('#ll-modalidade','lotofacil');await tab418('analise');await frame418('#ll-lab','LotoLab-4.18-Lotofacil');await js(`document.documentElement.dataset.tema='claro';return true;`);await frame418('#ll-lab','LotoLab-4.18-Laboratorio-claro');
+await js(`window.__cap418=window.Capacitor;window.Capacitor={isNativePlatform:()=>true};document.querySelector('[data-ll-action="exportar"]').click();return true;`);
+checar('Android oferece relatório JSON para copiar',await js(`return !!document.querySelector('#ll-json')&&JSON.parse(document.querySelector('#ll-json').value).versao==='4.18.0'`));await js(`window.Capacitor=window.__cap418;return true;`);
 
 /* ---------- fim ---------- */
 console.log(linhas.join("\n"));
