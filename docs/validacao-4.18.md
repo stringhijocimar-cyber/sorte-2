@@ -41,3 +41,5 @@ Consulte os checks do commit e a pré-release correspondente para o estado da co
 A base fornecida possui lacunas, datas e complementos ausentes. Super Sete e Mega da Virada não têm base completa incluída. Não foi comprovada vantagem preditiva. ROI só fica disponível com preço histórico e rateio completos. Os formatos novos permanecem no acompanhamento do laboratório, sem ampliar as notificações Java legadas. Os vídeos externos não foram assistidos integralmente; métodos públicos foram tratados como hipóteses, sem copiar palpites.
 
 [Diagnóstico inicial](diagnostico-4.18.md) · [Implementação e instruções](laboratorio-4.18.md)
+
+A CI de PR integra também as atualizações do ramo principal. Após o acervo receber novos concursos, as verificações passaram a calcular quantidade, lacunas, datas ausentes, faixas e próximo concurso diretamente dos registros de entrada, com contagem independente. Isso preserva as exigências sem fixar um tamanho que muda a cada sorteio.
