@@ -86,8 +86,8 @@ jobs:
             curl -sf http://127.0.0.1:8123/index.html >/dev/null && break
             sleep 0.5
           done
-          node ferramentas/testar-interface.mjs
           node ferramentas/testar-distribuicao.mjs
+          node ferramentas/testar-interface.mjs
 
       - name: Guardar as capturas de tela
         # As capturas são o único registro visual do que a build viu. Quando um
