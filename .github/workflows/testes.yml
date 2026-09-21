@@ -60,6 +60,7 @@ jobs:
           node ferramentas/testar-analitica.mjs
           node ferramentas/testar-recorrencia.mjs
           node --test ferramentas/testar-laboratorio.mjs
+          node --test ferramentas/testar-recomendacao.mjs
 
       - name: Metas, orçamento, cobertura e conferência colorida
         run: |
@@ -179,26 +180,32 @@ jobs:
           python3 ferramentas/conferir-apk.py android/app/build/outputs/apk/debug/app-debug.apk
           unzip -p android/app/build/outputs/apk/debug/app-debug.apk assets/public/index.html > /tmp/index-apk.html
           cmp index.html /tmp/index-apk.html
-          cp android/app/build/outputs/apk/debug/app-debug.apk LotoLab-4.18.0-preview.apk
+          unzip -p android/app/build/outputs/apk/debug/app-debug.apk assets/public/ui/lab-recommendation.js > /tmp/recomendacao-apk.js
+          cmp ui/lab-recommendation.js /tmp/recomendacao-apk.js
+          cp android/app/build/outputs/apk/debug/app-debug.apk LotoLab-4.19.0-preview.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: LotoLab-4.18.0-preview
-          path: LotoLab-4.18.0-preview.apk
+          name: LotoLab-4.19.0-preview
+          path: LotoLab-4.19.0-preview.apk
           retention-days: 14
 
       - name: Disponibilizar APK para download direto
         if: github.head_ref == 'codex/inteligencia-sugestoes-v4.9'
         env:
           GH_TOKEN: ${{ github.token }}
-          LOTOLAB_TAG: v4.18.0-rc.${{ github.run_number }}
+          LOTOLAB_TAG: v4.19.0-rc.${{ github.run_number }}
         run: |
           cat > /tmp/lotolab-release.md <<'NOTAS'
-          LotoLab 4.18.0 — base escura anterior, seletor de modalidades em
+          LotoLab 4.19.0 — base escura anterior, seletor de modalidades em
           duas linhas nas 15 telas e destaques na cor da loteria escolhida.
           A página recebe um degradê suave de baixo para cima.
           Os resultados usam bolinhas amarelas com números grafite.
           Conferências preservam acertos verdes e erros em vermelho suave.
-          Novo laboratório para qualquer combinação: distribuição exata e acumulada,
+          Recomendação principal integrada: estrutura, frequência, atrasos, pares,
+          trios e perfil de acertos usam os mesmos cálculos do laboratório.
+          Um jogo por padrão, extras opcionais e rastreabilidade da base usada.
+          Cálculo em worker, aviso de base alterada e acompanhamento prospectivo.
+          Laboratório para qualquer combinação: distribuição exata e acumulada,
           percentuais, concursos, subconjuntos e aderência contra 2.000 referências.
           Dez formatos, dez hipóteses, carteira diversificada, comparação cronológica,
           Monte Carlo e acompanhamento prospectivo com diagnóstico adaptativo.
@@ -207,13 +214,13 @@ jobs:
           Mega da Virada exigem importação e usam o acompanhamento do laboratório.
           Relatórios JSON disponíveis; nenhuma combinação de exemplo é preferencial.
 
-          Baixe LotoLab-4.18.0-preview.apk abaixo. APK assinado para depuração.
+          Baixe LotoLab-4.19.0-preview.apk abaixo. APK assinado para depuração.
           A assinatura pode ser diferente da instalação anterior: não desinstale
           seu aplicativo sem antes preservar seus jogos e resultados.
 
           Inicialização nativa simulada e toques validados em Chrome; instalação em aparelho
           físico ainda requer conferência. Não prevê resultados de loterias.
           NOTAS
-          gh release create "$LOTOLAB_TAG" LotoLab-4.18.0-preview.apk \
+          gh release create "$LOTOLAB_TAG" LotoLab-4.19.0-preview.apk \
             --target "$GITHUB_SHA" --prerelease \
-            --title "LotoLab 4.18.0 — teste" --notes-file /tmp/lotolab-release.md
+            --title "LotoLab 4.19.0 — teste" --notes-file /tmp/lotolab-release.md

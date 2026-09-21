@@ -1,3 +1,13 @@
+# LotoLab 4.19 — uma recomendação integrada
+
+Abra **Sugestões → Gerar recomendação**. Um jogo principal reúne os cálculos do laboratório: estrutura, frequência, atrasos, pares, trios, repetição e perfil de acertos. Todo o histórico disponível é usado por padrão; jogos adicionais são opcionais e priorizam menor repetição.
+
+A explicação mostra os critérios efetivos, concursos usados e distribuição de acertos. **Ver análise usada na escolha** abre a mesma combinação. O cálculo funciona no worker, inclusive offline; mudanças na base são sinalizadas. Jogos salvos para um concurso futuro alimentam o acompanhamento prospectivo.
+
+A seleção é descritiva e não possui vantagem preditiva demonstrada. Métodos individuais continuam na área de experimentos. [Implementação, limites e validação](docs/recomendacao-4.19.md).
+
+---
+
 # LotoLab 4.18 — laboratório de combinações e estratégias
 
 Abra **Análise → Analisar combinação**. Informe qualquer jogo válido: o laboratório calcula acertos exatos e acumulados, percentuais, concursos correspondentes, repetições, frequência, atraso e todos os pares, trios, quartetos e quintetos por páginas. A aderência compara o perfil com 2.000 jogos uniformes e resultados históricos comparáveis; não representa chance futura.

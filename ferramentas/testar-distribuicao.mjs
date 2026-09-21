@@ -22,12 +22,14 @@ ws.onmessage=e=>{const m=JSON.parse(e.data),p=pending.get(m.id);if(p){pending.de
 const cmd=(method,params={})=>new Promise((resolve,reject)=>{const id=++seq;pending.set(id,{resolve,reject});ws.send(JSON.stringify({id,method,params}));});
 async function js(code){const r=await cmd('Runtime.evaluate',{expression:`(()=>{${code}})()`,awaitPromise:true,returnByValue:true});if(r.exceptionDetails)throw Error(r.exceptionDetails.exception?.description||JSON.stringify(r.exceptionDetails));return r.result.value;}
 async function ready(){await until(()=>js('return !!globalThis.LL18UI && typeof S!=="undefined"'),'app');}
+async function recommend(){await js(`S.modalidade='mega-sena';S.intConfig={};S.intLotes={};irParaTela('sugestoes',{lateral:true});document.querySelector('#int-gerar').click();`);await until(()=>js(`return !!S.intLotes['mega-sena']?.laboratorio`),'recomendação offline',90000);assert.ok(await js(`const r=S.intLotes['mega-sena'];return r.jogos.length===1&&r.laboratorio.motor==='integrado'&&r.laboratorio.principal.analise.jogo.dezenas.join()===r.jogos[0].join()`));}
 async function analyze(){await js(`S.modalidade='mega-sena';irParaTela('estatisticas',{lateral:true});const e=document.querySelector('#ll-texto');e.value='14 23 53 56 57 60';e.dispatchEvent(new Event('input'));document.querySelector('[data-ll-action="analisar"]').click();`);await until(()=>js(`return !document.querySelector('[data-ll-action="cancelar"]')&&document.querySelector('#ll-content').textContent.includes('Distribuição completa')`),'worker analítico',90000);}
 try{
  await cmd('Page.enable');await cmd('Runtime.enable');
  await cmd('Page.navigate',{url:`http://127.0.0.1:${port}/index.html`});await ready();console.log('app HTTP pronto');
  await until(()=>js(`return !!navigator.serviceWorker.controller`),'controle do service worker');
  assert.ok(await js(`return caches.match('./ui/lab-worker.js').then(Boolean)`),'worker foi pré-armazenado');
+ assert.ok(await js(`return caches.match('./ui/lab-recommendation.js').then(Boolean)`),'motor integrado pré-armazenado');
  console.log('cache pronto');
  // Nenhuma análise foi executada online. Encerra o servidor de verdade.
  server.kill();await new Promise(r=>server.once('exit',r));console.log('servidor encerrado');
@@ -37,6 +39,7 @@ try{
  await analyze();
  assert.ok(await js(`return document.querySelector('#ll-content').textContent.includes('2.000 jogos aleatórios')&&document.querySelector('#ll-content').textContent.includes('120 concursos')`));
  console.log('ok — primeiro worker offline analisa 120 resultados e 2.000 referências, com servidor desligado');
+ await recommend();console.log('ok — recomendação integrada funciona offline com a mesma base');
  const first=rows.slice(0,2).sort((a,b)=>a.concurso-b.concurso);
  await js(`Guardar.gravar('resultados',${JSON.stringify(first)});Guardar.gravar('laboratorio418',{lotes:[{modalidade:'mega-sena',geradoAte:${first[0].concurso},concursoAlvo:${first[1].concurso},jogos:[{dezenas:[14,23,53,56,57,60]}]}],historicoExtra:[],tentativas:[],monitor:{},comites:{}});`);
  await cmd('Page.reload');await sleep(300);await ready();
@@ -49,5 +52,6 @@ try{
  await analyze();
  assert.ok(await js(`const t=document.querySelector('#ll-content').textContent;return t.includes('600 concursos')&&t.includes('2.000 jogos aleatórios')`));
  console.log('ok — HTML único file:// executa worker Blob com 600 concursos e 2.000 referências');
- console.log('3 testes de distribuição passaram');
+ await recommend();console.log('ok — HTML único também gera a recomendação integrada');
+ console.log('5 testes de distribuição passaram');
 }finally{ws.close();close();}

@@ -45,3 +45,22 @@ html[data-tema="claro"] .ll-lab{--ll-acento:color-mix(in srgb,var(--ll-cor) 48%,
 
 #ll-lab .acao:not(.secundaria){background:linear-gradient(110deg,color-mix(in srgb,var(--ll-cor) 52%,#07121b),color-mix(in srgb,var(--ll-cor) 37%,#07121b))!important;color:white!important}
 #ll-lab .acao.secundaria{color:var(--ll-acento)!important}
+
+/* Recomendação unificada: principal em destaque, detalhes sob demanda. */
+.int-integrated-intro{padding:14px 0 8px}
+.int-integrated-intro h3{margin:6px 0 10px;font-size:1.35rem;line-height:1.2}
+.int-principal{border:1px solid var(--seu)!important;background:linear-gradient(150deg,color-mix(in srgb,var(--seu) 12%,var(--carta)),var(--carta))!important}
+.int-principal>.int-section-title>span{font-size:.6rem;letter-spacing:.08em;color:var(--seu)}
+.int-integrated-results .int-section-title{gap:8px;flex-wrap:wrap}
+.int-integrated-results .int-section-title h2{font-size:1.15rem}
+.int-analysis-link{padding:16px;border:1px solid var(--linha);border-radius:16px;margin:12px 0 18px;background:var(--carta)}
+.int-analysis-link h3{margin:5px 0 10px}
+.int-analysis-link table{width:100%;font-size:.8rem;border-collapse:collapse}
+.int-analysis-link th,.int-analysis-link td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--linha)}
+.int-analysis-link th:last-child,.int-analysis-link td:last-child{text-align:right}
+.int-analysis-link .ll-table{overflow-x:auto}
+.int-integrated-results .int-summary b{font-size:1.05rem}
+.int-integrated-results .int-ticket>.acao{width:100%;margin-top:10px}
+.int-integrated-results .int-help{overflow-wrap:anywhere}
+.int-additional{margin:14px 0}
+@media(max-width:420px){.int-integrated-results .int-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.int-analysis-link{padding:12px}}
