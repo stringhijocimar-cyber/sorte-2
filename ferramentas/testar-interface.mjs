@@ -2109,6 +2109,10 @@ await js(`S.intLotes={};S.intConfig={};pintar();window.originalRecommend419=LL18
 await tocar('#int-gerar');await esperarRecomendacao();
 checar('falha do motor é visível, sem fabricar uma recomendação',await js(`return !S.intLotes['mega-sena']&&document.querySelector('#int-mensagem').textContent.includes('Falha simulada')`));
 await js(`LL18UI.recommend=window.originalRecommend419;return true;`);
+await js(`LL18UI.recommend=async(...args)=>{await new Promise(resolve=>window.liberarRecomendacao419=resolve);return window.originalRecommend419(...args);};document.querySelector('#int-gerar').click();pintar();window.manteveCalculo419=document.querySelector('#int-gerar').disabled&&document.querySelector('#int-mensagem').textContent.includes('Comparando candidatas');window.liberarRecomendacao419();return true;`);
+await esperarRecomendacao();
+checar('redesenho da tela durante o cálculo mantém progresso e entrega a recomendação',await js(`return window.manteveCalculo419&&S.intLotes['mega-sena']?.laboratorio.motor==='integrado'&&!!document.querySelector('.int-principal')`));
+await js(`LL18UI.recommend=window.originalRecommend419;S.intLotes={};pintar();return true;`);
 await js(`document.querySelector('#int-gerar').click();trocarModalidade('lotofacil');return true;`);await dormir(1000);
 checar('cálculo pendente não invade outra modalidade',await js(`return S.modalidade==='lotofacil'&&!S.intLotes['mega-sena']&&!document.querySelector('.int-principal')`));
 

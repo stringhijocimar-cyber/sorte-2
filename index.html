@@ -2833,7 +2833,7 @@ function metaLigarAcoes(){
 S.intConfig = {};
 S.intLotes = {};
 S.intTestes = {};
-let intTrabalho = 0;
+let intTrabalho = 0, intPendente = null;
 
 function intConfig(m){
   return S.intConfig[m] || (S.intConfig[m]={tam:MODALIDADES[m].min,quantidade:1,concurso:"",
@@ -2857,6 +2857,7 @@ function intExtraModalidade(m){
 }
 T.sugestoes = () => {
   const m=S.modalidade,c=MODALIDADES[m],o=intConfig(m),base=intHistorico(m,S.resultados,o.janela);
+  const calculando=intPendente?.token===intTrabalho&&intPendente.modalidade===m;
   return `<div class="ux-sugestoes-intro" aria-label="Como criar sugestões"><span>1. Defina</span><span>2. Confira</span><span>3. Salve</span></div>
     <section class="carta int-form ux-form"><div class="int-section-title"><h2>Configure seu jogo</h2><span>${esc(c.nome)}</span></div>
       <div class="int-integrated-intro"><span class="int-eyebrow">ANÁLISES CONECTADAS · 4.19</span><p class="int-help">Uma principal, escolhida com estrutura, frequência, atrasos, pares, trios e perfil de acertos. Jogos adicionais são opcionais.</p></div>
@@ -2875,8 +2876,8 @@ T.sugestoes = () => {
         <p class="int-help">Mesmo código, parâmetros e base reproduzem o mesmo lote. Fixar ou excluir dezenas limita a variedade; não altera a chance de cada combinação.</p>
       </details>
       <div class="int-price"><span>Estimativa antes do limite</span><strong id="int-preco">${brl(custoDoJogo(m,o.tam)*o.quantidade)}</strong></div>
-      <button class="acao int-primary" id="int-gerar">Gerar recomendação</button>
-      <div id="int-mensagem" role="status" aria-live="polite"></div>
+      <button class="acao int-primary" id="int-gerar" ${calculando?'disabled':''}>${calculando?'Integrando as análises…':'Gerar recomendação'}</button>
+      <div id="int-mensagem" role="status" aria-live="polite">${calculando?'Comparando candidatas com o histórico disponível. Você pode navegar enquanto o cálculo termina.':''}</div>
       <details class="int-details"><summary>Base da seleção: ${inf(base.hist.length)} concursos${base.lacunas?" · com lacunas":""}</summary>${intStatusBase(base)}</details>
       <p class="int-help ux-fonte">Salvar no app não registra uma aposta. Preços de 05/09/2026 · <a href="https://loterias.caixa.gov.br/Paginas/${INT_FONTES[m]}.aspx" target="_blank" rel="noopener noreferrer">regras da modalidade</a>.</p>
     </section>
@@ -3011,7 +3012,10 @@ function intLigarAcoes(){
   $("#int-gerar").onclick=async()=>{
     ler(); const parametros={...o,historico:S.resultados.slice()};
     const token=++intTrabalho,botao=$("#int-gerar"),mensagem=$("#int-mensagem");
-    const atual=()=>token===intTrabalho&&S.tela==="sugestoes"&&S.modalidade===m&&botao.isConnected;
+    intPendente={token,modalidade:m};
+    // Análises automáticas podem redesenhar esta tela sem cancelar a escolha.
+    // Navegação, troca de modalidade e nova geração invalidam pelo token.
+    const atual=()=>token===intTrabalho&&S.tela==="sugestoes"&&S.modalidade===m;
     botao.disabled=true;botao.textContent="Integrando as análises…";
     mensagem.textContent="Comparando candidatas com o histórico disponível. Você pode navegar enquanto o cálculo termina.";
     try{
@@ -3030,9 +3034,12 @@ function intLigarAcoes(){
       if(g.base.assinatura!==LL18.recommendationBase(m,S.resultados,op).meta.assinatura)
         throw Error("O histórico mudou durante o cálculo. Gere novamente para usar os dados atualizados.");
       const r=intReceberRecomendacao(g,parametros);r.concursoAlvo=alvo;
-      S.intLotes[m]=r;pintar();$("#int-lote").scrollIntoView({block:"start",behavior:"smooth"});
-    }catch(e){if(atual())mensagem.textContent=e.message;}
-    finally{if(atual()){botao.disabled=false;botao.textContent="Gerar recomendação";}}
+      S.intLotes[m]=r;intPendente=null;pintar();$("#int-lote").scrollIntoView({block:"start",behavior:"smooth"});
+    }catch(e){if(atual())$("#int-mensagem").textContent=e.message;}
+    finally{
+      if(intPendente?.token===token)intPendente=null;
+      if(atual()){const b=$("#int-gerar");b.disabled=false;b.textContent="Gerar recomendação";}
+    }
   };
   const lote=S.intLotes[m];
   if(lote){
