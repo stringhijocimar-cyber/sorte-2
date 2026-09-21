@@ -30,11 +30,11 @@
 /* 9: a conferência passou a guardar o número do concurso como número, e a
    abertura junta as duplicatas que a versão anterior deixou gravadas. Quem
    usa pelo navegador precisa receber o index.html novo, não o do cache. */
-const VERSAO = "11";
+const VERSAO = "24";
 const CACHE = `lotolab-v${VERSAO}`;
 
 //: A casca mínima para o app abrir offline.
-const CASCA = ["./", "./index.html", "./manifest.webmanifest", "./icone.svg", "./ui/sorte2-ui-final.css", "./ui/brain-network.svg", "./ui/lotolab-ui-v4-3.css"];
+const CASCA = ["./", "./index.html", "./manifest.webmanifest", "./icone.svg", "./ui/sorte2-ui-final.css", "./ui/brain-network.svg", "./ui/lotolab-ui-v4-3.css", "./ui/inteligencia-v4-9.css", "./ui/visual-metas-v4-10.css", "./ui/visual-foco-v4-11.css", "./ui/experiencia-v4-14.css", "./ui/modalidades-v4-15.css", "./ui/recorrencia-v4-17.css", "./ui/lab-core.js", "./ui/lab-strategies.js", "./ui/lab-recommendation.js", "./ui/lab-ui.js", "./ui/lab-worker.js", "./ui/lab-v4-18.css"];
 
 //: Recursos que praticamente não mudam. Ícone novo sai com versão nova.
 const IMUTAVEIS = /\.(png|svg|webmanifest)$/i;
@@ -71,7 +71,8 @@ async function redePrimeiro(req){
     }
     return rede;
   }catch(e){
-    const guardado = await caches.match(req);
+    const recursoLocal=/\/ui\/[^/]+\.(js|css)$/.test(new URL(req.url).pathname);
+    const guardado = await caches.match(req) || (recursoLocal ? await caches.match(req,{ignoreSearch:true}) : null);
     if(guardado) return guardado;
     /* Navegação sem rede e sem cache do endereço exato: devolve a casca, para
        o app abrir em vez de mostrar erro do navegador. */
