@@ -1745,7 +1745,7 @@ for(const retorno of ['objeto','promessa','falha']){
 secao('O. Trevos, dois sorteios e notificações 4.12');
 await js(`S.modalidade='mais-milionaria';S.jogos=[];S.teimosinhas=[];S.avisos=[];S.resultados=[];S.intLotes={};S.intConfig={};S.metaConfig={};irParaTela('sugestoes');return true;`);
 checar('+Milionária oferece campo de dois trevos',await js(`return !!document.querySelector('#int-trevos')`));
-await js(`document.querySelector('#int-trevos').value='02 06';document.querySelector('#int-concurso').value='100';document.querySelector('#int-semente').value='ui412';return true;`);
+await js(`document.querySelector('#int-quantidade').value='3';document.querySelector('#int-trevos').value='02 06';document.querySelector('#int-concurso').value='100';document.querySelector('#int-semente').value='ui412';return true;`);
 await tocar('#int-gerar');await esperarRecomendacao();
 checar('sugestões incluem os pares antes de salvar',await js(`return S.intLotes['mais-milionaria'].trevos.every(t=>t.join()==='2,6')&&document.querySelectorAll('#int-lote .trevo').length===6`));
 await capturar('sugestoes-trevos-412');
@@ -1785,6 +1785,7 @@ await js(`S.modalidade='mega-sena';S.autoAnalise=false;S.pesquisaAutomatica=fals
 checar('avaliação explica histórico insuficiente',await js(`return document.querySelector('#aud-iniciar').disabled&&document.querySelector('.aud-painel').textContent.includes('90 concursos')`));
 await js(`S.resultados=Array.from({length:100},(_,i)=>({modalidade:'mega-sena',concurso:i+1,data:'2026-01-01',dezenas:Array.from({length:6},(_,j)=>(i*7+j*11)%60+1).sort((a,b)=>a-b)}));irParaTela('sugestoes');return true;`);
 checar('histórico contínuo libera a avaliação',await js(`return !document.querySelector('#aud-iniciar').disabled`));
+const modoAntesAud413=await js(`return intConfig('mega-sena').modo`);
 await tocar('#aud-iniciar');
 let prontoAud=false;
 for(let i=0;i<150;i++){
@@ -1792,7 +1793,7 @@ for(let i=0;i<150;i++){
 }
 checar('avaliação completa pela interface',prontoAud);
 checar('resultado mostra separação, referências e intervalo',await js(`const t=document.querySelector('#aud-resultado').textContent;return /Seleção/.test(t)&&/Teste final/.test(t)&&/32 lotes aleatórios/.test(t)&&/IC 95%/.test(t)`));
-checar('avaliar não cria jogos nem muda a estratégia do usuário',await js(`return S.jogos.length===0&&intConfig('mega-sena').modo==='equilibrado'`));
+checar('avaliar não cria jogos nem muda a estratégia do usuário',await js(`return S.jogos.length===0&&intConfig('mega-sena').modo===${JSON.stringify(modoAntesAud413)}`));
 await js(`document.querySelector('#aud-resultado').scrollIntoView({block:'start'});return true;`);
 await capturar('analitica-413-resultado');
 await tocar('#aud-exportar');
@@ -1816,7 +1817,7 @@ await tocar('#abas [data-secao="sugestoes"]');
 checar('Sugestões abre o formulário com um toque',await js(`return S.tela==='sugestoes'&&!!document.querySelector('#int-gerar')`));
 checar('trocar de seção começa no topo com menu e sino visíveis',await js(`const h=document.querySelector('header').getBoundingClientRect();return scrollY===0&&h.top>=-1&&h.bottom<innerHeight`));
 await tocar('.mod-seletor [data-mod="quina"]');
-checar('seletor visível muda modalidade, tamanho e custo juntos',await js(`return S.modalidade==='quina'&&document.querySelector('#int-tam').value==='5'&&document.querySelector('#int-preco').textContent===brl(custoDoJogo('quina',5)*3)`));
+checar('seletor visível muda modalidade, tamanho e custo juntos',await js(`return S.modalidade==='quina'&&document.querySelector('#int-tam').value==='5'&&document.querySelector('#int-quantidade').value==='1'&&document.querySelector('#int-preco').textContent===brl(custoDoJogo('quina',5))`));
 checar('ajustes avançados começam recolhidos',await js(`return !document.querySelector('#int-avancado').open`));
 await tocar('#int-avancado summary');
 await js(`const f=document.querySelector('#int-fixas');f.value='03';f.dispatchEvent(new Event('change'));const s=document.querySelector('#int-janela');s.value='50';s.dispatchEvent(new Event('change'));return true;`);
@@ -2096,7 +2097,7 @@ checar('abrir análise mantém as dezenas e a mesma base da recomendação',awai
 await tab418('gerador');
 checar('laboratório encaminha para a recomendação e recolhe os experimentos',await js(`return !!document.querySelector('[data-ll-action="recomendacao"]')&&!document.querySelector('#ll-content > details').open`));
 await tocar('[data-ll-action="recomendacao"]');await tocar('#int-salvar');
-checar('salvar preserva semente, corte de geração, papel principal e critérios',await js(`const j=S.jogos[0];return S.tela==='jogos'&&j.inteligencia.motor==='integrado'&&j.inteligencia.geradoAte===${target419-1}&&j.concursoAlvo===${target419}&&j.inteligencia.papel==='principal'&&j.inteligencia.criterios.length===12`));
+checar('salvar preserva semente, corte de geração, papel principal e critérios',await js(`const j=S.jogos[0];return S.tela==='jogos'&&j.inteligencia.motor==='integrado'&&j.inteligencia.geradoAte===${target419-1}&&j.concursoAlvo===${target419}&&j.inteligencia.papel==='principal'&&j.inteligencia.criterios.length===12&&document.querySelector('#tela').textContent.includes('Recomendação integrada')`));
 await js(`guardarResultados([{modalidade:'mega-sena',concurso:${target419},dezenas:[1,2,3,4,5,6]}]);irParaTela('sugestoes',{lateral:true});return true;`);
 checar('novo resultado marca a recomendação antiga e bloqueia salvamento desatualizado',await js(`return document.querySelector('#int-salvar').disabled&&document.querySelector('#int-lote').textContent.includes('O histórico mudou')`));
 let monitored419=false;

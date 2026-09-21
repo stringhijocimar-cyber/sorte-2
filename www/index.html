@@ -1110,6 +1110,8 @@ function nomeDoMetodo(id){
   const m = METODOS.find(x => x.id === id);
   if(m) return m.nome;
   if(id === "meta-cobertura") return "Cobertura por meta";
+  if(id === "int-integrado") return "Recomendação integrada";
+  if(id === "int-lab418") return "Laboratório analítico";
   if(id && id.startsWith("int-")) return INT_METODOS[id.slice(4)] || id;
   return METODOS_APOSENTADOS[id] || String(id || "método desconhecido");
 }
@@ -3348,7 +3350,7 @@ T.jogos = () => {
   return resumoDeMeusJogos(meus) + Object.entries(porLote).reverse().map(([lote, jogos])=>{
     const p = jogos[0];
     return `<h2 style="margin:14px 0 8px">${esc(MODALIDADES[p.modalidade].nome)} ·
-      ${esc(p.data)} · ${esc(p.metodo)}</h2>
+      ${esc(p.data)} · ${esc(nomeDoMetodo(p.metodo))}</h2>
     ${jogos.map(j=>ficha(j)).join("")}
     <div class="botoes" style="margin-bottom:16px">
       <button class="acao contorno mini" data-copiar="${esc(lote)}">Copiar lote</button>
@@ -3561,7 +3563,7 @@ function linhaDoJogo(item, sorteadas){
   return `<div class="confronto">
     <div class="cabeca-confronto">
       <span class="quanto"><b>${item.acertos}</b> coincidência${item.acertos===1?"":"s"}</span>
-      <span class="contexto">${esc(j.metodo || "salvo")} · o acaso faria ${nf(esperado,2)}</span>
+      <span class="contexto">${esc(j.metodo ? nomeDoMetodo(j.metodo) : "salvo")} · o acaso faria ${nf(esperado,2)}</span>
     </div>
     <div class="dezenas">${j.dezenas.map(d =>
       `<span class="dz ${sorteadas.includes(d) ? "acertou" : "errou"}">${pad(d)}</span>`).join("")}</div>${metaComplementoHtml(item.conferencia)}
