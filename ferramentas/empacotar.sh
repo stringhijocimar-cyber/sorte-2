@@ -20,7 +20,7 @@ z.writestr("COMO-USAR.txt", """LotoLab — como abrir
 2. Toque em LotoLab.html. Ele abre no navegador.
 3. Opcional: no menu do navegador, "Adicionar a tela inicial". Vira app.
 
-Funciona sem internet. Ja vem com 4.399 concursos das 8 loterias.
+Funciona sem internet. Inclui os concursos recentes das 8 loterias.
 
 O app NAO preve resultados e NAO aumenta a chance de acerto. Sorteios honestos
 sao eventos independentes. O que ele faz e medir, comparar com o acaso, e
