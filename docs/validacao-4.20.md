@@ -60,3 +60,17 @@ Mega-Sena. As oito modalidades da base principal ficaram sem lacunas de
 numeração do concurso 1 até o último registro disponível em cada arquivo.
 Isso não significa rateios, datas ou complementos integralmente preenchidos;
 os indicadores da base continuam expondo campos ausentes.
+
+## Fechamento da versão
+
+O conflito com a atualização automática de 27/09/2026 foi resolvido por
+concurso: foram preservados os registros recuperados e os rateios mais
+recentes da `main`. As oito bases mantêm a sequência desde o concurso 1 e
+o campo `total` corresponde à quantidade efetivamente armazenada. O
+repositor também atualiza esse campo em futuras recuperações.
+
+A conferência da referência numérica ficava aberta após gerar o JSON,
+porque o ambiente simulado executava o intervalo de atualização da tela.
+O gerador agora desativa esse intervalo no ambiente de teste; a referência
+permanece idêntica, byte a byte. A CI limita essa etapa a dois minutos para
+detectar uma eventual regressão sem deixar a publicação parada por horas.

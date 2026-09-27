@@ -139,6 +139,7 @@ jobs:
         run: python3 ferramentas/conferir-icones.py
 
       - name: A referência dourada foi gerada pela ferramenta, e não à mão
+        timeout-minutes: 2
         # Regravar douradas.json é uma decisão consciente de mudar números na
         # tela. Este passo não impede a mudança — só garante que o arquivo
         # continue sendo o que a ferramenta produz a partir do código atual.

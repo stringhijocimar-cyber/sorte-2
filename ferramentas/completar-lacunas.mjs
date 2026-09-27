@@ -28,6 +28,7 @@ async function consume(){while(queue.length){const {file,n}=queue.shift();try{
 await Promise.all(Array.from({length:3},consume));
 for(const file of files){if(!file.novos.length)continue;
  file.data.concursos.push(...file.novos);file.data.concursos.sort((a,b)=>a.concurso-b.concurso);
+ file.data.total=file.data.concursos.length;
  writeFileSync(file.path,JSON.stringify(file.data)+'\n');
  console.log(`${file.m}: +${file.novos.length}; ${L.history(file.m,file.data.concursos).meta.lacunas} lacunas restantes.`);
 }

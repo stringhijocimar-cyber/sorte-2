@@ -44,7 +44,9 @@ const contexto = {
   window: { addEventListener(){}, matchMedia: () => ({ matches: false, addEventListener(){} }) },
   navigator: { userAgent: "node", onLine: true },
   location: { href: "file:///index.html", origin: "file://", pathname: "/index.html" },
-  setTimeout, clearTimeout, setInterval, clearInterval,
+  // A referência mede funções síncronas, não a atualização periódica da tela.
+  // Um intervalo real mantém o Node aberto depois de escrever todo o JSON.
+  setTimeout, clearTimeout, setInterval: () => 0, clearInterval: () => {},
   requestAnimationFrame: (f) => setTimeout(f, 0),
   fetch: async () => { throw new Error("sem rede"); },
   Math, Date, JSON, Number, String, Array, Object, Map, Set, Error, isNaN,
