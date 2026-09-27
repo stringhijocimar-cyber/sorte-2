@@ -2064,7 +2064,7 @@ for(const m of Object.keys(await js('return LL18.rules'))){
 await cmd('Emulation.setDeviceMetricsOverride',{width:412,height:915,deviceScaleFactor:2,mobile:true});await js(`document.documentElement.dataset.tema='escuro';return true;`);await input418('#ll-modalidade','super-sete');await tab418('analise');await frame418('#ll-lab','LotoLab-4.18-Super-Sete');
 await input418('#ll-modalidade','lotofacil');await tab418('analise');await frame418('#ll-lab','LotoLab-4.18-Lotofacil');await js(`document.documentElement.dataset.tema='claro';return true;`);await frame418('#ll-lab','LotoLab-4.18-Laboratorio-claro');
 await js(`window.__cap418=window.Capacitor;window.Capacitor={isNativePlatform:()=>true};document.querySelector('[data-ll-action="exportar"]').click();return true;`);
-checar('Android oferece relatório JSON para copiar',await js(`return !!document.querySelector('#ll-json')&&JSON.parse(document.querySelector('#ll-json').value).versao==='4.18.0'`));await js(`window.Capacitor=window.__cap418;return true;`);
+checar('Android oferece relatório JSON para copiar',await js(`return !!document.querySelector('#ll-json')&&JSON.parse(document.querySelector('#ll-json').value).versao==='4.20.0'`));await js(`window.Capacitor=window.__cap418;return true;`);
 
 /* ---------- R. Recomendação integrada 4.19 ---------- */
 async function esperarRecomendacao(){
@@ -2115,6 +2115,19 @@ checar('redesenho da tela durante o cálculo mantém progresso e entrega a recom
 await js(`LL18UI.recommend=window.originalRecommend419;S.intLotes={};pintar();return true;`);
 await js(`document.querySelector('#int-gerar').click();trocarModalidade('lotofacil');return true;`);await dormir(1000);
 checar('cálculo pendente não invade outra modalidade',await js(`return S.modalidade==='lotofacil'&&!S.intLotes['mega-sena']&&!document.querySelector('.int-principal')`));
+
+/* ---------- S. Formatos especiais no motor integrado 4.20 ---------- */
+secao('S. Recomendação única nos formatos especiais');
+for(const mod of ['super-sete','mega-da-virada']){
+ await js(`S.buscaAutomatica=false;irParaTela('sugestoes',{lateral:true});return true;`);
+ await tocar('[data-int-special="'+mod+'"]');
+ checar(mod+' abre o gerador integrado pela tela Sugestões',await js(`return document.querySelector('#ll-lab').dataset.labMod==='${mod}'&&!!document.querySelector('[data-ll-action="recomendar-especial"]')&&!document.querySelector('#ll-experimentos')?.open`));
+ await input418('#ll-antes','');await input418('#ll-texto','');await input418('#ll-quantidade',1);await input418('#ll-orcamento',100);
+ await tocar('[data-ll-action="recomendar-especial"]');await wait418();
+ checar(mod+' mostra uma principal e a validação efetiva',await js(`return document.querySelector('#ll-content').textContent.includes('Recomendação principal')&&document.querySelector('#ll-content').textContent.includes('Pesos neutros')`));
+ await tocar('[data-ll-recommend-inspect="0"]');
+ checar(mod+' abre a análise da mesma recomendação',await js(`return document.querySelector('#ll-lab').dataset.labMod==='${mod}'&&document.querySelector('#ll-status').textContent.includes('Retrato da base')&&document.querySelector('#ll-texto').value.length>0`));
+}
 
 /* ---------- fim ---------- */
 console.log(linhas.join("\n"));

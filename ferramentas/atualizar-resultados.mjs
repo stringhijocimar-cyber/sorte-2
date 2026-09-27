@@ -132,6 +132,7 @@ async function buscar(slug, concurso) {
   const url = `${BASE}/${slug}` + (concurso ? `/${concurso}` : "");
   const resp = await fetch(url, {
     headers: { Accept: "application/json", "User-Agent": "lotolab-atualizador" },
+    signal: AbortSignal.timeout(12000),
   });
   if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
   return resp.json();
@@ -192,6 +193,7 @@ const FONTES_ULTIMO = [
     buscar: async (slug) => {
       const r = await fetch(`${ESPELHO}/${slug}/latest`, {
         headers: { Accept: "application/json", "User-Agent": "lotolab-atualizador" },
+    signal: AbortSignal.timeout(12000),
       });
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       return daFormaDoEspelho(await r.json());

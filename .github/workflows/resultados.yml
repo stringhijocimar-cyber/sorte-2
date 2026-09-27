@@ -65,6 +65,9 @@ jobs:
           echo "rodando com:$args"
           node ferramentas/atualizar-resultados.mjs $args
 
+      - name: Repor concursos ausentes do histórico
+        run: node ferramentas/completar-lacunas.mjs --limite=40
+
       - name: Conferir o motor antes de publicar
         # Se o app estiver quebrado, publicar dado novo não ajuda ninguém —
         # e esconde a quebra atrás de um commit automático.

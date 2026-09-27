@@ -140,7 +140,7 @@ const contexto = {
             scrollTo() {}, addEventListener() {} },
   fetch: () => Promise.reject(new Error("sem rede — proposital")),
   AbortController,
-  setTimeout, clearTimeout, requestAnimationFrame: (f) => setTimeout(f, 0),
+  setTimeout, clearTimeout, setInterval:()=>0, clearInterval:()=>{}, requestAnimationFrame: (f) => setTimeout(f, 0),
   Math: mathSemeado(), Date, JSON, Number, String, Array, Object, Map, Set, Error, isNaN,
   parseInt, parseFloat, Promise, Intl,
 };

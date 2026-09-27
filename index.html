@@ -957,10 +957,10 @@ td{padding:6px 7px;border-bottom:1px solid var(--trama)}
 <link rel="stylesheet" href="ui/inteligencia-v4-9.css?v=4.9.0">
 <link rel="stylesheet" href="ui/visual-metas-v4-10.css?v=4.10.0">
 <link rel="stylesheet" href="ui/visual-foco-v4-11.css?v=4.13.0">
-<link rel="stylesheet" href="ui/experiencia-v4-14.css?v=4.19.0">
-<link rel="stylesheet" href="ui/modalidades-v4-15.css?v=4.19.0">
-<link rel="stylesheet" href="ui/recorrencia-v4-17.css?v=4.19.0">
-<link rel="stylesheet" href="ui/lab-v4-18.css?v=4.19.0">
+<link rel="stylesheet" href="ui/experiencia-v4-14.css?v=4.20.0">
+<link rel="stylesheet" href="ui/modalidades-v4-15.css?v=4.20.0">
+<link rel="stylesheet" href="ui/recorrencia-v4-17.css?v=4.20.0">
+<link rel="stylesheet" href="ui/lab-v4-18.css?v=4.20.0">
 </head>
 <body>
 <header>
@@ -1039,10 +1039,10 @@ td{padding:6px 7px;border-bottom:1px solid var(--trama)}
   <div class="corpo"><div class="alca"></div><div id="corpo-avisos"></div></div>
 </div>
 
-<script src="ui/lab-core.js?v=4.19.0"></script>
-<script src="ui/lab-strategies.js?v=4.19.0"></script>
-<script src="ui/lab-recommendation.js?v=4.19.0"></script>
-<script src="ui/lab-ui.js?v=4.19.0"></script>
+<script src="ui/lab-core.js?v=4.20.0"></script>
+<script src="ui/lab-strategies.js?v=4.20.0"></script>
+<script src="ui/lab-recommendation.js?v=4.20.0"></script>
+<script src="ui/lab-ui.js?v=4.20.0"></script>
 <script>
 "use strict";
 
@@ -2860,7 +2860,7 @@ T.sugestoes = () => {
   const calculando=intPendente?.token===intTrabalho&&intPendente.modalidade===m;
   return `<div class="ux-sugestoes-intro" aria-label="Como criar sugestões"><span>1. Defina</span><span>2. Confira</span><span>3. Salve</span></div>
     <section class="carta int-form ux-form"><div class="int-section-title"><h2>Configure seu jogo</h2><span>${esc(c.nome)}</span></div>
-      <div class="int-integrated-intro"><span class="int-eyebrow">ANÁLISES CONECTADAS · 4.19</span><p class="int-help">Uma principal, escolhida com estrutura, frequência, atrasos, pares, trios e perfil de acertos. Jogos adicionais são opcionais.</p></div>
+      <div class="int-integrated-intro"><span class="int-eyebrow">ANÁLISES CONECTADAS · 4.20</span><p class="int-help">Uma principal, escolhida com estrutura, frequência, atrasos, pares, trios e perfil de acertos. Jogos adicionais são opcionais.</p></div>
       <div class="int-grid"><label class="campo" for="int-tam">Dezenas por jogo
         <select id="int-tam">${Array.from({length:c.max-c.min+1},(_,i)=>i+c.min).map(t=>`<option ${o.tam===t?"selected":""}>${t}</option>`).join("")}</select></label>
         <label class="campo" for="int-quantidade">Total de jogos<input id="int-quantidade" type="number" min="1" max="60" value="${o.quantidade}"></label>
@@ -2882,6 +2882,7 @@ T.sugestoes = () => {
       <p class="int-help ux-fonte">Salvar no app não registra uma aposta. Preços de 05/09/2026 · <a href="https://loterias.caixa.gov.br/Paginas/${INT_FONTES[m]}.aspx" target="_blank" rel="noopener noreferrer">regras da modalidade</a>.</p>
     </section>
     <div id="int-lote">${S.intLotes[m]?intRenderLote(S.intLotes[m]):""}</div>
+    <div class="ux-links"><button data-int-special="super-sete">Super Sete ↗</button><button data-int-special="mega-da-virada">Mega da Virada ↗</button></div>
     <div class="ux-links"><button data-atalho="plano">Plano e metas <span aria-hidden="true">↗</span></button><button data-abrir-analitica>Avaliar estratégias <span aria-hidden="true">↓</span></button></div>
     ${audRenderPainel(m)}
     <details class="carta ux-explorar"><summary>Explorar o histórico em números</summary><div>
@@ -2934,6 +2935,8 @@ function intRenderRecomendacao(r){
     <div class="int-analysis-link"><span class="int-eyebrow">DO HISTÓRICO À SUGESTÃO</span><h3>Por que esta combinação?</h3>
       <p class="int-help">${g.base.n?`${inf(g.base.n)} concursos válidos, do ${g.base.primeiro} ao ${g.base.ultimo}. ${g.base.lacunas?inf(g.base.lacunas)+' concursos ausentes nesse intervalo. ':''}As faixas mais observadas foram ${a.predominantes.map(h=>h+' acertos ('+nf(a.faixas[h].percentual,1)+'%)').join(' e ')}.`:'Sem histórico válido disponível. Importe resultados para ativar a seleção por perfil.'}</p>
       <p class="int-help">${esc(g.evidencia)}</p>
+      <div class="int-validation"><b>Validação conectada à escolha</b><p class="int-help">${esc(g.calibracao.motivo)}</p>
+      ${g.calibracao.particao?`<details class="int-details"><summary>Conferir teste e pesos usados</summary><p class="int-help">Validação: ${g.calibracao.particao.validacao.join('–')} · teste separado: ${g.calibracao.particao.teste.join('–')}. Perfil: ${esc(g.calibracao.perfil)}.</p><p class="int-help">${esc(g.calibracao.limites)}</p><p class="int-help">${g.principal.criterios.map(x=>esc(x.nome)+': '+nf(g.calibracao.pesos[x.id]??1,1)).join(' · ')}</p></details>`:''}</div>
       <details class="int-details"><summary>Critérios que participaram da seleção</summary><p class="int-help">Distância ao perfil de referência: quanto menor, mais próximo. As parcelas abaixo somam a distância usada no ranking. São medidas descritivas, não chances de ganhar.</p>
         <div class="ll-table"><table><thead><tr><th>Critério</th><th>Parcela da distância</th></tr></thead><tbody>${g.principal.criterios.map(x=>`<tr><td>${esc(x.nome)}</td><td>${x.contribuicao===null?'insuficiente':nf(x.contribuicao,4)}</td></tr>`).join('')}</tbody></table></div>
         <p class="int-help">Complementos são sorteados uniformemente, exceto trevos fixados por você. Novidade histórica é informativa; não favorece ou elimina automaticamente uma combinação.</p></details>
@@ -2991,6 +2994,7 @@ function intRenderTeste(r){
 function intLigarAcoes(){
   if(S.tela!=="sugestoes") return;
   audLigarAcoes();
+  document.querySelectorAll('[data-int-special]').forEach(b=>b.onclick=()=>LL18UI.openRecommendation(b.dataset.intSpecial));
   const m=S.modalidade,o=intConfig(m);
   const ler=()=>{
     for(const k of ["tam","quantidade","janela"]) o[k]=Number($("#int-"+k).value);
@@ -3029,7 +3033,9 @@ function intLigarAcoes(){
       const op={formato,quantidade:parametros.quantidade,orcamento:parametros.orcamento,
         fixas:intDezenas(parametros.fixas,m),excluidas:intDezenas(parametros.excluidas,m),
         janela:parametros.janela,semente:seed,...(trevos?.length?{trevosFixos:trevos}:{})};
-      const g=await LL18UI.recommend(m,parametros.historico,op);
+      const g=await LL18UI.recommend(m,parametros.historico,op,p=>{
+        if(atual())$('#int-mensagem').textContent=`${p.etapa}: ${p.feitos} de ${p.total}.`;
+      });
       if(!atual())return;
       if(g.base.assinatura!==LL18.recommendationBase(m,S.resultados,op).meta.assinatura)
         throw Error("O histórico mudou durante o cálculo. Gere novamente para usar os dados atualizados.");
@@ -3058,11 +3064,12 @@ function intLigarAcoes(){
         ...(lote.concursoAlvo?{concursoAlvo:lote.concursoAlvo}:{}),
         inteligencia:{versao:lote.versao,semente:lote.semente,assinatura:lote.base.assinatura,
           janela:lote.janela,fixas:lote.fixas,excluidas:lote.excluidas,preco:lote.metricas.unitario,
+          calibracao:lote.laboratorio?.calibracao,
           ...(lote.laboratorio?{motor:"integrado",geradoAte:lote.laboratorio.base.ultimo||0,papel:i===0?"principal":"adicional",criterios:lote.laboratorio.explicacoes[i].criterios}: {})}})).filter(j=>!existentes.has(chaveDoJogo(j)));
       if(!novos.length){$("#int-salvar").textContent="Lote já salvo hoje";$("#int-salvar").disabled=true;return;}
       const todos=S.jogos.concat(novos);
       if(!Guardar.gravar("jogos",todos)){ $("#int-mensagem").textContent="Não foi possível salvar no aparelho. Exporte o CSV para conservar o lote.";return; }
-      S.jogos=todos; LL18UI.historyChanged();irParaTela("jogos");
+      S.jogos=todos;espelharParaSegundoPlano(); LL18UI.historyChanged();irParaTela("jogos");
     };
     $("#int-exportar").onclick=()=>{
       const csv=intCsv(lote);
@@ -3829,7 +3836,7 @@ T.inicio = () => {
   const avisos=S.avisos.filter(a=>!a.lido).length;
   const meus=S.jogos.filter(j=>j.modalidade===m).length,idade=idadeDoHistorico(m);
   return `<div class="foco-inicio ux-inicio" style="--foco-cor:${FOCO_CORES[m]}">
-    <div class="foco-boasvindas"><div><span class="foco-label">BEM-VINDO AO SEU LABORATÓRIO</span><${podeVoltar()?'h2':'h1'}>Seu jogo,<br>bem planejado.</${podeVoltar()?'h2':'h1'}></div><span class="foco-versao">4.19</span></div>
+    <div class="foco-boasvindas"><div><span class="foco-label">BEM-VINDO AO SEU LABORATÓRIO</span><${podeVoltar()?'h2':'h1'}>Seu jogo,<br>bem planejado.</${podeVoltar()?'h2':'h1'}></div><span class="foco-versao">4.20</span></div>
     <section class="foco-hero"><div class="foco-hero-topo"><span class="foco-label">UM PLANO PARA CADA CONCURSO</span><span class="foco-tag">${esc(c.nome)}</span></div>
       <div class="foco-objetivo"><div><h2>Crie seus jogos.<br>Veja os acertos.</h2><p>Defina seus critérios e seu limite. O LotoLab organiza e confere.</p></div><div class="foco-alvo" aria-label="Meta de ${c.k} dezenas"><strong>${c.k}</strong><span>${c.trevos?"+ 2 trevos":"dezenas"}</span></div></div>
       <button class="acao foco-primary" data-atalho="sugestoes">Criar sugestões <span aria-hidden="true">→</span></button>
@@ -4595,7 +4602,7 @@ function preverGanhadores(dezenas, modalidade){
 const INTERVALO_BUSCA = 12 * 60 * 60 * 1000;
 /* Quando há sorteio esperando, procurar de doze em doze horas é o mesmo que
    não procurar. */
-const INTERVALO_BUSCA_PENDENTE = 20 * 60 * 1000;
+const INTERVALO_BUSCA_PENDENTE = 5 * 60 * 1000;
 
 /* Busca do fim para trás, parando no primeiro erro. Devolver o que já veio é
    melhor que devolver nada: um histórico de 400 concursos ainda calibra e
@@ -4759,7 +4766,13 @@ function sorteioPendente(modalidade, agora){
   return ultima < esperado;
 }
 
-async function buscaDiaria(){
+let buscaEmAndamento=null;
+function buscaDiaria(){
+  if(buscaEmAndamento)return buscaEmAndamento;
+  buscaEmAndamento=executarBuscaDiaria().finally(()=>{buscaEmAndamento=null;});
+  return buscaEmAndamento;
+}
+async function executarBuscaDiaria(){
   if(S.buscaAutomatica === false) return {tentadas:0, novos:0};
   const agora = Date.now();
   const marcas = S.ultimaBusca || {};
@@ -4770,17 +4783,19 @@ async function buscaDiaria(){
 
      Com o calendário na mão dá para separar os dois casos: quando não há nada
      esperando, doze horas; quando há sorteio publicado que o aparelho não tem,
-     vinte minutos. */
+     cinco minutos; modalidade aberta e jogos salvos também usam esse intervalo. */
   const alvos = Object.keys(MODALIDADES).filter(k => {
-    if(!SLUG_CAIXA[k] || !historicoDe(k).length) return false;
+    if(!SLUG_CAIXA[k] || (!historicoDe(k).length&&!S.jogos.some(j=>j.modalidade===k))) return false;
     const desde = agora - (marcas[k] || 0);
-    return desde > (sorteioPendente(k, agora)
+    return desde > (sorteioPendente(k, agora)||k===S.modalidade||S.jogos.some(j=>j.modalidade===k)
       ? INTERVALO_BUSCA_PENDENTE : INTERVALO_BUSCA);
   });
   if(!alvos.length) return {tentadas:0, novos:0};
 
   let novos = 0, falhas = 0;
-  for(const k of alvos){
+  const fila=alvos.slice().sort((a,b)=>Number(b===S.modalidade)-Number(a===S.modalidade));
+  const consumir=async()=>{while(fila.length){
+    const k=fila.shift();
     try{
       const r = await buscarNaCaixa(k, null);
       /* Guardar só o último perde sorteio: quem passa três dias sem abrir o
@@ -4795,19 +4810,15 @@ async function buscaDiaria(){
         catch(e){ break; }
       }
       lote.sort((a, b) => Number(a.concurso) - Number(b.concurso));
-      novos += guardarResultados(lote);
+      const inseridos=guardarResultados(lote);novos+=inseridos;
+      // Confere e avisa assim que esta modalidade chega, sem esperar as demais.
+      aoMudarHistorico(inseridos,"busca diária");
       marcas[k] = agora;
-    }catch(e){ falhas++; }
-  }
+    }catch(e){ falhas++;marcas[k]=agora; }
+  }};
+  await Promise.all(Array.from({length:Math.min(3,fila.length)},consumir));
   S.ultimaBusca = marcas;
   Guardar.gravar("ultimaBusca", marcas);
-  if(novos||falhas < alvos.length) aoMudarHistorico(novos, "busca diária");
-  else if(falhas === alvos.length && alvos.length)
-    /* Falhar em todas é sinal de rede ausente ou serviço fora, e não vale um
-       aviso — o app funciona sem. Falha parcial também não, pelo mesmo motivo.
-       O silêncio aqui é deliberado: avisar "não consegui buscar" toda vez que o
-       celular está sem sinal treinaria a pessoa a ignorar o sino. */
-    void 0;
   return {tentadas:alvos.length, novos, falhas};
 }
 
@@ -6739,7 +6750,7 @@ const LL18_BRIDGE={
   read:(k,p)=>Guardar.ler(k,p),write:(k,v)=>Guardar.gravar(k,v),
   native:()=>typeof Capacitor!=='undefined'&&Capacitor.isNativePlatform?.(),
   fetchJson:async url=>{const r=await buscarComLimite(url,12000);if(!r.ok)throw Error('Fonte respondeu HTTP '+r.status);return r.json();},
-  records:()=>S.resultados,
+  records:()=>S.resultados,currentMode:()=>S.modalidade,
   changeMode:m=>{if(MODALIDADES[m])trocarModalidade(m);},
   openSuggestions:m=>{if(MODALIDADES[m]){trocarModalidade(m);irParaTela('sugestoes');}},
   openAnalysis:()=>irParaTela('estatisticas'),
@@ -10303,8 +10314,13 @@ function ligarControlesCabecalho(){
   document.addEventListener("visibilitychange", () => {
     if(document.visibilityState !== "visible") return;
     metaAbrirDestino();
+    espelharParaSegundoPlano();
     buscaDiaria().then(r => { if(r.novos) pintar(); }).catch(()=>{});
   });
+
+  setInterval(()=>{
+    if(document.visibilityState==="visible")buscaDiaria().then(r=>{if(r.novos)pintar();}).catch(()=>{});
+  },60000);
 
   carregarCalibracao().then(()=>{ if(CALIBRACAO && S.tela==="gerar") pintar(); });
   /* O try/catch e a checagem de objeto não são zelo excessivo: um navegador em
