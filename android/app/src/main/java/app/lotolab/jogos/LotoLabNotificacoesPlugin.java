@@ -3,6 +3,8 @@ package app.lotolab.jogos;
 import android.content.Intent;
 import androidx.work.Constraints;
 import androidx.work.ExistingPeriodicWorkPolicy;
+import androidx.work.ExistingWorkPolicy;
+import androidx.work.OneTimeWorkRequest;
 import androidx.work.NetworkType;
 import androidx.work.PeriodicWorkRequest;
 import androidx.work.WorkManager;
@@ -40,12 +42,15 @@ public class LotoLabNotificacoesPlugin extends Plugin {
         }
         WorkManager manager=WorkManager.getInstance(getContext());
         if(!estado.optBoolean("ligado",false)||estado.optJSONArray("jogos")==null||estado.optJSONArray("jogos").length()==0){
-            manager.cancelUniqueWork(TRABALHO);call.resolve();return;
+            manager.cancelUniqueWork(TRABALHO);manager.cancelUniqueWork(TRABALHO+"_agora");call.resolve();return;
         }
-        Constraints constraints=new Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).setRequiresBatteryNotLow(true).build();
-        PeriodicWorkRequest trabalho=new PeriodicWorkRequest.Builder(ConferenciaWorker.class,30,TimeUnit.MINUTES)
-            .setInitialDelay(5,TimeUnit.MINUTES).setConstraints(constraints).build();
-        manager.enqueueUniquePeriodicWork(TRABALHO,ExistingPeriodicWorkPolicy.KEEP,trabalho);
+        Constraints constraints=new Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build();
+        PeriodicWorkRequest trabalho=new PeriodicWorkRequest.Builder(ConferenciaWorker.class,15,TimeUnit.MINUTES)
+            .setConstraints(constraints).build();
+        // UPDATE migra instalações que ainda tinham o período de 30 minutos.
+        manager.enqueueUniquePeriodicWork(TRABALHO,ExistingPeriodicWorkPolicy.UPDATE,trabalho);
+        manager.enqueueUniqueWork(TRABALHO+"_agora",ExistingWorkPolicy.KEEP,
+            new OneTimeWorkRequest.Builder(ConferenciaWorker.class).setConstraints(constraints).build());
         call.resolve();
     }
 }

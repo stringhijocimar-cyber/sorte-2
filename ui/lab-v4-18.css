@@ -64,3 +64,7 @@ html[data-tema="claro"] .ll-lab{--ll-acento:color-mix(in srgb,var(--ll-cor) 48%,
 .int-integrated-results .int-help{overflow-wrap:anywhere}
 .int-additional{margin:14px 0}
 @media(max-width:420px){.int-integrated-results .int-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.int-analysis-link{padding:12px}}
+
+/* Resumo da validação diretamente na recomendação. */
+.int-validation{margin:16px 0;padding:16px;border:1px solid var(--linha);border-radius:14px;background:color-mix(in srgb,var(--acaso) 7%,var(--carta))}
+.int-validation>p{margin-bottom:0}.int-validation .int-details{margin-top:12px}

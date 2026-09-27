@@ -1,3 +1,15 @@
+# LotoLab 4.20 — validação conectada à recomendação
+
+Abra **Sugestões → Gerar recomendação**. O mesmo motor reúne as análises, valida pesos em períodos separados e acompanha resultados posteriores. Super Sete e Mega da Virada têm atalhos para a recomendação integrada. Os dados especiais exigem importação identificada.
+
+As notificações passam a conferir cada modalidade assim que chega; no Android, há verificação imediata ao sincronizar e agendamento de 15 minutos, sujeito ao sistema. O histórico recebe reposição validada de concursos ausentes.
+
+[Baixar a última versão](https://github.com/stringhijocimar-cyber/sorte-2/releases/latest) · [Notas da versão](docs/release-4.20.md) · [Implementação e limites](docs/validacao-4.20.md)
+
+A seleção é descritiva e não tem vantagem preditiva demonstrada. Testes e simulações não garantem prêmio.
+
+---
+
 # LotoLab 4.19 — uma recomendação integrada
 
 Abra **Sugestões → Gerar recomendação**. Um jogo principal reúne os cálculos do laboratório: estrutura, frequência, atrasos, pares, trios, repetição e perfil de acertos. Todo o histórico disponível é usado por padrão; jogos adicionais são opcionais e priorizam menor repetição.

@@ -6,6 +6,30 @@ const require=createRequire(import.meta.url),L=require('../ui/lab-recommendation
 const data=m=>JSON.parse(readFileSync(new URL('../dados/'+m+'.json',import.meta.url))).concursos;
 const m='mega-sena',rows=data(m).slice(-100);
 
+test('validação integrada não lê resultados futuros nem procura outra semente',()=>{
+ const rng=L.rng('auditoria-420'),hist=Array.from({length:140},(_,i)=>({modalidade:m,concurso:i+1,...L.randomTicket(m,rng)}));
+ const a=L.calibrateRecommendation(m,hist,{semente:'primeira'});
+ const changed=hist.map(r=>r.concurso>110?{...r,dezenas:[1,2,3,4,5,6]}:r);
+ const b=L.calibrateRecommendation(m,changed,{semente:'outra'});
+ assert.deepEqual(a.selecao,b.selecao);
+ assert.deepEqual(a.observacoes.slice(0,30),b.observacoes.slice(0,30));
+ assert.ok(a.observacoes.every(x=>x.treinoAte<x.concurso));
+ assert.equal(a.selecao.congeladaAte,110);
+ assert.ok(Object.values(a.pesos).every(x=>x>=.8&&x<=1.2));
+ assert.deepEqual(L.calibrateRecommendation(m,[...hist,{modalidade:m,concurso:141,dezenas:[1,2,3,4,5,6]}],{antesDe:141}),a);
+ assert.equal(L.calibrateRecommendation(m,hist,{fixas:[1]}).estado,'restricoes');
+});
+test('lacunas impedem ajuste e feedback persistente suspende o ranking',()=>{
+ const rng=L.rng('feedback'),hist=Array.from({length:130},(_,i)=>({modalidade:m,concurso:i+1,...L.randomTicket(m,rng)}));
+ assert.equal(L.calibrateRecommendation(m,hist.filter(x=>x.concurso!==100)).estado,'insuficiente');
+ const acompanhamento={comparacao:{n:60,pAjustado:.01,ic:[-1,-.1],periodos:[-.2,-.3,-.4]}};
+ const a=L.recommend(m,hist,{semente:'feedback',acompanhamento});
+ assert.equal(a.estado,'recuo-prospectivo');assert.equal(a.principal.distancia,null);
+ assert.equal(a.calibracao.perfil,'uniforme');
+ acompanhamento.comparacao.n=1;
+ assert.equal(L.recommend(m,hist,{semente:'feedback',acompanhamento}).estado,'perfil-historico');
+});
+
 test('uma principal reproduzível e distribuição conferida independentemente',()=>{
  const op={semente:'integracao',quantidade:3},a=L.recommend(m,rows,op),b=L.recommend(m,rows,op);
  assert.deepEqual(a,b);assert.deepEqual(a.principal.jogo,a.jogos[0]);

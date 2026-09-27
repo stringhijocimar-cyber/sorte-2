@@ -1,7 +1,7 @@
 /* LotoLab 4.18: núcleo descritivo puro, compartilhado pelo worker e pelos testes. */
 (function(root){
 'use strict';
-const VERSION='4.18.0';
+const VERSION='4.20.0';
 const aviso='Este índice mede semelhança com o histórico. Não representa a probabilidade matemática de a combinação ser sorteada no próximo concurso.';
 const rules={
  'mega-sena':{nome:'Mega-Sena',N:60,k:6,min:6,max:20,base:1,preco:6,faixas:[6,5,4],slug:'megasena'},

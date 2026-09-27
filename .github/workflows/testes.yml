@@ -182,21 +182,21 @@ jobs:
           cmp index.html /tmp/index-apk.html
           unzip -p android/app/build/outputs/apk/debug/app-debug.apk assets/public/ui/lab-recommendation.js > /tmp/recomendacao-apk.js
           cmp ui/lab-recommendation.js /tmp/recomendacao-apk.js
-          cp android/app/build/outputs/apk/debug/app-debug.apk LotoLab-4.19.0-preview.apk
+          cp android/app/build/outputs/apk/debug/app-debug.apk LotoLab-4.20.0-preview.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: LotoLab-4.19.0-preview
-          path: LotoLab-4.19.0-preview.apk
+          name: LotoLab-4.20.0-preview
+          path: LotoLab-4.20.0-preview.apk
           retention-days: 14
 
       - name: Disponibilizar APK para download direto
         if: github.head_ref == 'codex/inteligencia-sugestoes-v4.9'
         env:
           GH_TOKEN: ${{ github.token }}
-          LOTOLAB_TAG: v4.19.0-rc.${{ github.run_number }}
+          LOTOLAB_TAG: v4.20.0-rc.${{ github.run_number }}
         run: |
           cat > /tmp/lotolab-release.md <<'NOTAS'
-          LotoLab 4.19.0 — base escura anterior, seletor de modalidades em
+          LotoLab 4.20.0 — base escura anterior, seletor de modalidades em
           duas linhas nas 15 telas e destaques na cor da loteria escolhida.
           A página recebe um degradê suave de baixo para cima.
           Os resultados usam bolinhas amarelas com números grafite.
@@ -214,53 +214,31 @@ jobs:
           Mega da Virada exigem importação e usam o acompanhamento do laboratório.
           Relatórios JSON disponíveis; nenhuma combinação de exemplo é preferencial.
 
-          Baixe LotoLab-4.19.0-preview.apk abaixo. APK assinado para depuração.
+          Baixe LotoLab-4.20.0-preview.apk abaixo. APK assinado para depuração.
           A assinatura pode ser diferente da instalação anterior: não desinstale
           seu aplicativo sem antes preservar seus jogos e resultados.
 
           Inicialização nativa simulada e toques validados em Chrome; instalação em aparelho
           físico ainda requer conferência. Não prevê resultados de loterias.
           NOTAS
-          gh release create "$LOTOLAB_TAG" LotoLab-4.19.0-preview.apk \
+          gh release create "$LOTOLAB_TAG" LotoLab-4.20.0-preview.apk \
             --target "$GITHUB_SHA" --prerelease \
-            --title "LotoLab 4.19.0 — teste" --notes-file /tmp/lotolab-release.md
+            --title "LotoLab 4.20.0 — teste" --notes-file /tmp/lotolab-release.md
 
-      - name: Publicar LotoLab 4.19.0 final
+      - name: Publicar LotoLab 4.20.0 final
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           # Só publica depois de todas as verificações e da compilação acima.
           # Uma versão já publicada nunca é substituída por atualizações de dados.
-          test "$(cat VERSION)" = '4.19.0'
-          if gh release view v4.19.0 >/dev/null 2>&1; then
-            echo 'A versão 4.19.0 já está publicada; arquivo preservado.'
+          test "$(cat VERSION)" = '4.20.0'
+          if gh release view v4.20.0 >/dev/null 2>&1; then
+            echo 'A versão 4.20.0 já está publicada; arquivo preservado.'
             exit 0
           fi
-          cp LotoLab-4.19.0-preview.apk LotoLab-4.19.0.apk
-          sha256sum LotoLab-4.19.0.apk > LotoLab-4.19.0.apk.sha256
-          cat > /tmp/lotolab-final.md <<'NOTAS'
-          Uma recomendação principal conecta a tela Sugestões ao laboratório.
-
-          - Um jogo por padrão; adicionais são opcionais.
-          - Estrutura, frequência, atrasos, pares, trios, repetição e distribuição
-            de acertos participam da seleção pelo mesmo núcleo analítico.
-          - A explicação mostra os critérios e a base usados. O botão
-            “Ver análise usada na escolha” abre a mesma combinação.
-          - Histórico alterado é sinalizado; jogos salvos para concursos futuros
-            entram no acompanhamento. A geração funciona também offline.
-          - Cálculos em andamento sobrevivem a atualizações automáticas da tela.
-
-          Abra Sugestões → Gerar recomendação.
-
-          APK para instalação direta no Android, com a assinatura de depuração
-          usada nas distribuições deste repositório; não é um envio à Play Store.
-          Se houver conflito de assinatura com uma instalação anterior, preserve
-          seus jogos e resultados antes de remover qualquer aplicativo.
-          Testes automáticos e conteúdo do APK verificados; sem teste em aparelho físico.
-
-          A seleção é descritiva e não tem vantagem preditiva demonstrada.
-          NOTAS
-          gh release create v4.19.0 LotoLab-4.19.0.apk LotoLab-4.19.0.apk.sha256 \
+          cp LotoLab-4.20.0-preview.apk LotoLab-4.20.0.apk
+          sha256sum LotoLab-4.20.0.apk > LotoLab-4.20.0.apk.sha256
+          gh release create v4.20.0 LotoLab-4.20.0.apk LotoLab-4.20.0.apk.sha256 \
             --target "$GITHUB_SHA" --latest \
-            --title 'LotoLab 4.19.0' --notes-file /tmp/lotolab-final.md
+            --title 'LotoLab 4.20.0' --notes-file docs/release-4.20.md
