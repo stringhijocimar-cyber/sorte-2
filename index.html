@@ -3013,6 +3013,7 @@ function intLigarAcoes(){
     if(el.id==="int-janela") {intTrabalho++;pintar();}
     else $("#int-preco").textContent=brl(custoDoJogo(m,o.tam)*o.quantidade);
   });
+  document.querySelectorAll('.int-form input').forEach(el=>el.oninput=ler);
   const avancado=$('#int-avancado');
   if(avancado) avancado.ontoggle=()=>{o.avancado=avancado.open;};
   for(const id of ['int-quantidade','int-orcamento']) $('#'+id).oninput=()=>{
@@ -6762,7 +6763,14 @@ const LL18_BRIDGE={
   options:m=>{const o=intConfig(m);if(o.concurso&&S.intLotes[m]?.concursoAlvo===Number(o.concurso)&&Number(o.concurso)<=(LL18.history(m,S.resultados).meta.ultimo||0))o.concurso="";const formato=LL18.randomTicket(m,LL18.rng("formato:"+m));formato.dezenas=universo(m).slice(0,o.tam);
     const trevos=MODALIDADES[m].trevos?lerTrevos(o.trevos):null;
     return {formato,quantidade:o.quantidade,orcamento:o.orcamento,janela:o.janela,fixas:intDezenas(o.fixas,m),excluidas:intDezenas(o.excluidas,m),concursoAlvo:o.concurso===""?null:Number(o.concurso),...(trevos?.length?{trevosFixos:trevos}:{})};},
-  deliver:(m,g,records)=>{const r=intReceberRecomendacao(g,{historico:records});r.concursoAlvo=g.automatico.rodada.concursoAlvo;S.intLotes[m]=r;if(S.tela==="sugestoes"&&S.modalidade===m)pintar();},
+  deliver:(m,g,records)=>{const r=intReceberRecomendacao(g,{historico:records});r.concursoAlvo=g.automatico.rodada.concursoAlvo;S.intLotes[m]=r;
+    if(S.tela==="sugestoes"&&S.modalidade===m){
+      // Atualiza só a saída: preserva os campos, foco e ancoragem da rolagem.
+      const el=$('#int-lote');if(el)el.innerHTML=intRenderLote(r);
+      const status=$('#auto-status');if(status)status.textContent='';
+      const alvo=$('#int-concurso');if(alvo&&document.activeElement!==alvo)alvo.value=intConfig(m).concurso;
+      intLigarAcoes();recLigarAcoes();
+    }},
   changeMode:m=>{if(MODALIDADES[m])trocarModalidade(m);},
   openSuggestions:m=>{if(MODALIDADES[m]){trocarModalidade(m);irParaTela('sugestoes');}},
   openAnalysis:()=>irParaTela('estatisticas'),

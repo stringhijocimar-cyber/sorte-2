@@ -173,7 +173,7 @@ function prospective(m,rows,state,o){
   if(round.geradoAte>=draw.concurso||round.protocolo!==PROTOCOL){rejected.push(draw.concurso);continue;}
   // Se já existia data comprovadamente anterior à criação, não foi prospectivo.
   const localDay=new Date(round.criadoEm).toLocaleDateString('en-CA',{timeZone:'America/Sao_Paulo'});
-  if(draw.data&&localDay>draw.data){rejected.push(draw.concurso);continue;}
+  if(!draw.data||localDay>draw.data){rejected.push(draw.concurso);continue;}
   observations.push(observation(m,round,draw,o));
  }
  observations.sort((a,b)=>a.concurso-b.concurso);
@@ -191,7 +191,7 @@ function validateState(m,input,o){
  if(!Array.isArray(s.rodadas)||s.rodadas.length>20000||!Array.isArray(s.decisoes))throw Error('Memória automática inválida.');
  if(s.metodo&&!['consenso',...selectable].includes(s.metodo))throw Error('Método desconhecido na memória.');
  for(const r of s.rodadas){
-  if(!Number.isSafeInteger(r.concursoAlvo)||r.concursoAlvo<=r.geradoAte||seen.has(r.concursoAlvo)||!Number.isFinite(Date.parse(r.criadoEm))||r.protocolo!==PROTOCOL)throw Error('Registro de avaliação inválido.');
+  if(!Number.isSafeInteger(r.geradoAte)||r.geradoAte<0||!Number.isSafeInteger(r.concursoAlvo)||r.concursoAlvo<=r.geradoAte||seen.has(r.concursoAlvo)||!Number.isFinite(Date.parse(r.criadoEm))||r.protocolo!==PROTOCOL)throw Error('Registro de avaliação inválido.');
   if(!Array.isArray(r.testes)||r.testes.length!==ids.length||new Set(r.testes.map(x=>x.id)).size!==ids.length||r.testes.some(x=>!ids.includes(x.id)))throw Error('Pacote de testes incompleto.');
   for(const t of [r.principal,r.consenso,...r.testes.map(x=>x.jogo)]){
    L.validateTicket(m,t,{completo:true});

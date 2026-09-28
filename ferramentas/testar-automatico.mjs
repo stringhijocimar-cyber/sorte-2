@@ -108,6 +108,8 @@ test('memória adulterada não aceita alvo duplicado ou jogo incompatível',()=>
  const rows=history(40),a=L.autoCycle(m,rows,{}, {agora:now});
  const duplicate=structuredClone(a.estado);duplicate.rodadas.push(duplicate.rodadas[0]);
  assert.throws(()=>L.autoCycle(m,rows,duplicate),/Registro/);
+ const invalidCut=structuredClone(a.estado);delete invalidCut.rodadas[0].geradoAte;
+ assert.throws(()=>L.autoCycle(m,rows,invalidCut),/Registro/);
  const changed=structuredClone(a.estado);changed.rodadas[0].principal.dezenas.push(60);
  assert.throws(()=>L.autoCycle(m,rows,changed),/incompatível|repetida/);
 });
@@ -141,4 +143,10 @@ test('falha de gravação é declarada; chamadas concorrentes não perdem o regi
  assert.equal(store.get('automatico421:'+pair[0].automatico.estado.perfil).rodadas.length,1);
  const reopened=await controller(store).recommend(m,rows,{agora:now});
  assert.deepEqual(reopened.automatico.rodada,pair[0].automatico.rodada);
+});
+
+test('resultado sem data fica fora da evidência prospectiva',()=>{
+ const a=L.autoCycle(m,history(40),{}, {agora:now});
+ const r=L.autoCycle(m,[...history(40),{modalidade:m,concurso:41,dezenas:[1,2,3,4,5,6]}],a.estado,{agora:now});
+ assert.equal(r.acompanhamento.n,0);assert.deepEqual(r.acompanhamento.rejeitados,[41]);
 });
