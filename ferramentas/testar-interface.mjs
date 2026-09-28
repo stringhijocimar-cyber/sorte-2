@@ -1698,7 +1698,7 @@ async function tocar(seletor){
   await js(`document.querySelector(${JSON.stringify(seletor)})?.scrollIntoView({block:'center',behavior:'instant'});return true;`);
   await dormir(100);
   const p=await js(`const el=document.querySelector(${JSON.stringify(seletor)});if(!el)return null;const r=el.getBoundingClientRect(),x=r.left+r.width/2,y=r.top+r.height/2;const h=document.elementFromPoint(x,y);return {x,y,atingivel:!!h&&(el===h||el.contains(h))};`);
-  if(!p?.atingivel)throw new Error('Toque bloqueado: '+seletor);
+  if(!p?.atingivel){await capturar('falha-toque');const detalhe=await js(`const e=document.querySelector(${JSON.stringify(seletor)}),r=e?.getBoundingClientRect();return {rect:r?.toJSON(),scroll:scrollY,viewport:innerHeight,atingido:r?document.elementFromPoint(r.left+r.width/2,r.top+r.height/2)?.outerHTML.slice(0,400):null,details:e?[...document.querySelectorAll('details')].filter(d=>d.contains(e)).map(d=>({id:d.id,classe:d.className,open:d.open})):[]};`);throw new Error('Toque bloqueado: '+seletor+' '+JSON.stringify(detalhe));}
   await cmd('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:p.x,y:p.y,radiusX:2,radiusY:2,force:1}]});
   await cmd('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await dormir(150);
 }

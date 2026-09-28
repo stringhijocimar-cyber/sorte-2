@@ -2842,6 +2842,14 @@ function intConfig(m){
   return S.intConfig[m] || (S.intConfig[m]={tam:MODALIDADES[m].min,quantidade:1,concurso:"",
     modo:"integrado",janela:0,fixas:"",excluidas:"",orcamento:"",semente:""});
 }
+function intConfigDaTela(m){
+  const o=intConfig(m);
+  if(S.tela!=="sugestoes"||S.modalidade!==m||!$('#int-tam'))return o;
+  for(const k of ["tam","quantidade","janela"])o[k]=Number($('#int-'+k).value);
+  for(const k of ["fixas","excluidas","orcamento","semente","concurso"])o[k]=$('#int-'+k).value;
+  if($('#int-trevos'))o.trevos=$('#int-trevos').value;
+  return o;
+}
 function intStatusBase(base){
   const hist=base.hist;
   return `<div class="int-base"><span class="int-dot"></span><span>${hist.length
@@ -6760,16 +6768,19 @@ const LL18_BRIDGE={
   fetchJson:async url=>{const r=await buscarComLimite(url,12000);if(!r.ok)throw Error('Fonte respondeu HTTP '+r.status);return r.json();},
   records:()=>S.resultados,currentMode:()=>S.modalidade,
   currentScreen:()=>S.tela,busy:()=>!!intPendente,
-  options:m=>{const o=intConfig(m);if(o.concurso&&S.intLotes[m]?.concursoAlvo===Number(o.concurso)&&Number(o.concurso)<=(LL18.history(m,S.resultados).meta.ultimo||0))o.concurso="";const formato=LL18.randomTicket(m,LL18.rng("formato:"+m));formato.dezenas=universo(m).slice(0,o.tam);
+  options:m=>{const o=intConfigDaTela(m);if(o.concurso&&S.intLotes[m]?.concursoAlvo===Number(o.concurso)&&Number(o.concurso)<=(LL18.history(m,S.resultados).meta.ultimo||0))o.concurso="";const formato=LL18.randomTicket(m,LL18.rng("formato:"+m));formato.dezenas=universo(m).slice(0,o.tam);
     const trevos=MODALIDADES[m].trevos?lerTrevos(o.trevos):null;
     return {formato,quantidade:o.quantidade,orcamento:o.orcamento,janela:o.janela,fixas:intDezenas(o.fixas,m),excluidas:intDezenas(o.excluidas,m),concursoAlvo:o.concurso===""?null:Number(o.concurso),...(trevos?.length?{trevosFixos:trevos}:{})};},
   deliver:(m,g,records)=>{const r=intReceberRecomendacao(g,{historico:records});r.concursoAlvo=g.automatico.rodada.concursoAlvo;S.intLotes[m]=r;
     if(S.tela==="sugestoes"&&S.modalidade===m){
       // Atualiza só a saída: preserva os campos, foco e ancoragem da rolagem.
+      const anchor=$('.auto-settings'),before=anchor?.getBoundingClientRect();
+      const preserve=before&&scrollY>0&&before.top<innerHeight&&before.bottom>0;
       const el=$('#int-lote');if(el)el.innerHTML=intRenderLote(r);
       const status=$('#auto-status');if(status)status.textContent='';
       const alvo=$('#int-concurso');if(alvo&&document.activeElement!==alvo)alvo.value=intConfig(m).concurso;
       intLigarAcoes();recLigarAcoes();
+      if(preserve)window.scrollBy({top:anchor.getBoundingClientRect().top-before.top,behavior:'instant'});
     }},
   changeMode:m=>{if(MODALIDADES[m])trocarModalidade(m);},
   openSuggestions:m=>{if(MODALIDADES[m]){trocarModalidade(m);irParaTela('sugestoes');}},
