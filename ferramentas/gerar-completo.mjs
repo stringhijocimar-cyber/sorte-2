@@ -83,8 +83,12 @@ html = html.replace(/<link rel="stylesheet" href="(ui\/[^"?]+)(?:\?[^"\s]*)?"[^>
   return `<style data-folha="${caminho}">\n${css}\n</style>`;
 });
 
+/* Livros públicos congelados: a comparação também funciona sem rede. */
+const books=Object.fromEntries(readdirSync(join(RAIZ,'aprendizado')).filter(f=>f.endsWith('.json')).map(f=>[f.replace('.json',''),JSON.parse(readFileSync(join(RAIZ,'aprendizado',f),'utf8'))]));
+html=html.replace('<script src="ui/lab-auto-ui.js', '<script>globalThis.LL18_AUTO_BOOKS='+JSON.stringify(books).replace(/</g,'\\u003c')+';</script>\n<script src="ui/lab-auto-ui.js');
+
 /* Módulos e worker embutidos para funcionar também em file://. */
-const workerSource=['lab-core.js','lab-strategies.js','lab-recommendation.js','lab-worker.js'].map(f=>readFileSync(join(RAIZ,'ui',f),'utf8')).join('\n');
+const workerSource=['lab-core.js','lab-strategies.js','lab-recommendation.js','lab-auto.js','lab-worker.js'].map(f=>readFileSync(join(RAIZ,'ui',f),'utf8')).join('\n');
 html=html.replace(/<script src="(ui\/lab-[^"?]+\.js)(?:\?[^"\s]*)?"><\/script>/g,(_,p)=>{
   const contents=readFileSync(join(RAIZ,p),'utf8');
   const embedded=p.endsWith('lab-ui.js')?'globalThis.LL18_WORKER_SOURCE='+JSON.stringify(workerSource)+';\n'+contents:contents;
