@@ -189,6 +189,7 @@ async function capturar(nome) {
 /* ---------- relatório ---------- */
 let passou = 0, falhou = 0;
 const linhas = [];
+process.on('uncaughtExceptionMonitor',()=>console.log(linhas.join('\n')));
 const checar = (t, c, d = "") => {
   if (c) { passou++; linhas.push(`  ok   ${t}${d ? " — " + d : ""}`); }
   else { falhou++; linhas.push(`  FALHA ${t}${d ? " — " + d : ""}`); }
