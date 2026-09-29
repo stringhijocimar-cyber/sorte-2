@@ -12,10 +12,9 @@ name: Atualizar resultados
 
 on:
   schedule:
-    # 04:00 e 12:00 UTC = 01:00 e 09:00 em Brasília. Os sorteios da Caixa
-    # ocorrem à noite, então a primeira execução já pega o resultado do dia
-    # anterior; a segunda é a rede de segurança para quando a primeira falha.
-    - cron: "0 4,12 * * *"
+    # Depois dos sorteios noturnos e dos domingos; inclui tentativas de reserva.
+    - cron: "17 1,4,12 * * *"
+    - cron: "17 15 * * 0"
   workflow_dispatch:
     inputs:
       tudo:
@@ -68,6 +67,9 @@ jobs:
       - name: Repor concursos ausentes do histórico
         run: node ferramentas/completar-lacunas.mjs --limite=40
 
+      - name: Conferir pacotes e registrar o próximo concurso
+        run: node ferramentas/atualizar-aprendizado.mjs
+
       - name: Conferir o motor antes de publicar
         # Se o app estiver quebrado, publicar dado novo não ajuda ninguém —
         # e esconde a quebra atrás de um commit automático.
@@ -75,12 +77,12 @@ jobs:
 
       - name: Commitar o que mudou
         run: |
-          if [ -z "$(git status --porcelain dados/)" ]; then
+          if [ -z "$(git status --porcelain dados/ aprendizado/)" ]; then
             echo "nada mudou"; exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add dados/
+          git add dados/ aprendizado/
           # Mensagem simples de propósito: a versão anterior montava o corpo do
           # commit com $(node -e '...') dentro de heredoc, e o aninhamento de
           # aspas quebrava o passo — que era o único a falhar num job que fazia

@@ -32,7 +32,7 @@ async function recommend(){
   if(!s.ocupado)throw Error('Recomendação interrompida: '+JSON.stringify(s));
   return false;
  },'recomendação offline',90000);
- assert.ok(await js(`const r=S.intLotes['mega-sena'];return r.jogos.length===1&&r.laboratorio.motor==='integrado'&&r.laboratorio.principal.analise.jogo.dezenas.join()===r.jogos[0].join()`));
+ assert.ok(await js(`const r=S.intLotes['mega-sena'];return r.jogos.length===1&&r.laboratorio.motor==='automatico'&&r.laboratorio.automatico.pacoteVirtual.length===11&&r.laboratorio.principal.analise.jogo.dezenas.join()===r.jogos[0].join()`));
 }
 async function analyze(){await js(`S.modalidade='mega-sena';irParaTela('estatisticas',{lateral:true});const e=document.querySelector('#ll-texto');e.value='14 23 53 56 57 60';e.dispatchEvent(new Event('input'));document.querySelector('[data-ll-action="analisar"]').click();`);await until(()=>js(`return !document.querySelector('[data-ll-action="cancelar"]')&&document.querySelector('#ll-content').textContent.includes('Distribuição completa')`),'worker analítico',90000);}
 try{

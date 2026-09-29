@@ -1,9 +1,10 @@
-if(typeof LL18==='undefined')importScripts('lab-core.js','lab-strategies.js','lab-recommendation.js');
+if(typeof LL18==='undefined')importScripts('lab-core.js','lab-strategies.js','lab-recommendation.js','lab-auto.js');
 self.onmessage=event=>{
- const {id,acao,modalidade:m,jogo,registros=[],op={},jogos=[],livro=[]}=event.data;
+ const {id,acao,modalidade:m,jogo,registros=[],op={},estado={},jogos=[],livro=[]}=event.data;
  const progress=p=>self.postMessage({id,progresso:p});
  try{let resultado;
   switch(acao){
+   case 'automatico':resultado=LL18.autoRecommend(m,registros,estado,op,progress);break;
    case 'recomendar':{
     const integrados=livro.filter(b=>b.modalidade===m&&(!b.modelo||b.modelo==='integrado'));
     const acompanhamento=integrados.length?LL18.monitor(m,LL18.recommendationBase(m,registros,op).rows,integrados):null;

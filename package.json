@@ -1,6 +1,6 @@
 {
   "name": "lotolab",
-  "version": "4.20.0",
+  "version": "4.21.0",
   "description": "Monta jogos das loterias brasileiras, guarda no aparelho e confere contra os concursos, mostrando o desempenho comparado ao acaso.",
   "private": true,
   "scripts": {
@@ -14,7 +14,9 @@
     "test:analitica": "node ferramentas/testar-analitica.mjs",
     "test:laboratorio": "node --test ferramentas/testar-laboratorio.mjs",
     "test:recorrencia": "node ferramentas/testar-recorrencia.mjs",
-    "test:recomendacao": "node --test ferramentas/testar-recomendacao.mjs"
+    "test:recomendacao": "node --test ferramentas/testar-recomendacao.mjs",
+    "test:automatico": "node --test ferramentas/testar-automatico.mjs",
+    "aprendizado:atualizar": "node ferramentas/atualizar-aprendizado.mjs"
   },
   "devDependencies": {
     "@capacitor/cli": "^6.1.2"

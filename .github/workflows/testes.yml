@@ -61,44 +61,12 @@ jobs:
           node ferramentas/testar-recorrencia.mjs
           node --test ferramentas/testar-laboratorio.mjs
           node --test ferramentas/testar-recomendacao.mjs
+          node --test ferramentas/testar-automatico.mjs
 
       - name: Metas, orçamento, cobertura e conferência colorida
         run: |
           node ferramentas/testar-metas.mjs
           node ferramentas/testar-complementos.mjs
-
-      - name: Testes da interface
-        # Estes existiam desde sempre e não rodavam em lugar nenhum: nem aqui,
-        # nem em "Compilar APK". Ficavam à espera de alguém lembrar de rodá-los
-        # à mão — que é o mesmo que não existir. São eles que garantem que toda
-        # tela continua alcançável pela navegação e que o laboratório não ganhou
-        # botão de aposta.
-        #
-        # A bateria abre o app num Chrome de verdade, servido por HTTP: em
-        # file:// o service worker não registra e o teste do modo avião mediria
-        # outra coisa. O runner do GitHub já traz o google-chrome instalado.
-        run: |
-          python3 -m http.server 8123 >/dev/null 2>&1 &
-          servidor=$!
-          trap 'kill $servidor 2>/dev/null' EXIT
-          # Espera a porta abrir em vez de dormir um tempo fixo e torcer.
-          for i in $(seq 1 30); do
-            curl -sf http://127.0.0.1:8123/index.html >/dev/null && break
-            sleep 0.5
-          done
-          node ferramentas/testar-distribuicao.mjs
-          node ferramentas/testar-interface.mjs
-
-      - name: Guardar as capturas de tela
-        # As capturas são o único registro visual do que a build viu. Quando um
-        # teste de layout falha, "estourou a largura em 360px" sem imagem manda
-        # a pessoa reproduzir tudo de novo na mão.
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: capturas
-          path: capturas/
-          if-no-files-found: ignore
 
       - name: Guarda de atraso do atualizador
         # O cron de resultados rodava todo dia, dava verde e commitava — com os
@@ -152,10 +120,52 @@ jobs:
             exit 1
           fi
 
+  interface:
+    name: Interface e distribuição
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Testes da interface
+        # Estes existiam desde sempre e não rodavam em lugar nenhum: nem aqui,
+        # nem em "Compilar APK". Ficavam à espera de alguém lembrar de rodá-los
+        # à mão — que é o mesmo que não existir. São eles que garantem que toda
+        # tela continua alcançável pela navegação e que o laboratório não ganhou
+        # botão de aposta.
+        #
+        # A bateria abre o app num Chrome de verdade, servido por HTTP: em
+        # file:// o service worker não registra e o teste do modo avião mediria
+        # outra coisa. O runner do GitHub já traz o google-chrome instalado.
+        run: |
+          python3 -m http.server 8123 >/dev/null 2>&1 &
+          servidor=$!
+          trap 'kill $servidor 2>/dev/null' EXIT
+          # Espera a porta abrir em vez de dormir um tempo fixo e torcer.
+          for i in $(seq 1 30); do
+            curl -sf http://127.0.0.1:8123/index.html >/dev/null && break
+            sleep 0.5
+          done
+          node ferramentas/testar-distribuicao.mjs
+          node ferramentas/testar-interface.mjs
+
+      - name: Guardar as capturas de tela
+        # As capturas são o único registro visual do que a build viu. Quando um
+        # teste de layout falha, "estourou a largura em 360px" sem imagem manda
+        # a pessoa reproduzir tudo de novo na mão.
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: capturas
+          path: capturas/
+          if-no-files-found: ignore
+
+
   apk-preview:
     name: APK Android
     if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
-    needs: motor
+    needs: [motor, interface]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -183,63 +193,42 @@ jobs:
           cmp index.html /tmp/index-apk.html
           unzip -p android/app/build/outputs/apk/debug/app-debug.apk assets/public/ui/lab-recommendation.js > /tmp/recomendacao-apk.js
           cmp ui/lab-recommendation.js /tmp/recomendacao-apk.js
-          cp android/app/build/outputs/apk/debug/app-debug.apk LotoLab-4.20.0-preview.apk
+          unzip -p android/app/build/outputs/apk/debug/app-debug.apk assets/public/ui/lab-auto.js > /tmp/automatico-apk.js
+          cmp ui/lab-auto.js /tmp/automatico-apk.js
+          unzip -p android/app/build/outputs/apk/debug/app-debug.apk assets/public/ui/lab-auto-ui.js > /tmp/automatico-ui-apk.js
+          cmp ui/lab-auto-ui.js /tmp/automatico-ui-apk.js
+          cp android/app/build/outputs/apk/debug/app-debug.apk LotoLab-4.21.0-preview.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: LotoLab-4.20.0-preview
-          path: LotoLab-4.20.0-preview.apk
+          name: LotoLab-4.21.0-preview
+          path: LotoLab-4.21.0-preview.apk
           retention-days: 14
 
       - name: Disponibilizar APK para download direto
         if: github.head_ref == 'codex/inteligencia-sugestoes-v4.9'
         env:
           GH_TOKEN: ${{ github.token }}
-          LOTOLAB_TAG: v4.20.0-rc.${{ github.run_number }}
+          LOTOLAB_TAG: v4.21.0-rc.${{ github.run_number }}
         run: |
-          cat > /tmp/lotolab-release.md <<'NOTAS'
-          LotoLab 4.20.0 — base escura anterior, seletor de modalidades em
-          duas linhas nas 15 telas e destaques na cor da loteria escolhida.
-          A página recebe um degradê suave de baixo para cima.
-          Os resultados usam bolinhas amarelas com números grafite.
-          Conferências preservam acertos verdes e erros em vermelho suave.
-          Recomendação principal integrada: estrutura, frequência, atrasos, pares,
-          trios e perfil de acertos usam os mesmos cálculos do laboratório.
-          Um jogo por padrão, extras opcionais e rastreabilidade da base usada.
-          Cálculo em worker, aviso de base alterada e acompanhamento prospectivo.
-          Laboratório para qualquer combinação: distribuição exata e acumulada,
-          percentuais, concursos, subconjuntos e aderência contra 2.000 referências.
-          Dez formatos, dez hipóteses, carteira diversificada, comparação cronológica,
-          Monte Carlo e acompanhamento prospectivo com diagnóstico adaptativo.
-          A base incluída tem lacunas e complementos ausentes; o app informa isso.
-          ROI depende de preços históricos e rateios completos. Super Sete e
-          Mega da Virada exigem importação e usam o acompanhamento do laboratório.
-          Relatórios JSON disponíveis; nenhuma combinação de exemplo é preferencial.
-
-          Baixe LotoLab-4.20.0-preview.apk abaixo. APK assinado para depuração.
-          A assinatura pode ser diferente da instalação anterior: não desinstale
-          seu aplicativo sem antes preservar seus jogos e resultados.
-
-          Inicialização nativa simulada e toques validados em Chrome; instalação em aparelho
-          físico ainda requer conferência. Não prevê resultados de loterias.
-          NOTAS
-          gh release create "$LOTOLAB_TAG" LotoLab-4.20.0-preview.apk \
+          cp docs/release-4.21.md /tmp/lotolab-release.md
+          gh release create "$LOTOLAB_TAG" LotoLab-4.21.0-preview.apk \
             --target "$GITHUB_SHA" --prerelease \
-            --title "LotoLab 4.20.0 — teste" --notes-file /tmp/lotolab-release.md
+            --title "LotoLab 4.21.0 — teste" --notes-file /tmp/lotolab-release.md
 
-      - name: Publicar LotoLab 4.20.0 final
+      - name: Publicar LotoLab 4.21.0 final
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           # Só publica depois de todas as verificações e da compilação acima.
           # Uma versão já publicada nunca é substituída por atualizações de dados.
-          test "$(cat VERSION)" = '4.20.0'
-          if gh release view v4.20.0 >/dev/null 2>&1; then
-            echo 'A versão 4.20.0 já está publicada; arquivo preservado.'
+          test "$(cat VERSION)" = '4.21.0'
+          if gh release view v4.21.0 >/dev/null 2>&1; then
+            echo 'A versão 4.21.0 já está publicada; arquivo preservado.'
             exit 0
           fi
-          cp LotoLab-4.20.0-preview.apk LotoLab-4.20.0.apk
-          sha256sum LotoLab-4.20.0.apk > LotoLab-4.20.0.apk.sha256
-          gh release create v4.20.0 LotoLab-4.20.0.apk LotoLab-4.20.0.apk.sha256 \
+          cp LotoLab-4.21.0-preview.apk LotoLab-4.21.0.apk
+          sha256sum LotoLab-4.21.0.apk > LotoLab-4.21.0.apk.sha256
+          gh release create v4.21.0 LotoLab-4.21.0.apk LotoLab-4.21.0.apk.sha256 \
             --target "$GITHUB_SHA" --latest \
-            --title 'LotoLab 4.20.0' --notes-file docs/release-4.20.md
+            --title 'LotoLab 4.21.0' --notes-file docs/release-4.21.md

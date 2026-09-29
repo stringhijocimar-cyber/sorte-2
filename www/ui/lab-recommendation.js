@@ -37,7 +37,7 @@ function calibrateRecommendation(m,records,op={},progress=()=>{}){
  const sizes=c.colunas?shape.colunas.map(a=>a.length):[shape.dezenas.length,shape.trevos?.length||0];
  const signature=JSON.stringify([m,b.meta.assinatura,sizes,op.fixas||[],op.excluidas||[]]);
  if(calibrationCache.has(signature))return calibrationCache.get(signature);
- const fallback={versao:'4.20.0',modalidade:m,assinatura:b.meta.assinatura,pesos:{},perfil:'neutro',estado:'insuficiente',
+ const fallback={versao:'4.21.0',modalidade:m,assinatura:b.meta.assinatura,pesos:{},perfil:'neutro',estado:'insuficiente',
    motivo:'Pesos neutros: são necessários 120 concursos consecutivos para separar treino, validação e teste.'};
  // Restrições alteram a população de comparação. Não reutilizar evidência
  // obtida para jogos livres em jogos fixados pelo usuário.
@@ -165,7 +165,7 @@ function recommend(m,records,op={},progress=()=>{}){
  // vantagem fora da amostra, pois os mesmos dados participaram da seleção.
  const adherence=L.reference(m,first,b.rows,{antesDe:op.antesDe??null,semente:seed+':referencia',amostras:1000});
  analysis.base=b.meta;
- return {versao:'4.20.0',motor:'integrado',modalidade:m,semente:seed,calibracao:calibration,
+ return {versao:'4.21.0',motor:'integrado',modalidade:m,semente:seed,calibracao:calibration,
    parametros:{acompanhamento:monitor?{comparacao:monitor.comparacao}:null,janela:op.janela??0,antesDe:op.antesDe??null,fixas:fixed,excluidas:excluded,formato:shape,trevosFixos:op.trevosFixos||null},
    base:b.meta,totalDisponivel:b.totalDisponivel,estado:suspended?'recuo-prospectivo':enough?'perfil-historico':'amostra-insuficiente',
    jogos:selected.map(p=>p.jogo),explicacoes:explanations,

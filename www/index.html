@@ -957,10 +957,11 @@ td{padding:6px 7px;border-bottom:1px solid var(--trama)}
 <link rel="stylesheet" href="ui/inteligencia-v4-9.css?v=4.9.0">
 <link rel="stylesheet" href="ui/visual-metas-v4-10.css?v=4.10.0">
 <link rel="stylesheet" href="ui/visual-foco-v4-11.css?v=4.13.0">
-<link rel="stylesheet" href="ui/experiencia-v4-14.css?v=4.20.0">
-<link rel="stylesheet" href="ui/modalidades-v4-15.css?v=4.20.0">
-<link rel="stylesheet" href="ui/recorrencia-v4-17.css?v=4.20.0">
-<link rel="stylesheet" href="ui/lab-v4-18.css?v=4.20.0">
+<link rel="stylesheet" href="ui/experiencia-v4-14.css?v=4.21.0">
+<link rel="stylesheet" href="ui/modalidades-v4-15.css?v=4.21.0">
+<link rel="stylesheet" href="ui/recorrencia-v4-17.css?v=4.21.0">
+<link rel="stylesheet" href="ui/lab-v4-18.css?v=4.21.0">
+<link rel="stylesheet" href="ui/auto-v4-21.css?v=4.21.0">
 </head>
 <body>
 <header>
@@ -1039,10 +1040,12 @@ td{padding:6px 7px;border-bottom:1px solid var(--trama)}
   <div class="corpo"><div class="alca"></div><div id="corpo-avisos"></div></div>
 </div>
 
-<script src="ui/lab-core.js?v=4.20.0"></script>
-<script src="ui/lab-strategies.js?v=4.20.0"></script>
-<script src="ui/lab-recommendation.js?v=4.20.0"></script>
-<script src="ui/lab-ui.js?v=4.20.0"></script>
+<script src="ui/lab-core.js?v=4.21.0"></script>
+<script src="ui/lab-strategies.js?v=4.21.0"></script>
+<script src="ui/lab-recommendation.js?v=4.21.0"></script>
+<script src="ui/lab-auto.js?v=4.21.0"></script>
+<script src="ui/lab-ui.js?v=4.21.0"></script>
+<script src="ui/lab-auto-ui.js?v=4.21.0"></script>
 <script>
 "use strict";
 
@@ -2839,6 +2842,14 @@ function intConfig(m){
   return S.intConfig[m] || (S.intConfig[m]={tam:MODALIDADES[m].min,quantidade:1,concurso:"",
     modo:"integrado",janela:0,fixas:"",excluidas:"",orcamento:"",semente:""});
 }
+function intConfigDaTela(m){
+  const o=intConfig(m);
+  if(S.tela!=="sugestoes"||S.modalidade!==m||!$('#int-tam'))return o;
+  for(const k of ["tam","quantidade","janela"])o[k]=Number($('#int-'+k).value);
+  for(const k of ["fixas","excluidas","orcamento","semente","concurso"])o[k]=$('#int-'+k).value;
+  if($('#int-trevos'))o.trevos=$('#int-trevos').value;
+  return o;
+}
 function intStatusBase(base){
   const hist=base.hist;
   return `<div class="int-base"><span class="int-dot"></span><span>${hist.length
@@ -2858,9 +2869,11 @@ function intExtraModalidade(m){
 T.sugestoes = () => {
   const m=S.modalidade,c=MODALIDADES[m],o=intConfig(m),base=intHistorico(m,S.resultados,o.janela);
   const calculando=intPendente?.token===intTrabalho&&intPendente.modalidade===m;
-  return `<div class="ux-sugestoes-intro" aria-label="Como criar sugestões"><span>1. Defina</span><span>2. Confira</span><span>3. Salve</span></div>
+  return `<p class="int-help">O sistema prepara a sugestão, testa estratégias e confere os resultados automaticamente.</p><div id="auto-status" class="auto-status" role="status" aria-live="polite"></div>
+    <div id="int-lote">${S.intLotes[m]?intRenderLote(S.intLotes[m]):""}</div>
+    <details class="auto-settings" open><summary>Personalizar meus jogos (opcional)</summary>
     <section class="carta int-form ux-form"><div class="int-section-title"><h2>Configure seu jogo</h2><span>${esc(c.nome)}</span></div>
-      <div class="int-integrated-intro"><span class="int-eyebrow">ANÁLISES CONECTADAS · 4.20</span><p class="int-help">Uma principal, escolhida com estrutura, frequência, atrasos, pares, trios e perfil de acertos. Jogos adicionais são opcionais.</p></div>
+      <div class="int-integrated-intro"><span class="int-eyebrow">CICLO AUTOMÁTICO · 4.21</span><p class="int-help">A sugestão e o pacote virtual aparecem nesta tela sem treinamento manual. Ajuste apenas o tamanho, a quantidade ou o orçamento se desejar.</p></div>
       <div class="int-grid"><label class="campo" for="int-tam">Dezenas por jogo
         <select id="int-tam">${Array.from({length:c.max-c.min+1},(_,i)=>i+c.min).map(t=>`<option ${o.tam===t?"selected":""}>${t}</option>`).join("")}</select></label>
         <label class="campo" for="int-quantidade">Total de jogos<input id="int-quantidade" type="number" min="1" max="60" value="${o.quantidade}"></label>
@@ -2869,22 +2882,22 @@ T.sugestoes = () => {
       ${c.trevos?campoTrevos("int-trevos",o.trevos):""}
       <details class="int-details" id="int-avancado" ${o.avancado?'open':''}><summary>Ajustes avançados do lote</summary>
         <label class="campo" for="int-janela">Histórico usado na seleção<select id="int-janela">${[[0,"Todo o histórico disponível"],[50,"50 concursos"],[100,"100 concursos"],[300,"300 concursos"]].map(([v,n])=>`<option value="${v}" ${o.janela===v?"selected":""}>${n}</option>`).join("")}</select></label>
-        <label class="campo" for="int-concurso">Concurso para acompanhar<input id="int-concurso" type="number" min="1" step="1" inputmode="numeric" value="${esc(o.concurso||"")}" placeholder="Vazio: acompanhar resultados futuros"></label>
+        <label class="campo" for="int-concurso">Concurso para acompanhar<input id="int-concurso" type="number" min="1" step="1" inputmode="numeric" value="${esc(o.concurso||"")}" placeholder="Vazio: próximo concurso automaticamente"></label>
         <label class="campo" for="int-fixas">Dezenas fixas<input id="int-fixas" value="${esc(o.fixas)}" placeholder="Ex.: 03 12" maxlength="299"></label>
         <label class="campo" for="int-excluidas">Dezenas excluídas<input id="int-excluidas" value="${esc(o.excluidas)}" placeholder="Ex.: 07 19" maxlength="299"></label>
-        <label class="campo" for="int-semente">Código de reprodução<input id="int-semente" value="${esc(o.semente)}" placeholder="Em branco: novo lote a cada toque" maxlength="80"></label>
-        <p class="int-help">Mesmo código, parâmetros e base reproduzem o mesmo lote. Fixar ou excluir dezenas limita a variedade; não altera a chance de cada combinação.</p>
+        <input id="int-semente" type="hidden" value="${esc(o.semente)}">
+        <p class="int-help">O pacote fica fixo até o próximo concurso. Alterar formato ou restrições inicia um perfil separado de avaliação. Fixar ou excluir dezenas limita a variedade; não altera a chance de cada combinação.</p>
       </details>
       <div class="int-price"><span>Estimativa antes do limite</span><strong id="int-preco">${brl(custoDoJogo(m,o.tam)*o.quantidade)}</strong></div>
-      <button class="acao int-primary" id="int-gerar" ${calculando?'disabled':''}>${calculando?'Integrando as análises…':'Gerar recomendação'}</button>
+      <button class="acao int-primary" id="int-gerar" ${calculando?'disabled':''}>${calculando?'Atualizando sugestão…':'Atualizar sugestão'}</button>
       <div id="int-mensagem" role="status" aria-live="polite">${calculando?'Comparando candidatas com o histórico disponível. Você pode navegar enquanto o cálculo termina.':''}</div>
       <details class="int-details"><summary>Base da seleção: ${inf(base.hist.length)} concursos${base.lacunas?" · com lacunas":""}</summary>${intStatusBase(base)}</details>
       <p class="int-help ux-fonte">Salvar no app não registra uma aposta. Preços de 05/09/2026 · <a href="https://loterias.caixa.gov.br/Paginas/${INT_FONTES[m]}.aspx" target="_blank" rel="noopener noreferrer">regras da modalidade</a>.</p>
     </section>
-    <div id="int-lote">${S.intLotes[m]?intRenderLote(S.intLotes[m]):""}</div>
+    </details>
     <div class="ux-links"><button data-int-special="super-sete">Super Sete ↗</button><button data-int-special="mega-da-virada">Mega da Virada ↗</button></div>
-    <div class="ux-links"><button data-atalho="plano">Plano e metas <span aria-hidden="true">↗</span></button><button data-abrir-analitica>Avaliar estratégias <span aria-hidden="true">↓</span></button></div>
-    ${audRenderPainel(m)}
+    <div class="ux-links"><button data-atalho="plano">Plano e metas <span aria-hidden="true">↗</span></button><button data-abrir-analitica>Diagnósticos opcionais <span aria-hidden="true">↓</span></button></div>
+    <details class="carta int-details"><summary>Laboratório anterior · diagnósticos opcionais</summary>${audRenderPainel(m)}</details>
     <details class="carta ux-explorar"><summary>Explorar o histórico em números</summary><div>
       ${intStatusBase(base)}
       ${intMapaFrequencias(m,base.hist)}
@@ -2918,6 +2931,7 @@ function intRecomendacaoDesatualizada(r){
   return LL18.recommendationBase(r.modalidade,S.resultados,r.laboratorio.parametros).meta.assinatura!==r.laboratorio.base.assinatura;
 }
 function intRenderRecomendacao(r){
+  if(r.laboratorio.automatico)return LL18Auto.render(r.laboratorio,intRecomendacaoDesatualizada(r),t=>recBotao(r.modalidade,t.dezenas,r.concursoAlvo||null),trevosHtml);
   const g=r.laboratorio,a=g.principal.analise,m=r.modalidade,c=MODALIDADES[m],old=intRecomendacaoDesatualizada(r);
   const historico=g.estado==='perfil-historico';
   const ticket=(t,i)=>`<article class="int-ticket ${i===0?'int-principal':''}"><div class="int-section-title"><b>${i===0?'Recomendação principal':'Adicional '+i}</b><span>${i===0?'SELEÇÃO INTEGRADA':'MENOS REPETIÇÃO'}</span></div>
@@ -3007,6 +3021,7 @@ function intLigarAcoes(){
     if(el.id==="int-janela") {intTrabalho++;pintar();}
     else $("#int-preco").textContent=brl(custoDoJogo(m,o.tam)*o.quantidade);
   });
+  document.querySelectorAll('.int-form input').forEach(el=>el.oninput=ler);
   const avancado=$('#int-avancado');
   if(avancado) avancado.ontoggle=()=>{o.avancado=avancado.open;};
   for(const id of ['int-quantidade','int-orcamento']) $('#'+id).oninput=()=>{
@@ -3020,7 +3035,7 @@ function intLigarAcoes(){
     // Análises automáticas podem redesenhar esta tela sem cancelar a escolha.
     // Navegação, troca de modalidade e nova geração invalidam pelo token.
     const atual=()=>token===intTrabalho&&S.tela==="sugestoes"&&S.modalidade===m;
-    botao.disabled=true;botao.textContent="Integrando as análises…";
+    botao.disabled=true;botao.textContent="Atualizando sugestão…";
     mensagem.textContent="Comparando candidatas com o histórico disponível. Você pode navegar enquanto o cálculo termina.";
     try{
       const alvo=parametros.concurso===""?null:Number(parametros.concurso);
@@ -3030,21 +3045,21 @@ function intLigarAcoes(){
       const c=MODALIDADES[m],formato=LL18.randomTicket(m,LL18.rng(seed+':formato'));
       formato.dezenas=universo(m).slice(0,parametros.tam);
       const trevos=c.trevos?lerTrevos(parametros.trevos):null;
-      const op={formato,quantidade:parametros.quantidade,orcamento:parametros.orcamento,
+      const op={formato,concursoAlvo:alvo,quantidade:parametros.quantidade,orcamento:parametros.orcamento,
         fixas:intDezenas(parametros.fixas,m),excluidas:intDezenas(parametros.excluidas,m),
         janela:parametros.janela,semente:seed,...(trevos?.length?{trevosFixos:trevos}:{})};
-      const g=await LL18UI.recommend(m,parametros.historico,op,p=>{
+      const g=await LL18Auto.recommend(m,parametros.historico,op,p=>{
         if(atual())$('#int-mensagem').textContent=`${p.etapa}: ${p.feitos} de ${p.total}.`;
       });
       if(!atual())return;
       if(g.base.assinatura!==LL18.recommendationBase(m,S.resultados,op).meta.assinatura)
         throw Error("O histórico mudou durante o cálculo. Gere novamente para usar os dados atualizados.");
-      const r=intReceberRecomendacao(g,parametros);r.concursoAlvo=alvo;
+      const r=intReceberRecomendacao(g,parametros);r.concursoAlvo=g.automatico.rodada.concursoAlvo;
       S.intLotes[m]=r;intPendente=null;pintar();$("#int-lote").scrollIntoView({block:"start",behavior:"smooth"});
     }catch(e){if(atual())$("#int-mensagem").textContent=e.message;}
     finally{
       if(intPendente?.token===token)intPendente=null;
-      if(atual()){const b=$("#int-gerar");b.disabled=false;b.textContent="Gerar recomendação";}
+      if(atual()){const b=$("#int-gerar");b.disabled=false;b.textContent="Atualizar sugestão";}
     }
   };
   const lote=S.intLotes[m];
@@ -3065,7 +3080,7 @@ function intLigarAcoes(){
         inteligencia:{versao:lote.versao,semente:lote.semente,assinatura:lote.base.assinatura,
           janela:lote.janela,fixas:lote.fixas,excluidas:lote.excluidas,preco:lote.metricas.unitario,
           calibracao:lote.laboratorio?.calibracao,
-          ...(lote.laboratorio?{motor:"integrado",geradoAte:lote.laboratorio.base.ultimo||0,papel:i===0?"principal":"adicional",criterios:lote.laboratorio.explicacoes[i].criterios}: {})}})).filter(j=>!existentes.has(chaveDoJogo(j)));
+          ...(lote.laboratorio?{motor:lote.laboratorio.motor,geradoAte:lote.laboratorio.base.ultimo||0,papel:i===0?"principal":"adicional",criterios:lote.laboratorio.explicacoes[i].criterios}: {})}})).filter(j=>!existentes.has(chaveDoJogo(j)));
       if(!novos.length){$("#int-salvar").textContent="Lote já salvo hoje";$("#int-salvar").disabled=true;return;}
       const todos=S.jogos.concat(novos);
       if(!Guardar.gravar("jogos",todos)){ $("#int-mensagem").textContent="Não foi possível salvar no aparelho. Exporte o CSV para conservar o lote.";return; }
@@ -3836,7 +3851,7 @@ T.inicio = () => {
   const avisos=S.avisos.filter(a=>!a.lido).length;
   const meus=S.jogos.filter(j=>j.modalidade===m).length,idade=idadeDoHistorico(m);
   return `<div class="foco-inicio ux-inicio" style="--foco-cor:${FOCO_CORES[m]}">
-    <div class="foco-boasvindas"><div><span class="foco-label">BEM-VINDO AO SEU LABORATÓRIO</span><${podeVoltar()?'h2':'h1'}>Seu jogo,<br>bem planejado.</${podeVoltar()?'h2':'h1'}></div><span class="foco-versao">4.20</span></div>
+    <div class="foco-boasvindas"><div><span class="foco-label">BEM-VINDO AO SEU LABORATÓRIO</span><${podeVoltar()?'h2':'h1'}>Seu jogo,<br>bem planejado.</${podeVoltar()?'h2':'h1'}></div><span class="foco-versao">4.21</span></div>
     <section class="foco-hero"><div class="foco-hero-topo"><span class="foco-label">UM PLANO PARA CADA CONCURSO</span><span class="foco-tag">${esc(c.nome)}</span></div>
       <div class="foco-objetivo"><div><h2>Crie seus jogos.<br>Veja os acertos.</h2><p>Defina seus critérios e seu limite. O LotoLab organiza e confere.</p></div><div class="foco-alvo" aria-label="Meta de ${c.k} dezenas"><strong>${c.k}</strong><span>${c.trevos?"+ 2 trevos":"dezenas"}</span></div></div>
       <button class="acao foco-primary" data-atalho="sugestoes">Criar sugestões <span aria-hidden="true">→</span></button>
@@ -6741,6 +6756,7 @@ function guardarResultados(novos){
     ? a.concurso - b.concurso : a.modalidade.localeCompare(b.modalidade));
   Guardar.gravar("resultados", S.resultados);
   if(typeof LL18UI!=="undefined")LL18UI.historyChanged();
+  if(typeof LL18Auto!=="undefined")LL18Auto.historyChanged();
   return inseridos;
 }
 
@@ -6751,10 +6767,25 @@ const LL18_BRIDGE={
   native:()=>typeof Capacitor!=='undefined'&&Capacitor.isNativePlatform?.(),
   fetchJson:async url=>{const r=await buscarComLimite(url,12000);if(!r.ok)throw Error('Fonte respondeu HTTP '+r.status);return r.json();},
   records:()=>S.resultados,currentMode:()=>S.modalidade,
+  currentScreen:()=>S.tela,busy:()=>!!intPendente,
+  options:m=>{const o=intConfigDaTela(m);if(o.concurso&&S.intLotes[m]?.concursoAlvo===Number(o.concurso)&&Number(o.concurso)<=(LL18.history(m,S.resultados).meta.ultimo||0))o.concurso="";const formato=LL18.randomTicket(m,LL18.rng("formato:"+m));formato.dezenas=universo(m).slice(0,o.tam);
+    const trevos=MODALIDADES[m].trevos?lerTrevos(o.trevos):null;
+    return {formato,quantidade:o.quantidade,orcamento:o.orcamento,janela:o.janela,fixas:intDezenas(o.fixas,m),excluidas:intDezenas(o.excluidas,m),concursoAlvo:o.concurso===""?null:Number(o.concurso),...(trevos?.length?{trevosFixos:trevos}:{})};},
+  deliver:(m,g,records)=>{const r=intReceberRecomendacao(g,{historico:records});r.concursoAlvo=g.automatico.rodada.concursoAlvo;S.intLotes[m]=r;
+    if(S.tela==="sugestoes"&&S.modalidade===m){
+      // Atualiza só a saída: preserva os campos, foco e ancoragem da rolagem.
+      const anchor=$('.auto-settings'),before=anchor?.getBoundingClientRect();
+      const preserve=before&&scrollY>0&&before.top<innerHeight&&before.bottom>0;
+      const el=$('#int-lote');if(el)el.innerHTML=intRenderLote(r);
+      const status=$('#auto-status');if(status)status.textContent='';
+      const alvo=$('#int-concurso');if(alvo&&document.activeElement!==alvo)alvo.value=intConfig(m).concurso;
+      intLigarAcoes();recLigarAcoes();
+      if(preserve)window.scrollBy({top:anchor.getBoundingClientRect().top-before.top,behavior:'instant'});
+    }},
   changeMode:m=>{if(MODALIDADES[m])trocarModalidade(m);},
   openSuggestions:m=>{if(MODALIDADES[m]){trocarModalidade(m);irParaTela('sugestoes');}},
   openAnalysis:()=>irParaTela('estatisticas'),
-  recommendationBatches:()=>S.jogos.filter(j=>j.inteligencia?.motor==='integrado'&&j.concursoAlvo).map(j=>({modalidade:j.modalidade,concursoAlvo:j.concursoAlvo,geradoAte:j.inteligencia.geradoAte,jogos:[LL18.validateTicket(j.modalidade,j)]})),
+  recommendationBatches:()=>S.jogos.filter(j=>['integrado','automatico'].includes(j.inteligencia?.motor)&&j.concursoAlvo).map(j=>({modalidade:j.modalidade,concursoAlvo:j.concursoAlvo,geradoAte:j.inteligencia.geradoAte,jogos:[LL18.validateTicket(j.modalidade,j)]})),
   games:m=>S.jogos.filter(j=>j.modalidade===m).flatMap(j=>{try{return [LL18.validateTicket(m,j)];}catch(e){return [];}}),
   merge:novos=>{const n=guardarResultados(novos);aoMudarHistorico(n,'laboratório analítico');return n;},
   loadHistory:async m=>{const lote=await baixarHistoricoDoRepositorio(m);const validos=LL18.history(m,lote);if(validos.meta.invalidos||validos.meta.conflitos)throw Error('Histórico contém registros inválidos ou conflitantes.');const n=guardarResultados(validos.rows);aoMudarHistorico(n,'histórico do laboratório');return n;},
@@ -9505,7 +9536,7 @@ function acoes(){
   const fecharMenu=()=>{$('#gaveta').dataset.aberta='0';$('#btn-menu').setAttribute('aria-expanded','false');};
   document.querySelectorAll('[data-abrir-analitica]').forEach(b=>b.onclick=()=>{
     fecharMenu();if(S.tela!=='sugestoes')irParaTela('sugestoes');
-    const painel=$('#ux-analitica');if(painel){painel.focus({preventScroll:true});painel.scrollIntoView({block:'start',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});}
+    const painel=$('#ux-analitica');if(painel){const details=painel.closest('details');if(details)details.open=true;painel.focus({preventScroll:true});painel.scrollIntoView({block:'start',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});}
   });
   document.querySelectorAll('[data-ux-atualizar]').forEach(b=>b.onclick=()=>$('#r-caixa')?.click());
   document.querySelectorAll('[data-ux-historico]').forEach(b=>b.onclick=()=>{
@@ -10151,6 +10182,7 @@ function pintar(){
   intLigarAcoes();
   recLigarAcoes();
   if(typeof LL18UI!=="undefined")LL18UI.mount(LL18_BRIDGE);
+  if(typeof LL18Auto!=="undefined")LL18Auto.mount(LL18_BRIDGE);
   metaLigarAcoes();
   for(const lista of document.querySelectorAll('.segmento')){
     const ativo=lista.querySelector('[aria-pressed="true"],[aria-selected="true"]');

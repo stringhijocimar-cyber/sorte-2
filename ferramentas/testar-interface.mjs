@@ -189,6 +189,7 @@ async function capturar(nome) {
 /* ---------- relatório ---------- */
 let passou = 0, falhou = 0;
 const linhas = [];
+process.on('uncaughtExceptionMonitor',()=>console.log(linhas.join('\n')));
 const checar = (t, c, d = "") => {
   if (c) { passou++; linhas.push(`  ok   ${t}${d ? " — " + d : ""}`); }
   else { falhou++; linhas.push(`  FALHA ${t}${d ? " — " + d : ""}`); }
@@ -201,6 +202,15 @@ await cmd("Log.enable");
 await cmd("Emulation.setDeviceMetricsOverride", {
   width: LARGURA, height: ALTURA, deviceScaleFactor: 2, mobile: true,
 });
+
+/* Histórico/rede do ciclo automático isolados: estes testes controlam os concursos.
+   A sincronização com livro público é exercitada no teste do controlador. */
+await cmd('Page.addScriptToEvaluateOnNewDocument',{source:`
+ Object.defineProperty(window,'LL18Auto',{configurable:true,set(value){
+  const mount=value.mount;value.mount=b=>mount({...b,loadHistory:async()=>0,fetchJson:async()=>{throw Error('Rede isolada no teste');}});
+  Object.defineProperty(window,'LL18Auto',{value,writable:true,configurable:true});
+ }});
+`});
 
 /* ---------- carrega ---------- */
 await cmd("Page.navigate", { url: ENDERECO });
@@ -1580,7 +1590,7 @@ if(EDICAO.nome === "completa"){
       const el=document.querySelector('#int-'+k);el.value=v;el.dispatchEvent(new Event('change',{bubbles:true}));
     }
     document.querySelector('#int-gerar').click();return true;`);
-  await dormir(700);
+  await esperarRecomendacao();
   const loteInt=await js(`return {jogos:S.intLotes['mega-sena']?.jogos,
     custo:S.intLotes['mega-sena']?.metricas.custo,texto:document.querySelector('#int-lote').innerText,
     qtd:document.querySelectorAll('.int-ticket').length};`);
@@ -1592,7 +1602,7 @@ if(EDICAO.nome === "completa"){
   checar("mapa detalha a incerteza da frequência",await js(`return /Wilson/.test(document.querySelector('#int-dezena-detalhe').textContent)`));
   await js(`document.querySelector('#int-salvar').click();return true;`);
   await dormir(400);
-  checar("lote salvo preserva semente e dados após navegação",await js(`return S.tela==='jogos'&&S.jogos.length===2&&S.jogos.every(j=>j.inteligencia.semente==='teste-interface')`));
+  checar("lote salvo preserva semente e dados após navegação",await js(`return S.tela==='jogos'&&S.jogos.length===2&&S.jogos.every(j=>j.inteligencia.semente===S.intLotes['mega-sena'].semente&&j.inteligencia.motor==='automatico')`));
   await irPara("sugestoes");
   await js(`document.querySelector('#int-salvar').click();return true;`);
   checar("salvar novamente não duplica o lote",await js(`return S.jogos.length===2&&document.querySelector('#int-salvar').disabled`));
@@ -1613,7 +1623,7 @@ if(EDICAO.nome === "completa"){
       await cmd("Emulation.setDeviceMetricsOverride",{width,height:915,deviceScaleFactor:1,mobile:width<600});
       await js(`document.documentElement.dataset.tema=${JSON.stringify(tema)};return true;`);
       const overflow=await js(`return {pagina:document.documentElement.scrollWidth,janela:innerWidth,
-        controles:[...document.querySelectorAll('.int-form input,.int-form select')].every(el=>el.getBoundingClientRect().width>0)};`);
+        controles:[...document.querySelectorAll('.int-form input:not([type=hidden]),.int-form select')].every(el=>el.getBoundingClientRect().width>0)};`);
       checar(`central ${tema} cabe em ${width}px`,overflow.pagina<=overflow.janela+1&&overflow.controles,`${overflow.pagina}px`);
     }
   }
@@ -1651,7 +1661,7 @@ if(EDICAO.nome === "completa"){
   checar('fechamento salvo acompanha apenas o concurso declarado',await js(`return S.jogos.length===2&&S.jogos.every(j=>j.concursoAlvo===999999)`));
   await js(`document.querySelector('#meta-aplicar').click();return true;`);
   checar('plano transfere limite e concurso para as sugestões',await js(`return S.tela==='sugestoes'&&document.querySelector('#int-orcamento').value==='12'&&document.querySelector('#int-concurso').value==='999999'`));
-  await js(`document.querySelector('#int-gerar').click();return true;`);await dormir(600);
+  await js(`document.querySelector('#int-gerar').click();return true;`);await esperarRecomendacao();
   checar('lote gerado preserva o alvo mesmo após editar o formulário',await js(`document.querySelector('#int-concurso').value='888888';return S.intLotes['mega-sena'].concursoAlvo===999999`));
   await js(`document.querySelector('#btn-avisos').click();document.querySelector('#meta-testar-aviso').click();return true;`);
   await dormir(200);
@@ -1688,7 +1698,7 @@ async function tocar(seletor){
   await js(`document.querySelector(${JSON.stringify(seletor)})?.scrollIntoView({block:'center',behavior:'instant'});return true;`);
   await dormir(100);
   const p=await js(`const el=document.querySelector(${JSON.stringify(seletor)});if(!el)return null;const r=el.getBoundingClientRect(),x=r.left+r.width/2,y=r.top+r.height/2;const h=document.elementFromPoint(x,y);return {x,y,atingivel:!!h&&(el===h||el.contains(h))};`);
-  if(!p?.atingivel)throw new Error('Toque bloqueado: '+seletor);
+  if(!p?.atingivel){await capturar('falha-toque');const detalhe=await js(`const e=document.querySelector(${JSON.stringify(seletor)}),r=e?.getBoundingClientRect();return {rect:r?.toJSON(),scroll:scrollY,viewport:innerHeight,atingido:r?document.elementFromPoint(r.left+r.width/2,r.top+r.height/2)?.outerHTML.slice(0,400):null,details:e?[...document.querySelectorAll('details')].filter(d=>d.contains(e)).map(d=>({id:d.id,classe:d.className,open:d.open})):[]};`);throw new Error('Toque bloqueado: '+seletor+' '+JSON.stringify(detalhe));}
   await cmd('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:p.x,y:p.y,radiusX:2,radiusY:2,force:1}]});
   await cmd('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await dormir(150);
 }
@@ -1747,7 +1757,7 @@ await js(`S.modalidade='mais-milionaria';S.jogos=[];S.teimosinhas=[];S.avisos=[]
 checar('+Milionária oferece campo de dois trevos',await js(`return !!document.querySelector('#int-trevos')`));
 await js(`document.querySelector('#int-quantidade').value='3';document.querySelector('#int-trevos').value='02 06';document.querySelector('#int-concurso').value='100';document.querySelector('#int-semente').value='ui412';return true;`);
 await tocar('#int-gerar');await esperarRecomendacao();
-checar('sugestões incluem os pares antes de salvar',await js(`return S.intLotes['mais-milionaria'].trevos.every(t=>t.join()==='2,6')&&document.querySelectorAll('#int-lote .trevo').length===6`));
+checar('sugestões incluem os pares antes de salvar',await js(`return S.intLotes['mais-milionaria'].trevos.every(t=>t.join()==='2,6')&&document.querySelectorAll('#int-lote .int-ticket .trevo').length===6`));
 await capturar('sugestoes-trevos-412');
 await tocar('#int-salvar');
 checar('trevos e concurso persistem junto aos jogos',await js(`const salvos=JSON.parse(localStorage.getItem('lotolab:jogos'));return S.tela==='jogos'&&salvos.length===3&&salvos.every(j=>j.trevos.join()==='2,6'&&j.concursoAlvo===100)`));
@@ -1786,6 +1796,8 @@ checar('avaliação explica histórico insuficiente',await js(`return document.q
 await js(`S.resultados=Array.from({length:100},(_,i)=>({modalidade:'mega-sena',concurso:i+1,data:'2026-01-01',dezenas:Array.from({length:6},(_,j)=>(i*7+j*11)%60+1).sort((a,b)=>a-b)}));irParaTela('sugestoes');return true;`);
 checar('histórico contínuo libera a avaliação',await js(`return !document.querySelector('#aud-iniciar').disabled`));
 const modoAntesAud413=await js(`return intConfig('mega-sena').modo`);
+await tocar('#tela [data-abrir-analitica]');
+checar('diagnóstico opcional abre pelo atalho antes de iniciar',await js(`return document.querySelector('#ux-analitica').closest('details').open`));
 await tocar('#aud-iniciar');
 let prontoAud=false;
 for(let i=0;i<150;i++){
@@ -1942,6 +1954,7 @@ checar('histórico suficiente escolhe a análise ampliada',await js(`return docu
 await js(`document.querySelector('#aud-concursos').value='60';document.querySelector('#aud-concursos').dispatchEvent(new Event('change'));return true;`);
 checar('ampliar o teste exige 190 concursos sem reduzir o rigor em silêncio',await js(`return document.querySelector('#aud-iniciar').disabled&&document.querySelector('#aud-requisitos').textContent.includes('190 concursos')`));
 await js(`document.querySelector('#aud-concursos').value='30';document.querySelector('#aud-concursos').dispatchEvent(new Event('change'));document.querySelector('#int-semente').value='avaliacao-real-416';return true;`);
+await tocar('#tela [data-abrir-analitica]');
 await tocar('#aud-iniciar');
 checar('os critérios ficam fixos durante a análise',await js(`return document.querySelector('#aud-rigor').disabled&&document.querySelector('#aud-metrica').disabled`));
 let ampliado416=false;
@@ -2064,7 +2077,7 @@ for(const m of Object.keys(await js('return LL18.rules'))){
 await cmd('Emulation.setDeviceMetricsOverride',{width:412,height:915,deviceScaleFactor:2,mobile:true});await js(`document.documentElement.dataset.tema='escuro';return true;`);await input418('#ll-modalidade','super-sete');await tab418('analise');await frame418('#ll-lab','LotoLab-4.18-Super-Sete');
 await input418('#ll-modalidade','lotofacil');await tab418('analise');await frame418('#ll-lab','LotoLab-4.18-Lotofacil');await js(`document.documentElement.dataset.tema='claro';return true;`);await frame418('#ll-lab','LotoLab-4.18-Laboratorio-claro');
 await js(`window.__cap418=window.Capacitor;window.Capacitor={isNativePlatform:()=>true};document.querySelector('[data-ll-action="exportar"]').click();return true;`);
-checar('Android oferece relatório JSON para copiar',await js(`return !!document.querySelector('#ll-json')&&JSON.parse(document.querySelector('#ll-json').value).versao==='4.20.0'`));await js(`window.Capacitor=window.__cap418;return true;`);
+checar('Android oferece relatório JSON para copiar',await js(`return !!document.querySelector('#ll-json')&&JSON.parse(document.querySelector('#ll-json').value).versao==='4.21.0'`));await js(`window.Capacitor=window.__cap418;return true;`);
 
 /* ---------- R. Recomendação integrada 4.19 ---------- */
 async function esperarRecomendacao(){
@@ -2080,41 +2093,58 @@ const rows419=JSON.parse(readFileSync(join(RAIZ,'dados/mega-sena.json'),'utf8'))
 const target419=rows419.at(-1).concurso+1;
 await js(`S.autoAnalise=false;S.pesquisaAutomatica=false;S.buscaAutomatica=false;S.resultados=${JSON.stringify(rows419)};S.jogos=[];S.intLotes={};S.intConfig={};S.modalidade='mega-sena';irParaTela('sugestoes',{lateral:true});return true;`);
 checar('uma principal e todo o histórico são o padrão, sem seletor de métodos',await js(`return document.querySelector('#int-quantidade').value==='1'&&document.querySelector('#int-janela').value==='0'&&!document.querySelector('#int-modo')`));
-await frame418('.int-form','LotoLab-4.19-Recomendacao-inicio');
+await frame418('.int-form','LotoLab-4.21-Recomendacao-inicio');
 await input418('#int-semente','interface-419');await input418('#int-concurso',target419);
 await tocar('#int-gerar');await esperarRecomendacao();
-checar('principal é o primeiro jogo do mesmo cálculo do laboratório',await js(`const r=S.intLotes['mega-sena'];return r.laboratorio.motor==='integrado'&&r.laboratorio.base.n===120&&document.querySelectorAll('.int-ticket').length===1&&r.jogos[0].join()===r.laboratorio.principal.analise.jogo.dezenas.join()`));
-checar('ranking declara 12 critérios e distribuição com 120 concursos',await js(`const g=S.intLotes['mega-sena'].laboratorio;return g.principal.criterios.length===12&&g.principal.analise.faixas.reduce((s,f)=>s+f.vezes,0)===120&&document.querySelector('#int-lote').textContent.includes('não tem vantagem preditiva demonstrada')`));
-await frame418('.int-principal','LotoLab-4.19-Recomendacao-principal');
+checar('principal é o primeiro jogo do mesmo cálculo do laboratório',await js(`const r=S.intLotes['mega-sena'];return r.laboratorio.motor==='automatico'&&r.laboratorio.base.n===120&&document.querySelectorAll('.int-ticket').length===1&&r.jogos[0].join()===r.laboratorio.principal.analise.jogo.dezenas.join()`));
+checar('pacote automático tem dez métodos e controle, com distribuição de 120 concursos',await js(`const g=S.intLotes['mega-sena'].laboratorio;return g.automatico.pacoteVirtual.length===11&&document.querySelectorAll('[data-auto-strategy]').length===11&&g.principal.analise.faixas.reduce((s,f)=>s+f.vezes,0)===120&&document.querySelector('#int-lote').textContent.includes('não promete vantagem')`));
+await frame418('.int-principal','LotoLab-4.21-Recomendacao-principal');
 for(const tema of ['escuro','claro'])for(const width of [320,412,1024]){
  await cmd('Emulation.setDeviceMetricsOverride',{width,height:915,deviceScaleFactor:1,mobile:width<600});
  await js(`document.documentElement.dataset.tema='${tema}';return true;`);
  checar(`recomendação ${tema} cabe em ${width}px`,await js(`return document.documentElement.scrollWidth<=innerWidth+1`));
 }
 await cmd('Emulation.setDeviceMetricsOverride',{width:412,height:915,deviceScaleFactor:2,mobile:true});
-await frame418('.int-principal','LotoLab-4.19-Recomendacao-claro');
+await frame418('.int-principal','LotoLab-4.21-Recomendacao-claro');
 await js(`document.documentElement.dataset.tema='escuro';return true;`);
 await tocar('[data-int-analisar="0"]');
 checar('abrir análise mantém as dezenas e a mesma base da recomendação',await js(`return S.tela==='estatisticas'&&document.querySelector('#ll-texto').value===S.intLotes['mega-sena'].jogos[0].join(' ')&&document.querySelector('#ll-content').textContent.includes('120 concursos')&&document.querySelector('#ll-status').textContent.includes('Retrato da base')`));
 await tab418('gerador');
 checar('laboratório encaminha para a recomendação e recolhe os experimentos',await js(`return !!document.querySelector('[data-ll-action="recomendacao"]')&&!document.querySelector('#ll-content > details').open`));
 await tocar('[data-ll-action="recomendacao"]');await tocar('#int-salvar');
-checar('salvar preserva semente, corte de geração, papel principal e critérios',await js(`const j=S.jogos[0];return S.tela==='jogos'&&j.inteligencia.motor==='integrado'&&j.inteligencia.geradoAte===${target419-1}&&j.concursoAlvo===${target419}&&j.inteligencia.papel==='principal'&&j.inteligencia.criterios.length===12&&document.querySelector('#tela').textContent.includes('Recomendação integrada')`));
+checar('salvar preserva semente, corte de geração, papel principal e critérios',await js(`const j=S.jogos[0];return S.tela==='jogos'&&j.inteligencia.motor==='automatico'&&j.inteligencia.geradoAte===${target419-1}&&j.concursoAlvo===${target419}&&j.inteligencia.papel==='principal'&&j.inteligencia.semente===S.intLotes['mega-sena'].semente&&document.querySelector('#tela').textContent.includes('Recomendação integrada')`));
 await js(`guardarResultados([{modalidade:'mega-sena',concurso:${target419},dezenas:[1,2,3,4,5,6]}]);irParaTela('sugestoes',{lateral:true});return true;`);
 checar('novo resultado marca a recomendação antiga e bloqueia salvamento desatualizado',await js(`return document.querySelector('#int-salvar').disabled&&document.querySelector('#int-lote').textContent.includes('O histórico mudou')`));
 let monitored419=false;
 for(let i=0;i<100;i++){monitored419=await js(`return Guardar.ler('laboratorio418',{}).monitor?.['mega-sena']?.observacoes.some(x=>x.concurso===${target419})`);if(monitored419)break;await dormir(100);}
 checar('jogo da recomendação entra no acompanhamento prospectivo do laboratório',monitored419);
-await js(`S.intLotes={};S.intConfig={};pintar();window.originalRecommend419=LL18UI.recommend;LL18UI.recommend=async()=>{throw Error('Falha simulada no cálculo');};return true;`);
+// Aguarda o cálculo anterior e simula a falha no worker compartilhado pelas
+// duas entradas. Substituir apenas o botão deixaria o automático ter sucesso.
+await js(`return LL18Auto.recommend('mega-sena',S.resultados.slice(),{}).then(()=>true);`);
+await js(`window.originalRecommend419=LL18Auto.recommend;window.originalAutomatic419=LL18UI.automatic;LL18UI.automatic=async()=>{throw Error('Falha simulada no cálculo');};S.intLotes={};S.intConfig={};pintar();return true;`);
 await tocar('#int-gerar');await esperarRecomendacao();
 checar('falha do motor é visível, sem fabricar uma recomendação',await js(`return !S.intLotes['mega-sena']&&document.querySelector('#int-mensagem').textContent.includes('Falha simulada')`));
-await js(`LL18UI.recommend=window.originalRecommend419;return true;`);
-await js(`LL18UI.recommend=async(...args)=>{await new Promise(resolve=>window.liberarRecomendacao419=resolve);return window.originalRecommend419(...args);};document.querySelector('#int-gerar').click();pintar();window.manteveCalculo419=document.querySelector('#int-gerar').disabled&&document.querySelector('#int-mensagem').textContent.includes('Comparando candidatas');window.liberarRecomendacao419();return true;`);
+await js(`LL18UI.automatic=window.originalAutomatic419;return true;`);
+await js(`LL18Auto.recommend=async(...args)=>{await new Promise(resolve=>window.liberarRecomendacao419=resolve);return window.originalRecommend419(...args);};document.querySelector('#int-gerar').click();pintar();window.manteveCalculo419=document.querySelector('#int-gerar').disabled&&document.querySelector('#int-mensagem').textContent.includes('Comparando candidatas');return Promise.resolve().then(()=>{window.liberarRecomendacao419();return true;});`);
 await esperarRecomendacao();
-checar('redesenho da tela durante o cálculo mantém progresso e entrega a recomendação',await js(`return window.manteveCalculo419&&S.intLotes['mega-sena']?.laboratorio.motor==='integrado'&&!!document.querySelector('.int-principal')`));
-await js(`LL18UI.recommend=window.originalRecommend419;S.intLotes={};pintar();return true;`);
+checar('redesenho da tela durante o cálculo mantém progresso e entrega a recomendação',await js(`return window.manteveCalculo419&&S.intLotes['mega-sena']?.laboratorio.motor==='automatico'&&!!document.querySelector('.int-principal')`));
+await js(`LL18Auto.recommend=window.originalRecommend419;S.intLotes={};pintar();return true;`);
 await js(`document.querySelector('#int-gerar').click();trocarModalidade('lotofacil');return true;`);await dormir(1000);
-checar('cálculo pendente não invade outra modalidade',await js(`return S.modalidade==='lotofacil'&&!S.intLotes['mega-sena']&&!document.querySelector('.int-principal')`));
+checar('cálculo pendente não invade outra modalidade',await js(`return S.modalidade==='lotofacil'&&!S.intLotes['mega-sena']&&(!S.intLotes.lotofacil||S.intLotes.lotofacil.modalidade==='lotofacil')`));
+
+/* ---------- Automação: abrir, conferir e avançar sem tocar em treinar/gerar ---------- */
+secao('Automação 4.21 sem treinamento manual');
+await js(`S.resultados=${JSON.stringify(rows419)};S.jogos=[];S.intLotes={};S.intConfig={};S.modalidade='mega-sena';irParaTela('sugestoes',{lateral:true});LL18Auto.historyChanged();return true;`);
+let automaticReady=false;
+for(let i=0;i<200;i++){automaticReady=await js(`return S.intLotes['mega-sena']?.laboratorio.automatico?.rodada.concursoAlvo===${target419}`);if(automaticReady)break;await dormir(100);}
+checar('abrir Sugestões prepara principal e pacote sem clicar em gerar',automaticReady);
+checar('pacote virtual registrado sem criar apostas',await js(`const a=S.intLotes['mega-sena'].laboratorio.automatico;window.round421=JSON.stringify(a.rodada);return S.jogos.length===0&&a.persistido&&Guardar.ler('automatico421:'+a.estado.perfil,{}).rodadas.some(r=>r.concursoAlvo===${target419})`));
+await frame418('.auto-results','LotoLab-4.21-Automatico');
+await js(`guardarResultados([{modalidade:'mega-sena',concurso:${target419},data:new Date().toISOString().slice(0,10),dezenas:[1,2,3,4,5,6]}]);return true;`);
+let advanced421=false;
+for(let i=0;i<200;i++){advanced421=await js(`return S.intLotes['mega-sena']?.laboratorio.automatico?.rodada.concursoAlvo===${target419+1}`);if(advanced421)break;await dormir(100);}
+checar('novo resultado confere e prepara próximo pacote sem intervenção',advanced421);
+checar('rodada original permanece preservada e um resultado não troca estratégia',await js(`const a=S.intLotes['mega-sena'].laboratorio.automatico;return JSON.stringify(a.estado.rodadas.find(r=>r.concursoAlvo===${target419}))===window.round421&&a.acompanhamento.observacoes.filter(o=>o.concurso===${target419}).length===1&&a.decisao.acao==='MANTER'&&S.jogos.length===0`));
 
 /* ---------- S. Formatos especiais no motor integrado 4.20 ---------- */
 secao('S. Recomendação única nos formatos especiais');

@@ -1,3 +1,15 @@
+# LotoLab 4.21 — sugestão e aprendizado automáticos
+
+Abra **Sugestões**. O aplicativo prepara a principal e um pacote de 11 jogos virtuais, confere os resultados e explica quando manter ou alterar a estratégia. Não é preciso treinar o sistema em outras telas.
+
+Dez hipóteses competem com um controle aleatório. Os pacotes padrão das oito modalidades também são acompanhados pela rotina do repositório com o app fechado. Ajustes de formato, orçamento e restrições continuam opcionais; testes virtuais não são apostas nem gastos.
+
+[Baixar a última versão](https://github.com/stringhijocimar-cyber/sorte-2/releases/latest) · [Notas da versão](docs/release-4.21.md) · [Protocolo e limites](docs/aprendizado-automatico-4.21.md)
+
+Comparar estratégias não torna sorteios independentes previsíveis nem demonstra vantagem futura.
+
+---
+
 # LotoLab 4.20 — validação conectada à recomendação
 
 Abra **Sugestões → Gerar recomendação**. O mesmo motor reúne as análises, valida pesos em períodos separados e acompanha resultados posteriores. Super Sete e Mega da Virada têm atalhos para a recomendação integrada. Os dados especiais exigem importação identificada.
