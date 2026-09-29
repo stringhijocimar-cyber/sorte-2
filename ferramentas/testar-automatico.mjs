@@ -150,3 +150,47 @@ test('resultado sem data fica fora da evidência prospectiva',()=>{
  const r=L.autoCycle(m,[...history(40),{modalidade:m,concurso:41,dezenas:[1,2,3,4,5,6]}],a.estado,{agora:now});
  assert.equal(r.acompanhamento.n,0);assert.deepEqual(r.acompanhamento.rejeitados,[41]);
 });
+
+function preparation(compute){
+ const rows=history(40),memory=new Map(),delivered=[];
+ let screen='';
+ const context=vm.createContext({LL18:L,document:{getElementById:()=>null},setTimeout,
+  LL18UI:{automatic:compute}});
+ vm.runInContext(readFileSync(new URL('../ui/lab-auto-ui.js',import.meta.url),'utf8'),context);
+ const api=context.LL18Auto;
+ api.mount({currentScreen:()=>screen,currentMode:()=>m,busy:()=>false,
+  options:()=>({agora:now}),records:()=>rows,loadHistory:async()=>{},
+  fetchJson:async()=>{throw Error('offline');},
+  read:(k,p)=>memory.has(k)?structuredClone(memory.get(k)):p,
+  write:(k,v)=>{memory.set(k,structuredClone(v));return true;},
+  deliver:(mode,result)=>delivered.push(result)});
+ return {api,delivered,screen:value=>{screen=value;}};
+}
+test('voltar à tela retoma a sugestão que terminou durante a navegação',async()=>{
+ let release,started;
+ const ready=new Promise(resolve=>{started=resolve;});
+ let calls=0;
+ const p=preparation(async(...args)=>{
+  if(++calls===1){started();await new Promise(resolve=>{release=resolve;});}
+  return L.autoRecommend(...args);
+ });
+ p.screen('sugestoes');const pending=p.api.prepare(m);await ready;
+ p.screen('jogos');release();await pending;
+ assert.equal(p.delivered.length,0);
+ p.screen('sugestoes');await p.api.prepare(m);
+ assert.equal(p.delivered.length,1);
+ assert.equal(p.delivered[0].automatico.rodada.concursoAlvo,41);
+});
+test('falha transitória não bloqueia a preparação automática na próxima abertura',async()=>{
+ let calls=0;
+ const p=preparation(async(...args)=>{
+  if(++calls===1)throw Error('Worker indisponível');
+  return L.autoRecommend(...args);
+ });
+ p.screen('sugestoes');await p.api.prepare(m);
+ assert.equal(p.delivered.length,0);
+ await p.api.prepare(m);
+ assert.equal(p.delivered.length,1);
+ await p.api.prepare(m);
+ assert.equal(calls,2,'um resultado já entregue não precisa ser recalculado');
+});

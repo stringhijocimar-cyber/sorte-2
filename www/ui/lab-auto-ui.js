@@ -1,7 +1,7 @@
 /* Memória persistente e apresentação do ciclo automático. */
 (function(root){
 'use strict';
-const L=root.LL18, jobs=new Map(), loaded=new Map(), remote=new Map(), cache=new Map();
+const L=root.LL18, jobs=new Map(), loaded=new Map(), remote=new Map(), cache=new Map(), preparing=new Map();
 let bridge=null, scheduled=false;
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const num=(v,d=2)=>v==null||!Number.isFinite(v)?'—':v.toLocaleString('pt-BR',{maximumFractionDigits:d});
@@ -54,20 +54,26 @@ async function prepare(m){
  let op;try{op=bridge.options(m);}catch(e){status(e.message);return;}
  const before=L.recommendationBase(m,bridge.records(),op).meta.assinatura;
  const stamp=JSON.stringify([op,before]);
- if(cache.get(m)===stamp)return;
- cache.set(m,stamp);status('Analisando o histórico e preparando a sugestão automaticamente…');
+ if(cache.get(m)===stamp||preparing.get(m)?.stamp===stamp)return;
+ // Só uma resposta entregue entra no cache. Navegar ou uma falha transitória
+ // não pode marcar a preparação como concluída e bloquear a próxima abertura.
+ const attempt={stamp};preparing.set(m,attempt);
+ const active=()=>preparing.get(m)===attempt&&bridge.currentMode()===m&&bridge.currentScreen()==='sugestoes'&&!bridge.busy();
+ status('Analisando o histórico e preparando a sugestão automaticamente…');
  try{
   await history(m);
-  if(bridge.currentMode()!==m||bridge.currentScreen()!=='sugestoes')return;
+  if(!active())return;
   // O usuário pode ajustar o formato enquanto a rede termina.
   if(JSON.stringify(op)!==JSON.stringify(bridge.options(m)))return;
   const records=bridge.records().slice();
-  const result=await recommend(m,records,op,p=>status(p.etapa+': '+p.feitos+' de '+p.total+'.'));
-  if(bridge.currentMode()!==m||bridge.currentScreen()!=='sugestoes'||bridge.busy())return;
+  const result=await recommend(m,records,op,p=>{if(active())status(p.etapa+': '+p.feitos+' de '+p.total+'.');});
+  if(!active())return;
   if(JSON.stringify(op)!==JSON.stringify(bridge.options(m)))return;
   if(result.base.assinatura!==L.recommendationBase(m,bridge.records(),op).meta.assinatura){cache.delete(m);historyChanged();return;}
-  cache.set(m,JSON.stringify([op,result.base.assinatura]));bridge.deliver(m,result,records);
- }catch(e){status('Preparação automática pendente: '+e.message+' Toque em Atualizar sugestão para tentar novamente.');}
+  bridge.deliver(m,result,records);
+  if(result.automatico.persistido)cache.set(m,JSON.stringify([op,result.base.assinatura]));
+ }catch(e){if(active())status('Preparação automática pendente: '+e.message+' Toque em Atualizar sugestão para tentar novamente.');}
+ finally{if(preparing.get(m)===attempt)preparing.delete(m);}
 }
 function mount(b){bridge=b;if(bridge.currentScreen()==='sugestoes')void prepare(bridge.currentMode());}
 function historyChanged(){
