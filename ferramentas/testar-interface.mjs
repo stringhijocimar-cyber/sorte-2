@@ -2118,10 +2118,13 @@ checar('novo resultado marca a recomendação antiga e bloqueia salvamento desat
 let monitored419=false;
 for(let i=0;i<100;i++){monitored419=await js(`return Guardar.ler('laboratorio418',{}).monitor?.['mega-sena']?.observacoes.some(x=>x.concurso===${target419})`);if(monitored419)break;await dormir(100);}
 checar('jogo da recomendação entra no acompanhamento prospectivo do laboratório',monitored419);
-await js(`S.intLotes={};S.intConfig={};pintar();window.originalRecommend419=LL18Auto.recommend;LL18Auto.recommend=async()=>{throw Error('Falha simulada no cálculo');};return true;`);
+// Aguarda o cálculo anterior e simula a falha no worker compartilhado pelas
+// duas entradas. Substituir apenas o botão deixaria o automático ter sucesso.
+await js(`return LL18Auto.recommend('mega-sena',S.resultados.slice(),{}).then(()=>true);`);
+await js(`window.originalRecommend419=LL18Auto.recommend;window.originalAutomatic419=LL18UI.automatic;LL18UI.automatic=async()=>{throw Error('Falha simulada no cálculo');};S.intLotes={};S.intConfig={};pintar();return true;`);
 await tocar('#int-gerar');await esperarRecomendacao();
 checar('falha do motor é visível, sem fabricar uma recomendação',await js(`return !S.intLotes['mega-sena']&&document.querySelector('#int-mensagem').textContent.includes('Falha simulada')`));
-await js(`LL18Auto.recommend=window.originalRecommend419;return true;`);
+await js(`LL18UI.automatic=window.originalAutomatic419;return true;`);
 await js(`LL18Auto.recommend=async(...args)=>{await new Promise(resolve=>window.liberarRecomendacao419=resolve);return window.originalRecommend419(...args);};document.querySelector('#int-gerar').click();pintar();window.manteveCalculo419=document.querySelector('#int-gerar').disabled&&document.querySelector('#int-mensagem').textContent.includes('Comparando candidatas');return Promise.resolve().then(()=>{window.liberarRecomendacao419();return true;});`);
 await esperarRecomendacao();
 checar('redesenho da tela durante o cálculo mantém progresso e entrega a recomendação',await js(`return window.manteveCalculo419&&S.intLotes['mega-sena']?.laboratorio.motor==='automatico'&&!!document.querySelector('.int-principal')`));
