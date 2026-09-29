@@ -1796,6 +1796,8 @@ checar('avaliação explica histórico insuficiente',await js(`return document.q
 await js(`S.resultados=Array.from({length:100},(_,i)=>({modalidade:'mega-sena',concurso:i+1,data:'2026-01-01',dezenas:Array.from({length:6},(_,j)=>(i*7+j*11)%60+1).sort((a,b)=>a-b)}));irParaTela('sugestoes');return true;`);
 checar('histórico contínuo libera a avaliação',await js(`return !document.querySelector('#aud-iniciar').disabled`));
 const modoAntesAud413=await js(`return intConfig('mega-sena').modo`);
+await tocar('#tela [data-abrir-analitica]');
+checar('diagnóstico opcional abre pelo atalho antes de iniciar',await js(`return document.querySelector('#ux-analitica').closest('details').open`));
 await tocar('#aud-iniciar');
 let prontoAud=false;
 for(let i=0;i<150;i++){
@@ -1952,6 +1954,7 @@ checar('histórico suficiente escolhe a análise ampliada',await js(`return docu
 await js(`document.querySelector('#aud-concursos').value='60';document.querySelector('#aud-concursos').dispatchEvent(new Event('change'));return true;`);
 checar('ampliar o teste exige 190 concursos sem reduzir o rigor em silêncio',await js(`return document.querySelector('#aud-iniciar').disabled&&document.querySelector('#aud-requisitos').textContent.includes('190 concursos')`));
 await js(`document.querySelector('#aud-concursos').value='30';document.querySelector('#aud-concursos').dispatchEvent(new Event('change'));document.querySelector('#int-semente').value='avaliacao-real-416';return true;`);
+await tocar('#tela [data-abrir-analitica]');
 await tocar('#aud-iniciar');
 checar('os critérios ficam fixos durante a análise',await js(`return document.querySelector('#aud-rigor').disabled&&document.querySelector('#aud-metrica').disabled`));
 let ampliado416=false;
