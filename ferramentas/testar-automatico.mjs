@@ -25,6 +25,7 @@ test('rodada permanece congelada em recarga e novo toque; resultado é contado u
  const draw={modalidade:m,concurso:41,data:'2026-09-28',dezenas:[1,2,3,4,5,6]};
  const next=L.autoCycle(m,[...rows,draw],again.estado,{agora:'2026-09-28T23:00:00Z'});
  assert.equal(next.acompanhamento.n,1);assert.equal(next.rodada.concursoAlvo,42);
+ assert.deepEqual(next.acompanhamento.observacoes[0].resultado,{dezenas:draw.dezenas});
  for(const t of first.rodada.testes)assert.equal(next.acompanhamento.observacoes[0].acertos[t.id],t.jogo.dezenas.filter(x=>draw.dezenas.includes(x)).length);
  assert.equal(L.autoCycle(m,[...rows,draw],next.estado,{agora:now}).acompanhamento.n,1);
  assert.equal(next.decisao.acao,'MANTER');
@@ -37,6 +38,7 @@ test('correções de resultado substituem a observação, preservando o pacote o
  const c=L.autoCycle(m,[...rows,corrected],b.estado,{agora:'2026-09-29T23:00:00Z'});
  assert.equal(c.acompanhamento.n,1);
  assert.equal(c.acompanhamento.observacoes[0].acertos.equilibrio,0);
+ assert.deepEqual(c.acompanhamento.observacoes[0].resultado,{dezenas:corrected.dezenas});
  assert.deepEqual(c.estado.rodadas[0],a.rodada);
 });
 test('validação não acessa o futuro e a estratégia é congelada antes do teste',()=>{
