@@ -2165,7 +2165,7 @@ await tocar('[data-abrir-jogo="cores422"]');
 checar('abrir cartela separa acerto, sorteadas fora e marcações erradas',await js(`const b=document.querySelector('.cartela');return b.querySelectorAll('.casa.acertou').length===1&&b.querySelectorAll('.casa.sorteada').length===5&&b.querySelectorAll('.casa.errou').length===5&&b.querySelectorAll('.casa.neutra').length===49&&b.querySelector('[data-casa="7"]').getAttribute('aria-label').includes('sorteada fora do jogo')`));
 for(const theme of ['escuro','claro']){
  await js(`document.documentElement.dataset.tema='${theme}';return true;`);
- checar('cartela '+theme+': bolinhas verdes, azuis e vermelhas com números brancos',await js(`const expected={acertou:'rgb(21, 125, 71)',sorteada:'rgb(21, 101, 192)',errou:'rgb(180, 35, 55)'};return Object.entries(expected).every(([cl,color])=>{const e=document.querySelector('.cartela .casa.'+cl),style=getComputedStyle(e,'::before');return style.backgroundColor===color&&style.borderRadius==='50%'&&getComputedStyle(e.querySelector('span')).color==='rgb(255, 255, 255)';})`));
+ checar('cartela '+theme+': bolinhas verdes, azuis e vermelhas com números brancos',await js(`const expected={acertou:'rgb(21, 125, 71)',sorteada:'rgb(91, 155, 230)',errou:'rgb(217, 120, 131)'};return Object.entries(expected).every(([cl,color])=>{const e=document.querySelector('.cartela .casa.'+cl),style=getComputedStyle(e,'::before');return style.backgroundColor===color&&style.borderRadius==='50%'&&getComputedStyle(e.querySelector('span')).color==='rgb(255, 255, 255)';})`));
  await frame418('.cartela','LotoLab-4.22-Cartela-'+theme);
 }
 for(const mod of ['mega-sena','lotofacil','quina','lotomania','dupla-sena','dia-de-sorte','timemania','mais-milionaria']){
