@@ -1,5 +1,5 @@
 /* Cores de conferência independentes da modalidade e do tema. */
-:root{--check-hit:#157d47;--check-drawn:#1565c0;--check-miss:#b42337}
+:root{--check-hit:#157d47;--check-drawn:#5b9be6;--check-miss:#d97883}
 .cartela.check-board .casa.acertou,.cartela.check-board .casa.sorteada,.cartela.check-board .casa.errou{background:var(--papel)!important}
 .cartela.check-board .casa.acertou::before,.cartela.check-board .casa.sorteada::before,.cartela.check-board .casa.errou::before{content:"";position:absolute;inset:6%!important;border-radius:50%!important;box-shadow:none!important;border:0!important}
 .cartela.check-board .casa.acertou::before{background:var(--check-hit)!important}
