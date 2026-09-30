@@ -2077,7 +2077,7 @@ for(const m of Object.keys(await js('return LL18.rules'))){
 await cmd('Emulation.setDeviceMetricsOverride',{width:412,height:915,deviceScaleFactor:2,mobile:true});await js(`document.documentElement.dataset.tema='escuro';return true;`);await input418('#ll-modalidade','super-sete');await tab418('analise');await frame418('#ll-lab','LotoLab-4.18-Super-Sete');
 await input418('#ll-modalidade','lotofacil');await tab418('analise');await frame418('#ll-lab','LotoLab-4.18-Lotofacil');await js(`document.documentElement.dataset.tema='claro';return true;`);await frame418('#ll-lab','LotoLab-4.18-Laboratorio-claro');
 await js(`window.__cap418=window.Capacitor;window.Capacitor={isNativePlatform:()=>true};document.querySelector('[data-ll-action="exportar"]').click();return true;`);
-checar('Android oferece relatório JSON para copiar',await js(`return !!document.querySelector('#ll-json')&&JSON.parse(document.querySelector('#ll-json').value).versao==='4.21.0'`));await js(`window.Capacitor=window.__cap418;return true;`);
+checar('Android oferece relatório JSON para copiar',await js(`return !!document.querySelector('#ll-json')&&JSON.parse(document.querySelector('#ll-json').value).versao==='4.22.0'`));await js(`window.Capacitor=window.__cap418;return true;`);
 
 /* ---------- R. Recomendação integrada 4.19 ---------- */
 async function esperarRecomendacao(){
@@ -2145,6 +2145,38 @@ let advanced421=false;
 for(let i=0;i<200;i++){advanced421=await js(`return S.intLotes['mega-sena']?.laboratorio.automatico?.rodada.concursoAlvo===${target419+1}`);if(advanced421)break;await dormir(100);}
 checar('novo resultado confere e prepara próximo pacote sem intervenção',advanced421);
 checar('rodada original permanece preservada e um resultado não troca estratégia',await js(`const a=S.intLotes['mega-sena'].laboratorio.automatico;return JSON.stringify(a.estado.rodadas.find(r=>r.concursoAlvo===${target419}))===window.round421&&a.acompanhamento.observacoes.filter(o=>o.concurso===${target419}).length===1&&a.decisao.acao==='MANTER'&&S.jogos.length===0`));
+
+/* ---------- Histórico 4.22: pacotes congelados, seleção e cores ---------- */
+secao('Histórico visual 4.22');
+checar('histórico abre o último concurso conferido e mostra onze estratégias e a principal',await js(`return document.querySelector('[data-auto-contest]').value==='${target419}'&&document.querySelectorAll('.auto-history-games .auto-history-game').length===11&&document.querySelectorAll('.auto-history-game.primary').length===1`));
+checar('cada cartão mostra os acertos da combinação original',await js(`const round=JSON.parse(window.round421),cards=[...document.querySelectorAll('.auto-history-games .auto-history-game')];return cards.every((e,i)=>{const n=round.testes[i].jogo.dezenas.filter(d=>[1,2,3,4,5,6].includes(d)).length;return e.querySelector('.auto-hit-count').textContent===n+' acerto'+(n===1?'':'s')&&e.querySelectorAll('.check-ticket .acertou').length===n;})`));
+await frame418('.auto-history','LotoLab-4.22-Historico');
+await input418('[data-auto-contest]',target419+1);
+checar('pacote aguardando não exibe zeros nem dezenas vermelhas',await js(`return document.querySelector('.auto-history-status').textContent==='Aguardando resultado'&&document.querySelectorAll('.auto-history .errou').length===0&&[...document.querySelectorAll('.auto-history .auto-hit-count')].every(e=>e.textContent==='Aguardando')`));
+await input418('[data-auto-contest]',target419);
+await js(`pintar();return true;`);
+checar('seleção do concurso é preservada ao redesenhar sem inserir apostas',await js(`return document.querySelector('[data-auto-contest]').value==='${target419}'&&S.jogos.length===0&&JSON.stringify(S.intLotes['mega-sena'].laboratorio.automatico.estado.rodadas.find(r=>r.concursoAlvo===${target419}))===window.round421`));
+await js(`guardarResultados([{modalidade:'mega-sena',concurso:${target419},data:new Date().toISOString().slice(0,10),dezenas:[7,8,9,10,11,12]}]);return true;`);
+let corrected422=false;
+for(let i=0;i<200;i++){corrected422=await js(`return S.intLotes['mega-sena'].laboratorio.automatico.acompanhamento.observacoes.find(o=>o.concurso===${target419})?.resultado.dezenas.join()==='7,8,9,10,11,12'&&!document.querySelector('#int-salvar')?.disabled`);if(corrected422)break;await dormir(100);}
+checar('correção atualiza a conferência, mantém os jogos e não duplica concurso',corrected422&&await js(`const a=S.intLotes['mega-sena'].laboratorio.automatico;return a.acompanhamento.observacoes.filter(o=>o.concurso===${target419}).length===1&&JSON.stringify(a.estado.rodadas.find(r=>r.concursoAlvo===${target419}))===window.round421&&[...document.querySelectorAll('.auto-history-result .check-ticket:first-of-type .check-ball')].map(e=>Number(e.textContent)).join()==='7,8,9,10,11,12'`));
+await js(`S.jogos=[{id:'cores422',modalidade:'mega-sena',dezenas:[1,2,3,4,5,6],data:'2026-01-01',metodo:'manual',lote:'cores422',conferencias:[{concurso:123,data:'2026-01-02',dezenas:[2,7,8,9,10,11],acertos:1}]}];S.jogoAberto=null;irParaTela('jogos',{lateral:true});return true;`);
+await tocar('[data-abrir-jogo="cores422"]');
+checar('abrir cartela separa acerto, sorteadas fora e marcações erradas',await js(`const b=document.querySelector('.cartela');return b.querySelectorAll('.casa.acertou').length===1&&b.querySelectorAll('.casa.sorteada').length===5&&b.querySelectorAll('.casa.errou').length===5&&b.querySelectorAll('.casa.neutra').length===49&&b.querySelector('[data-casa="7"]').getAttribute('aria-label').includes('sorteada fora do jogo')`));
+for(const theme of ['escuro','claro']){
+ await js(`document.documentElement.dataset.tema='${theme}';return true;`);
+ checar('cartela '+theme+': bolinhas verdes, azuis e vermelhas com números brancos',await js(`const expected={acertou:'rgb(21, 125, 71)',sorteada:'rgb(21, 101, 192)',errou:'rgb(180, 35, 55)'};return Object.entries(expected).every(([cl,color])=>{const e=document.querySelector('.cartela .casa.'+cl),style=getComputedStyle(e,'::before');return style.backgroundColor===color&&style.borderRadius==='50%'&&getComputedStyle(e.querySelector('span')).color==='rgb(255, 255, 255)';})`));
+ await frame418('.cartela','LotoLab-4.22-Cartela-'+theme);
+}
+for(const mod of ['mega-sena','lotofacil','quina','lotomania','dupla-sena','dia-de-sorte','timemania','mais-milionaria']){
+ await js(`S.modalidade='${mod}';const c=MODALIDADES[S.modalidade],marked=Array.from({length:c.min},(_,i)=>i+c.base),drawn=Array.from({length:c.k},(_,i)=>c.N+c.base-c.k+i);S.jogos=[{id:'cores422-'+S.modalidade,modalidade:S.modalidade,dezenas:marked,data:'2026-01-01',metodo:'manual',lote:'422',conferencias:[{concurso:123,data:'2026-01-02',dezenas:drawn,acertos:marked.filter(d=>drawn.includes(d)).length}]}];S.jogoAberto=S.jogos[0].id;irParaTela('jogos',{lateral:true});return true;`);
+ for(const width of [320,390,412]){
+  await cmd('Emulation.setDeviceMetricsOverride',{width,height:915,deviceScaleFactor:1,mobile:true});
+  checar(mod+': cartela cabe em '+width+'px',await js(`return document.documentElement.scrollWidth<=innerWidth+1&&document.querySelectorAll('.cartela .casa').length===MODALIDADES[S.modalidade].N`));
+ }
+}
+await cmd('Emulation.setDeviceMetricsOverride',{width:412,height:915,deviceScaleFactor:2,mobile:true});
+await js(`document.documentElement.dataset.tema='escuro';S.modalidade='mega-sena';S.jogos=[];return true;`);
 
 /* ---------- S. Formatos especiais no motor integrado 4.20 ---------- */
 secao('S. Recomendação única nos formatos especiais');

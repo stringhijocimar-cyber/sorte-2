@@ -957,11 +957,12 @@ td{padding:6px 7px;border-bottom:1px solid var(--trama)}
 <link rel="stylesheet" href="ui/inteligencia-v4-9.css?v=4.9.0">
 <link rel="stylesheet" href="ui/visual-metas-v4-10.css?v=4.10.0">
 <link rel="stylesheet" href="ui/visual-foco-v4-11.css?v=4.13.0">
-<link rel="stylesheet" href="ui/experiencia-v4-14.css?v=4.21.0">
-<link rel="stylesheet" href="ui/modalidades-v4-15.css?v=4.21.0">
-<link rel="stylesheet" href="ui/recorrencia-v4-17.css?v=4.21.0">
-<link rel="stylesheet" href="ui/lab-v4-18.css?v=4.21.0">
-<link rel="stylesheet" href="ui/auto-v4-21.css?v=4.21.0">
+<link rel="stylesheet" href="ui/experiencia-v4-14.css?v=4.22.0">
+<link rel="stylesheet" href="ui/modalidades-v4-15.css?v=4.22.0">
+<link rel="stylesheet" href="ui/recorrencia-v4-17.css?v=4.22.0">
+<link rel="stylesheet" href="ui/lab-v4-18.css?v=4.22.0">
+<link rel="stylesheet" href="ui/auto-v4-21.css?v=4.22.0">
+<link rel="stylesheet" href="ui/conferencia-v4-22.css?v=4.22.0">
 </head>
 <body>
 <header>
@@ -1040,12 +1041,13 @@ td{padding:6px 7px;border-bottom:1px solid var(--trama)}
   <div class="corpo"><div class="alca"></div><div id="corpo-avisos"></div></div>
 </div>
 
-<script src="ui/lab-core.js?v=4.21.0"></script>
-<script src="ui/lab-strategies.js?v=4.21.0"></script>
-<script src="ui/lab-recommendation.js?v=4.21.0"></script>
-<script src="ui/lab-auto.js?v=4.21.0"></script>
-<script src="ui/lab-ui.js?v=4.21.0"></script>
-<script src="ui/lab-auto-ui.js?v=4.21.0"></script>
+<script src="ui/lab-core.js?v=4.22.0"></script>
+<script src="ui/lab-strategies.js?v=4.22.0"></script>
+<script src="ui/lab-recommendation.js?v=4.22.0"></script>
+<script src="ui/lab-auto.js?v=4.22.0"></script>
+<script src="ui/lab-ui.js?v=4.22.0"></script>
+<script src="ui/lab-check.js?v=4.22.0"></script>
+<script src="ui/lab-auto-ui.js?v=4.22.0"></script>
 <script>
 "use strict";
 
@@ -2873,7 +2875,7 @@ T.sugestoes = () => {
     <div id="int-lote">${S.intLotes[m]?intRenderLote(S.intLotes[m]):""}</div>
     <details class="auto-settings" open><summary>Personalizar meus jogos (opcional)</summary>
     <section class="carta int-form ux-form"><div class="int-section-title"><h2>Configure seu jogo</h2><span>${esc(c.nome)}</span></div>
-      <div class="int-integrated-intro"><span class="int-eyebrow">CICLO AUTOMÁTICO · 4.21</span><p class="int-help">A sugestão e o pacote virtual aparecem nesta tela sem treinamento manual. Ajuste apenas o tamanho, a quantidade ou o orçamento se desejar.</p></div>
+      <div class="int-integrated-intro"><span class="int-eyebrow">CICLO AUTOMÁTICO · 4.22</span><p class="int-help">A sugestão e o pacote virtual aparecem nesta tela sem treinamento manual. Ajuste apenas o tamanho, a quantidade ou o orçamento se desejar.</p></div>
       <div class="int-grid"><label class="campo" for="int-tam">Dezenas por jogo
         <select id="int-tam">${Array.from({length:c.max-c.min+1},(_,i)=>i+c.min).map(t=>`<option ${o.tam===t?"selected":""}>${t}</option>`).join("")}</select></label>
         <label class="campo" for="int-quantidade">Total de jogos<input id="int-quantidade" type="number" min="1" max="60" value="${o.quantidade}"></label>
@@ -3851,7 +3853,7 @@ T.inicio = () => {
   const avisos=S.avisos.filter(a=>!a.lido).length;
   const meus=S.jogos.filter(j=>j.modalidade===m).length,idade=idadeDoHistorico(m);
   return `<div class="foco-inicio ux-inicio" style="--foco-cor:${FOCO_CORES[m]}">
-    <div class="foco-boasvindas"><div><span class="foco-label">BEM-VINDO AO SEU LABORATÓRIO</span><${podeVoltar()?'h2':'h1'}>Seu jogo,<br>bem planejado.</${podeVoltar()?'h2':'h1'}></div><span class="foco-versao">4.21</span></div>
+    <div class="foco-boasvindas"><div><span class="foco-label">BEM-VINDO AO SEU LABORATÓRIO</span><${podeVoltar()?'h2':'h1'}>Seu jogo,<br>bem planejado.</${podeVoltar()?'h2':'h1'}></div><span class="foco-versao">4.22</span></div>
     <section class="foco-hero"><div class="foco-hero-topo"><span class="foco-label">UM PLANO PARA CADA CONCURSO</span><span class="foco-tag">${esc(c.nome)}</span></div>
       <div class="foco-objetivo"><div><h2>Crie seus jogos.<br>Veja os acertos.</h2><p>Defina seus critérios e seu limite. O LotoLab organiza e confere.</p></div><div class="foco-alvo" aria-label="Meta de ${c.k} dezenas"><strong>${c.k}</strong><span>${c.trevos?"+ 2 trevos":"dezenas"}</span></div></div>
       <button class="acao foco-primary" data-atalho="sugestoes">Criar sugestões <span aria-hidden="true">→</span></button>
@@ -5353,7 +5355,7 @@ function emFatias(itens, passo, aoProgresso, aoTerminar){
    objeto em qualquer tela.
 
    `sorteadas` pinta o resultado; quando há marcadas E sorteadas, a casa que é
-   as duas coisas ganha o contorno âmbar: é o acerto.                       */
+   as duas coisas fica verde; fora do jogo, azul; marca errada, vermelha.                       */
 function cartela(modalidade, marcadas, opcoes){
   const o = Object.assign({sorteadas:null, interativa:false, rodape:"", selo:""}, opcoes||{});
   const c = MODALIDADES[modalidade];
@@ -5363,13 +5365,13 @@ function cartela(modalidade, marcadas, opcoes){
   const casas = [];
   for(let d = c.base; d <= c.N + c.base - 1; d++){
     const m = marc.has(d), s = sort && sort.has(d);
-    const classe = s && m ? "casa acertou" : s ? "casa sorteada" : sort && m ? "casa errou" : "casa";
+    const classe = s && m ? "casa acertou" : s ? "casa sorteada" : sort && m ? "casa errou" : m ? "casa marcada" : "casa neutra";
     casas.push(`<button type="button" class="${classe}" ${o.interativa?"":"disabled"}
       data-casa="${d}" aria-pressed="${m}"
-      aria-label="${d}${s?" sorteada":""}${m?" marcada":""}"><span>${pad(d)}</span></button>`);
+      aria-label="${pad(d)}, ${s&&m?"acerto":s?"sorteada fora do jogo":sort&&m?"marcada e não sorteada":m?"marcada, aguardando resultado":"não marcada"}"><span>${pad(d)}</span></button>`);
   }
   const acertos = sort ? [...marc].filter(d => sort.has(d)).length : null;
-  return `<div class="cartela">
+  return `<div class="cartela check-board">
     <div class="tarja"><b>${esc(c.nome)}</b>
       <span>${o.selo || `${marc.size}/${c.N}`}</span></div>
     <div class="miolo">
@@ -5383,16 +5385,7 @@ function cartela(modalidade, marcadas, opcoes){
   </div>`;
 }
 
-const legendaCartela = `<div class="legenda-cartela">
-  <span><i style="background:var(--tintaPapel)"></i>marcada</span>
-  <span><i style="background:var(--acaso)"></i>sorteada</span>
-  <!-- O selo do acerto reproduz o que a casa faz: caneta escura sobre a casa
-       sorteada, com o fio claro em volta. Antes era um quadrado âmbar, que não
-       aparece em lugar nenhum da cartela — legenda que não bate com o desenho
-       é pior que legenda nenhuma. -->
-  <span><i style="background:var(--acaso);box-shadow:inset 0 0 0 1px #fff,
-    inset 0 0 0 3px var(--tintaPapel)"></i>acerto</span>
-</div>`;
+const legendaCartela = `<div class="legenda-cartela check-legend" aria-label="Legenda da conferência"><span><i class="check-hit"></i>Acerto</span><span><i class="check-drawn"></i>Sorteada fora do jogo</span><span><i class="check-miss"></i>Marcada e não sorteada</span></div>`;
 
 /* ==================== avisos e conferência automática ====================
    Conferir à mão só funciona para quem lembra de conferir. O motor abaixo roda

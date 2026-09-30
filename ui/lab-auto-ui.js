@@ -8,6 +8,39 @@ const num=(v,d=2)=>v==null||!Number.isFinite(v)?'—':v.toLocaleString('pt-BR',{
 const money=v=>v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const name=id=>id==='consenso'?'Consenso das estratégias':L.autoExperts[id]||id;
 const key=p=>'automatico421:'+p;
+// Apenas o concurso selecionado é desenhado; os demais pacotes permanecem na memória.
+const reports=new Map(),historyChoices=new Map();
+function historyCard(m,t,title,result,hits,primary=false){
+ const C=root.LL18Check,c=L.cfg(m);
+ const second=c.dupla&&result?.dezenasSegundoSorteio?{dezenas:result.dezenasSegundoSorteio}:null;
+ return `<article class="auto-history-game ${primary?'primary':''}"><div class="auto-game-head"><h4>${esc(title)}</h4><span class="auto-hit-count">${hits==null?'Aguardando':hits+' acerto'+(hits===1?'':'s')+(c.dupla?' · 1º sorteio':'')}</span></div>${C.ticket(m,t,result)}
+  ${second?`<p class="auto-history-note">2º sorteio: ${L.hits(m,t,second)} acertos</p>${C.ticket(m,t,second)}`:c.dupla&&result?'<p class="auto-history-note">2º sorteio: aguardando publicação.</p>':''}
+  <details><summary>Ver cartela completa</summary>${C.board(m,t,result,{selo:result&&c.dupla?'1º sorteio':result?'Conferido':'Aguardando resultado'})}${second?C.board(m,t,second,{selo:'2º sorteio'}):''}${result?C.legend():''}</details></article>`;
+}
+function historyRound(report,target){
+ const {m,a}=report,round=a.estado.rodadas.find(r=>r.concursoAlvo===target);
+ if(!round)return '<p class="auto-history-note">Nenhum pacote registrado para este concurso.</p>';
+ const observation=a.acompanhamento.observacoes.find(o=>o.concurso===target),result=observation?.resultado;
+ const rejected=a.acompanhamento.rejeitados.includes(target),checked=!!result,C=root.LL18Check;
+ const label=checked?'Conferido':rejected?'Fora da avaliação':'Aguardando resultado';
+ const date=observation?.data?.split('-').reverse().join('/')||'';
+ return `<div class="auto-round-summary"><div><b>Concurso ${target}</b>${date?`<div class="auto-round-date">${esc(date)}</div>`:''}</div><span class="auto-history-status ${checked?'checked':''}">${label}</span></div>
+  ${rejected?'<p class="auto-history-note" role="status">Este registro não atende aos critérios de avaliação: confira a data do resultado e se o pacote foi criado antes do sorteio. Ele permanece visível, sem entrar no desempenho.</p>':''}
+  ${checked?`<div class="auto-history-result"><b>${L.cfg(m).dupla?'Resultado · 1º sorteio':'Resultado do concurso'}</b>${C.ticket(m,result)}${result.dezenasSegundoSorteio?`<b>Resultado · 2º sorteio</b>${C.ticket(m,{dezenas:result.dezenasSegundoSorteio})}`:''}</div>${C.legend()}`:'<p class="auto-history-note">As combinações originais estão preservadas. Os acertos aparecerão quando este concurso for recebido e validado.</p>'}
+  ${historyCard(m,round.principal,'Sugestão principal · '+name(round.metodo),result,observation?.acertos.principal,true)}
+  <p class="auto-history-note">${round.testes.length} jogos virtuais · custo R$ 0,00. As dezenas permanecem iguais às registradas para este concurso.</p>
+  <div class="auto-history-games">${round.testes.map(t=>historyCard(m,t.jogo,name(t.id),result,observation?.acertos[t.id])).join('')}</div>`;
+}
+function historyReport(g){
+ const a=g.automatico,profile=a.estado.perfil,rounds=a.estado.rodadas.slice().sort((x,y)=>y.concursoAlvo-x.concursoAlvo);
+ const report={m:g.modalidade,a};reports.set(profile,report);
+ if(!rounds.length)return '<section class="auto-history"><h3>Histórico dos jogos por concurso</h3><p class="auto-history-note">O histórico aparecerá quando houver um pacote registrado para um concurso definido.</p></section>';
+ const observed=new Set(a.acompanhamento.observacoes.map(o=>o.concurso)),rejected=new Set(a.acompanhamento.rejeitados);
+ const selected=rounds.find(r=>r.concursoAlvo===historyChoices.get(profile))?.concursoAlvo||rounds.find(r=>observed.has(r.concursoAlvo))?.concursoAlvo||rounds[0].concursoAlvo;
+ return `<details class="auto-history" data-auto-history="${esc(profile)}" ${a.acompanhamento.n?'open':''}><summary>Histórico dos jogos por concurso<span>${a.acompanhamento.n} conferidos</span></summary><p class="auto-history-note">Confira a sugestão principal e os 11 jogos virtuais deste perfil, concurso a concurso.</p>
+  <label>Concurso registrado<select data-auto-contest aria-label="Concurso do histórico de jogos">${rounds.map(r=>`<option value="${r.concursoAlvo}" ${selected===r.concursoAlvo?'selected':''}>${r.concursoAlvo} · ${observed.has(r.concursoAlvo)?'Conferido':rejected.has(r.concursoAlvo)?'Fora da avaliação':'Aguardando resultado'}</option>`).join('')}</select></label>
+  <div data-auto-round aria-live="polite">${historyRound(report,selected)}</div></details>`;
+}
 function merge(local,shared,profile,latest){
  if(!shared||shared.protocolo!==L.autoProtocol||shared.perfil!==profile||shared.ultimaBase?.ultimo>latest)return local;
  if(!local)return shared;
@@ -96,14 +129,15 @@ function render(g,old=false,rec=()=>'',trevos=()=> ''){
  const ranking=(follow.n?follow.ranking:a.inicial?.teste||[]).slice().sort((x,y)=>y.media-x.media);
  const n=follow.n||a.inicial?.observacoes.slice(30).length||0;
  const ticket=(t,i)=>`<article class="int-ticket ${i===0?'int-principal':''}"><div class="int-section-title"><h3>${i===0?'Sua sugestão principal':'Jogo adicional '+i}</h3><span>${i===0?'CONCURSO '+(round.concursoAlvo||'A DEFINIR'):'OPCIONAL'}</span></div>${balls(g.modalidade,t)}${t.trevos?trevos(t.trevos):''}${rec(t)}${i===0?`<p class="int-help">${esc(g.motivo)}</p>`:''}<button class="acao secundaria" data-int-analisar="${i}">Ver estatísticas deste jogo</button></article>`;
- return `<section class="int-results auto-results" aria-label="Sugestão automática"><div class="int-section-title"><h2>Sugestão + laboratório automático</h2><span>4.21</span></div>
+ return `<section class="int-results auto-results" aria-label="Sugestão automática"><div class="int-section-title"><h2>Sugestão + laboratório automático</h2><span>4.22</span></div>
   ${old?'<p class="nota atencao">O histórico mudou. A atualização automática está preparando o próximo concurso.</p>':''}
   ${!a.persistido?'<p class="nota atencao" role="alert">A memória do aparelho não pôde ser gravada. Este pacote ainda não está registrado para avaliação; libere espaço e atualize a sugestão.</p>':''}
   ${!g.base.n?'<p class="nota atencao">Sem histórico disponível. A sugestão usa apenas referências combinatórias; a comparação começará quando os resultados chegarem.</p>':''}
   ${ticket(g.jogos[0],0)}
   <div class="auto-summary"><div><b>${num(g.base.n,0)}</b><small>concursos analisados</small></div><div><b>${a.pacoteVirtual.length}</b><small>jogos de teste virtual</small></div><div><b>${num(follow.n,0)}</b><small>sorteios conferidos</small></div></div>
   <article class="auto-decision"><span class="int-eyebrow">DECISÃO AUTOMÁTICA · ${esc(a.decisao.acao)}</span><h3>${esc(name(round.metodo))}</h3><p>${esc(a.decisao.motivo)}</p><p class="int-help">${last?`Último resultado: concurso ${last.concurso}; principal com ${last.acertos.principal} acertos. `:'O pacote atual aguarda o próximo resultado. '}Revisão de estratégia a partir de ${a.proximaRevisao} sorteios conferidos neste perfil; o pacote é renovado a cada novo concurso.</p></article>
-  <details class="int-details auto-pack" open><summary>Pacote de estratégias · ${a.pacoteVirtual.length} jogos virtuais</summary><p class="int-help">${round.concursoAlvo?'Registrados para o concurso '+round.concursoAlvo+'.':'Prévia sem concurso definido; ainda não entra na avaliação.'} A conferência e a comparação acontecem automaticamente. Custo dos testes: R$ 0,00.</p><div class="auto-pack-grid">${a.pacoteVirtual.map(t=>`<article class="auto-test" data-auto-strategy="${esc(t.id)}"><b>${esc(t.nome)}</b>${balls(g.modalidade,t.jogo)}</article>`).join('')}</div></details>
+  ${historyReport(g)}
+  <details class="int-details auto-pack" ${follow.n?'':'open'}><summary>Pacote de estratégias · ${a.pacoteVirtual.length} jogos virtuais</summary><p class="int-help">${round.concursoAlvo?'Registrados para o concurso '+round.concursoAlvo+'.':'Prévia sem concurso definido; ainda não entra na avaliação.'} A conferência e a comparação acontecem automaticamente. Custo dos testes: R$ 0,00.</p><div class="auto-pack-grid">${a.pacoteVirtual.map(t=>`<article class="auto-test" data-auto-strategy="${esc(t.id)}"><b>${esc(t.nome)}</b>${balls(g.modalidade,t.jogo)}</article>`).join('')}</div></details>
   <details class="int-details auto-ranking"><summary>Desempenho e motivo da escolha</summary><p class="int-help">${follow.n?`${follow.n} concursos com jogos registrados antes do resultado.`:`Comparação histórica inicial: ${n} concursos de teste, separados dos 30 usados para escolher o método. Ainda não é acompanhamento futuro.`}</p>${ranking.length?`<div class="ll-table"><table><thead><tr><th>Estratégia</th><th>Acertos médios</th><th>Diferença para o acaso</th><th>IC 95%</th></tr></thead><tbody>${ranking.map(x=>`<tr><td>${esc(name(x.id))}</td><td>${num(x.media)}</td><td>${num(x.acaso.media,3)}</td><td>${x.acaso.ic?.map(v=>num(v,3)).join(' a ')||'—'}</td></tr>`).join('')}</tbody></table></div>`:'<p>Aguardando histórico suficiente; nenhuma estratégia é declarada vencedora.</p>'}<p class="int-help">Controle: média de 32 jogos aleatórios independentes por concurso, além do controle visível no pacote. A troca exige confirmação em períodos distintos, correção de múltiplas comparações e teste válido para consultas repetidas. O maior número da tabela, sozinho, não basta.</p>${a.inicial?.particao?`<p class="int-help">Seleção inicial: ${a.inicial.particao.validacao.join('–')} · teste separado: ${a.inicial.particao.teste.join('–')}.</p>`:''}</details>
   ${g.jogos.length>1?`<details class="int-details"><summary>Jogos adicionais escolhidos (${g.jogos.length-1})</summary>${g.jogos.slice(1).map((t,i)=>ticket(t,i+1)).join('')}</details>`:''}
   ${g.jogos.length<g.solicitados?`<p class="nota">O orçamento comporta ${g.jogos.length} dos ${g.solicitados} jogos solicitados.</p>`:''}
@@ -112,5 +146,13 @@ function render(g,old=false,rec=()=>'',trevos=()=> ''){
  </section>`;
 }
 root.addEventListener?.('online',()=>{loaded.clear();remote.clear();cache.clear();historyChanged();});
-root.LL18Auto={mount,recommend,historyChanged,render,merge,prepare};
+root.addEventListener?.('change',event=>{
+ const select=event.target.closest?.('[data-auto-contest]'),host=select?.closest('[data-auto-history]');
+ if(!host)return;
+ const report=reports.get(host.dataset.autoHistory),target=Number(select.value);
+ if(!report?.a.estado.rodadas.some(r=>r.concursoAlvo===target))return;
+ historyChoices.set(host.dataset.autoHistory,target);
+ host.querySelector('[data-auto-round]').innerHTML=historyRound(report,target);
+});
+root.LL18Auto={mount,recommend,historyChanged,render,merge,prepare,historyReport};
 })(globalThis);

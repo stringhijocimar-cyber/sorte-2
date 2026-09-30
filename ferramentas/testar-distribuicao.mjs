@@ -41,6 +41,7 @@ try{
  await until(()=>js(`return !!navigator.serviceWorker.controller`),'controle do service worker');
  assert.ok(await js(`return caches.match('./ui/lab-worker.js').then(Boolean)`),'worker foi pré-armazenado');
  assert.ok(await js(`return caches.match('./ui/lab-recommendation.js').then(Boolean)`),'motor integrado pré-armazenado');
+ assert.ok(await js(`return caches.match('./ui/lab-check.js').then(Boolean)`),'cartelas de conferência pré-armazenadas');
  console.log('cache pronto');
  // Também corta fontes externas: encerrar só o servidor não impede a busca
  // diária de atualizar a base enquanto o HTML único é testado na CI.

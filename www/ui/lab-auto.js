@@ -2,7 +2,7 @@
 (function(root){
 'use strict';
 const L=root.LL18||(typeof require==='function'?require('./lab-recommendation.js'):null);
-const PROTOCOL='auto-421-1', VERSION='4.21.0', POOL=96, REFERENCES=32;
+const PROTOCOL='auto-421-1', VERSION='4.22.0', POOL=96, REFERENCES=32;
 const experts={
  equilibrio:'Equilíbrio de soma e paridade', frequencia:'Frequência com suavização bayesiana',
  recencia:'Frequência recente ponderada', atraso:'Atrasos como hipótese',
@@ -133,6 +133,7 @@ function observation(m,r,draw,o){
  const acertos=Object.fromEntries(r.testes.map(x=>[x.id,L.hits(m,x.jogo,draw)]));
  acertos.consenso=L.hits(m,r.consenso,draw);acertos.principal=L.hits(m,r.principal,draw);
  return {concurso:draw.concurso,data:draw.data,geradoAte:r.geradoAte,acertos,referencia:reference,
+  resultado:{...L.validateTicket(m,draw,{resultado:true}),...(draw.dezenasSegundoSorteio?{dezenasSegundoSorteio:draw.dezenasSegundoSorteio.slice()}:{})},
   complementos:r.testes.map(x=>({id:x.id,financeiro:L.financial(m,x.jogo,draw)}))};
 }
 function statistics(obs,seed){
