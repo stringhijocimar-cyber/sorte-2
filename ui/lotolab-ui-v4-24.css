@@ -250,3 +250,9 @@ html[data-tema="claro"] .auto-test b{
 .hero-card.hero-card,.mini-card.mini-card,.auto-results.auto-results,
 .auto-history.auto-history,.auto-decision.auto-decision,.concurso.concurso,
 .draw-card.draw-card,.activity-item.activity-item{border-radius:14px!important}
+
+/* Escala final com especificidade suficiente para componentes compostos. */
+[class*="carta"][class*="carta"],[class*="kpi"][class*="kpi"],
+[class*="card"][class*="card"],[class*="ficha"][class*="ficha"],
+[class*="item"][class*="item"],[class*="nota"][class*="nota"],
+[class*="painel"][class*="painel"]{border-radius:14px!important}
