@@ -241,3 +241,7 @@ html[data-tema="claro"] .auto-test b{
 .carta,.panel,.kpi,.card,.ficha,.item,.nota,.painel,.auto-results,.auto-history,
 .auto-test,.auto-decision,.int-ticket,.sum-card,.metric,.chart-card,.concurso,
 .draw-card,.activity-item{border-radius:14px!important}
+
+/* Componentes criados dinamicamente também obedecem à escala: */
+[class*="carta"],[class*="kpi"],[class*="card"],[class*="ficha"],
+[class*="item"],[class*="nota"],[class*="painel"]{border-radius:14px!important}
