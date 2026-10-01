@@ -44,7 +44,6 @@ header{
   border-color:var(--ll23-line)!important;
   box-shadow:0 10px 26px rgba(0,0,0,.16)!important;
 }
-.carta,.panel,.ficha,.draw-card,.concurso,.auto-history{border-radius:16px!important}
 .panel-title h3,h3{letter-spacing:-.02em!important}
 
 /* Ações principais recebem um gradiente curto, com foco visual controlado. */
