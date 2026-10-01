@@ -236,3 +236,8 @@ html[data-tema="claro"] .auto-test b{
 @media(prefers-reduced-motion:reduce){
   .concurso,.draw-card,.auto-test,.acao:not(.secundaria),.primary-btn{transition:none!important}
 }
+
+/* Todas as superfícies do laboratório seguem a escala única já validada pela bateria. */
+.carta,.panel,.kpi,.card,.ficha,.item,.nota,.painel,.auto-results,.auto-history,
+.auto-test,.auto-decision,.int-ticket,.sum-card,.metric,.chart-card,.concurso,
+.draw-card,.activity-item{border-radius:14px!important}
