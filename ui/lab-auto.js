@@ -2,7 +2,7 @@
 (function(root){
 'use strict';
 const L=root.LL18||(typeof require==='function'?require('./lab-recommendation.js'):null);
-const PROTOCOL='auto-421-1', VERSION='4.23.0', POOL=96, REFERENCES=32;
+const PROTOCOL='auto-421-1', VERSION='4.24.0', POOL=96, REFERENCES=32;
 const experts={
  equilibrio:'Equilíbrio de soma e paridade', frequencia:'Frequência com suavização bayesiana',
  recencia:'Frequência recente ponderada', atraso:'Atrasos como hipótese',
