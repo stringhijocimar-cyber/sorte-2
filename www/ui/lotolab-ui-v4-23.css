@@ -1,0 +1,196 @@
+/* LotoLab 4.23 — refinamento visual
+   Camada visual: mantém motor, dados e fluxos inalterados.
+   Objetivo: hierarquia mais clara, leitura confortável e aparência premium
+   sem transformar o laboratório em uma interface de cassino. */
+
+:root{
+  --ll23-accent:#A979FF;
+  --ll23-accent-2:#7650D8;
+  --ll23-accent-soft:rgba(169,121,255,.12);
+  --ll23-cyan:#5FE4CF;
+  --ll23-surface:#0D1824;
+  --ll23-surface-2:#101F2D;
+  --ll23-line:#253A4A;
+  --ll23-muted:#9BADB7;
+  --ll23-white:#F7FBFC;
+}
+
+/* Fundo com profundidade discreta e uma coluna de leitura mais coesa. */
+html[data-tema="escuro"] body{
+  background:
+    radial-gradient(540px 260px at 94% -8%,rgba(169,121,255,.10),transparent 70%),
+    radial-gradient(420px 220px at -15% 42%,rgba(95,228,207,.055),transparent 72%),
+    linear-gradient(180deg,#050B12 0%,#07131E 52%,#050B12 100%)!important;
+}
+main{padding-top:16px!important}
+
+/* Cabeçalho mais leve: a marca vira ponto de orientação, sem competir com o
+   conteúdo da tela. */
+header{
+  box-shadow:0 8px 28px rgba(0,0,0,.16)!important;
+}
+.marca-titulo b{
+  background:linear-gradient(100deg,#FFFFFF 12%,#D4C0FF 58%,#9A6BFF 100%);
+  -webkit-background-clip:text;background-clip:text;
+  -webkit-text-fill-color:transparent;
+}
+.marca-titulo span{opacity:.8!important}
+
+/* Cartões com contraste em três níveis: fundo, superfície e ação. */
+.carta,.panel,.ficha,.kpi,.mini-card,.draw-card,.concurso,.item,
+.activity-item,.metric,.sum-card,.chart-card,.pq-grafico,.analysis-card,
+.auto-results,.auto-history,.auto-test,.auto-decision{
+  background:linear-gradient(180deg,var(--ll23-surface-2),var(--ll23-surface))!important;
+  border-color:var(--ll23-line)!important;
+  box-shadow:0 10px 26px rgba(0,0,0,.16)!important;
+}
+.carta,.panel,.ficha,.draw-card,.concurso,.auto-history{border-radius:16px!important}
+.panel-title h3,h3{letter-spacing:-.02em!important}
+
+/* Ações principais recebem um gradiente curto, com foco visual controlado. */
+.acao:not(.secundaria),.primary-btn,.big-action{
+  background:linear-gradient(135deg,#9C6AF5 0%,#7047CE 100%)!important;
+  border-color:rgba(211,190,255,.40)!important;
+  color:#FFFFFF!important;
+  box-shadow:0 8px 18px rgba(109,62,210,.22),inset 0 1px 0 rgba(255,255,255,.16)!important;
+  font-weight:760!important;
+}
+.acao:not(.secundaria):hover,.primary-btn:hover,.big-action:hover{
+  filter:brightness(1.07);
+  transform:translateY(-1px);
+}
+.acao.secundaria{
+  background:rgba(169,121,255,.07)!important;
+  border-color:rgba(169,121,255,.32)!important;
+  color:#D6C6FF!important;
+}
+
+/* Seletores e abas: estado ativo evidente, sem blocos pesados. */
+.segmento,.tabs,.activity-tabs,.chips,.mode-tabs{
+  background:rgba(5,13,21,.78)!important;
+  border-color:var(--ll23-line)!important;
+}
+.segmento button[aria-selected="true"],.tabs button.active,
+.activity-tabs .active,.chip[aria-pressed="true"],
+.mode-tabs .active,.mode-tabs button[aria-pressed="true"]{
+  background:linear-gradient(180deg,rgba(169,121,255,.30),rgba(118,80,216,.18))!important;
+  color:#FFFFFF!important;
+  box-shadow:inset 0 -2px 0 var(--ll23-accent),0 4px 12px rgba(118,80,216,.12)!important;
+  border-color:rgba(169,121,255,.42)!important;
+}
+
+/* A tela inicial ganha uma ação e uma leitura mais claras. */
+.hero-card{
+  border-color:rgba(169,121,255,.38)!important;
+  background:
+    radial-gradient(190px 150px at 88% 40%,rgba(169,121,255,.18),transparent 72%),
+    linear-gradient(140deg,#101B2A,#0A1723 72%)!important;
+}
+.hero-card h2{font-size:1.1rem!important;letter-spacing:-.025em!important}
+.hero-card p{color:#B0BEC5!important}
+
+/* Resumo e indicadores: números com mais peso e rótulos mais discretos. */
+.mini-card strong,.resumo .kpi .val,.metric b,.kpi .val{
+  color:#F8FBFC!important;
+  letter-spacing:-.035em!important;
+}
+.mini-card strong.teal,.resumo .kpi:nth-child(3) .val,.metric b.teal{
+  color:var(--ll23-cyan)!important;
+}
+.mini-card small,.resumo .kpi .sub,.metric span,.metric small{
+  color:var(--ll23-muted)!important;
+}
+
+/* Resultado do concurso: status na lateral e dezenas como elementos de leitura. */
+.concurso,.draw-card{transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease}
+.concurso:hover,.draw-card:hover{
+  transform:translateY(-2px);
+  border-color:rgba(169,121,255,.38)!important;
+  box-shadow:0 14px 30px rgba(0,0,0,.22)!important;
+}
+.bola,.ball{
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.18),0 4px 10px rgba(0,0,0,.16)!important;
+}
+
+/* Sugestão automática: a decisão vira o centro visual do fluxo. */
+.auto-decision{
+  border-color:rgba(169,121,255,.40)!important;
+  background:
+    radial-gradient(180px 100px at 96% 0%,rgba(169,121,255,.16),transparent 70%),
+    linear-gradient(145deg,#131D31,#0D1824)!important;
+}
+.auto-decision h3{font-size:1.08rem!important;color:#FFFFFF!important}
+.auto-decision .int-eyebrow{color:#D5C2FF!important;letter-spacing:.08em!important}
+.auto-summary{
+  gap:8px!important;
+}
+.auto-summary>div{
+  border:1px solid var(--ll23-line)!important;
+  background:rgba(16,31,45,.86)!important;
+  border-radius:13px!important;
+  padding:11px 8px!important;
+}
+.auto-summary b{color:#FFFFFF!important;font-size:1.18rem!important}
+.auto-summary small{color:var(--ll23-muted)!important}
+
+/* Os 11 jogos ficam mais escaneáveis: título, etiqueta e dezenas separados. */
+.auto-test{
+  border-radius:13px!important;
+  padding:11px!important;
+  transition:transform .16s ease,border-color .16s ease!important;
+}
+.auto-test:hover{transform:translateY(-1px);border-color:rgba(169,121,255,.38)!important}
+.auto-game-head{align-items:center!important}
+.auto-hit-count{
+  border-radius:999px!important;
+  padding:4px 7px!important;
+  background:rgba(95,228,207,.09)!important;
+  border:1px solid rgba(95,228,207,.22)!important;
+  color:#9BEFE2!important;
+}
+
+/* Conferência: a legenda e o status ficam visualmente próximos da cartela. */
+.auto-history{
+  border-color:rgba(95,228,207,.25)!important;
+}
+.auto-history>summary{
+  color:#F7FBFC!important;
+  font-weight:760!important;
+}
+.auto-history-status.checked{
+  background:rgba(95,228,207,.12)!important;
+  border-color:rgba(95,228,207,.30)!important;
+  color:#A6F2E6!important;
+}
+
+/* Navegação inferior com cápsula de estado ativo. */
+nav button[aria-current="page"]{
+  color:#D7C5FF!important;
+  font-weight:760!important;
+}
+nav button[aria-current="page"]::before{
+  display:block!important;
+  content:""!important;
+  position:absolute!important;
+  top:3px!important;
+  width:42px!important;height:28px!important;
+  border-radius:14px!important;
+  background:rgba(169,121,255,.13)!important;
+  box-shadow:inset 0 0 0 1px rgba(169,121,255,.18)!important;
+  z-index:-1!important;
+}
+nav button{position:relative!important;transition:color .16s ease,transform .16s ease!important}
+nav button:active{transform:scale(.96)!important}
+
+/* Toque e foco com a mesma linguagem visual. */
+:where(button,a,input,select,summary):focus-visible{
+  outline:2px solid var(--ll23-accent)!important;
+  outline-offset:3px!important;
+}
+@media(max-width:390px){
+  .hero-card h2{font-size:1.02rem!important}
+  .auto-summary>div{padding-left:5px!important;padding-right:5px!important}
+}
+@media(prefers-reduced-motion:reduce){
+  .concurso,.draw-card,.auto-test,nav button,.acao:not(.secundaria),.primary-btn,.big-action{transition:none!important}
+}
