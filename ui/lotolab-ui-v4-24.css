@@ -245,3 +245,8 @@ html[data-tema="claro"] .auto-test b{
 /* Componentes criados dinamicamente também obedecem à escala: */
 [class*="carta"],[class*="kpi"],[class*="card"],[class*="ficha"],
 [class*="item"],[class*="nota"],[class*="painel"]{border-radius:14px!important}
+
+/* Empate de especificidade com folhas visuais anteriores. */
+.hero-card.hero-card,.mini-card.mini-card,.auto-results.auto-results,
+.auto-history.auto-history,.auto-decision.auto-decision,.concurso.concurso,
+.draw-card.draw-card,.activity-item.activity-item{border-radius:14px!important}
