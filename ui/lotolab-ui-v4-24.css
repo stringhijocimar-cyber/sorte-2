@@ -1,0 +1,238 @@
+/* LotoLab 4.24 — experiência da recomendação
+   Refinamento visual sem alteração de cálculo, conferência ou navegação. */
+
+:root{
+  --ll24-purple:#A979FF;
+  --ll24-purple-deep:#6E43CF;
+  --ll24-teal:#5FE4CF;
+  --ll24-line:#294152;
+  --ll24-muted:#9CAEB8;
+}
+
+/* A sugestão é o centro do produto: primeiro a decisão, depois a evidência. */
+.auto-results{
+  display:grid!important;
+  gap:12px!important;
+}
+.auto-results>.int-section-title{
+  padding:2px 2px 4px!important;
+  align-items:center!important;
+}
+.auto-results>.int-section-title h2{
+  color:#F8FBFC!important;
+  font-size:.92rem!important;
+  letter-spacing:.02em!important;
+}
+.auto-results>.int-section-title span{
+  color:#D7C5FF!important;
+  background:rgba(169,121,255,.12)!important;
+  border:1px solid rgba(169,121,255,.30)!important;
+  border-radius:999px!important;
+  padding:4px 8px!important;
+  font-size:.58rem!important;
+}
+
+/* Cartão principal: a única recomendação fica visualmente acima dos testes. */
+.int-ticket.int-principal{
+  position:relative!important;
+  overflow:hidden!important;
+  padding:15px!important;
+  border:1px solid rgba(169,121,255,.58)!important;
+  border-radius:18px!important;
+  background:
+    radial-gradient(190px 100px at 94% 0%,rgba(169,121,255,.16),transparent 72%),
+    linear-gradient(150deg,#151E31 0%,#0B1724 72%)!important;
+  box-shadow:0 16px 34px rgba(44,25,92,.22)!important;
+}
+.int-ticket.int-principal::before{
+  content:"RECOMENDAÇÃO DO LABORATÓRIO";
+  display:inline-flex!important;
+  margin-bottom:10px!important;
+  color:#DCCBFF!important;
+  font-size:.56rem!important;
+  font-weight:800!important;
+  letter-spacing:.12em!important;
+}
+.int-ticket.int-principal .int-section-title{
+  margin-bottom:12px!important;
+}
+.int-ticket.int-principal .int-section-title h3{
+  font-size:1.08rem!important;
+  color:#FFFFFF!important;
+}
+.int-ticket.int-principal .dezenas{
+  gap:8px!important;
+  margin:6px 0 12px!important;
+}
+.int-ticket.int-principal .dz{
+  min-width:39px!important;
+  width:39px!important;
+  height:39px!important;
+  font-size:.76rem!important;
+  box-shadow:0 6px 14px rgba(0,0,0,.20)!important;
+}
+.int-ticket.int-principal .int-help{
+  color:#C4D0D6!important;
+  font-size:.69rem!important;
+  line-height:1.45!important;
+}
+.int-ticket.int-principal .acao.secundaria{
+  width:100%!important;
+  justify-content:center!important;
+  margin-top:8px!important;
+}
+
+/* O motivo automático vira um resumo curto e legível. */
+.auto-decision{
+  position:relative!important;
+  overflow:hidden!important;
+  padding:15px!important;
+  border-left:3px solid var(--ll24-purple)!important;
+}
+.auto-decision .int-eyebrow{
+  display:inline-flex!important;
+  color:#D9C9FF!important;
+  font-size:.56rem!important;
+  font-weight:800!important;
+}
+.auto-decision h3{
+  margin-top:6px!important;
+  color:#FFFFFF!important;
+  font-size:1.02rem!important;
+}
+.auto-decision p{
+  color:#B9C8D0!important;
+  font-size:.68rem!important;
+  line-height:1.48!important;
+}
+
+/* Métricas rápidas: menos ruído, leitura em três colunas. */
+.auto-summary{
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  display:grid!important;
+}
+.auto-summary>div{
+  min-width:0!important;
+  min-height:76px!important;
+  display:flex!important;
+  flex-direction:column!important;
+  justify-content:center!important;
+  gap:4px!important;
+  text-align:center!important;
+}
+.auto-summary b{font-variant-numeric:tabular-nums!important}
+.auto-summary small{line-height:1.22!important}
+
+/* Detalhes secundários se comportam como módulos recolhíveis, não como blocos
+   concorrentes com a recomendação. */
+.int-details,.auto-history{
+  border-radius:14px!important;
+  border-color:rgba(41,65,82,.95)!important;
+  background:rgba(8,20,31,.72)!important;
+}
+.int-details>summary,.auto-history>summary{
+  min-height:44px!important;
+  padding:12px 13px!important;
+  font-size:.72rem!important;
+  font-weight:720!important;
+}
+.int-details[open]>summary,.auto-history[open]>summary{
+  border-bottom:1px solid rgba(41,65,82,.84)!important;
+}
+.auto-pack-grid{
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:8px!important;
+}
+.auto-test b{
+  display:block!important;
+  min-height:30px!important;
+  color:#EAF3F5!important;
+  font-size:.66rem!important;
+  line-height:1.25!important;
+}
+.auto-test .dz{transform:scale(.94)!important}
+
+/* Cartela: números neutros recuam; estados semânticos ficam mais fáceis de
+   distinguir sem voltar ao vermelho/azul fortes. */
+.cartela .casa:not(.sorteada):not(.acertou){
+  color:#5F625E!important;
+}
+.cartela .casa.sorteada{
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.24),0 4px 9px rgba(91,155,230,.18)!important;
+}
+.cartela .casa.acertou{
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.20),0 4px 10px rgba(21,125,71,.20)!important;
+}
+.legenda-cartela{
+  gap:9px 14px!important;
+}
+.legenda-cartela i{
+  width:12px!important;height:12px!important;border-radius:50%!important;
+}
+
+/* Tema claro: não deixar cartões escuros com texto escuro. */
+html[data-tema="claro"] .auto-results,
+html[data-tema="claro"] .auto-results .int-ticket,
+html[data-tema="claro"] .auto-results .auto-decision,
+html[data-tema="claro"] .auto-results .int-details,
+html[data-tema="claro"] .auto-results .auto-history{
+  color:#203244!important;
+}
+html[data-tema="claro"] .auto-results .int-ticket.int-principal{
+  background:linear-gradient(150deg,#FFFFFF 0%,#F4F0FF 100%)!important;
+  border-color:#C8A7FF!important;
+  box-shadow:0 12px 26px rgba(87,57,150,.12)!important;
+}
+html[data-tema="claro"] .auto-results .int-ticket.int-principal::before{
+  color:#6F45B6!important;
+}
+html[data-tema="claro"] .auto-results .int-ticket.int-principal .int-section-title h3,
+html[data-tema="claro"] .auto-results .int-ticket.int-principal .int-help{
+  color:#203244!important;
+}
+html[data-tema="claro"] .auto-results .auto-decision{
+  border-left-color:#7650D8!important;
+  background:linear-gradient(150deg,#F2EDFF,#FFFFFF)!important;
+  border-color:#D4C4F7!important;
+}
+html[data-tema="claro"] .auto-results .auto-decision .int-eyebrow{
+  color:#6B45B0!important;
+}
+html[data-tema="claro"] .auto-results .auto-decision h3{
+  color:#24364A!important;
+}
+html[data-tema="claro"] .auto-results .auto-decision p{
+  color:#556979!important;
+}
+html[data-tema="claro"] .auto-results .int-details,
+html[data-tema="claro"] .auto-results .auto-history{
+  background:#FFFFFF!important;
+  border-color:#D6E0E5!important;
+}
+html[data-tema="claro"] .auto-results .int-details>summary,
+html[data-tema="claro"] .auto-results .auto-history>summary,
+html[data-tema="claro"] .auto-results>.int-section-title h2{
+  color:#24364A!important;
+}
+html[data-tema="claro"] .auto-results>.int-section-title span{
+  color:#6745A7!important;
+  background:#F0E9FF!important;
+  border-color:#D4C4F7!important;
+}
+html[data-tema="claro"] .auto-test{
+  background:#F7FAFB!important;
+  border-color:#D6E0E5!important;
+}
+html[data-tema="claro"] .auto-test b{
+  color:#263A4B!important;
+}
+
+/* Telas estreitas: mantém o destaque sem fazer os números quebrarem. */
+@media(max-width:390px){
+  .int-ticket.int-principal{padding:13px!important}
+  .int-ticket.int-principal .dz{min-width:35px!important;width:35px!important;height:35px!important}
+  .auto-summary>div{min-height:70px!important}
+}
+@media(prefers-reduced-motion:reduce){
+  .concurso,.draw-card,.auto-test,.acao:not(.secundaria),.primary-btn{transition:none!important}
+}
