@@ -3,7 +3,21 @@ set -euo pipefail
 apk="$1"
 : "${LOTOLAB_SIGNING_SHA256:?Configure o SHA-256 do certificado permanente}"
 sdk="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
-assinador=$(rg --files "$sdk/build-tools" -g apksigner | sort -V | tail -n 1)
+localizar() {
+  if command -v rg >/dev/null 2>&1; then
+    rg --files "$sdk/build-tools" -g "$1"
+  else
+    find "$sdk/build-tools" -type f -name "$1"
+  fi | sort -V | tail -n 1
+}
+depuracao() {
+  if command -v rg >/dev/null 2>&1; then
+    rg -q '^application-debuggable' <<< "$metadados"
+  else
+    grep -q '^application-debuggable' <<< "$metadados"
+  fi
+}
+assinador=$(localizar apksigner)
 test -n "$assinador"
 relatorio=$("$assinador" verify --verbose --print-certs "$apk")
 obtido=$(printf '%s\n' "$relatorio" | sed -n 's/^Signer #1 certificate SHA-256 digest: //p' | tr -d ':' | tr '[:upper:]' '[:lower:]')
@@ -16,7 +30,7 @@ if [ "$obtido" != "$esperado" ]; then
   exit 1
 fi
 echo 'APK verificado com a assinatura permanente.'
-aapt=$(rg --files "$sdk/build-tools" -g aapt | sort -V | tail -n 1)
+aapt=$(localizar aapt)
 metadados=$("$aapt" dump badging "$apk")
 versao=$(cat VERSION)
 case "$metadados" in
@@ -24,9 +38,9 @@ case "$metadados" in
   *) echo '::error::APK com identidade ou versão incorreta.'; exit 1 ;;
 esac
 if [ "${2:-final}" = transferencia ]; then
-  printf '%s\n' "$metadados" | rg -q '^application-debuggable'
+  depuracao
 else
-  if printf '%s\n' "$metadados" | rg -q '^application-debuggable'; then
+  if depuracao; then
     echo '::error::O APK final não pode permitir depuração.'
     exit 1
   fi
