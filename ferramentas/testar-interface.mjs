@@ -2165,7 +2165,7 @@ await tocar('[data-abrir-jogo="cores422"]');
 checar('abrir cartela separa acerto, sorteadas fora e marcações erradas',await js(`const b=document.querySelector('.cartela');return b.querySelectorAll('.casa.acertou').length===1&&b.querySelectorAll('.casa.sorteada').length===5&&b.querySelectorAll('.casa.errou').length===5&&b.querySelectorAll('.casa.neutra').length===49&&b.querySelector('[data-casa="7"]').getAttribute('aria-label').includes('sorteada fora do jogo')`));
 for(const theme of ['escuro','claro']){
  await js(`document.documentElement.dataset.tema='${theme}';return true;`);
- checar('cartela '+theme+': bolinhas verdes, azuis e vermelhas com números brancos',await js(`const expected={acertou:'rgb(21, 125, 71)',sorteada:'rgb(91, 155, 230)',errou:'rgb(217, 120, 131)'};return Object.entries(expected).every(([cl,color])=>{const e=document.querySelector('.cartela .casa.'+cl),style=getComputedStyle(e,'::before');return style.backgroundColor===color&&style.borderRadius==='50%'&&getComputedStyle(e.querySelector('span')).color==='rgb(255, 255, 255)';})`));
+ checar('cartela '+theme+': bolinhas suaves com texto de alto contraste',await js(`const expected={acertou:'rgb(21, 125, 71)',sorteada:'rgb(91, 155, 230)',errou:'rgb(217, 120, 131)'};return Object.entries(expected).every(([cl,color])=>{const e=document.querySelector('.cartela .casa.'+cl),style=getComputedStyle(e,'::before');return style.backgroundColor===color&&style.borderRadius==='50%'&&getComputedStyle(e.querySelector('span')).color===({acertou:'rgb(255, 255, 255)',sorteada:'rgb(9, 46, 87)',errou:'rgb(72, 22, 32)'})[cl];})`));
  await frame418('.cartela','LotoLab-4.22-Cartela-'+theme);
 }
 for(const mod of ['mega-sena','lotofacil','quina','lotomania','dupla-sena','dia-de-sorte','timemania','mais-milionaria']){
@@ -2177,6 +2177,37 @@ for(const mod of ['mega-sena','lotofacil','quina','lotomania','dupla-sena','dia-
 }
 await cmd('Emulation.setDeviceMetricsOverride',{width:412,height:915,deviceScaleFactor:2,mobile:true});
 await js(`document.documentElement.dataset.tema='escuro';S.modalidade='mega-sena';S.jogos=[];return true;`);
+
+/* ---------- Participação 4.25: salvar, persistir e rever ---------- */
+secao('Acompanhamento 4.25');
+await js(`S.modalidade='mega-sena';S.jogos=[];S.resultados=${JSON.stringify(rows419)};S.intLotes={};S.intConfig={};irParaTela('sugestoes',{lateral:true});LL18Auto.historyChanged();return true;`);
+for(let i=0;i<200;i++){if(await js(`return !!S.intLotes['mega-sena']?.laboratorio&&!document.querySelector('#int-salvar')?.disabled`))break;await dormir(100);}
+checar('salvar oferece concurso único, teimosinha e jogo fixo',await js(`return document.querySelectorAll('#int-salvar-opcoes input[type=radio]').length===3&&document.querySelector('#int-salvar-opcoes input:checked').value==='unico'`));
+await tocar('#int-salvar-opcoes input[value="teimosinha"]');
+await input418('#int-salvar-opcoes input[type=number]',2.5);
+await tocar('#int-salvar');
+checar('teimosinha recusa duração fracionária sem salvar',await js(`return S.jogos.length===0&&document.querySelector('.acomp-error').textContent.includes('inteiros')`));
+await input418('#int-salvar-opcoes input[type=number]',3);
+await frame418('#int-salvar-opcoes','LotoLab-4.25-Salvar');
+await tocar('#int-salvar');
+checar('teimosinha salva exatamente três concursos',await js(`window.teim425=S.jogos[0];return S.tela==='jogos'&&window.teim425.acompanhamento==='teimosinha'&&window.teim425.concursos===3&&!window.teim425.concursoAlvo&&JSON.parse(localStorage.getItem('lotolab:jogos'))[0].concursos===3`));
+await js(`irParaTela('sugestoes',{lateral:true});return true;`);
+await tocar('#int-salvar-opcoes input[value="fixo"]');
+await tocar('#int-salvar');
+checar('mesma sugestão pode ser salva como fixo com início e sem limite',await js(`window.fixo425=S.jogos.find(j=>j.acompanhamento==='fixo');return !!window.fixo425&&!window.fixo425.concursoAlvo&&!window.fixo425.concursos&&window.fixo425.deConcurso===window.teim425.deConcurso`));
+await js(`const de=window.teim425.deConcurso;S.resultados=Array.from({length:5},(_,i)=>({modalidade:'mega-sena',concurso:de+i,data:'2026-10-02',dezenas:i===0?window.fixo425.dezenas:[1,2,3,4,5,6]}));conferenciaAutomatica();S.jogos=Guardar.ler('jogos',[]);S.jogoAberto=window.fixo425.id;pintar();return true;`);
+checar('reabrir mantém fixo ativo após acerto máximo e encerra só a teimosinha',await js(`return S.jogos.find(j=>j.acompanhamento==='fixo').conferencias.length===5&&S.jogos.find(j=>j.acompanhamento==='teimosinha').conferencias.length===3&&[...document.querySelectorAll('.acomp-status')].some(e=>e.textContent.includes('concluída'))`));
+await input418('[data-rever-jogo]',await js(`return window.fixo425.deConcurso;`));
+checar('selecionar concurso antigo redesenha cartela e exibe análise por jogo',await js(`return document.querySelectorAll('.physical-ticket .casa.acertou').length===6&&document.querySelector('[data-rever-jogo]').value===String(window.fixo425.deConcurso)&&document.querySelector('.acomp-metrics').textContent.includes('5')`));
+await frame418('.physical-ticket','LotoLab-4.25-Fixo');
+for(const theme of ['escuro','claro'])for(const mod of ['mega-sena','lotofacil']){
+ await js(`S.tema='${theme}';document.documentElement.dataset.tema=S.tema;S.modalidade='${mod}';const c=MODALIDADES[S.modalidade];const ds=Array.from({length:c.min},(_,i)=>c.base+i);S.jogos=[{id:'papel425',lote:'papel425',modalidade:S.modalidade,metodo:'manual',data:'2026-10-01',dezenas:ds,...planoAcompanhamento('fixo',100),conferencias:[{concurso:100,data:'2026-10-02',dezenas:Array.from({length:c.k},(_,i)=>c.base+i+3),acertos:c.k-3}]}];S.resultados=[];S.jogoAberto='papel425';pintar();return true;`);
+ await frame418('.physical-ticket','LotoLab-4.25-Bilhete-'+mod+'-'+theme);
+ checar(mod+' '+theme+': volante e análise sem rolagem horizontal',await js(`return document.documentElement.scrollWidth<=innerWidth+1&&document.querySelector('.physical-ticket').textContent.includes('VOLANTE DIGITAL')&&document.querySelectorAll('.physical-ticket .casa').length===MODALIDADES[S.modalidade].N`));
+}
+await js(`window.__confirm425=window.confirm;window.confirm=()=>true;document.querySelector('[data-excluir-jogo]').click();window.confirm=window.__confirm425;return true;`);
+checar('exclusão manual remove o fixo do armazenamento e da conferência',await js(`return S.jogos.length===0&&Guardar.ler('jogos',[]).length===0&&conferenciaAutomatica().novas===0`));
+await js(`document.documentElement.dataset.tema='escuro';S.tema='escuro';S.modalidade='mega-sena';S.jogos=[];return true;`);
 
 /* ---------- S. Formatos especiais no motor integrado 4.20 ---------- */
 secao('S. Recomendação única nos formatos especiais');

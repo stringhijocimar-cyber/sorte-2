@@ -64,7 +64,7 @@ public class ConferenciaWorker extends Worker {
                     JSONObject melhor=null;int maior=Integer.MIN_VALUE;
                     for(int i=0;i<jogos.length();i++){
                         JSONObject j=jogos.getJSONObject(i);if(!m.equals(j.optString("modalidade")))continue;
-                        if(!ConferenciaRegras.cobre(j.optInt("concursoAlvo",0),j.optInt("deConcurso",0),j.optInt("concursos",0),j.optString("data"),n,data))continue;
+                        if(!ConferenciaRegras.cobre("fixo".equals(j.optString("acompanhamento")),j.optInt("concursoAlvo",0),j.optInt("deConcurso",0),j.optInt("concursos",0),j.optString("data"),n,data))continue;
                         JSONObject cf=new JSONObject().put("modalidade",m).put("concurso",n).put("jogo",j.optString("id"))
                             .put("dezenas",j.getJSONArray("dezenas")).put("sorteadas",dezenas);
                         if("mais-milionaria".equals(m)){

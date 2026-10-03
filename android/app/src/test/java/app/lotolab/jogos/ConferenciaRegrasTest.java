@@ -3,6 +3,13 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class ConferenciaRegrasTest {
+    @Test public void fixoContinuaAteExclusaoSemAceitarConcursosAnteriores(){
+        assertTrue(ConferenciaRegras.cobre(true,0,100,0,"2026-10-01",100,"2026-10-02"));
+        assertTrue(ConferenciaRegras.cobre(true,0,100,0,"2026-10-01",50000,"2036-10-02"));
+        assertFalse(ConferenciaRegras.cobre(true,0,100,0,"2026-10-01",99,"2026-10-02"));
+        assertFalse(ConferenciaRegras.cobre(true,0,0,0,"2026-10-01",100,"2026-10-02"));
+        assertFalse(ConferenciaRegras.cobre(false,0,100,3,"2026-10-01",103,"2026-10-02"));
+    }
     @Test public void recusaDezenasInvalidas(){
         assertTrue(ConferenciaRegras.validos(new int[]{0,1,99},3,3,0,100));
         assertFalse(ConferenciaRegras.validos(new int[]{1,1,3},3,3,1,60));

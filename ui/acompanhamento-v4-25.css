@@ -1,0 +1,55 @@
+/* LotoLab 4.25: acompanhamento legível e volante inspirado no papel. */
+.acomp-options{min-width:0;margin:20px 0 14px;padding:16px;border:1px solid var(--linha);border-radius:14px;background:var(--superficie,var(--fundo))}
+.acomp-options legend{padding:0 6px;font-size:.88rem;font-weight:750;color:var(--tinta)}
+.acomp-choices{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.acomp-choices label{position:relative;display:flex;align-items:flex-start;gap:7px;margin:0;padding:12px 8px;min-width:0;border:1px solid var(--linha);border-radius:10px;cursor:pointer;background:var(--fundo)}
+.acomp-choices label:has(input:checked){border-color:var(--mod-cor);background:color-mix(in srgb,var(--mod-cor) 12%,var(--fundo));box-shadow:inset 0 0 0 1px var(--mod-cor)}
+.acomp-choices input{width:16px;min-width:16px;height:16px;margin:2px 0 0;accent-color:var(--mod-cor)}
+.acomp-choices span{min-width:0}.acomp-choices b{display:block;font-size:.77rem;line-height:1.4;color:var(--tinta)}
+.acomp-choices small{display:block;font-size:.66rem;line-height:1.4;color:var(--secundaria);margin-top:4px}
+.acomp-duration{max-width:270px;margin-top:14px}.acomp-options [hidden]{display:none!important}
+.acomp-options input[type=number]{min-height:46px;width:100%;margin-top:6px}
+.acomp-description{font-size:.78rem;line-height:1.6;margin:12px 0 0;color:var(--secundaria)}
+.acomp-error{font-size:.8rem;color:var(--check-miss);margin:8px 0 0}.acomp-error:empty{display:none}
+.acomp-status{display:flex;align-items:center;flex-wrap:wrap;gap:7px 10px;margin:12px 0 16px;font-size:.74rem;color:var(--secundaria);line-height:1.55}
+.acomp-badge{border:1px solid var(--linha);border-radius:30px;padding:4px 9px;font-weight:750;color:var(--tinta);background:color-mix(in srgb,var(--mod-cor) 8%,transparent)}
+.acomp-badge.fixed{border-color:color-mix(in srgb,var(--mod-cor) 50%,var(--linha));color:var(--mod-cor)}
+.acomp-status progress{appearance:none;width:100%;height:5px;border:0;border-radius:8px;overflow:hidden;background:var(--linha)}
+.acomp-status progress::-webkit-progress-bar{background:var(--linha)}.acomp-status progress::-webkit-progress-value{background:var(--mod-cor)}
+.acomp-review{margin:12px 0;font-size:.82rem}.acomp-review select{margin-top:6px;min-height:46px;width:100%}
+.acomp-analysis{margin:18px 0;padding:16px 0;border-top:1px solid var(--linha);border-bottom:1px solid var(--linha)}
+.acomp-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.acomp-metrics div{min-width:0}.acomp-metrics small{display:block;font-size:.67rem;color:var(--secundaria);line-height:1.5}.acomp-metrics b{display:block;font-size:1.35rem;margin-top:4px;font-variant-numeric:tabular-nums;color:var(--tinta)}
+.acomp-analysis>p{font-size:.76rem;line-height:1.6;margin:14px 0 8px}.acomp-distribution{display:grid;gap:7px}
+.acomp-distribution>div{display:grid;grid-template-columns:80px 1fr 26px;align-items:center;gap:10px;font-size:.74rem}
+.acomp-distribution meter{width:100%;height:8px;appearance:none;background:var(--linha);border-radius:6px}
+.acomp-distribution meter::-webkit-meter-bar{border:0;background:var(--linha)}.acomp-distribution meter::-webkit-meter-optimum-value{background:var(--mod-cor)}
+
+.cartela.physical-ticket{--ticket-ink:#176959;--papel:#fffdf6;--ticket-grid:#fdf7de;background:var(--papel)!important;color:#343c39!important;border:1px solid #d2cbb9!important;box-shadow:0 8px 22px #0002!important;overflow:hidden}
+.physical-ticket[data-modalidade="lotofacil"]{--ticket-ink:#873574}.physical-ticket[data-modalidade="quina"]{--ticket-ink:#493578}.physical-ticket[data-modalidade="lotomania"]{--ticket-ink:#b7631b}.physical-ticket[data-modalidade="dupla-sena"]{--ticket-ink:#97414c}.physical-ticket[data-modalidade="dia-de-sorte"]{--ticket-ink:#8b6520}.physical-ticket[data-modalidade="timemania"]{--ticket-ink:#586b19}.physical-ticket[data-modalidade="mais-milionaria"]{--ticket-ink:#285b89}
+.physical-ticket .ticket-brand{display:flex;justify-content:space-between;gap:12px;padding:12px 16px 9px;font-size:.57rem;letter-spacing:.13em;line-height:1.3;color:#68726b!important;font-family:var(--mono)}
+.cartela.physical-ticket .tarja{margin:0 12px;padding:12px 13px;background:var(--ticket-ink)!important;color:#fff!important;display:flex;align-items:center;flex-wrap:wrap;gap:7px;border:0!important;border-radius:2px!important}
+.physical-ticket .tarja b{font-weight:850;font-style:italic;font-size:1.12rem;letter-spacing:-.03em;color:#fff!important;line-height:1.2}
+.physical-ticket .tarja>span{color:#fff!important;opacity:.9;font-size:.62rem;letter-spacing:.03em;text-transform:none}
+.physical-ticket .ticket-instruction{margin:10px 14px 2px;font-size:.6rem;line-height:1.5;color:var(--ticket-ink)!important}
+.cartela.physical-ticket .miolo{position:relative;padding:12px 14px 16px 28px!important;background:var(--papel)!important}
+.physical-ticket .miolo::before{content:"";position:absolute;left:9px;top:14px;bottom:17px;width:7px;background:repeating-linear-gradient(to bottom,#333c34 0 7px,transparent 7px 18px);opacity:.75}
+.cartela.physical-ticket .grade-volante{padding:10px 6px;border:1px solid color-mix(in srgb,var(--ticket-ink) 48%,#fff)!important;border-radius:8px!important;background:var(--ticket-grid)!important;gap:6px 2px;overflow:visible}
+.cartela.physical-ticket .casa{position:relative;display:flex;align-items:center;justify-content:center;min-width:0;min-height:26px;aspect-ratio:1;height:auto;padding:0;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;opacity:1!important;font-family:var(--mono);font-size:clamp(.64rem,2.7vw,.86rem);line-height:1;isolation:isolate}
+.cartela.physical-ticket .casa span{position:relative;z-index:1;display:flex;align-items:center;justify-content:center;width:100%;height:100%}
+.cartela.physical-ticket .casa.neutra{color:var(--ticket-ink)!important}
+.physical-ticket .casa.neutra span::before,.physical-ticket .casa.neutra span::after{position:absolute;top:50%;transform:translateY(-50%);font-size:.85em;opacity:.6}
+.physical-ticket .casa.neutra span::before{content:'[';left:0}.physical-ticket .casa.neutra span::after{content:']';right:0}
+.cartela.physical-ticket .casa.marcada{background:transparent!important;color:white!important}
+.cartela.physical-ticket .casa.marcada::before{content:"";position:absolute;inset:8%;border-radius:3px;background:#414942}
+.cartela.physical-ticket .casa.acertou,.cartela.physical-ticket .casa.sorteada,.cartela.physical-ticket .casa.errou{background:transparent!important}
+.cartela.physical-ticket .casa.acertou span{color:#fff!important}.cartela.physical-ticket .casa.sorteada span{color:#092e57!important}.cartela.physical-ticket .casa.errou span{color:#481620!important}
+.cartela.physical-ticket .casa:is(.acertou,.sorteada,.errou)::before{inset:2%!important;box-shadow:none!important}
+.cartela.physical-ticket .pe{display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;margin:0 14px;padding:12px 0!important;border-top:1px dashed #c3bead!important;color:#465148!important;font-size:.67rem;line-height:1.5;background:transparent!important}
+.physical-ticket .ticket-footnote{margin:0 14px;padding:0 0 12px;color:#6f786e!important;font-size:.53rem;line-height:1.6;text-align:center;letter-spacing:.025em}
+.physical-ticket[data-modalidade="lotofacil"] .grade-volante{gap:6px 9px;padding:12px}.physical-ticket[data-modalidade="lotofacil"] .casa{max-height:44px;aspect-ratio:auto;height:40px;font-size:.94rem}
+.cartela.physical-ticket[data-modalidade="lotofacil"] .casa:is(.acertou,.sorteada,.errou,.marcada)::before{inset:auto!important;left:50%!important;top:50%!important;width:34px;height:34px;transform:translate(-50%,-50%)}
+.physical-ticket[data-modalidade="lotofacil"] .casa.neutra span::before{left:10%}.physical-ticket[data-modalidade="lotofacil"] .casa.neutra span::after{right:10%}
+.physical-ticket .casa:focus-visible{outline:2px solid var(--ticket-ink)!important;outline-offset:3px}
+.cartela.physical-ticket .casa:not(:disabled){min-height:44px}
+@media(max-width:380px){.acomp-options{padding:12px}.acomp-choices{gap:5px}.acomp-choices label{flex-direction:column;padding:10px 7px}.acomp-choices b{font-size:.74rem}.physical-ticket .tarja b{font-size:1rem}.cartela.physical-ticket .miolo{padding-right:10px!important;padding-left:24px!important}.cartela.physical-ticket .grade-volante{padding:8px 4px;gap:5px 1px}}
