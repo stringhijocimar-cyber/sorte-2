@@ -22,7 +22,7 @@ test -n "$assinador"
 relatorio=$("$assinador" verify --verbose --print-certs "$apk")
 # O SDK pode listar signatários por número ou por intervalo de API (v3.1).
 # Todos precisam ter o mesmo certificado; certificados extras diferentes falham.
-obtido=$(printf '%s\n' "$relatorio" | sed -nE 's/^Signer .+ certificate SHA-256 digest: ([[:xdigit:]:]+)[[:space:]]*$/\1/p' | tr -d ':' | tr '[:upper:]' '[:lower:]' | sort -u)
+obtido=$(printf '%s\n' "$relatorio" | sed -nE 's/^(V[0-9.]+ )?Signer.* certificate SHA-256 digest: ([[:xdigit:]:]+)[[:space:]]*$/\2/p' | tr -d ':' | tr '[:upper:]' '[:lower:]' | sort -u)
 esperado=$(printf '%s' "$LOTOLAB_SIGNING_SHA256" | tr -d ':' | tr '[:upper:]' '[:lower:]')
 if [ "${3:-}" != teste ]; then
   test "$esperado" = "$(cat android/assinatura.sha256)"

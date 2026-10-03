@@ -233,6 +233,15 @@ class RelatorioAssinatura(unittest.TestCase):
     def test_formato_numerado_sem_ripgrep(self):
         self.assertEqual(self.verificar(['Signer #1 certificate SHA-256 digest: ' + self.sha]), 0)
 
+    def test_rotulo_v2_observado_no_sdk_do_runner(self):
+        self.assertEqual(self.verificar([
+            'V2 Signer: certificate DN: CN=LotoLab, O=Jocimar Stringhi, C=BR',
+            'V2 Signer: certificate SHA-256 digest: ' + self.sha,
+            'V2 Signer: public key SHA-256 digest: ' + 'b' * 64]), 0)
+        self.assertNotEqual(self.verificar([
+            'V2 Signer: certificate SHA-256 digest: ' + self.sha,
+            'V3.1 Signer: certificate SHA-256 digest: ' + 'b' * 64]), 0)
+
     def test_intervalos_de_api_com_mesmo_certificado(self):
         self.assertEqual(self.verificar([
             'Signer (minSdkVersion=33, maxSdkVersion=2147483647) certificate SHA-256 digest: ' + self.sha,
