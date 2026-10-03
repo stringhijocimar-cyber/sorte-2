@@ -965,6 +965,7 @@ td{padding:6px 7px;border-bottom:1px solid var(--trama)}
 <link rel="stylesheet" href="ui/conferencia-v4-22.css?v=4.22.1">
 <link rel="stylesheet" href="ui/lotolab-ui-v4-23.css?v=4.23.0" data-lotolab-ui-refino="4.23.0">
 <link rel="stylesheet" href="ui/lotolab-ui-v4-24.css?v=4.24.0" data-lotolab-ui-experiencia="4.24.0">
+<link rel="stylesheet" href="ui/acompanhamento-v4-25.css?v=4.25.0">
 </head>
 <body>
 <header>
@@ -1048,7 +1049,7 @@ td{padding:6px 7px;border-bottom:1px solid var(--trama)}
 <script src="ui/lab-recommendation.js?v=4.22.1"></script>
 <script src="ui/lab-auto.js?v=4.22.1"></script>
 <script src="ui/lab-ui.js?v=4.22.1"></script>
-<script src="ui/lab-check.js?v=4.22.1"></script>
+<script src="ui/lab-check.js?v=4.25.0"></script>
 <script src="ui/lab-auto-ui.js?v=4.22.1"></script>
 <script>
 "use strict";
@@ -2595,7 +2596,7 @@ function metaChanceTodas(r){
 function focoConcurso(m,alvo,jogos,resultados){
   const c=MODALIDADES[m],n=Number(alvo);
   if(!c||!Number.isSafeInteger(n)||n<1)return {alvo:null,jogos:0,melhor:null,faltam:null,atingiu:false};
-  const vinculados=jogos.filter(j=>j.modalidade===m&&Number(j.concursoAlvo)===n);
+  const vinculados=jogos.filter(j=>j.modalidade===m&&((j.acompanhamento==='fixo'||j.acompanhamento==='teimosinha')?jogoCobreResultado(j,{modalidade:m,concurso:n}):Number(j.concursoAlvo)===n));
   const r=intHistorico(m,resultados).hist.find(r=>r.concurso===n);
   const conferidos=r?vinculados.map(j=>metaValidarConferencia(metaConferencia(j,r))).filter(Boolean):[];
   conferidos.sort((a,b)=>metaOrdemAcerto(b)-metaOrdemAcerto(a));
@@ -2877,7 +2878,7 @@ T.sugestoes = () => {
     <div id="int-lote">${S.intLotes[m]?intRenderLote(S.intLotes[m]):""}</div>
     <details class="auto-settings" open><summary>Personalizar meus jogos (opcional)</summary>
     <section class="carta int-form ux-form"><div class="int-section-title"><h2>Configure seu jogo</h2><span>${esc(c.nome)}</span></div>
-      <div class="int-integrated-intro"><span class="int-eyebrow">CICLO AUTOMÁTICO · 4.22</span><p class="int-help">A sugestão e o pacote virtual aparecem nesta tela sem treinamento manual. Ajuste apenas o tamanho, a quantidade ou o orçamento se desejar.</p></div>
+      <div class="int-integrated-intro"><span class="int-eyebrow">CICLO AUTOMÁTICO · 4.25</span><p class="int-help">A sugestão e o pacote virtual aparecem nesta tela sem treinamento manual. Ajuste apenas o tamanho, a quantidade ou o orçamento se desejar.</p></div>
       <div class="int-grid"><label class="campo" for="int-tam">Dezenas por jogo
         <select id="int-tam">${Array.from({length:c.max-c.min+1},(_,i)=>i+c.min).map(t=>`<option ${o.tam===t?"selected":""}>${t}</option>`).join("")}</select></label>
         <label class="campo" for="int-quantidade">Total de jogos<input id="int-quantidade" type="number" min="1" max="60" value="${o.quantidade}"></label>
@@ -3068,6 +3069,7 @@ function intLigarAcoes(){
   };
   const lote=S.intLotes[m];
   if(lote){
+    prepararAcompanhamento("int-salvar",lote.concursoAlvo||proximoConcursoSalvo());
     document.querySelectorAll('[data-int-analisar]').forEach(b=>b.onclick=()=>{
       const i=Number(b.dataset.intAnalisar),g=lote.laboratorio;
       LL18UI.inspect(m,g.jogos[i],i===0?{analise:g.principal.analise,aderencia:g.principal.aderencia}:null);
@@ -3076,16 +3078,17 @@ function intLigarAcoes(){
       if(lote.laboratorio&&intRecomendacaoDesatualizada(lote)){
         $("#int-mensagem").textContent="O histórico mudou. Gere uma nova recomendação antes de salvar.";return;
       }
+      const plano=lerAcompanhamento("int-salvar");if(!plano)return;
       const data=hoje(),loteId="I"+Date.now().toString(36);
-      const existentes=new Set(S.jogos.filter(j=>j.modalidade===m&&j.data===data&&(j.concursoAlvo??null)===(lote.concursoAlvo??null)).map(chaveDoJogo));
+      const existentes=new Set(S.jogos.filter(j=>j.modalidade===m&&(plano.acompanhamento==='fixo'?j.acompanhamento==='fixo':j.data===data&&(j.acompanhamento||'unico')===plano.acompanhamento&&(j.concursoAlvo??null)===(plano.concursoAlvo??null)&&(j.deConcurso??null)===(plano.deConcurso??null)&&(j.concursos??null)===(plano.concursos??null))).map(chaveDoJogo));
       const novos=lote.jogos.map((ds,i)=>({id:loteId+"-"+i,
         dezenas:ds.slice(),...(lote.laboratorio?lote.laboratorio.jogos[i]:{}),...(lote.trevos?{trevos:lote.trevos[i].slice()}:{}),modalidade:m,metodo:"int-"+lote.modo,data,lote:loteId,conferencias:[],
-        ...(lote.concursoAlvo?{concursoAlvo:lote.concursoAlvo}:{}),
-        inteligencia:{versao:lote.versao,semente:lote.semente,assinatura:lote.base.assinatura,
+        ...plano,
+        inteligencia:{concursoOriginal:lote.concursoAlvo,versao:lote.versao,semente:lote.semente,assinatura:lote.base.assinatura,
           janela:lote.janela,fixas:lote.fixas,excluidas:lote.excluidas,preco:lote.metricas.unitario,
           calibracao:lote.laboratorio?.calibracao,
           ...(lote.laboratorio?{motor:lote.laboratorio.motor,geradoAte:lote.laboratorio.base.ultimo||0,papel:i===0?"principal":"adicional",criterios:lote.laboratorio.explicacoes[i].criterios}: {})}})).filter(j=>!existentes.has(chaveDoJogo(j)));
-      if(!novos.length){$("#int-salvar").textContent="Lote já salvo hoje";$("#int-salvar").disabled=true;return;}
+      if(!novos.length){$("#int-mensagem").textContent="Este jogo já está salvo com esse acompanhamento.";$("#int-salvar").disabled=true;$("#int-salvar").dataset.duplicado='1';return;}
       const todos=S.jogos.concat(novos);
       if(!Guardar.gravar("jogos",todos)){ $("#int-mensagem").textContent="Não foi possível salvar no aparelho. Exporte o CSV para conservar o lote.";return; }
       S.jogos=todos;espelharParaSegundoPlano(); LL18UI.historyChanged();irParaTela("jogos");
@@ -3393,10 +3396,79 @@ T.jogos = () => {
   aparelho. Nada é enviado para lugar nenhum.</div>`;
 };
 
+/* Participação e histórico dos jogos salvos. Jogos antigos conservam sua regra. */
+function planoAcompanhamento(tipo, inicio, quantidade=1){
+  const de=Number(inicio),n=Number(quantidade);
+  if(!Number.isSafeInteger(de)||de<1)throw Error('Informe um concurso inicial válido.');
+  if(tipo==='fixo')return {acompanhamento:'fixo',deConcurso:de};
+  if(tipo==='teimosinha'){
+    if(!Number.isSafeInteger(n)||n<2||n>10000||!Number.isSafeInteger(de+n-1))throw Error('Escolha de 2 a 10.000 concursos inteiros.');
+    return {acompanhamento:'teimosinha',deConcurso:de,concursos:n};
+  }
+  if(tipo!=='unico')throw Error('Escolha como acompanhar o jogo.');
+  return {acompanhamento:'unico',concursoAlvo:de};
+}
+function jogoCobreResultado(j,r){
+  if(j.modalidade!==r.modalidade)return false;
+  if(j.acompanhamento==='fixo')return Number.isSafeInteger(Number(j.deConcurso))&&Number(j.deConcurso)>0&&r.concurso>=Number(j.deConcurso);
+  if(Number.isFinite(j.concursoAlvo))return r.concurso===j.concursoAlvo;
+  if(j.deConcurso)return r.concurso>=Number(j.deConcurso)&&r.concurso<Number(j.deConcurso)+Number(j.concursos||1);
+  return String(r.data||'')>=String(j.data||'');
+}
+function resumoAcompanhamento(j){
+  const conf=[...new Map((j.conferencias||[]).filter(cf=>(!j.acompanhamento&&!j.concursoAlvo&&!j.deConcurso)||jogoCobreResultado(j,{...cf,modalidade:j.modalidade})).map(cf=>[cf.concurso,cf])).values()].sort((a,b)=>a.concurso-b.concurso);
+  const fixo=j.acompanhamento==='fixo',teim=!fixo&&!j.concursoAlvo&&!!j.deConcurso;
+  const fim=teim?Number(j.deConcurso)+Number(j.concursos||1)-1:j.concursoAlvo;
+  const n=teim?Number(j.concursos||1):j.concursoAlvo?1:null;
+  const pendentes=n===null?null:Math.max(0,n-conf.length);
+  const rotulo=fixo?'Jogo fixo':teim?'Teimosinha':j.concursoAlvo?'Concurso único':'Acompanhamento contínuo';
+  const descricao=fixo?`Desde o concurso ${j.deConcurso} · ativo até você excluir`:teim?`Concursos ${j.deConcurso} a ${fim} · ${conf.length}/${n} conferidos${pendentes?' · '+pendentes+' a conferir':' · concluída'}`:j.concursoAlvo?`Concurso ${j.concursoAlvo}`:'Desde a data em que foi salvo';
+  const acertos=conf.map(x=>Number(x.acertos)).filter(Number.isFinite),frequencias={};
+  acertos.forEach(n=>frequencias[n]=(frequencias[n]||0)+1);
+  return {fixo,teim,fim,n,pendentes,rotulo,descricao,conf,frequencias,media:acertos.length?acertos.reduce((a,b)=>a+b,0)/acertos.length:null,melhor:acertos.length?Math.max(...acertos):null};
+}
+function painelAcompanhamento(j){
+  const r=resumoAcompanhamento(j);
+  return `<div class="acomp-status"><span class="acomp-badge ${r.fixo?'fixed':''}">${esc(r.rotulo)}</span><span>${esc(r.descricao)}</span>${r.teim?`<progress value="${r.conf.length}" max="${r.n}" aria-label="${r.conf.length} de ${r.n} concursos conferidos"></progress>`:''}</div>`;
+}
+function analiseDoJogo(j){
+  const r=resumoAcompanhamento(j);if(!r.conf.length)return '';
+  return `<section class="acomp-analysis" aria-label="Desempenho deste jogo"><div class="acomp-metrics"><div><small>Concursos conferidos</small><b>${r.conf.length}</b></div><div><small>Média de acertos</small><b>${nf(r.media,2)}</b></div><div><small>Melhor resultado</small><b>${r.melhor}</b></div></div><p>Acertos por concurso${j.modalidade==='dupla-sena'?' · primeiro sorteio':''}</p><div class="acomp-distribution">${Object.entries(r.frequencias).sort((a,b)=>Number(b[0])-Number(a[0])).map(([h,n])=>`<div><span>${h} acerto${h==='1'?'':'s'}</span><meter min="0" max="${r.conf.length}" value="${n}" aria-label="${h} acertos em ${n} de ${r.conf.length} concursos"></meter><b>${n}×</b></div>`).join('')}</div><p class="int-help">Somente concursos deste jogo. Referência ao acaso: ${nf(esperadoAcertos(j.modalidade,j.dezenas.length),2)} acertos por concurso. O histórico não altera a chance do próximo sorteio.</p></section>`;
+}
+function prepararAcompanhamento(botaoId,inicio){
+  const botao=document.getElementById(botaoId);if(!botao)return;
+  let area=document.getElementById(botaoId+'-opcoes');
+  if(!area){
+    const alvo=botao.closest('.int-actions')||botao;
+    alvo.insertAdjacentHTML('beforebegin',`<fieldset class="acomp-options" id="${botaoId}-opcoes"><legend>Como acompanhar este jogo?</legend><div class="acomp-choices">${[['unico','Concurso único','Uma conferência'],['teimosinha','Teimosinha','Escolha a duração'],['fixo','Jogo fixo','Até você excluir']].map(([v,t,d])=>`<label><input type="radio" name="${botaoId}-modo" value="${v}" ${v==='unico'?'checked':''}><span><b>${t}</b><small>${d}</small></span></label>`).join('')}</div><label class="campo acomp-duration" hidden>Quantidade de concursos<input type="number" min="2" max="10000" step="1" inputmode="numeric" value="6" aria-label="Quantidade de concursos da teimosinha"></label><p class="acomp-description" aria-live="polite"></p><p class="acomp-error" role="status"></p></fieldset>`);
+    area=document.getElementById(botaoId+'-opcoes');
+  }
+  area.dataset.inicio=inicio;
+  S.opcoesAcompanhamento=S.opcoesAcompanhamento||{};
+  const chave=S.modalidade+':'+botaoId,preferencia=S.opcoesAcompanhamento[chave];
+  if(preferencia){area.querySelector('input[value="'+preferencia.tipo+'"]').checked=true;area.querySelector('input[type=number]').value=preferencia.quantidade;}
+  const atualizar=()=>{
+    const tipo=area.querySelector('input[type=radio]:checked').value,n=Number(area.querySelector('input[type=number]').value),de=Number(area.dataset.inicio);
+    S.opcoesAcompanhamento[chave]={tipo,quantidade:area.querySelector('input[type=number]').value};
+    area.querySelector('.acomp-duration').hidden=tipo!=='teimosinha';
+    area.querySelector('.acomp-description').textContent=tipo==='fixo'?`A partir do concurso ${de}. A conferência continua até você excluir o jogo.`:tipo==='teimosinha'?(Number.isSafeInteger(n)&&n>=2&&n<=10000?`Do concurso ${de} ao ${de+n-1}. O histórico permanece salvo ao terminar.`:'Informe quantos concursos deseja acompanhar.'):`Somente o concurso ${de}.`;
+    area.querySelector('.acomp-error').textContent='';
+  };
+  const mudar=()=>{if(botao.dataset.duplicado){botao.disabled=false;delete botao.dataset.duplicado;}atualizar();};
+  area.onchange=mudar;area.oninput=mudar;atualizar();
+}
+function lerAcompanhamento(botaoId){
+  const area=document.getElementById(botaoId+'-opcoes');
+  try{return planoAcompanhamento(area.querySelector('input[type=radio]:checked').value,area.dataset.inicio,area.querySelector('input[type=number]').value);}
+  catch(e){area.querySelector('.acomp-error').textContent=e.message;return null;}
+}
+function proximoConcursoSalvo(){return (ultimoResultado(S.modalidade)?.concurso||0)+1;}
+
+
 function ficha(j){
   const c = MODALIDADES[j.modalidade];
-  const conferencias = (j.conferencias || []).slice().sort((a,b)=>a.concurso-b.concurso);
-  const ultima = conferencias[conferencias.length-1];
+  const conferencias = resumoAcompanhamento(j).conf;
+  const ultima = conferencias.find(cf=>cf.concurso===S.concursoDoJogo?.[j.id])||conferencias[conferencias.length-1];
   const aberto = S.jogoAberto === j.id;
   const resultado=ultima&&(S.resultados.find(r=>r.modalidade===j.modalidade&&r.concurso===ultima.concurso)||ultima);
   const cf=resultado?metaValidarConferencia(metaConferencia(j,resultado)):null;
@@ -3415,6 +3487,7 @@ function ficha(j){
         ? `<span class="selo ok">${conferencias.length} conferência${conferencias.length>1?"s":""}</span>`
         : `<span class="selo seu">não conferido</span>`}
     </div>
+    ${painelAcompanhamento(j)}
     <div class="dezenas">${j.dezenas.map(d=>{
       const acertou = ultima && ultima.dezenas.includes(d);
       return `<span class="dz ${acertou?"acertou":ultima?"errou":""}">${pad(d)}</span>`;
@@ -3426,14 +3499,18 @@ function ficha(j){
     <div class="botoes" style="margin-top:10px">
       <button class="acao contorno mini" data-abrir-jogo="${esc(j.id)}"
         aria-expanded="${aberto}">${aberto?"fechar cartela":"ver na cartela"}</button>
+      <button class="acao secundaria mini" data-excluir-jogo="${esc(j.id)}">Excluir jogo</button>
     </div>
     ${!aberto ? "" : `<div style="margin-top:12px">
       ${recBotao(j.modalidade,j.dezenas)}
       ${c.trevos?campoTrevos('j-trevos-'+j.id,(j.trevos||[]).join(' '),true)+'<button class="acao secundaria mini" data-salvar-trevos="'+esc(j.id)+'">Salvar trevos deste jogo</button><p id="j-trevos-erro-'+esc(j.id)+'" role="status"></p>':''}
+      ${conferencias.length>1?`<label class="campo acomp-review">Rever concurso<select data-rever-jogo="${esc(j.id)}" aria-label="Concurso da cartela">${conferencias.slice().reverse().map(x=>`<option value="${x.concurso}" ${x.concurso===ultima.concurso?'selected':''}>${x.concurso} · ${x.acertos} acertos${x.data?' · '+esc(x.data):''}</option>`).join('')}</select></label>`:''}
       ${cartela(j.modalidade, j.dezenas, {
         sorteadas: ultima ? ultima.dezenas : null,
         selo: ultima ? `concurso ${ultima.concurso}` : "não conferido"})}
+      ${j.modalidade==='dupla-sena'&&resultado?.dezenasSegundoSorteio?cartela(j.modalidade,j.dezenas,{sorteadas:resultado.dezenasSegundoSorteio,selo:`concurso ${ultima.concurso} · 2º sorteio`}):''}
       ${ultima ? legendaCartela : ""}
+      ${analiseDoJogo(j)}
       ${conferencias.length > 1 ? `<div class="rolagem" style="margin-top:10px"><table>
         <tr><th>concurso</th><th>coincidências</th><th>sorteio</th></tr>
         ${conferencias.map(cf=>{
@@ -3534,8 +3611,8 @@ function ultimoResultado(modalidade){
 /* Por que este jogo não tem conferência neste concurso. Retorna null quando
    está tudo certo — ou seja, quando o jogo de fato cobre o concurso. */
 function motivoSemConferencia(j, r){
-  if(Number.isFinite(j.concursoAlvo) && j.concursoAlvo !== r.concurso)
-    return `salvo para o concurso ${j.concursoAlvo}`;
+  if(j.acompanhamento==='fixo')return jogoCobreResultado(j,r)?null:`jogo fixo começa no ${j.deConcurso}`;
+  if(Number.isFinite(j.concursoAlvo))return j.concursoAlvo===r.concurso?null:`salvo para o concurso ${j.concursoAlvo}`;
   if(j.deConcurso){
     const fim = j.deConcurso + (j.concursos || 1) - 1;
     /* Número de concurso sai cru, sem separador de milhar: "3.301" lê como
@@ -3855,7 +3932,7 @@ T.inicio = () => {
   const avisos=S.avisos.filter(a=>!a.lido).length;
   const meus=S.jogos.filter(j=>j.modalidade===m).length,idade=idadeDoHistorico(m);
   return `<div class="foco-inicio ux-inicio" style="--foco-cor:${FOCO_CORES[m]}">
-    <div class="foco-boasvindas"><div><span class="foco-label">BEM-VINDO AO SEU LABORATÓRIO</span><${podeVoltar()?'h2':'h1'}>Seu jogo,<br>bem planejado.</${podeVoltar()?'h2':'h1'}></div><span class="foco-versao">4.22</span></div>
+    <div class="foco-boasvindas"><div><span class="foco-label">BEM-VINDO AO SEU LABORATÓRIO</span><${podeVoltar()?'h2':'h1'}>Seu jogo,<br>bem planejado.</${podeVoltar()?'h2':'h1'}></div><span class="foco-versao">4.25</span></div>
     <section class="foco-hero"><div class="foco-hero-topo"><span class="foco-label">UM PLANO PARA CADA CONCURSO</span><span class="foco-tag">${esc(c.nome)}</span></div>
       <div class="foco-objetivo"><div><h2>Crie seus jogos.<br>Veja os acertos.</h2><p>Defina seus critérios e seu limite. O LotoLab organiza e confere.</p></div><div class="foco-alvo" aria-label="Meta de ${c.k} dezenas"><strong>${c.k}</strong><span>${c.trevos?"+ 2 trevos":"dezenas"}</span></div></div>
       <button class="acao foco-primary" data-atalho="sugestoes">Criar sugestões <span aria-hidden="true">→</span></button>
@@ -5373,9 +5450,11 @@ function cartela(modalidade, marcadas, opcoes){
       aria-label="${pad(d)}, ${s&&m?"acerto":s?"sorteada fora do jogo":sort&&m?"marcada e não sorteada":m?"marcada, aguardando resultado":"não marcada"}"><span>${pad(d)}</span></button>`);
   }
   const acertos = sort ? [...marc].filter(d => sort.has(d)).length : null;
-  return `<div class="cartela check-board">
+  return `<div class="cartela check-board physical-ticket" data-modalidade="${esc(modalidade)}">
+    <div class="ticket-brand"><span>LotoLab</span><span>VOLANTE DIGITAL</span></div>
     <div class="tarja"><b>${esc(c.nome)}</b>
       <span>${o.selo || `${marc.size}/${c.N}`}</span></div>
+    <p class="ticket-instruction">${o.interativa?"Marque suas dezenas":"Suas marcações e o resultado do concurso"}</p>
     <div class="miolo">
       <div class="grade-volante" style="grid-template-columns:repeat(${cols},1fr)"
         ${o.interativa?'id="volante"':""}>${casas.join("")}</div>
@@ -5383,7 +5462,8 @@ function cartela(modalidade, marcadas, opcoes){
     ${o.rodape || (acertos !== null
       ? `<div class="pe"><span>${acertos} acerto${acertos===1?"":"s"}</span>
           <span>${marc.size} dezenas marcadas</span></div>`
-      : "")}
+      : `<div class="pe"><span>${marc.size} dezenas marcadas</span><span>Aguardando resultado</span></div>`)}
+    <div class="ticket-footnote">LotoLab · acompanhamento pessoal · não é comprovante de aposta</div>
   </div>`;
 }
 
@@ -5860,15 +5940,7 @@ function resultadosDe(modalidade){
 }
 
 function concursosDoJogo(j){
-  const daModalidade = resultadosDe(j.modalidade);
-  if(Number.isFinite(j.concursoAlvo))
-    return daModalidade.filter(r => r.concurso === j.concursoAlvo);
-  if(j.deConcurso){
-    const fim = j.deConcurso + (j.concursos||1) - 1;
-    return daModalidade.filter(r => r.concurso >= j.deConcurso && r.concurso <= fim);
-  }
-  const desde = String(j.data || "");
-  return daModalidade.filter(r => String(r.data || "") >= desde);
+  return resultadosDe(j.modalidade).filter(r=>jogoCobreResultado(j,r));
 }
 
 function conferenciaAutomatica(){
@@ -6344,7 +6416,7 @@ function espelharParaSegundoPlano(){
     /* Só o necessário para contar acerto. Mandar a conferência inteira de cada
        jogo encheria o armazenamento compartilhado sem servir para nada. */
     const jogos = S.jogos.concat(S.teimosinhas || []).map(j => ({
-      id: j.id, modalidade: j.modalidade, dezenas: j.dezenas, trevos:j.trevos, data:j.data,
+      id: j.id, modalidade: j.modalidade, dezenas: j.dezenas, trevos:j.trevos, data:j.data, acompanhamento:j.acompanhamento,
       concursoAlvo: j.concursoAlvo != null ? j.concursoAlvo : null,
       deConcurso: j.deConcurso != null ? j.deConcurso : null,
       concursos: j.concursos != null ? j.concursos : null,
@@ -6780,7 +6852,7 @@ const LL18_BRIDGE={
   changeMode:m=>{if(MODALIDADES[m])trocarModalidade(m);},
   openSuggestions:m=>{if(MODALIDADES[m]){trocarModalidade(m);irParaTela('sugestoes');}},
   openAnalysis:()=>irParaTela('estatisticas'),
-  recommendationBatches:()=>S.jogos.filter(j=>['integrado','automatico'].includes(j.inteligencia?.motor)&&j.concursoAlvo).map(j=>({modalidade:j.modalidade,concursoAlvo:j.concursoAlvo,geradoAte:j.inteligencia.geradoAte,jogos:[LL18.validateTicket(j.modalidade,j)]})),
+  recommendationBatches:()=>S.jogos.filter(j=>['integrado','automatico'].includes(j.inteligencia?.motor)&&(j.concursoAlvo||j.inteligencia?.concursoOriginal)).map(j=>({modalidade:j.modalidade,concursoAlvo:j.concursoAlvo||j.inteligencia.concursoOriginal,geradoAte:j.inteligencia.geradoAte,jogos:[LL18.validateTicket(j.modalidade,j)]})),
   games:m=>S.jogos.filter(j=>j.modalidade===m).flatMap(j=>{try{return [LL18.validateTicket(m,j)];}catch(e){return [];}}),
   merge:novos=>{const n=guardarResultados(novos);aoMudarHistorico(n,'laboratório analítico');return n;},
   loadHistory:async m=>{const lote=await baixarHistoricoDoRepositorio(m);const validos=LL18.history(m,lote);if(validos.meta.invalidos||validos.meta.conflitos)throw Error('Histórico contém registros inválidos ou conflitantes.');const n=guardarResultados(validos.rows);aoMudarHistorico(n,'histórico do laboratório');return n;},
@@ -9030,7 +9102,7 @@ T.resultados = () => {
 T.teimosinha = () => {
   const c = MODALIDADES[S.modalidade];
   const dez = marcadasDe(S.modalidade).slice().sort((a,b)=>a-b);
-  const minhas = (S.teimosinhas||[]).filter(t => t.modalidade === S.modalidade);
+  const minhas = (S.teimosinhas||[]).concat(S.jogos.filter(j=>j.acompanhamento==='teimosinha')).filter(t => t.modalidade === S.modalidade);
   const podeCriar = dez.length >= c.min && dez.length <= c.max;
   const ultimo = ultimoResultado(S.modalidade);
   return `<div class="carta">
@@ -9063,14 +9135,14 @@ T.teimosinha = () => {
         return `<div class="carta">
           <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
             <h3>Concursos ${t.deConcurso}–${fim}</h3>
-            <span class="selo ${restam?"seu":"ok"}">${restam?`${restam} por sair`:"encerrada"}</span>
+            <span class="selo ${restam?"seu":"ok"}">${restam?`${restam} a conferir`:"encerrada"}</span>
           </div>
           ${cartela(t.modalidade, t.dezenas, {
             sorteadas: conf.length ? conf[conf.length-1].dezenas : null,
             selo:`${t.dezenas.length} dezenas`})}
           <div class="kpis">
             ${/*<aposta>*/""}<div class="kpi"><div class="rot">custo total</div>
-              <div class="val" style="font-size:1.15rem">${brl(t.custo)}</div>
+              <div class="val" style="font-size:1.15rem">${brl(t.custo??custoDoJogo(t.modalidade,t.dezenas.length)*t.concursos)}</div>
               <div class="sub">${t.concursos} concursos</div></div>${/*</aposta>*/""}
             <div class="kpi"><div class="rot">melhor resultado</div>
               <div class="val">${melhor === null ? "—" : melhor}</div>
@@ -9412,7 +9484,8 @@ function acoesNovas(){
   };
   document.querySelectorAll("[data-apagar-teimosinha]").forEach(b => b.onclick = () => {
     S.teimosinhas = (S.teimosinhas||[]).filter(t => t.id !== b.dataset.apagarTeimosinha);
-    Guardar.gravar("teimosinhas", S.teimosinhas); pintar();
+    S.jogos=S.jogos.filter(t=>t.id!==b.dataset.apagarTeimosinha);
+    Guardar.gravar("teimosinhas", S.teimosinhas);Guardar.gravar("jogos",S.jogos);espelharParaSegundoPlano();pintar();
   });
 
   /* --- aprendizado --- */
@@ -9483,6 +9556,16 @@ function acoesNovas(){
   document.querySelectorAll("[data-abrir-jogo]").forEach(b => b.onclick = () => {
     S.jogoAberto = S.jogoAberto === b.dataset.abrirJogo ? null : b.dataset.abrirJogo;
     pintar();
+  });
+
+  document.querySelectorAll('[data-rever-jogo]').forEach(el=>el.onchange=()=>{
+    S.concursoDoJogo=S.concursoDoJogo||{};S.concursoDoJogo[el.dataset.reverJogo]=Number(el.value);pintar();
+  });
+  document.querySelectorAll('[data-excluir-jogo]').forEach(b=>b.onclick=()=>{
+    if(!confirm('Excluir este jogo e seu histórico? Ele deixará de ser conferido.'))return;
+    const novos=S.jogos.filter(j=>j.id!==b.dataset.excluirJogo);
+    if(!Guardar.gravar('jogos',novos)){b.textContent='Não foi possível excluir';return;}
+    S.jogos=novos;espelharParaSegundoPlano();pintar();
   });
 
   document.querySelectorAll('[data-salvar-trevos]').forEach(b=>b.onclick=()=>{
@@ -9618,10 +9701,12 @@ function acoes(){
       try{ s = sugestaoDoSistema(S.modalidade, tamanhoPadrao(S.modalidade)); }
       catch(e){ s = {erro: e.message}; }
       saida.innerHTML = tabelaSugestao(s);
+      if(!s.erro)prepararAcompanhamento("s-salvar",proximoConcursoSalvo());
       if(!s.erro && $("#s-salvar")) $("#s-salvar").onclick = () => {
+        const plano=lerAcompanhamento("s-salvar");if(!plano)return;
         const jogo = {id: `${Date.now().toString(36)}-s`, dezenas: s.dezenas,
           modalidade: S.modalidade, metodo: "sugestao", data: hoje(),
-          lote: `S${Date.now().toString(36)}`, conferencias: []};
+          lote: `S${Date.now().toString(36)}`, conferencias: [],...plano};
         S.jogos = S.jogos.concat([jogo]);
         Guardar.gravar("jogos", S.jogos);
         irParaTela("jogos");
@@ -9673,8 +9758,10 @@ function acoes(){
           vereditoDaRepeticao(S.modalidade, S.ultimoLote.map(j=>j.dezenas)) + `
           <button class="acao" id="g-salvar" style="margin-top:6px">Salvar ${S.ultimoLote.length} jogo${S.ultimoLote.length>1?"s":""}</button>`;
 
+        prepararAcompanhamento("g-salvar",proximoConcursoSalvo());
         $("#g-salvar").onclick = () => {
-          S.jogos = S.jogos.concat(S.ultimoLote);
+          const plano=lerAcompanhamento("g-salvar");if(!plano)return;
+          S.jogos = S.jogos.concat(S.ultimoLote.map(j=>({...j,...plano})));
           Guardar.gravar("jogos", S.jogos);
           irParaTela("jogos");
         };
@@ -9773,7 +9860,7 @@ function acoes(){
   document.querySelectorAll("[data-apagar]").forEach(b => b.onclick = () => {
     if(!confirm("Apagar este lote de jogos?")) return;
     S.jogos = S.jogos.filter(j => j.lote !== b.dataset.apagar);
-    Guardar.gravar("jogos", S.jogos); pintar();
+    Guardar.gravar("jogos", S.jogos); espelharParaSegundoPlano(); pintar();
   });
   document.querySelectorAll("[data-copiar]").forEach(b => b.onclick = async () => {
     const texto = S.jogos.filter(j=>j.lote===b.dataset.copiar)
@@ -9814,18 +9901,7 @@ function acoes(){
       saida.innerHTML = `<div class="nota atencao">Informe o número do concurso.</div>`; return;
     }
 
-    const alvo = S.jogos.filter(j => j.modalidade === S.modalidade);
-    if(!alvo.length){
-      saida.innerHTML = `<div class="nota atencao">Nenhum jogo salvo desta modalidade.</div>`;
-      return;
-    }
-    let soma = 0, somaEsperado = 0;
-    alvo.forEach(j=>{
-      j.conferencias = (j.conferencias||[]).filter(cf => cf.concurso !== concurso);
-      const acertos = j.dezenas.filter(d => dezenas.includes(d)).length;
-      j.conferencias.push({concurso, data, dezenas, acertos});
-      soma += acertos; somaEsperado += esperadoAcertos(j.modalidade, j.dezenas.length);
-    });
+    const alvo = S.jogos.concat(S.teimosinhas||[]).filter(j=>jogoCobreResultado(j,{modalidade:S.modalidade,concurso,data}));
     /* Se este concurso ja tinha sido trazido pela busca, ele carrega rateio e
        cidades. Substituir sem olhar apagaria essa informacao e transformaria um
        "3 ganhadores em Belo Horizonte" num "nao informado" — perda silenciosa
@@ -9836,14 +9912,17 @@ function acoes(){
     const mesmos=anterior&&anterior.dezenas.slice().sort((a,b)=>a-b).join()===dezenas.slice().sort((a,b)=>a-b).join();
     S.resultados.push(Object.assign({}, anterior || {},
       {concurso, data, dezenas, modalidade:S.modalidade},mesmos?{}:{trevos:undefined,dezenasSegundoSorteio:undefined}));
-    Guardar.gravar("jogos", S.jogos); Guardar.gravar("resultados", S.resultados);
-
+    Guardar.gravar("resultados", S.resultados);
+    conferenciaAutomatica();espelharParaSegundoPlano();
+    if(!alvo.length){saida.innerHTML='<div class="nota">Resultado salvo. Nenhum jogo acompanha este concurso.</div>';return;}
+    const soma=alvo.reduce((n,j)=>n+(j.conferencias.find(cf=>cf.concurso===concurso)?.acertos||0),0);
+    const somaEsperado=alvo.reduce((n,j)=>n+esperadoAcertos(j.modalidade,j.dezenas.length),0);
     const media = soma/alvo.length, esperado = somaEsperado/alvo.length;
     const dp = desvioAcertos(S.modalidade, alvo[0].dezenas.length)/Math.sqrt(alvo.length);
     /* Era `premiou`: quantos jogos caíram numa faixa. Virou "melhor resultado",
        porque a conferência conta coincidência e não prêmio. */
     const melhorAcerto = alvo.reduce((m, j) =>
-      Math.max(m, j.conferencias[j.conferencias.length-1].acertos), 0);
+      Math.max(m, j.conferencias.find(cf=>cf.concurso===concurso)?.acertos||0), 0);
 
     const doConcurso = S.resultados.find(r =>
       r.concurso === concurso && r.modalidade === S.modalidade) || {};

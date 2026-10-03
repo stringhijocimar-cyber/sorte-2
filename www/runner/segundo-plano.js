@@ -67,6 +67,7 @@ async function buscar(slug){
  * concurso declarado, faixa de teimosinha, ou todo concurso desde que o jogo
  * foi salvo. */
 function jogoCobre(jogo, concurso){
+  if(jogo.acompanhamento === "fixo") return Number.isSafeInteger(Number(jogo.deConcurso)) && Number(jogo.deConcurso) > 0 && concurso >= Number(jogo.deConcurso);
   if(jogo.concursoAlvo != null) return Number(jogo.concursoAlvo) === concurso;
   if(jogo.deConcurso != null && jogo.concursos != null){
     const de = Number(jogo.deConcurso);

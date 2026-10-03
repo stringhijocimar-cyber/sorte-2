@@ -33,4 +33,8 @@ public final class ConferenciaRegras {
         return criado != null && data != null && criado.matches("\\d{4}-\\d{2}-\\d{2}")
             && data.matches("\\d{4}-\\d{2}-\\d{2}") && data.compareTo(criado) >= 0;
     }
+    public static boolean cobre(boolean fixo, int alvo, int inicio, int quantidade, String criado, int concurso, String data) {
+        if (fixo) return inicio > 0 && concurso >= inicio;
+        return cobre(alvo, inicio, quantidade, criado, concurso, data);
+    }
 }

@@ -35,7 +35,7 @@ function board(m,t,r=null,op={}){
  const count=c.colunas?t.colunas.reduce((n,a)=>n+a.length,0):marked.size;
  const hits=r?L.hits(m,t,r):null;
  const footer=op.rodape||(hits==null?'':`<div class="pe"><span>${hits} acerto${hits===1?'':'s'}${c.colunas?' por coluna':''}</span><span>${count} ${c.colunas?'marcações':'dezenas marcadas'}</span></div>`);
- return `<div class="cartela check-board"><div class="tarja"><b>${esc(c.nome)}</b><span>${esc(op.selo||count+'/'+(c.colunas?70:c.N))}</span></div><div class="miolo"><div class="grade-volante" style="grid-template-columns:repeat(${columns},1fr)" ${op.interativa?'id="volante"':''}>${cells.join('')}</div></div>${footer}</div>`;
+ return `<div class="cartela check-board physical-ticket" data-modalidade="${esc(m)}"><div class="ticket-brand"><span>LotoLab</span><span>VOLANTE DIGITAL</span></div><div class="tarja"><b>${esc(c.nome)}</b><span>${esc(op.selo||count+'/'+(c.colunas?70:c.N))}</span></div><p class="ticket-instruction">${op.interativa?"Marque suas dezenas":"Suas marcações e o resultado do concurso"}</p><div class="miolo"><div class="grade-volante" style="grid-template-columns:repeat(${columns},1fr)" ${op.interativa?'id="volante"':''}>${cells.join('')}</div></div>${footer}<div class="ticket-footnote">LotoLab · acompanhamento pessoal · não é comprovante de aposta</div></div>`;
 }
 root.LL18Check={board,ticket,legend,extras};
 })(globalThis);

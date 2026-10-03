@@ -67,6 +67,7 @@ jobs:
         run: |
           node ferramentas/testar-metas.mjs
           node ferramentas/testar-complementos.mjs
+          node ferramentas/testar-acompanhamento.mjs
 
       - name: Guarda de atraso do atualizador
         # O cron de resultados rodava todo dia, dava verde e commitava — com os
@@ -197,42 +198,42 @@ jobs:
           cmp ui/lab-auto.js /tmp/automatico-apk.js
           unzip -p android/app/build/outputs/apk/debug/app-debug.apk assets/public/ui/lab-auto-ui.js > /tmp/automatico-ui-apk.js
           cmp ui/lab-auto-ui.js /tmp/automatico-ui-apk.js
-          for asset in ui/lab-check.js ui/conferencia-v4-22.css; do
+          for asset in ui/lab-check.js ui/conferencia-v4-22.css ui/acompanhamento-v4-25.css runner/segundo-plano.js; do
             unzip -p android/app/build/outputs/apk/debug/app-debug.apk "assets/public/$asset" > /tmp/conferencia-apk
             cmp "$asset" /tmp/conferencia-apk
           done
-          cp android/app/build/outputs/apk/debug/app-debug.apk LotoLab-4.24.0-preview.apk
+          cp android/app/build/outputs/apk/debug/app-debug.apk LotoLab-4.25.0-preview.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: LotoLab-4.24.0-preview
-          path: LotoLab-4.24.0-preview.apk
+          name: LotoLab-4.25.0-preview
+          path: LotoLab-4.25.0-preview.apk
           retention-days: 14
 
       - name: Disponibilizar APK para download direto
         if: github.head_ref == 'codex/inteligencia-sugestoes-v4.9'
         env:
           GH_TOKEN: ${{ github.token }}
-          LOTOLAB_TAG: v4.24.0-rc.${{ github.run_number }}
+          LOTOLAB_TAG: v4.25.0-rc.${{ github.run_number }}
         run: |
-          cp docs/release-4.24.0.md /tmp/lotolab-release.md
-          gh release create "$LOTOLAB_TAG" LotoLab-4.24.0-preview.apk \
+          cp docs/release-4.25.0.md /tmp/lotolab-release.md
+          gh release create "$LOTOLAB_TAG" LotoLab-4.25.0-preview.apk \
             --target "$GITHUB_SHA" --prerelease \
-            --title "LotoLab 4.24.0 — teste" --notes-file /tmp/lotolab-release.md
+            --title "LotoLab 4.25.0 — teste" --notes-file /tmp/lotolab-release.md
 
-      - name: Publicar LotoLab 4.24.0 final
+      - name: Publicar LotoLab 4.25.0 final
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           # Só publica depois de todas as verificações e da compilação acima.
           # Uma versão já publicada nunca é substituída por atualizações de dados.
-          test "$(cat VERSION)" = '4.24.0'
-          if gh release view v4.24.0 >/dev/null 2>&1; then
-            echo 'A versão 4.24.0 já está publicada; arquivo preservado.'
+          test "$(cat VERSION)" = '4.25.0'
+          if gh release view v4.25.0 >/dev/null 2>&1; then
+            echo 'A versão 4.25.0 já está publicada; arquivo preservado.'
             exit 0
           fi
-          cp LotoLab-4.24.0-preview.apk LotoLab-4.24.0.apk
-          sha256sum LotoLab-4.24.0.apk > LotoLab-4.24.0.apk.sha256
-          gh release create v4.24.0 LotoLab-4.24.0.apk LotoLab-4.24.0.apk.sha256 \
+          cp LotoLab-4.25.0-preview.apk LotoLab-4.25.0.apk
+          sha256sum LotoLab-4.25.0.apk > LotoLab-4.25.0.apk.sha256
+          gh release create v4.25.0 LotoLab-4.25.0.apk LotoLab-4.25.0.apk.sha256 \
             --target "$GITHUB_SHA" --latest \
-            --title 'LotoLab 4.24.0' --notes-file docs/release-4.24.0.md
+            --title 'LotoLab 4.25.0' --notes-file docs/release-4.25.0.md

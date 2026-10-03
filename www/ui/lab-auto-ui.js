@@ -129,7 +129,7 @@ function render(g,old=false,rec=()=>'',trevos=()=> ''){
  const ranking=(follow.n?follow.ranking:a.inicial?.teste||[]).slice().sort((x,y)=>y.media-x.media);
  const n=follow.n||a.inicial?.observacoes.slice(30).length||0;
  const ticket=(t,i)=>`<article class="int-ticket ${i===0?'int-principal':''}"><div class="int-section-title"><h3>${i===0?'Sua sugestão principal':'Jogo adicional '+i}</h3><span>${i===0?'CONCURSO '+(round.concursoAlvo||'A DEFINIR'):'OPCIONAL'}</span></div>${balls(g.modalidade,t)}${t.trevos?trevos(t.trevos):''}${rec(t)}${i===0?`<p class="int-help">${esc(g.motivo)}</p>`:''}<button class="acao secundaria" data-int-analisar="${i}">Ver estatísticas deste jogo</button></article>`;
- return `<section class="int-results auto-results" aria-label="Sugestão automática"><div class="int-section-title"><h2>Sugestão + laboratório automático</h2><span>4.24</span></div>
+ return `<section class="int-results auto-results" aria-label="Sugestão automática"><div class="int-section-title"><h2>Sugestão + laboratório automático</h2><span>4.25</span></div>
   ${old?'<p class="nota atencao">O histórico mudou. A atualização automática está preparando o próximo concurso.</p>':''}
   ${!a.persistido?'<p class="nota atencao" role="alert">A memória do aparelho não pôde ser gravada. Este pacote ainda não está registrado para avaliação; libere espaço e atualize a sugestão.</p>':''}
   ${!g.base.n?'<p class="nota atencao">Sem histórico disponível. A sugestão usa apenas referências combinatórias; a comparação começará quando os resultados chegarem.</p>':''}
