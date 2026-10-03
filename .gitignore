@@ -147,3 +147,9 @@ android/app/src/main/assets/capacitor.plugins.json
 
 # Entregaveis e capturas locais
 entrega/
+
+# Arquivos privados da assinatura e backups do aparelho
+.assinatura/
+assinatura-privada.json
+LotoLab-dados-*.tar
+LotoLab-dados-*.tar.sha256

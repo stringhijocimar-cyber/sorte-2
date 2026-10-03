@@ -83,6 +83,9 @@ jobs:
         # Nenhum teste olhava para o projeto nativo. Agora olha, em milissegundos.
         run: python3 ferramentas/conferir-xml-android.py
 
+      - name: Testes de assinatura permanente e proteção dos backups
+        run: python3 ferramentas/testar-assinatura.py
+
       - name: Os testes são reprodutíveis
         # Toda medida estatística desta suíte roda com gerador semeado. Se duas
         # execuções seguidas discordarem, algum teste voltou a depender do
@@ -202,38 +205,75 @@ jobs:
             unzip -p android/app/build/outputs/apk/debug/app-debug.apk "assets/public/$asset" > /tmp/conferencia-apk
             cmp "$asset" /tmp/conferencia-apk
           done
-          cp android/app/build/outputs/apk/debug/app-debug.apk LotoLab-4.25.0-preview.apk
+          cp android/app/build/outputs/apk/debug/app-debug.apk LotoLab-4.25.1-preview.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: LotoLab-4.25.0-preview
-          path: LotoLab-4.25.0-preview.apk
+          name: LotoLab-4.25.1-preview
+          path: LotoLab-4.25.1-preview.apk
           retention-days: 14
 
-      - name: Disponibilizar APK para download direto
-        if: github.head_ref == 'codex/inteligencia-sugestoes-v4.9'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          LOTOLAB_TAG: v4.25.0-rc.${{ github.run_number }}
+      - name: Preparar chave temporária somente para testar a compilação de release
         run: |
-          cp docs/release-4.25.0.md /tmp/lotolab-release.md
-          gh release create "$LOTOLAB_TAG" LotoLab-4.25.0-preview.apk \
-            --target "$GITHUB_SHA" --prerelease \
-            --title "LotoLab 4.25.0 — teste" --notes-file /tmp/lotolab-release.md
+          python3 - <<'PY'
+          import base64, importlib.util, json, os, tempfile
+          from pathlib import Path
+          def carregar(nome):
+              spec = importlib.util.spec_from_file_location(nome, 'ferramentas/' + nome + '.py')
+              modulo = importlib.util.module_from_spec(spec)
+              spec.loader.exec_module(modulo)
+              return modulo
+          pasta = Path(tempfile.mkdtemp(prefix='lotolab-teste-assinatura-'))
+          sha = carregar('configurar-assinatura').configurar(pasta, somente_gerar=True, teste=True)
+          dados = json.loads((pasta / 'assinatura-privada.json').read_text())
+          dados['LOTOLAB_KEYSTORE_BASE64'] = base64.b64encode((pasta / 'lotolab-release.jks').read_bytes()).decode()
+          os.environ.update(dados)
+          carregar('preparar-assinatura').preparar(Path.cwd(), teste=True)
+          with open(os.environ['GITHUB_ENV'], 'a') as f:
+              f.write('LOTOLAB_SIGNING_SHA256=' + sha + '\n')
+          PY
 
-      - name: Publicar LotoLab 4.25.0 final
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: Verificar release final e transferência com a mesma assinatura
         run: |
-          # Só publica depois de todas as verificações e da compilação acima.
-          # Uma versão já publicada nunca é substituída por atualizações de dados.
-          test "$(cat VERSION)" = '4.25.0'
-          if gh release view v4.25.0 >/dev/null 2>&1; then
-            echo 'A versão 4.25.0 já está publicada; arquivo preservado.'
-            exit 0
+          (cd android && ./gradlew assembleRelease --no-daemon)
+          bash ferramentas/conferir-assinatura.sh android/app/build/outputs/apk/release/app-release.apk final teste
+          python3 ferramentas/conferir-apk.py android/app/build/outputs/apk/release/app-release.apk
+          (cd android && ./gradlew assembleRelease -PlotolabMigracao --no-daemon)
+          bash ferramentas/conferir-assinatura.sh android/app/build/outputs/apk/release/app-release.apk transferencia teste
+          python3 ferramentas/conferir-apk.py android/app/build/outputs/apk/release/app-release.apk
+
+      - name: Apagar assinatura temporária de teste
+        if: always()
+        run: rm -f android/chave.properties android/lotolab-release.jks
+
+  assinatura-disponivel:
+    name: Verificar assinatura para publicação
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [motor, interface, apk-preview]
+    runs-on: ubuntu-latest
+    outputs:
+      pronta: ${{ steps.assinatura.outputs.pronta }}
+    steps:
+      - name: Exigir os cinco Secrets da assinatura fixa
+        id: assinatura
+        env:
+          CHAVE: ${{ secrets.LOTOLAB_KEYSTORE_BASE64 }}
+          SENHA: ${{ secrets.LOTOLAB_STORE_PASSWORD }}
+          ALIAS: ${{ secrets.LOTOLAB_KEY_ALIAS }}
+          SENHA_CHAVE: ${{ secrets.LOTOLAB_KEY_PASSWORD }}
+          CERTIFICADO: ${{ secrets.LOTOLAB_SIGNING_SHA256 }}
+        run: |
+          if [ -n "$CHAVE" ] && [ -n "$SENHA" ] && [ -n "$ALIAS" ] && [ -n "$SENHA_CHAVE" ] && [ -n "$CERTIFICADO" ]; then
+            echo 'pronta=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'pronta=false' >> "$GITHUB_OUTPUT"
+            echo '::warning::Publicação bloqueada até cadastrar a assinatura permanente. APKs de revisão não são atualizações.'
+            echo '### Publicação bloqueada: falta cadastrar a assinatura permanente. Nenhum APK final foi publicado.' >> "$GITHUB_STEP_SUMMARY"
           fi
-          cp LotoLab-4.25.0-preview.apk LotoLab-4.25.0.apk
-          sha256sum LotoLab-4.25.0.apk > LotoLab-4.25.0.apk.sha256
-          gh release create v4.25.0 LotoLab-4.25.0.apk LotoLab-4.25.0.apk.sha256 \
-            --target "$GITHUB_SHA" --latest \
-            --title 'LotoLab 4.25.0' --notes-file docs/release-4.25.0.md
+
+  publicar:
+    needs: [assinatura-disponivel]
+    if: needs.assinatura-disponivel.outputs.pronta == 'true'
+    permissions:
+      contents: write
+    uses: ./.github/workflows/apk.yml
+    secrets: inherit
