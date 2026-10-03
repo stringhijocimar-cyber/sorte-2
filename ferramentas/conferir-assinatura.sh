@@ -20,13 +20,18 @@ depuracao() {
 assinador=$(localizar apksigner)
 test -n "$assinador"
 relatorio=$("$assinador" verify --verbose --print-certs "$apk")
-obtido=$(printf '%s\n' "$relatorio" | sed -n 's/^Signer #1 certificate SHA-256 digest: //p' | tr -d ':' | tr '[:upper:]' '[:lower:]')
+# O SDK pode listar signatários por número ou por intervalo de API (v3.1).
+# Todos precisam ter o mesmo certificado; certificados extras diferentes falham.
+obtido=$(printf '%s\n' "$relatorio" | sed -nE 's/^Signer .+ certificate SHA-256 digest: ([[:xdigit:]:]+)[[:space:]]*$/\1/p' | tr -d ':' | tr '[:upper:]' '[:lower:]' | sort -u)
 esperado=$(printf '%s' "$LOTOLAB_SIGNING_SHA256" | tr -d ':' | tr '[:upper:]' '[:lower:]')
 if [ "${3:-}" != teste ]; then
   test "$esperado" = "$(cat android/assinatura.sha256)"
 fi
 if [ "$obtido" != "$esperado" ]; then
   echo '::error::O APK não usa a assinatura permanente. Publicação bloqueada.'
+  # O relatório contém certificados públicos, nunca a chave ou sua senha.
+  printf 'Certificado esperado: %s\nCertificados encontrados: %s\n' "$esperado" "${obtido:-nenhum}"
+  printf '%s\n' "$relatorio"
   exit 1
 fi
 echo 'APK verificado com a assinatura permanente.'

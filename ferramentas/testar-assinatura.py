@@ -6,6 +6,8 @@ import json
 import os
 from pathlib import Path
 import shutil
+import shlex
+import subprocess
 import tarfile
 import tempfile
 import unittest
@@ -194,6 +196,68 @@ class Backup(unittest.TestCase):
         with tarfile.open(retorno[0]) as tar:
             self.assertEqual(tar.extractfile('app_webview/Default/Local Storage/leveldb/000003.log').read(),
                              b'estado novo antes de restaurar')
+
+
+@unittest.skipIf(os.name == 'nt', 'O verificador bash roda no runner Linux')
+class RelatorioAssinatura(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        p = Path(self.tmp.name)
+        self.bin = p / 'bin'
+        self.bin.mkdir()
+        self.sdk = p / 'sdk/build-tools/35.0.0'
+        self.sdk.mkdir(parents=True)
+        for nome in ['find', 'sort', 'tail', 'tr', 'sed', 'grep', 'cat']:
+            (self.bin / nome).symlink_to(shutil.which(nome))
+        self.sha = 'a' * 64
+        self.env = {**os.environ, 'PATH': str(self.bin),
+                    'ANDROID_SDK_ROOT': str(p / 'sdk'), 'LOTOLAB_SIGNING_SHA256': self.sha}
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def verificar(self, linhas, modo='final', debug=False):
+        signer = self.sdk / 'apksigner'
+        signer.write_text("#!/bin/sh\nprintf '%s\\n' " + shlex.quote('\n'.join(linhas)) + '\n')
+        signer.chmod(0o700)
+        badging = "package: name='app.lotolab.jogos' versionCode='36' versionName='4.25.1'"
+        if debug:
+            badging += '\napplication-debuggable'
+        aapt = self.sdk / 'aapt'
+        aapt.write_text("#!/bin/sh\nprintf '%s\\n' " + shlex.quote(badging) + '\n')
+        aapt.chmod(0o700)
+        return subprocess.run(['/usr/bin/bash', str(RAIZ / 'ferramentas/conferir-assinatura.sh'),
+                               'teste.apk', modo, 'teste'], env=self.env, cwd=RAIZ,
+                              capture_output=True).returncode
+
+    def test_formato_numerado_sem_ripgrep(self):
+        self.assertEqual(self.verificar(['Signer #1 certificate SHA-256 digest: ' + self.sha]), 0)
+
+    def test_intervalos_de_api_com_mesmo_certificado(self):
+        self.assertEqual(self.verificar([
+            'Signer (minSdkVersion=33, maxSdkVersion=2147483647) certificate SHA-256 digest: ' + self.sha,
+            'Signer (minSdkVersion=24, maxSdkVersion=32) certificate SHA-256 digest: ' + self.sha]), 0)
+
+    def test_certificado_diferente_em_um_intervalo_bloqueia(self):
+        self.assertNotEqual(self.verificar([
+            'Signer (minSdkVersion=33, maxSdkVersion=2147483647) certificate SHA-256 digest: ' + self.sha,
+            'Signer (minSdkVersion=24, maxSdkVersion=32) certificate SHA-256 digest: ' + 'b' * 64]), 0)
+
+    def test_segundo_signatario_diferente_bloqueia(self):
+        self.assertNotEqual(self.verificar([
+            'Signer #1 certificate SHA-256 digest: ' + self.sha,
+            'Signer #2 certificate SHA-256 digest: ' + 'b' * 64]), 0)
+
+    def test_hash_de_chave_publica_nao_substitui_certificado(self):
+        self.assertNotEqual(self.verificar(['Signer #1 public key SHA-256 digest: ' + self.sha]), 0)
+
+    def test_final_nao_permite_depuracao(self):
+        self.assertNotEqual(self.verificar(['Signer #1 certificate SHA-256 digest: ' + self.sha], debug=True), 0)
+
+    def test_transferencia_exige_depuracao(self):
+        linhas = ['Signer #1 certificate SHA-256 digest: ' + self.sha]
+        self.assertNotEqual(self.verificar(linhas, modo='transferencia'), 0)
+        self.assertEqual(self.verificar(linhas, modo='transferencia', debug=True), 0)
 
 
 if __name__ == '__main__':
