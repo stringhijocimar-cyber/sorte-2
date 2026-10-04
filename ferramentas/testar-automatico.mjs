@@ -196,3 +196,58 @@ test('falha transitória não bloqueia a preparação automática na próxima ab
  await p.api.prepare(m);
  assert.equal(calls,2,'um resultado já entregue não precisa ser recalculado');
 });
+
+test('objetivo completo da +Milionária exige os trevos; ausências não viram zero',()=>{
+ const t={dezenas:[1,2,3,4,5,6],trevos:[1,2]};
+ assert.equal(L.autoObjective('mais-milionaria',t,{...t,trevos:[3,4]}),0);
+ assert.equal(L.autoObjective('mais-milionaria',t,t),1);
+ assert.equal(L.autoObjective('mais-milionaria',t,{dezenas:t.dezenas}),null);
+ assert.ok(L.autoObjective('mais-milionaria',t,{...t,trevos:[2,3]})<1);
+ for(const mode of Object.keys(L.rules)){
+  const jogo=L.randomTicket(mode,L.rng('jogo:'+mode)),c=L.cfg(mode);
+  const draw=c.colunas?{colunas:jogo.colunas.map(a=>[a[0]])}:{dezenas:L.sample(Array.from({length:c.N},(_,i)=>c.base+i),c.k,L.rng('sorteio:'+mode)),...(jogo.trevos?{trevos:jogo.trevos.slice(0,2)}:{})};
+  const value=L.autoObjective(mode,jogo,draw);assert.ok(value>=0&&value<=1);
+  const completo=c.colunas?{colunas:jogo.colunas.map(a=>[a[0]])}:{dezenas:jogo.dezenas.slice(0,c.k),...(jogo.trevos?{trevos:jogo.trevos.slice(0,2)}:{})};
+  assert.equal(L.autoObjective(mode,jogo,completo),1);
+ }
+});
+
+test('avaliação nova preserva rodadas antigas e reavalia uma correção sem mudar a seleção com dados futuros',()=>{
+ const rows=history(120),a=L.autoCycle(m,rows,{}, {agora:now}),state=structuredClone(a.estado);
+ delete state.inicial.protocoloAvaliacao;
+ const upgraded=L.autoCycle(m,rows,state,{agora:now});
+ assert.deepEqual(upgraded.rodada,a.rodada);assert.equal(upgraded.estado.rodadas.length,1);
+ const corrected=rows.map(r=>r.concurso===110?{...r,dezenas:[1,2,3,4,5,6]}:r);
+ const b=L.autoCycle(m,corrected,upgraded.estado,{agora:now});
+ assert.notEqual(b.inicial.assinatura,upgraded.inicial.assinatura);
+ assert.deepEqual(b.inicial.validacao,upgraded.inicial.validacao);
+ assert.equal(b.inicial.selecao,upgraded.inicial.selecao);
+ assert.deepEqual(b.rodada,a.rodada);
+});
+
+test('melhor média com pior desempenho de acertos altos não promove a estratégia',()=>{
+ const rows=history(40),first=L.autoCycle(m,rows,{}, {agora:'2026-09-01T10:00:00Z'}),template=first.rodada;
+ const full={dezenas:[1,2,3,4,5,6]},low={dezenas:[7,8,9,10,11,12]},two={dezenas:[1,2,7,8,9,10]};
+ const state=first.estado;state.metodo='consenso';state.rodadas=[];
+ for(let n=41;n<=280;n++){
+  rows.push({modalidade:m,concurso:n,data:'2026-09-26',...full});
+  const consensus=(n-41)%10===0?full:low;
+  state.rodadas.push({...template,concursoAlvo:n,geradoAte:n-1,semente:'cauda:'+n,principal:consensus,consenso:consensus,
+   testes:Object.keys(L.autoExperts).map(id=>({id,jogo:id==='frequencia'?two:consensus}))});
+ }
+ const r=L.autoCycle(m,rows,state,{agora:now}),candidate=r.acompanhamento.ranking.find(x=>x.id==='frequencia');
+ assert.ok(candidate.acaso.media>0&&candidate.consenso.media>0);
+ assert.ok(candidate.objetivo.consenso.media<0);
+ assert.equal(r.decisao.metodo,'consenso');
+ assert.equal(r.objetivo.linhas.find(x=>x.id==='principal').maximos,24);
+ assert.equal(r.objetivo.linhas.find(x=>x.id==='frequencia').melhor,2);
+});
+
+test('família de comparações inclui a métrica de acertos altos e usa permutação exata em amostra pequena',()=>{
+ const rows=history(40),a=L.autoCycle(m,rows,{}, {agora:now}),draw={modalidade:m,concurso:41,data:'2026-09-28',dezenas:[1,2,3,4,5,6]};
+ const r=L.autoCycle(m,[...rows,draw],a.estado,{agora:now});
+ for(const x of r.acompanhamento.ranking){
+  assert.equal(x.objetivo.n,1);assert.equal(x.objetivo.acaso.pAjustado,1);
+ }
+ assert.equal(r.objetivo.protocolo,L.autoEvaluation);assert.equal(r.objetivo.n,1);
+});

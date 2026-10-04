@@ -1047,10 +1047,11 @@ td{padding:6px 7px;border-bottom:1px solid var(--trama)}
 <script src="ui/lab-core.js?v=4.22.1"></script>
 <script src="ui/lab-strategies.js?v=4.22.1"></script>
 <script src="ui/lab-recommendation.js?v=4.22.1"></script>
-<script src="ui/lab-auto.js?v=4.22.1"></script>
+<script src="ui/lab-auto.js?v=4.26.0"></script>
 <script src="ui/lab-ui.js?v=4.22.1"></script>
 <script src="ui/lab-check.js?v=4.25.0"></script>
-<script src="ui/lab-auto-ui.js?v=4.22.1"></script>
+<script src="ui/lab-auto-ui.js?v=4.26.0"></script>
+<script src="ui/lab-backup.js?v=4.26.0"></script>
 <script>
 "use strict";
 
@@ -1149,12 +1150,14 @@ const S = {
 
 /* Persistência tolerante: se o navegador bloquear, o app segue funcionando
    na sessão em vez de quebrar. */
+let backupRestaurando = false;
 const Guardar = {
   ler(chave, padrao){
     try{ const v = localStorage.getItem("lotolab:"+chave);
       return v ? JSON.parse(v) : padrao; }catch(e){ return padrao; }
   },
   gravar(chave, valor){
+    if(backupRestaurando) return false;
     try{
       localStorage.setItem("lotolab:"+chave, JSON.stringify(valor));
       /* Espelhar aqui, e não em cada lugar que grava jogo, porque são dez
@@ -2878,7 +2881,7 @@ T.sugestoes = () => {
     <div id="int-lote">${S.intLotes[m]?intRenderLote(S.intLotes[m]):""}</div>
     <details class="auto-settings" open><summary>Personalizar meus jogos (opcional)</summary>
     <section class="carta int-form ux-form"><div class="int-section-title"><h2>Configure seu jogo</h2><span>${esc(c.nome)}</span></div>
-      <div class="int-integrated-intro"><span class="int-eyebrow">CICLO AUTOMÁTICO · 4.25</span><p class="int-help">A sugestão e o pacote virtual aparecem nesta tela sem treinamento manual. Ajuste apenas o tamanho, a quantidade ou o orçamento se desejar.</p></div>
+      <div class="int-integrated-intro"><span class="int-eyebrow">CICLO AUTOMÁTICO · 4.26</span><p class="int-help">A sugestão e o pacote virtual aparecem nesta tela sem treinamento manual. Ajuste apenas o tamanho, a quantidade ou o orçamento se desejar.</p></div>
       <div class="int-grid"><label class="campo" for="int-tam">Dezenas por jogo
         <select id="int-tam">${Array.from({length:c.max-c.min+1},(_,i)=>i+c.min).map(t=>`<option ${o.tam===t?"selected":""}>${t}</option>`).join("")}</select></label>
         <label class="campo" for="int-quantidade">Total de jogos<input id="int-quantidade" type="number" min="1" max="60" value="${o.quantidade}"></label>
@@ -3932,7 +3935,7 @@ T.inicio = () => {
   const avisos=S.avisos.filter(a=>!a.lido).length;
   const meus=S.jogos.filter(j=>j.modalidade===m).length,idade=idadeDoHistorico(m);
   return `<div class="foco-inicio ux-inicio" style="--foco-cor:${FOCO_CORES[m]}">
-    <div class="foco-boasvindas"><div><span class="foco-label">BEM-VINDO AO SEU LABORATÓRIO</span><${podeVoltar()?'h2':'h1'}>Seu jogo,<br>bem planejado.</${podeVoltar()?'h2':'h1'}></div><span class="foco-versao">4.25</span></div>
+    <div class="foco-boasvindas"><div><span class="foco-label">BEM-VINDO AO SEU LABORATÓRIO</span><${podeVoltar()?'h2':'h1'}>Seu jogo,<br>bem planejado.</${podeVoltar()?'h2':'h1'}></div><span class="foco-versao">4.26</span></div>
     <section class="foco-hero"><div class="foco-hero-topo"><span class="foco-label">UM PLANO PARA CADA CONCURSO</span><span class="foco-tag">${esc(c.nome)}</span></div>
       <div class="foco-objetivo"><div><h2>Crie seus jogos.<br>Veja os acertos.</h2><p>Defina seus critérios e seu limite. O LotoLab organiza e confere.</p></div><div class="foco-alvo" aria-label="Meta de ${c.k} dezenas"><strong>${c.k}</strong><span>${c.trevos?"+ 2 trevos":"dezenas"}</span></div></div>
       <button class="acao foco-primary" data-atalho="sugestoes">Criar sugestões <span aria-hidden="true">→</span></button>
@@ -4175,6 +4178,56 @@ function tabelaBancada(r, titulo, umConcursoSo, opcoes){
     com ganhadores reais — a calibração precisa de ${MINIMO_CALIBRACAO} concursos com
     rateio publicado por modalidade, e o histórico deste app não chega lá.
   </div>`}`;
+}
+
+T.backup = () => `<section class="carta"><span class="int-eyebrow">SEUS DADOS</span><h2>Guarde seus jogos e históricos</h2>
+  <p>O backup inclui todas as modalidades: jogos, conferências, teimosinhas, jogos fixos, resultados, preferências e memória das análises.</p>
+  <button class="acao" id="backup-salvar">Salvar backup completo</button><div id="backup-status" role="status" aria-live="polite"></div>
+  <details class="int-details"><summary>Restaurar um backup</summary><p>Confira o conteúdo antes de restaurar. A restauração substitui os dados locais pelos do arquivo; guarde uma cópia dos dados atuais primeiro.</p>
+  <label class="campo" for="backup-arquivo">Arquivo de backup<input id="backup-arquivo" type="file" accept=".json,application/json"></label>
+  <div id="backup-preview" role="status"></div><label class="campo"><span><input id="backup-confirmar" type="checkbox"> Já guardei uma cópia dos dados atuais e quero restaurar o arquivo escolhido.</span></label>
+  <button class="acao secundaria" id="backup-restaurar" disabled>Restaurar dados e reabrir</button></details>
+  <p class="int-help">Mantenha o arquivo fora da pasta do aplicativo. A cópia fica onde você escolher e não é enviada ao LotoLab.</p></section>`;
+
+function backupLigarAcoes(){
+  const salvar=$('#backup-salvar');if(!salvar)return;
+  const status=$('#backup-status'),arquivo=$('#backup-arquivo'),preview=$('#backup-preview'),confirmar=$('#backup-confirmar'),restaurar=$('#backup-restaurar');
+  let raw=null,leitura=0;
+  salvar.onclick=async()=>{
+    salvar.disabled=true;status.textContent='Preparando e verificando a cópia…';
+    try{
+      const backup=await LL18Backup.create(LL18Backup.recovery||localStorage),texto=JSON.stringify(backup),nome='LotoLab-backup-'+backup.conteudo.criadoEm.replace(/[:.]/g,'-')+'.json';
+      await LL18Backup.validate(texto);
+      if(typeof Capacitor!=='undefined'&&Capacitor.isNativePlatform?.()){
+        const plugin=Capacitor.registerPlugin?Capacitor.registerPlugin('LotoLabBackup'):Capacitor.Plugins.LotoLabBackup;
+        const result=await plugin.salvar({texto,nome});
+        if(!result?.salvo)throw Error('Salvamento não confirmado.');
+        status.textContent='Backup salvo e verificado. Guarde esta cópia antes de trocar de versão.';
+      }else{
+        const url=URL.createObjectURL(new Blob([texto],{type:'application/json'})),a=document.createElement('a');
+        a.href=url;a.download=nome;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+        status.textContent='Download iniciado. Confira o arquivo na pasta de downloads antes de trocar de versão.';
+      }
+    }catch(e){status.textContent=e.message;}finally{salvar.disabled=false;}
+  };
+  const ready=()=>{restaurar.disabled=!raw||!confirmar.checked;};
+  confirmar.onchange=ready;
+  arquivo.onchange=async()=>{
+    const token=++leitura;raw=null;ready();preview.textContent='';
+    try{
+      const file=arquivo.files[0];if(!file)return;if(file.size>LL18Backup.LIMIT)throw Error('Backup maior que 30 MB.');
+      const text=await file.text(),backup=await LL18Backup.validate(text),counts=LL18Backup.summary(backup);
+      if(token!==leitura)return;
+      raw=text;preview.textContent=`Cópia íntegra da versão ${backup.conteudo.versao}: ${counts.jogos} jogos, ${counts.teimosinhas} teimosinhas e ${counts.resultados} resultados. Criada em ${new Date(backup.conteudo.criadoEm).toLocaleString('pt-BR')}.`;ready();
+    }catch(e){if(token===leitura){preview.textContent=e.message;ready();}}
+  };
+  restaurar.onclick=async()=>{
+    if(!raw||!confirmar.checked)return;
+    restaurar.disabled=true;salvar.disabled=true;arquivo.disabled=true;confirmar.disabled=true;
+    status.textContent='Restaurando a cópia verificada…';backupRestaurando=true;
+    try{await LL18Backup.restore(localStorage,raw);location.reload();}
+    catch(e){backupRestaurando=false;status.textContent=e.message;salvar.disabled=false;if(LL18Backup.recovery)salvar.textContent='Salvar cópia de recuperação';arquivo.disabled=false;confirmar.disabled=false;ready();}
+  };
 }
 
 T.entender = () => `<div class="prosa">
@@ -9995,6 +10048,7 @@ const SECOES = [
     {id:"jogos",nome:"Salvos",titulo:"Meus jogos",sub:"Seus jogos e os acertos conferidos com os resultados da base."},
     {id:"conferir",nome:"Conferir",titulo:"Conferir",sub:"Veja como seus jogos se saíram no último resultado disponível."},
     {id:"teimosinha",nome:"Teimosinha",titulo:"Teimosinha",sub:"Acompanhe o mesmo jogo em vários concursos e veja o custo total."}
+    ,{id:"backup",nome:"Backup",titulo:"Backup dos meus dados",sub:"Guarde seus jogos e históricos para restaurar em outra instalação."}
   ]},
   {id:"resultados",nome:"Resultados",icone:'<rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9.5h18M8 3v3M16 3v3"/>',telas:[
     {id:"resultados",nome:"Concursos",titulo:"Resultados",sub:"Atualize os concursos. Toque em um resultado para conferir seus jogos."}
@@ -10258,6 +10312,7 @@ function pintar(){
   if(typeof LL18UI!=="undefined")LL18UI.mount(LL18_BRIDGE);
   if(typeof LL18Auto!=="undefined")LL18Auto.mount(LL18_BRIDGE);
   metaLigarAcoes();
+  backupLigarAcoes();
   for(const lista of document.querySelectorAll('.segmento')){
     const ativo=lista.querySelector('[aria-pressed="true"],[aria-selected="true"]');
     if(ativo)lista.scrollLeft=Math.max(0,ativo.offsetLeft-lista.offsetLeft-8);

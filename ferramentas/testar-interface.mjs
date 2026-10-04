@@ -1919,7 +1919,7 @@ for(const tema of ['escuro','claro']){
       const cs=gradiente(estilo),amarelas=cs.every(c=>{const [r,g,b]=rgb(c);return r>230&&g>175&&b<175});
       return {erros,cores:cores.size,amarelas,contrasteBola:Math.min(...cs.map(c=>contraste(estilo.color,c)))};
     `);
-    checar('15 telas / 8 modalidades / '+tema+' em '+width+'px',audit.erros.length===0,audit.erros.join(' · '));
+    checar('16 telas / 8 modalidades / '+tema+' em '+width+'px',audit.erros.length===0,audit.erros.join(' · '));
     checar('oito destaques distintos no '+tema+' em '+width+'px',audit.cores===8,String(audit.cores));
     checar('bolinhas amarelas e números com contraste alto no '+tema,audit.amarelas&&audit.contrasteBola>=7,audit.contrasteBola.toFixed(2)+':1');
   }
@@ -2208,6 +2208,24 @@ for(const theme of ['escuro','claro'])for(const mod of ['mega-sena','lotofacil']
 await js(`window.__confirm425=window.confirm;window.confirm=()=>true;document.querySelector('[data-excluir-jogo]').click();window.confirm=window.__confirm425;return true;`);
 checar('exclusão manual remove o fixo do armazenamento e da conferência',await js(`return S.jogos.length===0&&Guardar.ler('jogos',[]).length===0&&conferenciaAutomatica().novas===0`));
 await js(`document.documentElement.dataset.tema='escuro';S.tema='escuro';S.modalidade='mega-sena';S.jogos=[];return true;`);
+
+/* ---------- Backup completo 4.26 ---------- */
+secao('Backup e objetivo 4.26');
+await js(`Guardar.gravar('jogos',[{id:'backup426',modalidade:'mega-sena',dezenas:[1,2,3,4,5,6],acompanhamento:'fixo',deConcurso:100,conferencias:[{concurso:100,acertos:6}]}]);irParaTela('backup',{lateral:true});return true;`);
+checar('backup tem entrada própria em Meus jogos e abrange todas as modalidades',await js(`return document.querySelector('[data-tela="backup"]').getAttribute('aria-selected')==='true'&&document.querySelector('#tela').textContent.includes('todas as modalidades')&&!document.querySelector('#backup-confirmar').checked&&document.querySelector('#backup-restaurar').disabled`));
+await frame418('.carta','LotoLab-4.26-Backup');
+await js(`window.backupValid426=JSON.stringify(await LL18Backup.create(localStorage));window.backupTarget426=document.querySelector('#backup-arquivo');Object.defineProperty(window.backupTarget426,'files',{configurable:true,value:[new File([window.backupValid426],'LotoLab-backup.json',{type:'application/json'})]});window.backupTarget426.dispatchEvent(new Event('change'));return true;`);
+for(let i=0;i<40;i++){if(await js(`return document.querySelector('#backup-preview').textContent.includes('Cópia íntegra')`))break;await dormir(50);}
+checar('importação mostra quantidade e não libera restauração sem confirmação',await js(`return document.querySelector('#backup-preview').textContent.includes('1 jogos')&&document.querySelector('#backup-restaurar').disabled`));
+await tocar('#backup-confirmar');
+checar('cópia validada e confirmação habilitam a restauração',await js(`return !document.querySelector('#backup-restaurar').disabled`));
+await js(`Object.defineProperty(window.backupTarget426,'files',{configurable:true,value:[new File([window.backupValid426.slice(0,-4)],'incompleto.json')]});window.backupTarget426.dispatchEvent(new Event('change'));return true;`);
+for(let i=0;i<40;i++){if(await js(`return !!document.querySelector('#backup-preview').textContent`))break;await dormir(50);}
+checar('arquivo truncado bloqueia restauração e preserva o jogo fixo',await js(`return document.querySelector('#backup-restaurar').disabled&&Guardar.ler('jogos',[])[0].id==='backup426'`));
+await js(`S.modalidade='mega-sena';S.resultados=${JSON.stringify(rows419)};S.intLotes={};irParaTela('sugestoes',{lateral:true});LL18Auto.historyChanged();return true;`);
+for(let i=0;i<200;i++){if(await js(`return !!document.querySelector('.auto-goal')`))break;await dormir(100);}
+checar('objetivo de acertos altos está conectado à recomendação principal',await js(`return document.querySelector('.auto-goal').textContent.includes('FOCO NO PRÊMIO MÁXIMO')&&S.intLotes['mega-sena'].laboratorio.automatico.objetivo.protocolo==='objetivo-426-1'`));
+await frame418('.auto-goal','LotoLab-4.26-Objetivo');
 
 /* ---------- S. Formatos especiais no motor integrado 4.20 ---------- */
 secao('S. Recomendação única nos formatos especiais');

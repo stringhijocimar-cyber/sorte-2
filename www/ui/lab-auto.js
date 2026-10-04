@@ -2,7 +2,8 @@
 (function(root){
 'use strict';
 const L=root.LL18||(typeof require==='function'?require('./lab-recommendation.js'):null);
-const PROTOCOL='auto-421-1', VERSION='4.24.0', POOL=96, REFERENCES=32;
+// O protocolo dos bilhetes permanece igual: rodadas antigas continuam congeladas.
+const PROTOCOL='auto-421-1', EVALUATION='objetivo-426-1', VERSION='4.26.0', POOL=96, REFERENCES=32;
 const experts={
  equilibrio:'Equilíbrio de soma e paridade', frequencia:'Frequência com suavização bayesiana',
  recencia:'Frequência recente ponderada', atraso:'Atrasos como hipótese',
@@ -128,22 +129,64 @@ function proposal(b,o,target){
  chosen.push({id:'uniforme',jogo:randomTicket(b.m,L.rng(seed+':controle-visivel'),o)});
  return {seed,tests:chosen,consensus:consensus.t,pool:pool.map(x=>({jogo:x.t,score:agreement(x)})),candidatos:pool.length};
 }
+// Utilidade fixada antes de avaliar: acertos altos recebem peso cúbico.
+// Não é uma probabilidade ou estimativa de prêmio. +Milionária exige trevos.
+function objective(m,t,draw){
+ const c=L.cfg(m),h=L.hits(m,t,draw);
+ if(c.extra==='trevos'&&(!t.trevos||!draw.trevos))return null;
+ const extra=c.extra==='trevos'?t.trevos.filter(x=>draw.trevos.includes(x)).length/2:1;
+ return (h/c.k)**3*extra**2;
+}
 function observation(m,r,draw,o){
- const reference=L.mean(Array.from({length:REFERENCES},(_,i)=>L.hits(m,randomTicket(m,L.rng(r.semente+':controle:'+i),o),draw)));
+ const controls=Array.from({length:REFERENCES},(_,i)=>randomTicket(m,L.rng(r.semente+':controle:'+i),o));
+ const reference=L.mean(controls.map(t=>L.hits(m,t,draw)));
  const acertos=Object.fromEntries(r.testes.map(x=>[x.id,L.hits(m,x.jogo,draw)]));
  acertos.consenso=L.hits(m,r.consenso,draw);acertos.principal=L.hits(m,r.principal,draw);
+ const tickets={...Object.fromEntries(r.testes.map(x=>[x.id,x.jogo])),consenso:r.consenso,principal:r.principal};
+ const scores=Object.fromEntries(Object.entries(tickets).map(([id,t])=>[id,objective(m,t,draw)]));
+ const full=objective(m,r.principal,draw)!==null;
  return {concurso:draw.concurso,data:draw.data,geradoAte:r.geradoAte,acertos,referencia:reference,
+  objetivo:{protocolo:EVALUATION,valores:scores,referencia:full?L.mean(controls.map(t=>objective(m,t,draw))):null},
   resultado:{...L.validateTicket(m,draw,{resultado:true}),...(draw.dezenasSegundoSorteio?{dezenasSegundoSorteio:draw.dezenasSegundoSorteio.slice()}:{})},
   complementos:r.testes.map(x=>({id:x.id,financeiro:L.financial(m,x.jogo,draw)}))};
 }
-function statistics(obs,seed){
- const list=selectable.map(id=>({id,n:obs.length,media:L.mean(obs.map(x=>x.acertos[id])),
-  acaso:L.paired(obs.map(x=>x.acertos[id]-x.referencia),seed+':'+id,999),
-  consenso:L.paired(obs.map(x=>x.acertos[id]-x.acertos.consenso),seed+':consenso:'+id,999)}));
- const adj=L.holm(list.flatMap(x=>[x.acaso.p,x.consenso.p]));
- list.forEach((x,j)=>{x.acaso.pAjustado=adj[j*2];x.consenso.pAjustado=adj[j*2+1];});return list;
+function compare(delta,seed){
+ const s=L.paired(delta,seed,999);
+ if(delta.length<10)return s;
+ const blocks=[];for(let i=0;i<delta.length;i+=s.bloco)blocks.push(L.sum(delta.slice(i,i+s.bloco)));
+ // Enumeração evita que a resolução de 999 sorteios impeça a correção de
+ // 40 hipóteses em amostras pequenas. O IC continua sendo bootstrap em blocos.
+ if(blocks.length<=16){
+  let values=[0];for(const block of blocks)values=values.flatMap(x=>[x+block,x-block]);
+  const target=Math.abs(L.sum(delta));
+  s.p=values.filter(v=>Math.abs(v)>=target-1e-12).length/values.length;
+  s.permutacoesExatas=values.length;
+ }
+ return s;
 }
-function winner(stats){return stats.filter(x=>L.robust(x.acaso)&&L.robust(x.consenso)).sort((a,b)=>b.consenso.ic[0]-a.consenso.ic[0])[0]?.id||'consenso';}
+function statistics(obs,seed){
+ const complete=obs.filter(x=>x.objetivo?.protocolo===EVALUATION&&x.objetivo.referencia!==null);
+ const list=selectable.map(id=>({id,n:obs.length,media:L.mean(obs.map(x=>x.acertos[id])),
+  acaso:compare(obs.map(x=>x.acertos[id]-x.referencia),seed+':'+id),
+  consenso:compare(obs.map(x=>x.acertos[id]-x.acertos.consenso),seed+':consenso:'+id),
+  objetivo:{n:complete.length,media:complete.length?L.mean(complete.map(x=>x.objetivo.valores[id])):null,
+   acaso:compare(complete.map(x=>x.objetivo.valores[id]-x.objetivo.referencia),seed+':objetivo:'+id),
+   consenso:compare(complete.map(x=>x.objetivo.valores[id]-x.objetivo.valores.consenso),seed+':objetivo-consenso:'+id)}}));
+ const adj=L.holm(list.flatMap(x=>[x.acaso.p,x.consenso.p,x.objetivo.acaso.p,x.objetivo.consenso.p]));
+ list.forEach((x,j)=>{[x.acaso,x.consenso,x.objetivo.acaso,x.objetivo.consenso].forEach((s,i)=>s.pAjustado=adj[j*4+i]);});return list;
+}
+const qualified=x=>L.robust(x.acaso)&&L.robust(x.consenso)&&L.robust(x.objetivo.acaso)&&L.robust(x.objetivo.consenso);
+function winner(stats){return stats.filter(qualified).sort((a,b)=>b.objetivo.consenso.ic[0]-a.objetivo.consenso.ic[0])[0]?.id||'consenso';}
+function goalReport(m,obs){
+ const k=L.cfg(m).k;
+ return {protocolo:EVALUATION,n:obs.length,linhas:[...ids,'consenso','principal'].map(id=>{
+  const dist=Array.from({length:k+1},(_,h)=>({acertos:h,vezes:obs.filter(x=>x.acertos[id]===h).length}));
+  const full=obs.filter(x=>x.objetivo?.valores[id]!==null&&x.objetivo?.valores[id]!==undefined);
+  const maximos=full.filter(x=>x.objetivo.valores[id]===1).length;
+  return {id,distribuicao:dist,melhor:obs.length?Math.max(...dist.filter(x=>x.vezes).map(x=>x.acertos)):null,
+   proximos:obs.filter(x=>x.acertos[id]>=k-1).length,maximos,completos:full.length,icMaximos:L.wilson(maximos,full.length)};
+ })};
+}
 function retrospective(m,rows,o,progress){
  if(rows.length<120)return {estado:'amostra-insuficiente',metodo:'consenso',n:0,necessarios:120,observacoes:[],motivo:'A base ainda não permite separar 60 concursos de avaliação. O pacote virtual começa sem escolher um vencedor histórico.'};
  const start=rows.length-60,training=rows.slice(0,start),b=model(m,training),obs=[];let choice='consenso',validation=[];
@@ -154,11 +197,11 @@ function retrospective(m,rows,o,progress){
   progress({etapa:'Comparando estratégias automaticamente',feitos:i-start+1,total:60});
  }
  const test=statistics(obs.slice(30),'teste:'+o.profile+':'+rows[start+30].concurso),selected=test.find(x=>x.id===choice);
- const confirmed=choice!=='consenso'&&selected&&L.robust(selected.acaso)&&L.robust(selected.consenso);
+ const confirmed=choice!=='consenso'&&selected&&qualified(selected);
  return {estado:'concluido',metodo:confirmed?choice:'consenso',n:60,observacoes:obs,
   selecao:choice,validacao:validation,teste:test,congeladoAte:rows[start+29].concurso,
   particao:{treino:[rows[0].concurso,rows[start-1].concurso],validacao:[rows[start].concurso,rows[start+29].concurso],teste:[rows[start+30].concurso,rows.at(-1).concurso]},
-  motivo:confirmed?'Uma estratégia superou o controle e o consenso na validação e confirmou o resultado no teste separado. A escolha continua exploratória até os próximos sorteios.':'Nenhuma estratégia superou o controle e o consenso nas duas etapas. Mantido o consenso; os próximos concursos serão avaliados automaticamente.'};
+  motivo:confirmed?'Uma estratégia superou o controle e o consenso em média e proximidade do prêmio máximo, na validação e no teste separado. A escolha continua exploratória até os próximos sorteios.':'Nenhuma estratégia confirmou melhora de média e proximidade do prêmio máximo nas duas etapas. Mantido o consenso; os próximos concursos serão avaliados automaticamente.'};
 }
 // Mistura de supermartingales de Hoeffding para diferenças limitadas a [-1,1].
 // O máximo acumulado permite consultar repetidamente sem escolher um p favorável.
@@ -178,11 +221,15 @@ function prospective(m,rows,state,o){
   observations.push(observation(m,round,draw,o));
  }
  observations.sort((a,b)=>a.concurso-b.concurso);
- const stats=statistics(observations,'prospectivo:'+o.profile),M=selectable.length*3,k=L.cfg(m).k;
+ const stats=statistics(observations,'prospectivo:'+o.profile),M=selectable.length*6,k=L.cfg(m).k;
+ const complete=observations.filter(x=>x.objetivo.referencia!==null);
  for(const x of stats){
   x.pContinuoAcaso=Math.min(1,M*anytime(observations.map(r=>r.acertos[x.id]-r.referencia),k));
   x.pContinuoConsenso=Math.min(1,M*anytime(observations.map(r=>r.acertos[x.id]-r.acertos.consenso),k));
-  x.pContinuoAbaixo=Math.min(1,30*anytime(observations.map(r=>r.referencia-r.acertos[x.id]),k));
+  x.pContinuoAbaixo=Math.min(1,M*anytime(observations.map(r=>r.referencia-r.acertos[x.id]),k));
+  x.objetivo.pContinuoAcaso=Math.min(1,M*anytime(complete.map(r=>r.objetivo.valores[x.id]-r.objetivo.referencia),1));
+  x.objetivo.pContinuoConsenso=Math.min(1,M*anytime(complete.map(r=>r.objetivo.valores[x.id]-r.objetivo.valores.consenso),1));
+  x.objetivo.pContinuoAbaixo=Math.min(1,M*anytime(complete.map(r=>r.objetivo.referencia-r.objetivo.valores[x.id]),1));
  }
  return {n:observations.length,observacoes:observations,ranking:stats,pendentes:pending,rejeitados:rejected};
 }
@@ -207,19 +254,24 @@ function autoCycle(m,records,input={},op={},progress=()=>{}){
  const evaluation=L.history(m,records,{antesDe:op.antesDe??null});
  const now=op.agora||new Date().toISOString();if(!Number.isFinite(Date.parse(now)))throw Error('Data de geração inválida.');
  const contiguous=rows.filter(r=>r.bloco===rows.at(-1)?.bloco).length;
- if(rows.length&&(!state.inicial||state.inicial.estado==='amostra-insuficiente'&&contiguous>=120)){
+ const initialCut=state.inicial?.particao?.teste?.[1];
+ const initialSignature=initialCut?L.history(m,rows,{antesDe:initialCut+1}).meta.assinatura:null;
+ if(rows.length&&(!state.inicial||state.inicial.protocoloAvaliacao!==EVALUATION||state.inicial.estado==='amostra-insuficiente'&&contiguous>=120||initialCut&&state.inicial.assinatura!==initialSignature)){
   state.inicial=retrospective(m,contiguous>=120?rows:rows.slice(-Math.min(contiguous,119)),o,progress);
+  state.inicial.protocoloAvaliacao=EVALUATION;
+  state.inicial.assinatura=L.history(m,rows).meta.assinatura;
   if(!state.decisoes.length)state.metodo=state.inicial.metodo;
  }
  const follow=prospective(m,evaluation.rows,state,o),count=follow.n;
- const lastDecision=state.decisoes.at(-1),ready=count>=60&&count>=(lastDecision?.n||30)+30;
+ const lastDecision=state.decisoes.at(-1),ready=count>=60&&(lastDecision?.protocoloAvaliacao!==EVALUATION||count>=(lastDecision?.n||30)+30);
  if(ready){
-  const candidates=follow.ranking.filter(x=>L.robust(x.acaso)&&L.robust(x.consenso)&&x.pContinuoAcaso<.05&&x.pContinuoConsenso<.05).sort((a,b)=>b.consenso.media-a.consenso.media);
+  const candidates=follow.ranking.filter(x=>qualified(x)&&x.pContinuoAcaso<.05&&x.pContinuoConsenso<.05&&x.objetivo.pContinuoAcaso<.05&&x.objetivo.pContinuoConsenso<.05).sort((a,b)=>b.objetivo.consenso.ic[0]-a.objetivo.consenso.ic[0]);
   const old=state.metodo||'consenso',chosen=candidates[0]?.id;
   const current=follow.ranking.find(x=>x.id===old),bad=current&&current.pContinuoAbaixo<.05&&current.acaso.ic?.[1]<0&&current.acaso.periodos.every(x=>x<0);
-  state.metodo=chosen||(bad?'consenso':old);
-  state.decisoes.push({n:count,concurso:follow.observacoes.at(-1).concurso,anterior:old,metodo:state.metodo,
-   acao:state.metodo===old?'MANTER':'ALTERAR',motivo:chosen?'Desempenho consistente nos concursos registrados antes do resultado, acima do controle e do consenso.':bad?'O método ficou persistentemente abaixo do controle. Retorno ao consenso.':'As diferenças continuam compatíveis com o acaso. Manter evita trocar por causa de um único concurso.'});
+  const badObjective=current&&current.objetivo.pContinuoAbaixo<.05&&current.objetivo.acaso.ic?.[1]<0&&current.objetivo.acaso.periodos.every(x=>x<0);
+  state.metodo=chosen||(bad||badObjective?'consenso':old);
+  state.decisoes.push({n:count,protocoloAvaliacao:EVALUATION,concurso:follow.observacoes.at(-1).concurso,anterior:old,metodo:state.metodo,
+   acao:state.metodo===old?'MANTER':'ALTERAR',motivo:chosen?'Melhora consistente de média e proximidade do prêmio máximo, acima do controle e do consenso em concursos futuros.':bad||badObjective?'O método ficou persistentemente abaixo do controle. Retorno ao consenso.':'As diferenças continuam compatíveis com o acaso. Manter evita trocar por causa de um único concurso.'});
  }
  const latest=rows.at(-1)?.concurso||0,requested=op.concursoAlvo??null;
  if(requested!==null&&(!Number.isSafeInteger(requested)||requested<=latest))throw Error('Escolha um concurso futuro.');
@@ -236,7 +288,7 @@ function autoCycle(m,records,input={},op={},progress=()=>{}){
  state.ultimaBase={ultimo:latest,assinatura:base.meta.assinatura,avaliacao:evaluation.meta.assinatura,n:base.meta.n};
  const decision=state.decisoes.at(-1)||{acao:'MANTER',metodo:state.metodo||'consenso',motivo:state.inicial?.motivo||'Aguardando resultados válidos para iniciar o acompanhamento.'};
  return {versao:VERSION,protocolo:PROTOCOL,modalidade:m,estado:state,base:base.meta,rodada:round,acompanhamento:follow,
-  inicial:state.inicial||null,decisao:decision,proximaRevisao:Math.max(60,30*(Math.floor(count/30)+1)),
+  inicial:state.inicial||null,decisao:decision,objetivo:goalReport(m,count?follow.observacoes:state.inicial?.observacoes?.slice(30)||[]),proximaRevisao:Math.max(60,30*(Math.floor(count/30)+1)),
   pacoteVirtual:round.testes.map(x=>({...x,nome:experts[x.id]})),custoVirtual:0,pool:p?.pool||null,
   limite:'Os testes virtuais não são apostas. Acertos históricos e convergência não representam probabilidade futura. Comparação principal: dezenas/colunas; complementos e retorno financeiro são informados separadamente.'};
 }
@@ -264,6 +316,6 @@ function autoRecommend(m,records,input={},op={},progress=()=>{}){
   motivo:cycle.rodada.metodo==='consenso'?'Combinação com maior concordância entre as dez estratégias do pacote virtual.':'Estratégia selecionada automaticamente: '+experts[cycle.rodada.metodo]+'.',
   evidencia:'Seleção e comparação automáticas; vantagem futura não demonstrada.',automatico:publicCycle,aviso:L.aviso};
 }
-Object.assign(L,{autoProtocol:PROTOCOL,autoExperts:experts,autoOptions:options,autoCycle,autoRecommend,autoProspective:prospective,autoAnytime:anytime});
+Object.assign(L,{autoProtocol:PROTOCOL,autoEvaluation:EVALUATION,autoObjective:objective,autoExperts:experts,autoOptions:options,autoCycle,autoRecommend,autoProspective:prospective,autoAnytime:anytime});
 if(typeof module!=='undefined'&&module.exports)module.exports=L;
 })(globalThis);
