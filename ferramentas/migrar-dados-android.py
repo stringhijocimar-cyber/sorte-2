@@ -162,7 +162,8 @@ if __name__ == '__main__':
     parser.add_argument('--arquivo', required=True, type=Path)
     parser.add_argument('--adb', default='adb')
     parser.add_argument('--serial')
-    parser.add_argument('--versao-transferencia', default=(Path(__file__).resolve().parents[1] / 'VERSION').read_text().strip())
+    versao_arquivo = Path(__file__).resolve().parents[1] / 'VERSION'
+    parser.add_argument('--versao-transferencia', default=versao_arquivo.read_text().strip() if versao_arquivo.is_file() else '4.26.0')
     args = parser.parse_args()
     try:
         if args.acao == 'validar':

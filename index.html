@@ -9679,7 +9679,7 @@ function acoes(){
   const fecharMenu=()=>{$('#gaveta').dataset.aberta='0';$('#btn-menu').setAttribute('aria-expanded','false');};
   document.querySelectorAll('[data-abrir-analitica]').forEach(b=>b.onclick=()=>{
     fecharMenu();if(S.tela!=='sugestoes')irParaTela('sugestoes');
-    const painel=$('#ux-analitica');if(painel){const details=painel.closest('details');if(details)details.open=true;painel.focus({preventScroll:true});painel.scrollIntoView({block:'start',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});}
+    const painel=$('#ux-analitica');if(painel){const details=painel.closest('details');if(details)details.open=true;painel.focus({preventScroll:true});painel.scrollIntoView({block:'start',behavior:'instant'});}
   });
   document.querySelectorAll('[data-ux-atualizar]').forEach(b=>b.onclick=()=>$('#r-caixa')?.click());
   document.querySelectorAll('[data-ux-historico]').forEach(b=>b.onclick=()=>{

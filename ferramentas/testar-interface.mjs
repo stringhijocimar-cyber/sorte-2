@@ -2216,7 +2216,7 @@ await js(`Guardar.gravar('jogos',[{id:'backup426',modalidade:'mega-sena',dezenas
 checar('backup tem entrada própria em Meus jogos e abrange todas as modalidades',await js(`return document.querySelector('[data-tela="backup"]').getAttribute('aria-selected')==='true'&&document.querySelector('#tela').textContent.includes('todas as modalidades')&&!document.querySelector('#backup-confirmar').checked&&document.querySelector('#backup-restaurar').disabled`));
 await frame418('.carta','LotoLab-4.26-Backup');
 await tocar('#tela .int-details > summary');
-await js(`window.backupValid426=JSON.stringify(await LL18Backup.create(localStorage));window.backupTarget426=document.querySelector('#backup-arquivo');Object.defineProperty(window.backupTarget426,'files',{configurable:true,value:[new File([window.backupValid426],'LotoLab-backup.json',{type:'application/json'})]});window.backupTarget426.dispatchEvent(new Event('change'));return true;`);
+await js(`return LL18Backup.create(localStorage).then(backup=>{window.backupValid426=JSON.stringify(backup);window.backupTarget426=document.querySelector('#backup-arquivo');Object.defineProperty(window.backupTarget426,'files',{configurable:true,value:[new File([window.backupValid426],'LotoLab-backup.json',{type:'application/json'})]});window.backupTarget426.dispatchEvent(new Event('change'));return true;});`);
 for(let i=0;i<40;i++){if(await js(`return document.querySelector('#backup-preview').textContent.includes('Cópia íntegra')`))break;await dormir(50);}
 checar('importação mostra quantidade e não libera restauração sem confirmação',await js(`return document.querySelector('#backup-preview').textContent.includes('1 jogos')&&document.querySelector('#backup-restaurar').disabled`));
 await tocar('#backup-confirmar');
