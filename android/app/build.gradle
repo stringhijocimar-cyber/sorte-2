@@ -8,8 +8,8 @@ android {
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         // versionCode sobe a cada versão Android publicada.
-        versionCode 35
-        versionName "4.25.0"
+        versionCode 36
+        versionName "4.25.1"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         resourceConfigurations += ['pt-rBR', 'en']
         aaptOptions {
@@ -18,9 +18,8 @@ android {
             ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
-    // Assinatura de release: lida de android/chave.properties, que fica FORA
-    // do controle de versão. Sem esse arquivo o projeto continua compilando —
-    // apenas assembleDebug funciona, e o release sai sem assinatura.
+    // A chave permanece fora do Git. A publicação usa assembleRelease;
+    // assembleDebug serve apenas à revisão e nunca é publicado como final.
     def arquivoChave = rootProject.file("chave.properties")
     def chave = new Properties()
     if (arquivoChave.exists()) {
@@ -40,6 +39,9 @@ android {
 
     buildTypes {
         release {
+            // Transferência única quando a chave antiga se perdeu: mesma
+            // assinatura do final, com acesso a dados por run-as para restaurar.
+            debuggable project.hasProperty('lotolabMigracao')
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
             if (arquivoChave.exists()) {
@@ -56,6 +58,16 @@ android {
 
     lint {
         abortOnError false
+    }
+}
+
+gradle.taskGraph.whenReady { graph ->
+    if (graph.allTasks.any { it.project == project &&
+            it.name in ['packageRelease', 'assembleRelease', 'bundleRelease'] }) {
+        def propriedades = rootProject.file('chave.properties')
+        if (!propriedades.exists()) {
+            throw new GradleException('Publicação bloqueada: configure a chave permanente em android/chave.properties. Não publique assembleDebug.')
+        }
     }
 }
 

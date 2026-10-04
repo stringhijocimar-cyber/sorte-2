@@ -1,136 +1,125 @@
-# Compila o APK e publica numa release para download direto.
-#
-# Por que aqui: o runner do GitHub já vem com Android SDK instalado, então não
-# é preciso instalar nada nem ter máquina configurada. O APK sai assinado com a
-# chave de depuração — serve para instalar no celular, não para a Play Store,
-# que exige a keystore do dono e essa não fica em repositório.
-
-name: Compilar APK
+# Apenas APKs assinados com a chave permanente podem virar releases.
+name: Publicar APK assinado
 
 on:
   workflow_dispatch:
     inputs:
       versao:
-        description: "Nome da versão (vira a tag da release, ex.: 6)"
-        required: true
-        default: "6"
+        description: "Versão do arquivo VERSION (deixe vazio para usar a atual)"
+        required: false
+        default: ""
+      incluir_migracao:
+        description: "Incluir APK de transferência para recuperar instalações com assinatura antiga"
+        type: boolean
+        default: true
+  workflow_call:
+    inputs:
+      incluir_migracao:
+        type: boolean
+        default: true
+    secrets:
+      LOTOLAB_KEYSTORE_BASE64:
+        required: false
+      LOTOLAB_STORE_PASSWORD:
+        required: false
+      LOTOLAB_KEY_ALIAS:
+        required: false
+      LOTOLAB_KEY_PASSWORD:
+        required: false
+      LOTOLAB_SIGNING_SHA256:
+        required: false
 
 permissions:
   contents: write
 
+concurrency:
+  group: lotolab-publicacao-assinada
+  cancel-in-progress: false
+
 jobs:
-  compilar:
+  publicar:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
+      - name: Conferir versão e preservar releases existentes
+        id: versao
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSAO_PEDIDA: ${{ inputs.versao }}
+        run: |
+          test "$GITHUB_REF" = refs/heads/main
+          versao=$(cat VERSION)
+          [[ "$versao" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          test -z "$VERSAO_PEDIDA" || test "$VERSAO_PEDIDA" = "$versao"
+          echo "numero=$versao" >> "$GITHUB_OUTPUT"
+          if gh release view "v$versao" >/dev/null 2>&1; then
+            echo 'Esta versão já está publicada; os arquivos serão preservados.'
+            echo 'publicar=false' >> "$GITHUB_OUTPUT"
+          else
+            echo 'publicar=true' >> "$GITHUB_OUTPUT"
+          fi
       - uses: actions/setup-node@v4
+        if: steps.versao.outputs.publicar == 'true'
         with:
-          node-version: "20"
-
+          node-version: "22"
+          cache: npm
       - uses: actions/setup-java@v4
+        if: steps.versao.outputs.publicar == 'true'
         with:
           distribution: temurin
           java-version: "17"
-
-      - name: Conferir que www/ está sincronizado com a raiz
-        # O erro clássico deste projeto: editar index.html e esquecer de copiar
-        # para www/, gerando um APK sem as mudanças. Falhar aqui é melhor que
-        # entregar um APK velho parecendo novo.
+      - name: Preparar a assinatura permanente
+        if: steps.versao.outputs.publicar == 'true'
+        env:
+          LOTOLAB_KEYSTORE_BASE64: ${{ secrets.LOTOLAB_KEYSTORE_BASE64 }}
+          LOTOLAB_STORE_PASSWORD: ${{ secrets.LOTOLAB_STORE_PASSWORD }}
+          LOTOLAB_KEY_ALIAS: ${{ secrets.LOTOLAB_KEY_ALIAS }}
+          LOTOLAB_KEY_PASSWORD: ${{ secrets.LOTOLAB_KEY_PASSWORD }}
+          LOTOLAB_SIGNING_SHA256: ${{ secrets.LOTOLAB_SIGNING_SHA256 }}
+        run: python3 ferramentas/preparar-assinatura.py
+      - name: Conferir os arquivos e preparar Android
+        if: steps.versao.outputs.publicar == 'true'
         run: |
           cmp index.html www/index.html
-          # O executor em segundo plano viaja no APK pela pasta www/. Um APK
-          # com o executor antigo confere com regra antiga e avisa errado no
-          # aparelho, sem nada vermelho na compilação.
+          cmp sw.js www/sw.js
+          diff -r ui www/ui
           diff -r runner www/runner
-
-      - name: Rodar a bateria antes de compilar
-        run: node ferramentas/testar-motor.mjs
-
-      - name: O XML do projeto Android é bem-formado
-        # Vale repetir aqui o que "Testes" já confere: quando falha, o Gradle
-        # gasta quarenta segundos para dizer a mesma coisa enterrada em duzentas
-        # linhas de stack trace de Java. Foi assim que a v26 morreu.
-        run: python3 ferramentas/conferir-xml-android.py
-
-      - name: Instalar dependências
-        run: npm install
-
-      - name: Sincronizar o projeto Android
-        run: npx cap sync android
-
-      - name: Compilar
+          node ferramentas/testar-motor.mjs
+          python3 ferramentas/conferir-xml-android.py
+          npm ci
+          npx cap sync android
+      - name: Compilar e conferir o APK final
+        if: steps.versao.outputs.publicar == 'true'
+        env:
+          LOTOLAB_SIGNING_SHA256: ${{ secrets.LOTOLAB_SIGNING_SHA256 }}
+          LOTOLAB_VERSAO: ${{ steps.versao.outputs.numero }}
         run: |
-          cd android
-          echo "sdk.dir=$ANDROID_HOME" > local.properties
-          ./gradlew assembleDebug --no-daemon
-
-      - name: Renomear com a versão
+          (cd android && ./gradlew testDebugUnitTest assembleRelease --no-daemon)
+          apk=android/app/build/outputs/apk/release/app-release.apk
+          bash ferramentas/conferir-assinatura.sh "$apk" final
+          python3 ferramentas/conferir-apk.py "$apk"
+          unzip -p "$apk" assets/public/index.html > /tmp/index-apk.html
+          cmp index.html /tmp/index-apk.html
+          cp "$apk" "LotoLab-$LOTOLAB_VERSAO.apk"
+      - name: Preparar o APK para a transferência única de dados
+        if: steps.versao.outputs.publicar == 'true' && inputs.incluir_migracao
+        env:
+          LOTOLAB_SIGNING_SHA256: ${{ secrets.LOTOLAB_SIGNING_SHA256 }}
+          LOTOLAB_VERSAO: ${{ steps.versao.outputs.numero }}
         run: |
-          cp android/app/build/outputs/apk/debug/app-debug.apk \
-             "LotoLab-v${{ inputs.versao }}.apk"
-          ls -la "LotoLab-v${{ inputs.versao }}.apk"
-
-      - name: Conferir o APK por dentro
-        # Esta conferência existe porque um defeito atravessou todas as outras:
-        # o app/build.gradle não aplicava o capacitor.build.gradle, e os plugins
-        # nativos compilavam sem nunca virar dependência do :app. As classes não
-        # chegavam ao APK, o capacitor.plugins.json continuava listando-as, e o
-        # Capacitor falhava calado no aparelho.
-        #
-        # Testar o código não pegava. Testar a build não pegava, porque a build
-        # passava. Só abrir o arquivo que vai para o celular pega.
-        run: python3 ferramentas/conferir-apk.py "LotoLab-v${{ inputs.versao }}.apk"
-
-      - name: Conferir que o APK tem a versão certa do app
-        # Sem isto, um APK compilado de cache antigo passaria por novo.
-        run: |
-          esperado=$(wc -c < index.html)
-          dentro=$(unzip -p "LotoLab-v${{ inputs.versao }}.apk" assets/public/index.html | wc -c)
-          echo "index.html no repositório: $esperado bytes"
-          echo "index.html dentro do APK : $dentro bytes"
-          test "$esperado" = "$dentro"
-
-      - name: Publicar a release
+          (cd android && ./gradlew assembleRelease -PlotolabMigracao --no-daemon)
+          apk=android/app/build/outputs/apk/release/app-release.apk
+          bash ferramentas/conferir-assinatura.sh "$apk" transferencia
+          python3 ferramentas/conferir-apk.py "$apk"
+          cp "$apk" "LotoLab-$LOTOLAB_VERSAO-transferencia.apk"
+      - name: Publicar os arquivos verificados
+        if: steps.versao.outputs.publicar == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
+          LOTOLAB_VERSAO: ${{ steps.versao.outputs.numero }}
         run: |
-          # --target no COMMIT que foi compilado, e não no branch padrão.
-          #
-          # Sem isto, `gh release create` cria a tag apontando para o branch
-          # padrão do repositório quando a tag ainda não existe. Numa build
-          # disparada de outro branch, o resultado é uma release cujo APK veio
-          # de um código e cujo código-fonte anexado é outro — foi exatamente o
-          # que aconteceu com a primeira v4.2.0-stat: o binário era a edição
-          # estatística e a tag apontava para o main, a edição completa.
-          #
-          # Quem baixa o zip da release e quem baixa o .apk levava coisas
-          # diferentes, sem nada na página avisando.
-          #
-          # O nome sai do appName do capacitor.config.json em vez de ser fixo,
-          # porque cada edição tem o seu: assim a release nasce chamando o que
-          # ela é, sem depender de alguém lembrar de renomear depois.
-          nome=$(node -p "require('./capacitor.config.json').appName")
-          # A versão do PRODUTO vem do arquivo VERSION. O parâmetro `versao`
-          # serve à tag e ao nome do arquivo, onde o sufixo de edição precisa
-          # aparecer para não colidir — mas "LotoLab Estatístico 4.2.0-stat"
-          # não é o nome de nada: a edição já está no nome do app.
-          versaoDoProduto=$(cat VERSION)
-          # Repetível: se a tag já existe de uma tentativa anterior, ela é
-          # removida antes. Release meio publicada é pior que nenhuma.
-          gh release delete "v${{ inputs.versao }}" --yes --cleanup-tag 2>/dev/null || true
-          gh release create "v${{ inputs.versao }}" \
-            "LotoLab-v${{ inputs.versao }}.apk" \
-            --target "$GITHUB_SHA" \
-            --title "$nome $versaoDoProduto" \
-            --notes "APK de depuração, para instalar no celular.
-
-          Baixe o arquivo .apk abaixo e toque nele. O Android vai pedir para
-          permitir instalação de fontes desconhecidas.
-
-          IMPORTANTE: desinstale a versão anterior do LotoLab antes. A
-          assinatura é diferente e o Android recusa instalar por cima — os
-          jogos salvos na versão antiga se perdem nessa troca.
-
-          Este app NÃO prevê resultados e NÃO aumenta a chance de acerto.
-          Sorteios honestos são eventos independentes."
+          sha256sum LotoLab-*.apk > "LotoLab-$LOTOLAB_VERSAO.sha256"
+          gh release create "v$LOTOLAB_VERSAO" LotoLab-*.apk "LotoLab-$LOTOLAB_VERSAO.sha256"             --target "$GITHUB_SHA" --latest --title "LotoLab $LOTOLAB_VERSAO"             --notes-file "docs/release-$LOTOLAB_VERSAO.md"
+      - name: Apagar os arquivos privados de assinatura do runner
+        if: always()
+        run: rm -f android/chave.properties android/lotolab-release.jks
