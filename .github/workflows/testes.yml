@@ -62,6 +62,7 @@ jobs:
           node --test ferramentas/testar-laboratorio.mjs
           node --test ferramentas/testar-recomendacao.mjs
           node --test ferramentas/testar-automatico.mjs
+          node --test ferramentas/testar-backup.mjs
 
       - name: Metas, orçamento, cobertura e conferência colorida
         run: |
@@ -201,15 +202,15 @@ jobs:
           cmp ui/lab-auto.js /tmp/automatico-apk.js
           unzip -p android/app/build/outputs/apk/debug/app-debug.apk assets/public/ui/lab-auto-ui.js > /tmp/automatico-ui-apk.js
           cmp ui/lab-auto-ui.js /tmp/automatico-ui-apk.js
-          for asset in ui/lab-check.js ui/conferencia-v4-22.css ui/acompanhamento-v4-25.css runner/segundo-plano.js; do
+          for asset in ui/lab-check.js ui/lab-backup.js ui/conferencia-v4-22.css ui/acompanhamento-v4-25.css runner/segundo-plano.js; do
             unzip -p android/app/build/outputs/apk/debug/app-debug.apk "assets/public/$asset" > /tmp/conferencia-apk
             cmp "$asset" /tmp/conferencia-apk
           done
-          cp android/app/build/outputs/apk/debug/app-debug.apk LotoLab-4.25.1-preview.apk
+          cp android/app/build/outputs/apk/debug/app-debug.apk LotoLab-4.26.0-preview.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: LotoLab-4.25.1-preview
-          path: LotoLab-4.25.1-preview.apk
+          name: LotoLab-4.26.0-preview
+          path: LotoLab-4.26.0-preview.apk
           retention-days: 14
 
       - name: Preparar chave temporária somente para testar a compilação de release

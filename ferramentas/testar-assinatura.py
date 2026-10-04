@@ -220,7 +220,7 @@ class RelatorioAssinatura(unittest.TestCase):
         signer = self.sdk / 'apksigner'
         signer.write_text("#!/bin/sh\nprintf '%s\\n' " + shlex.quote('\n'.join(linhas)) + '\n')
         signer.chmod(0o700)
-        badging = "package: name='app.lotolab.jogos' versionCode='36' versionName='4.25.1'"
+        badging = "package: name='app.lotolab.jogos' versionCode='37' versionName='4.26.0'"
         if debug:
             badging += '\napplication-debuggable'
         aapt = self.sdk / 'aapt'
