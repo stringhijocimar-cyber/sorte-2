@@ -84,8 +84,20 @@ jobs:
           printf '%s\n' 'Candidatos de compilação: não instalar nem publicar antes de assinar com a chave permanente e conferir o certificado.' > compilacao/LEIA-ME.txt
       - uses: actions/upload-artifact@v4
         with:
-          name: LotoLab-compilacao-assinatura-local
-          path: compilacao/
+          name: LotoLab-candidatos-assinatura-local
+          path: |
+            compilacao/*.apk
+            compilacao/VERSION
+            compilacao/assinatura.sha256
+            compilacao/commit.txt
+            compilacao/compilacao.sha256
+            compilacao/LEIA-ME.txt
+          retention-days: 30
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: LotoLab-ferramentas-assinatura-local
+          path: compilacao/sdk/
           retention-days: 30
           if-no-files-found: error
       - name: Apagar arquivos privados da assinatura de teste
