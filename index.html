@@ -2439,7 +2439,8 @@ function audRenderResultado(r){
       <p class="int-help">Base ${esc(r.base.assinatura)} · código ${esc(r.semente)}. A avaliação usa os últimos ${r.base.usados} concursos consecutivos disponíveis. O custo compara os volantes a preços atuais; não calcula lucro.</p></details>
     <button class="acao secundaria" id="aud-exportar">Exportar avaliação</button><div id="aud-exportacao" role="status"></div></div>`;
 }
-let audTrabalho=0;
+let audTrabalho=0,audPendente=null;
+const audEmAndamento=()=>!!audPendente&&audPendente.token===audTrabalho&&audPendente.modalidade===S.modalidade&&S.tela==='sugestoes'&&audPendente.saida.isConnected;
 function audRenderPainel(m){
   const base=audBase(m,S.resultados),r=(S.auditorias||{})[m];
   const atual=r&&r.base.assinatura===intHistorico(m,base.consecutivos.slice(-r.base.usados)).assinatura;
@@ -2477,6 +2478,9 @@ function audLigarExportacao(m){
 }
 function audLigarAcoes(){
   const b=$('#aud-iniciar');if(!b)return;const m=S.modalidade;
+  // A entrega automática religa ações da tela. Não libera os critérios de
+  // uma avaliação que já começou nem substitui seu botão durante o cálculo.
+  if(audEmAndamento())return;
   audLigarExportacao(m);
   const requisitos=()=>{
     const ampliado=$('#aud-rigor').value==='ampliado',selecao=ampliado?90:20,teste=Number($('#aud-concursos').value),n=audBase(m,S.resultados).consecutivos.length;
@@ -2487,11 +2491,17 @@ function audLigarAcoes(){
   b.onclick=()=>{
     const saida=$('#aud-resultado'),token=++audTrabalho;
     const tarefa=intAuditar(m,S.resultados.slice(),{tam:Number($('#int-tam').value),concursos:Number($('#aud-concursos').value),metrica:$('#aud-metrica').value,rigor:$('#aud-rigor').value,semente:$('#int-semente').value||'lotolab-4.13'});
+    audPendente={token,modalidade:m,saida};
     b.disabled=true;
-    const controles=['#aud-rigor','#aud-concursos','#aud-metrica'];controles.forEach(s=>$(s).disabled=true);
-    const liberar=()=>{controles.forEach(s=>$(s).disabled=false);requisitos();};
+    const controles=['#aud-rigor','#aud-concursos','#aud-metrica'].map(s=>$(s));controles.forEach(el=>el.disabled=true);
+    const liberar=()=>{
+      if(audPendente?.token===token)audPendente=null;
+      if(!saida.isConnected)return;
+      controles.forEach(el=>el.disabled=false);requisitos();
+      if(typeof LL18Auto!=='undefined')void LL18Auto.prepare(m);
+    };
     const passo=()=>{
-      if(token!==audTrabalho||S.modalidade!==m||S.tela!=='sugestoes'||!saida.isConnected)return;
+      if(token!==audTrabalho||S.modalidade!==m||S.tela!=='sugestoes'||!saida.isConnected){if(audPendente?.token===token)audPendente=null;return;}
       try{const r=tarefa.next();if(r.done){
         (S.auditorias||(S.auditorias={}))[m]=r.value;
         S.audMemoria=audRegistrar(S.audMemoria,r.value);S.audMemoriaFalha=!Guardar.gravar('audMemoria',S.audMemoria);
@@ -6887,7 +6897,7 @@ const LL18_BRIDGE={
   native:()=>typeof Capacitor!=='undefined'&&Capacitor.isNativePlatform?.(),
   fetchJson:async url=>{const r=await buscarComLimite(url,12000);if(!r.ok)throw Error('Fonte respondeu HTTP '+r.status);return r.json();},
   records:()=>S.resultados,currentMode:()=>S.modalidade,
-  currentScreen:()=>S.tela,busy:()=>!!intPendente,
+  currentScreen:()=>S.tela,busy:()=>!!intPendente||audEmAndamento(),
   options:m=>{const o=intConfigDaTela(m);if(o.concurso&&S.intLotes[m]?.concursoAlvo===Number(o.concurso)&&Number(o.concurso)<=(LL18.history(m,S.resultados).meta.ultimo||0))o.concurso="";const formato=LL18.randomTicket(m,LL18.rng("formato:"+m));formato.dezenas=universo(m).slice(0,o.tam);
     const trevos=MODALIDADES[m].trevos?lerTrevos(o.trevos):null;
     return {formato,quantidade:o.quantidade,orcamento:o.orcamento,janela:o.janela,fixas:intDezenas(o.fixas,m),excluidas:intDezenas(o.excluidas,m),concursoAlvo:o.concurso===""?null:Number(o.concurso),...(trevos?.length?{trevosFixos:trevos}:{})};},
@@ -6895,7 +6905,9 @@ const LL18_BRIDGE={
     if(S.tela==="sugestoes"&&S.modalidade===m){
       // Atualiza só a saída: preserva os campos, foco e ancoragem da rolagem.
       const anchor=$('.auto-settings'),before=anchor?.getBoundingClientRect();
-      const preserve=before&&scrollY>0&&before.top<innerHeight&&before.bottom>0;
+      // Também preserva o lugar de quem está nos diagnósticos abaixo dos
+      // ajustes, mesmo quando os ajustes já saíram pelo topo da tela.
+      const preserve=before&&scrollY>0&&before.top<innerHeight;
       const el=$('#int-lote');if(el)el.innerHTML=intRenderLote(r);
       const status=$('#auto-status');if(status)status.textContent='';
       const alvo=$('#int-concurso');if(alvo&&document.activeElement!==alvo)alvo.value=intConfig(m).concurso;

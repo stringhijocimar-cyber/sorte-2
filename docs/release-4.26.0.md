@@ -9,3 +9,5 @@ São comparados os mesmos jogos congelados antes de cada concurso. A escolha exi
 Os APKs finais usam a assinatura permanente verificada. Instalações antigas com outro certificado precisam da [migração única com backup](atualizacoes-android.md). **Não desinstale a versão antiga antes de verificar o backup.** O APK `transferencia` destina-se apenas a essa migração; após conferir os dados, instale o APK final por cima.
 
 Não foi demonstrado aumento da chance de prêmio. As novas medidas avaliam hipóteses e descrevem os acertos registrados. A migração e o seletor de arquivos ainda precisam da confirmação no aparelho do usuário.
+
+Uma entrega automática de sugestões preserva a posição de leitura dos diagnósticos. Durante uma avaliação manual, os critérios permanecem bloqueados e a entrega automática aguarda o término do cálculo.

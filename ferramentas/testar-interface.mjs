@@ -293,7 +293,7 @@ checar("nenhuma tela ficou sem porta na navegação",
     return orfas.length === 0 ? true : 'órfãs: ' + orfas.join(', ');
   `) === true);
 checar("as telas da edição continuam alcançáveis",
-  await js(`return SECOES.reduce((n,s)=>n+s.telas.length,0)`) === (EDICAO.nome === "completa" ? 15 : 14),
+  await js(`return SECOES.reduce((n,s)=>n+s.telas.length,0)`) === (EDICAO.nome === "completa" ? 16 : 15),
   String(await js(`return SECOES.reduce((n,s)=>n+s.telas.length,0)`)));
 
 /* ---------- percorrer a navegação ----------
@@ -1957,6 +1957,7 @@ await js(`document.querySelector('#aud-concursos').value='30';document.querySele
 await tocar('#tela [data-abrir-analitica]');
 await tocar('#aud-iniciar');
 checar('os critérios ficam fixos durante a análise',await js(`return document.querySelector('#aud-rigor').disabled&&document.querySelector('#aud-metrica').disabled`));
+checar('religar ações preserva critérios e suspende entrega automática durante a avaliação',await js(`intLigarAcoes();return LL18_BRIDGE.busy()&&document.querySelector('#aud-iniciar').disabled&&document.querySelector('#aud-rigor').disabled&&document.querySelector('#aud-metrica').disabled`));
 let ampliado416=false;
 for(let i=0;i<225;i++){
   ampliado416=await js(`return !!S.auditorias['mega-sena']&&!document.querySelector('#aud-iniciar').disabled`);
@@ -2226,6 +2227,7 @@ await js(`S.modalidade='mega-sena';S.resultados=${JSON.stringify(rows419)};S.int
 for(let i=0;i<200;i++){if(await js(`return !!document.querySelector('.auto-goal')`))break;await dormir(100);}
 checar('objetivo de acertos altos está conectado à recomendação principal',await js(`return document.querySelector('.auto-goal').textContent.includes('FOCO NO PRÊMIO MÁXIMO')&&S.intLotes['mega-sena'].laboratorio.automatico.objetivo.protocolo==='objetivo-426-1'`));
 await frame418('.auto-goal','LotoLab-4.26-Objetivo');
+checar('entrega automática mantém a posição de leitura nos diagnósticos abaixo dos ajustes',await js(`const pack=document.querySelector('.auto-pack');pack.open=!pack.open;const p=document.querySelector('#ux-analitica');p.closest('details').open=true;p.scrollIntoView({block:'start',behavior:'instant'});const before=p.getBoundingClientRect().top;LL18_BRIDGE.deliver('mega-sena',S.intLotes['mega-sena'].laboratorio,S.resultados.slice());return Math.abs(before-p.getBoundingClientRect().top)<2;`));
 
 /* ---------- S. Formatos especiais no motor integrado 4.20 ---------- */
 secao('S. Recomendação única nos formatos especiais');
