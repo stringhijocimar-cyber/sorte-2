@@ -42,14 +42,14 @@ test('correções de resultado substituem a observação, preservando o pacote o
  assert.deepEqual(c.estado.rodadas[0],a.rodada);
 });
 test('validação não acessa o futuro e a estratégia é congelada antes do teste',()=>{
- const rows=history(120),a=L.autoCycle(m,rows,{}, {agora:now});
- const changed=rows.map((r,i)=>i>=90?{...r,dezenas:[1,2,3,4,5,6]}:r);
+ const rows=history(180),a=L.autoCycle(m,rows,{}, {agora:now});
+ const changed=rows.map((r,i)=>i>=120?{...r,dezenas:[1,2,3,4,5,6]}:r);
  const b=L.autoCycle(m,changed,{}, {agora:now});
  assert.deepEqual(a.inicial.validacao,b.inicial.validacao);
  assert.equal(a.inicial.selecao,b.inicial.selecao);
- assert.deepEqual(a.inicial.observacoes.slice(0,30),b.inicial.observacoes.slice(0,30));
+ assert.deepEqual(a.inicial.observacoes.slice(0,60),b.inicial.observacoes.slice(0,60));
  assert.ok(a.inicial.observacoes.every(x=>x.geradoAte<x.concurso));
- assert.equal(a.inicial.congeladoAte,90);
+ assert.equal(a.inicial.congeladoAte,120);
 });
 test('orçamento, fixas e exclusões valem para todos os jogos; formato não mistura evidência',()=>{
  const rows=history(40),op={agora:now,fixas:[1,2],excluidas:[7,8],quantidade:5,orcamento:12};
@@ -70,9 +70,24 @@ test('registro criado depois da data do sorteio não vira evidência prospectiva
  assert.equal(b.acompanhamento.n,0);assert.deepEqual(b.acompanhamento.rejeitados,[41]);
 });
 test('lacunas impedem calibração e base ampliada a libera automaticamente',()=>{
- const rows=history(120),a=L.autoCycle(m,rows.filter(x=>x.concurso!==90),{}, {agora:now});
+ const rows=history(180),a=L.autoCycle(m,rows.filter(x=>x.concurso!==120),{}, {agora:now});
  assert.equal(a.inicial.estado,'amostra-insuficiente');
  const b=L.autoCycle(m,rows,a.estado,{agora:now});assert.equal(b.inicial.estado,'concluido');
+});
+test('etapas iniciais têm resolução para Holm sem reutilizar a seleção no teste',()=>{
+ const rows=history(190),small=L.autoCycle(m,rows.slice(0,179),{}, {agora:now});
+ assert.equal(small.inicial.estado,'amostra-insuficiente');assert.equal(small.inicial.necessarios,180);
+ const initial=L.autoCycle(m,rows.slice(0,180),small.estado,{agora:now}).inicial;
+ assert.equal(initial.observacoes.length,120);
+ assert.equal(initial.particao.validacao[1]+1,initial.particao.teste[0]);
+ for(const x of [...initial.validacao,...initial.teste]){
+  assert.equal(x.n,60);assert.equal(x.objetivo.n,60);
+  assert.equal(x.acaso.permutacoesExatas,4096);
+  assert.ok(40*2/x.acaso.permutacoesExatas<.05,'um sinal máximo não é impedido pela resolução do teste');
+ }
+ const a=L.autoCycle(m,rows.slice(0,180),{}, {agora:now});
+ const extended=L.autoCycle(m,rows,a.estado,{agora:now});
+ assert.deepEqual(extended.inicial,a.inicial,'estender o histórico conserva a calibração original');
 });
 for(const mode of Object.keys(L.rules))test(mode+': pacote virtual válido e independente de compra',()=>{
  const c=L.cfg(mode),r=L.autoCycle(mode,[],{}, {agora:now});
@@ -213,11 +228,11 @@ test('objetivo completo da +Milionária exige os trevos; ausências não viram z
 });
 
 test('avaliação nova preserva rodadas antigas e reavalia uma correção sem mudar a seleção com dados futuros',()=>{
- const rows=history(120),a=L.autoCycle(m,rows,{}, {agora:now}),state=structuredClone(a.estado);
+ const rows=history(180),a=L.autoCycle(m,rows,{}, {agora:now}),state=structuredClone(a.estado);
  delete state.inicial.protocoloAvaliacao;
  const upgraded=L.autoCycle(m,rows,state,{agora:now});
  assert.deepEqual(upgraded.rodada,a.rodada);assert.equal(upgraded.estado.rodadas.length,1);
- const corrected=rows.map(r=>r.concurso===110?{...r,dezenas:[1,2,3,4,5,6]}:r);
+ const corrected=rows.map(r=>r.concurso===170?{...r,dezenas:[1,2,3,4,5,6]}:r);
  const b=L.autoCycle(m,corrected,upgraded.estado,{agora:now});
  assert.notEqual(b.inicial.assinatura,upgraded.inicial.assinatura);
  assert.deepEqual(b.inicial.validacao,upgraded.inicial.validacao);

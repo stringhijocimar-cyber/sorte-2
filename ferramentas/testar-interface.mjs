@@ -2226,7 +2226,7 @@ for(let i=0;i<40;i++){if(await js(`return !!document.querySelector('#backup-prev
 checar('arquivo truncado bloqueia restauração e preserva o jogo fixo',await js(`return document.querySelector('#backup-restaurar').disabled&&Guardar.ler('jogos',[])[0].id==='backup426'`));
 await js(`S.modalidade='mega-sena';S.resultados=${JSON.stringify(rows419)};S.intLotes={};irParaTela('sugestoes',{lateral:true});LL18Auto.historyChanged();return true;`);
 for(let i=0;i<200;i++){if(await js(`return !!document.querySelector('.auto-goal')`))break;await dormir(100);}
-checar('objetivo de acertos altos está conectado à recomendação principal',await js(`return document.querySelector('.auto-goal').textContent.includes('FOCO NO PRÊMIO MÁXIMO')&&S.intLotes['mega-sena'].laboratorio.automatico.objetivo.protocolo==='objetivo-426-1'`));
+checar('objetivo de acertos altos está conectado à recomendação principal',await js(`return document.querySelector('.auto-goal').textContent.includes('FOCO NO PRÊMIO MÁXIMO')&&S.intLotes['mega-sena'].laboratorio.automatico.objetivo.protocolo===LL18.autoEvaluation`));
 await frame418('.auto-goal','LotoLab-4.26-Objetivo');
 checar('entrega automática mantém a posição de leitura nos diagnósticos abaixo dos ajustes',await js(`const pack=document.querySelector('.auto-pack');pack.open=!pack.open;const p=document.querySelector('#ux-analitica');p.closest('details').open=true;p.scrollIntoView({block:'start',behavior:'instant'});const before=p.getBoundingClientRect().top;LL18_BRIDGE.deliver('mega-sena',S.intLotes['mega-sena'].laboratorio,S.resultados.slice());return Math.abs(before-p.getBoundingClientRect().top)<2;`));
 

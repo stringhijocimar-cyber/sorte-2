@@ -4,6 +4,8 @@ A decisão automática passa a exigir melhora na média de acertos e na proximid
 
 São comparados os mesmos jogos congelados antes de cada concurso. A escolha exige confirmação no teste separado, três períodos positivos, resistência à remoção do melhor resultado, correção conjunta de 40 comparações e controle para consultas repetidas. Corrigir um resultado atualiza sua apuração e invalida a calibração inicial quando necessário. A atualização conserva os registros originais do laboratório.
 
+A avaliação inicial usa 60 concursos de seleção e outros 60 de teste, após pelo menos 60 para treino. As etapas mais longas permitem confirmar um sinal forte com a correção de 40 comparações; a janela anterior de 30 por etapa não tinha resolução suficiente. Dados insuficientes não interrompem a criação e conferência do pacote virtual.
+
 **Meus jogos → Backup** salva jogos de todas as modalidades, conferências, regras de jogo fixo/teimosinha, resultados, preferências e análises. No Android, um seletor permite escolher o arquivo e a gravação é conferida por leitura. A importação verifica SHA-256 e estrutura antes de escrever; uma falha de gravação tenta reverter ao estado anterior. Guarde uma cópia externa antes de restaurar.
 
 Os APKs finais usam a assinatura permanente verificada. Instalações antigas com outro certificado precisam da [migração única com backup](atualizacoes-android.md). **Não desinstale a versão antiga antes de verificar o backup.** O APK `transferencia` destina-se apenas a essa migração; após conferir os dados, instale o APK final por cima.

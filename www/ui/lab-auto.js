@@ -3,7 +3,7 @@
 'use strict';
 const L=root.LL18||(typeof require==='function'?require('./lab-recommendation.js'):null);
 // O protocolo dos bilhetes permanece igual: rodadas antigas continuam congeladas.
-const PROTOCOL='auto-421-1', EVALUATION='objetivo-426-1', VERSION='4.26.0', POOL=96, REFERENCES=32;
+const PROTOCOL='auto-421-1', EVALUATION='objetivo-426-2', VERSION='4.26.0', POOL=96, REFERENCES=32;
 const experts={
  equilibrio:'Equilíbrio de soma e paridade', frequencia:'Frequência com suavização bayesiana',
  recencia:'Frequência recente ponderada', atraso:'Atrasos como hipótese',
@@ -188,19 +188,22 @@ function goalReport(m,obs){
  })};
 }
 function retrospective(m,rows,o,progress){
- if(rows.length<120)return {estado:'amostra-insuficiente',metodo:'consenso',n:0,necessarios:120,observacoes:[],motivo:'A base ainda não permite separar 60 concursos de avaliação. O pacote virtual começa sem escolher um vencedor histórico.'};
- const start=rows.length-60,training=rows.slice(0,start),b=model(m,training),obs=[];let choice='consenso',validation=[];
+ // Com só seis blocos de cinco concursos, o menor p bilateral é 2/64,
+ // insuficiente para Holm em 40 comparações. Doze blocos em cada etapa
+ // permitem confirmar um sinal forte sem relaxar o controle de falsos positivos.
+ if(rows.length<180)return {estado:'amostra-insuficiente',metodo:'consenso',n:0,necessarios:180,nSelecao:60,observacoes:[],motivo:'A base ainda não permite separar 60 concursos de seleção e 60 de teste, além de 60 anteriores para treino. O pacote virtual começa sem escolher um vencedor histórico.'};
+ const start=rows.length-120,training=rows.slice(0,start),b=model(m,training),obs=[];let choice='consenso',validation=[];
  for(let i=start;i<rows.length;i++){
-  if(i===start+30){validation=statistics(obs,'validacao:'+o.profile+':'+rows[start].concurso);choice=winner(validation);}
+  if(i===start+60){validation=statistics(obs,'validacao:'+o.profile+':'+rows[start].concurso);choice=winner(validation);}
   const p=proposal(b,o,rows[i].concurso),r={testes:p.tests,consenso:p.consensus,principal:p.consensus,semente:p.seed,geradoAte:rows[i-1].concurso};
   obs.push(observation(m,r,rows[i],o));add(b,rows[i]);
-  progress({etapa:'Comparando estratégias automaticamente',feitos:i-start+1,total:60});
+  progress({etapa:'Comparando estratégias automaticamente',feitos:i-start+1,total:120});
  }
- const test=statistics(obs.slice(30),'teste:'+o.profile+':'+rows[start+30].concurso),selected=test.find(x=>x.id===choice);
+ const test=statistics(obs.slice(60),'teste:'+o.profile+':'+rows[start+60].concurso),selected=test.find(x=>x.id===choice);
  const confirmed=choice!=='consenso'&&selected&&qualified(selected);
- return {estado:'concluido',metodo:confirmed?choice:'consenso',n:60,observacoes:obs,
-  selecao:choice,validacao:validation,teste:test,congeladoAte:rows[start+29].concurso,
-  particao:{treino:[rows[0].concurso,rows[start-1].concurso],validacao:[rows[start].concurso,rows[start+29].concurso],teste:[rows[start+30].concurso,rows.at(-1).concurso]},
+ return {estado:'concluido',metodo:confirmed?choice:'consenso',n:120,nSelecao:60,observacoes:obs,
+  selecao:choice,validacao:validation,teste:test,congeladoAte:rows[start+59].concurso,
+  particao:{treino:[rows[0].concurso,rows[start-1].concurso],validacao:[rows[start].concurso,rows[start+59].concurso],teste:[rows[start+60].concurso,rows.at(-1).concurso]},
   motivo:confirmed?'Uma estratégia superou o controle e o consenso em média e proximidade do prêmio máximo, na validação e no teste separado. A escolha continua exploratória até os próximos sorteios.':'Nenhuma estratégia confirmou melhora de média e proximidade do prêmio máximo nas duas etapas. Mantido o consenso; os próximos concursos serão avaliados automaticamente.'};
 }
 // Mistura de supermartingales de Hoeffding para diferenças limitadas a [-1,1].
@@ -256,8 +259,8 @@ function autoCycle(m,records,input={},op={},progress=()=>{}){
  const contiguous=rows.filter(r=>r.bloco===rows.at(-1)?.bloco).length;
  const initialCut=state.inicial?.particao?.teste?.[1];
  const initialSignature=initialCut?L.history(m,rows,{antesDe:initialCut+1}).meta.assinatura:null;
- if(rows.length&&(!state.inicial||state.inicial.protocoloAvaliacao!==EVALUATION||state.inicial.estado==='amostra-insuficiente'&&contiguous>=120||initialCut&&state.inicial.assinatura!==initialSignature)){
-  state.inicial=retrospective(m,contiguous>=120?rows:rows.slice(-Math.min(contiguous,119)),o,progress);
+ if(rows.length&&(!state.inicial||state.inicial.protocoloAvaliacao!==EVALUATION||state.inicial.estado==='amostra-insuficiente'&&contiguous>=180||initialCut&&state.inicial.assinatura!==initialSignature)){
+  state.inicial=retrospective(m,contiguous>=180?rows:rows.slice(-Math.min(contiguous,179)),o,progress);
   state.inicial.protocoloAvaliacao=EVALUATION;
   state.inicial.assinatura=L.history(m,rows).meta.assinatura;
   if(!state.decisoes.length)state.metodo=state.inicial.metodo;
@@ -288,7 +291,7 @@ function autoCycle(m,records,input={},op={},progress=()=>{}){
  state.ultimaBase={ultimo:latest,assinatura:base.meta.assinatura,avaliacao:evaluation.meta.assinatura,n:base.meta.n};
  const decision=state.decisoes.at(-1)||{acao:'MANTER',metodo:state.metodo||'consenso',motivo:state.inicial?.motivo||'Aguardando resultados válidos para iniciar o acompanhamento.'};
  return {versao:VERSION,protocolo:PROTOCOL,modalidade:m,estado:state,base:base.meta,rodada:round,acompanhamento:follow,
-  inicial:state.inicial||null,decisao:decision,objetivo:goalReport(m,count?follow.observacoes:state.inicial?.observacoes?.slice(30)||[]),proximaRevisao:Math.max(60,30*(Math.floor(count/30)+1)),
+  inicial:state.inicial||null,decisao:decision,objetivo:goalReport(m,count?follow.observacoes:state.inicial?.observacoes?.slice(state.inicial.nSelecao)||[]),proximaRevisao:Math.max(60,30*(Math.floor(count/30)+1)),
   pacoteVirtual:round.testes.map(x=>({...x,nome:experts[x.id]})),custoVirtual:0,pool:p?.pool||null,
   limite:'Os testes virtuais não são apostas. Acertos históricos e convergência não representam probabilidade futura. Comparação principal: dezenas/colunas; complementos e retorno financeiro são informados separadamente.'};
 }
