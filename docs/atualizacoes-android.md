@@ -4,7 +4,15 @@ A 4.24 e a 4.25 foram publicadas com certificados de depuração diferentes. A c
 
 A correção usa uma chave permanente para todos os próximos APKs finais, conserva o identificador `app.lotolab.jogos` e aumenta o `versionCode`. A publicação verifica o certificado antes de disponibilizar os arquivos. Um APK de revisão nunca vira release final. Releases existentes não são apagadas nem substituídas.
 
-## Cadastrar a chave permanente uma única vez
+## APKs assinados fora do GitHub
+
+A 4.26.0 também pode ser publicada sem cadastrar a chave no GitHub: **Preparar APK para assinatura local** compila os dois candidatos de release com uma chave de teste descartável, executa os testes nativos e separa os APKs das ferramentas oficiais de assinatura. Esses candidatos não devem ser instalados ou publicados.
+
+`ferramentas/assinar-apk-local.py` usa o backup privado em um computador com Python 3 e JDK 17. Confere o commit da compilação, os hashes, as fontes e o certificado permanente antes de assinar. O resultado final desativa a depuração; o arquivo de transferência a habilita somente para a migração. A chave e as senhas permanecem fora do repositório e dos artefatos públicos.
+
+Os dois APKs assinados ficam em `distribuicao/4.26.0/`, junto dos hashes e da proveniência. **Publicar APK com assinatura permanente conferida** repete as verificações de integridade, certificado, identidade, fontes e plugins antes de criar a release. Essa publicação não depende dos cinco Secrets abaixo. O cadastro continua disponível para automatizar a assinatura de novas versões no GitHub.
+
+## Cadastrar a chave permanente uma única vez para assinar no GitHub
 
 Uma chave permanente foi criada e seu certificado está fixado em `android/assinatura.sha256`. É necessário ser administrador do repositório. Extraia o backup privado **LotoLab-Assinatura-Permanente.zip**. Em um computador com Python 3, JDK 17 e GitHub CLI, execute:
 
@@ -17,7 +25,7 @@ O comando verifica a chave contra o certificado fixado e cadastra cinco Secrets 
 
 Se a chave já tiver sido criada em outro computador, transfira o diretório privado completo e use `--diretorio CAMINHO`. Não gere outra chave para um app já publicado com assinatura permanente.
 
-Os Secrets são `LOTOLAB_KEYSTORE_BASE64`, `LOTOLAB_STORE_PASSWORD`, `LOTOLAB_KEY_ALIAS`, `LOTOLAB_KEY_PASSWORD` e `LOTOLAB_SIGNING_SHA256`. O último identifica o certificado esperado; trocar apenas o keystore bloqueia a publicação. Na ausência dos Secrets, os testes continuam e a publicação permanece bloqueada. Após o cadastro, execute **Actions → Publicar APK assinado → Run workflow**, usando o branch `main`.
+Os Secrets são `LOTOLAB_KEYSTORE_BASE64`, `LOTOLAB_STORE_PASSWORD`, `LOTOLAB_KEY_ALIAS`, `LOTOLAB_KEY_PASSWORD` e `LOTOLAB_SIGNING_SHA256`. O último identifica o certificado esperado; trocar apenas o keystore bloqueia a publicação. Na ausência dos Secrets, os testes continuam e a assinatura dentro do GitHub permanece bloqueada. Após o cadastro, execute **Actions → Publicar APK assinado → Run workflow**, usando o branch `main`.
 
 ## Transferir os dados de uma instalação antiga
 

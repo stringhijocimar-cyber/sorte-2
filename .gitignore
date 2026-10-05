@@ -133,6 +133,8 @@ android/capacitor-cordova-android-plugins/build/
 android/local.properties
 *.apk
 *.aab
+# Somente entregas finais com certificado e fontes conferidos são versionadas.
+!/distribuicao/*/LotoLab-*.apk
 
 # Segredos de assinatura — vazamento permite assinar APK se passando pelo app
 *.keystore

@@ -267,8 +267,8 @@ jobs:
             echo 'pronta=true' >> "$GITHUB_OUTPUT"
           else
             echo 'pronta=false' >> "$GITHUB_OUTPUT"
-            echo '::warning::Publicação bloqueada até cadastrar a assinatura permanente. APKs de revisão não são atualizações.'
-            echo '### Publicação bloqueada: falta cadastrar a assinatura permanente. Nenhum APK final foi publicado.' >> "$GITHUB_STEP_SUMMARY"
+            echo '::warning::Assinatura no runner bloqueada até cadastrar os Secrets. APKs de revisão não são atualizações.'
+            echo '### Assinatura no GitHub indisponível: faltam os Secrets. APKs assinados localmente usam o fluxo Publicar APK com assinatura permanente conferida.' >> "$GITHUB_STEP_SUMMARY"
           fi
 
   publicar:

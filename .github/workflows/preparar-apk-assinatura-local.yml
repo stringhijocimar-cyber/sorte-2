@@ -1,0 +1,105 @@
+# Compila candidatos para assinatura fora do runner. Nunca publica estes APKs.
+# A chave permanente permanece no backup privado, fora do código e dos artefatos.
+name: Preparar APK para assinatura local
+
+on:
+  push:
+    branches: [codex/preparar-apk-assinado-4-26]
+    paths: [.github/workflows/preparar-apk-assinatura-local.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  preparar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Conferir fontes e preparar Android
+        run: |
+          cmp index.html www/index.html
+          cmp sw.js www/sw.js
+          diff -r ui www/ui
+          diff -r runner www/runner
+          node ferramentas/testar-motor.mjs
+          python3 ferramentas/conferir-xml-android.py
+          npm ci
+          npx cap sync android
+      - name: Preparar assinatura de teste para validar a compilação
+        run: |
+          python3 - <<'PY'
+          import base64, importlib.util, json, os, tempfile
+          from pathlib import Path
+          def carregar(nome):
+              spec = importlib.util.spec_from_file_location(nome, 'ferramentas/' + nome + '.py')
+              modulo = importlib.util.module_from_spec(spec)
+              spec.loader.exec_module(modulo)
+              return modulo
+          pasta = Path(tempfile.mkdtemp(prefix='lotolab-compilacao-'))
+          sha = carregar('configurar-assinatura').configurar(pasta, somente_gerar=True, teste=True)
+          dados = json.loads((pasta / 'assinatura-privada.json').read_text())
+          dados['LOTOLAB_KEYSTORE_BASE64'] = base64.b64encode((pasta / 'lotolab-release.jks').read_bytes()).decode()
+          os.environ.update(dados)
+          carregar('preparar-assinatura').preparar(Path.cwd(), teste=True)
+          with open(os.environ['GITHUB_ENV'], 'a') as f:
+              f.write('LOTOLAB_SIGNING_SHA256=' + sha + '\n')
+          PY
+      - name: Compilar e conferir o aplicativo final
+        run: |
+          (cd android && ./gradlew testDebugUnitTest assembleRelease --no-daemon)
+          apk=android/app/build/outputs/apk/release/app-release.apk
+          bash ferramentas/conferir-assinatura.sh "$apk" final teste
+          python3 ferramentas/conferir-apk.py "$apk"
+          mkdir -p compilacao
+          cp "$apk" compilacao/final-compilacao.apk
+      - name: Compilar e conferir a transferência única
+        run: |
+          (cd android && ./gradlew assembleRelease -PlotolabMigracao --no-daemon)
+          apk=android/app/build/outputs/apk/release/app-release.apk
+          bash ferramentas/conferir-assinatura.sh "$apk" transferencia teste
+          python3 ferramentas/conferir-apk.py "$apk"
+          cp "$apk" compilacao/transferencia-compilacao.apk
+      - name: Guardar identificação e ferramentas oficiais de conferência
+        run: |
+          ferramentas=$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)
+          destino=compilacao/sdk/build-tools/$(basename "$ferramentas")
+          mkdir -p "$destino/lib"
+          cp "$ferramentas/apksigner" "$ferramentas/aapt" "$destino/"
+          cp "$ferramentas/lib/apksigner.jar" "$destino/lib/"
+          if [ -d "$ferramentas/lib64" ]; then cp -r "$ferramentas/lib64" "$destino/"; fi
+          cp VERSION compilacao/VERSION
+          cp android/assinatura.sha256 compilacao/assinatura.sha256
+          git rev-parse HEAD > compilacao/commit.txt
+          (cd compilacao && sha256sum final-compilacao.apk transferencia-compilacao.apk > compilacao.sha256)
+          printf '%s\n' 'Candidatos de compilação: não instalar nem publicar antes de assinar com a chave permanente e conferir o certificado.' > compilacao/LEIA-ME.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: LotoLab-candidatos-assinatura-local
+          path: |
+            compilacao/*.apk
+            compilacao/VERSION
+            compilacao/assinatura.sha256
+            compilacao/commit.txt
+            compilacao/compilacao.sha256
+            compilacao/LEIA-ME.txt
+          retention-days: 30
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: LotoLab-ferramentas-assinatura-local
+          path: compilacao/sdk/
+          retention-days: 30
+          if-no-files-found: error
+      - name: Apagar arquivos privados da assinatura de teste
+        if: always()
+        run: rm -f android/chave.properties android/lotolab-release.jks
