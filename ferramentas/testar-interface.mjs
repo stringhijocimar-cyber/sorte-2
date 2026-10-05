@@ -1667,8 +1667,8 @@ if(EDICAO.nome === "completa"){
   await dormir(200);
   checar('aviso de demonstração exibe quatro acertos e dois erros',await js(`return document.querySelectorAll('#corpo-avisos .dz.acertou').length===4&&document.querySelectorAll('#corpo-avisos .dz.errou').length===2`));
   const verde=await js(`const s=getComputedStyle(document.querySelector('#corpo-avisos .dz.acertou'));return {fundo:s.backgroundColor,texto:s.color,raio:s.borderRadius}`);
-  checar('acertos são bolinhas verdes com números brancos',verde.fundo==='rgb(21, 125, 71)'&&verde.texto==='rgb(255, 255, 255)'&&verde.raio==='50%');
-  checar('números centralizados dentro das bolinhas',await js(`const b=document.querySelector('#corpo-avisos .dz.acertou'),r=document.createRange();r.selectNode(b.firstChild);const t=r.getBoundingClientRect(),c=b.getBoundingClientRect();return Math.abs(t.left+t.width/2-c.left-c.width/2)<3&&Math.abs(t.top+t.height/2-c.top-c.height/2)<3;`));
+  checar('acertos são quadrados verdes com números brancos',verde.fundo==='rgb(21, 125, 71)'&&verde.texto==='rgb(255, 255, 255)'&&verde.raio==='3px');
+  checar('números centralizados dentro dos marcadores',await js(`const b=document.querySelector('#corpo-avisos .dz.acertou'),r=document.createRange();r.selectNode(b.firstChild);const t=r.getBoundingClientRect(),c=b.getBoundingClientRect();return Math.abs(t.left+t.width/2-c.left-c.width/2)<3&&Math.abs(t.top+t.height/2-c.top-c.height/2)<3;`));
   const vermelho=await js(`return getComputedStyle(document.querySelector('#corpo-avisos .dz.errou')).backgroundColor`);
   checar('erros recebem vermelho suave',vermelho==='rgb(252, 230, 232)');
   await capturar('notificacao-colorida');
@@ -2166,7 +2166,7 @@ await tocar('[data-abrir-jogo="cores422"]');
 checar('abrir cartela separa acerto, sorteadas fora e marcações erradas',await js(`const b=document.querySelector('.cartela');return b.querySelectorAll('.casa.acertou').length===1&&b.querySelectorAll('.casa.sorteada').length===5&&b.querySelectorAll('.casa.errou').length===5&&b.querySelectorAll('.casa.neutra').length===49&&b.querySelector('[data-casa="7"]').getAttribute('aria-label').includes('sorteada fora do jogo')`));
 for(const theme of ['escuro','claro']){
  await js(`document.documentElement.dataset.tema='${theme}';return true;`);
- checar('cartela '+theme+': bolinhas suaves com texto de alto contraste',await js(`const expected={acertou:'rgb(21, 125, 71)',sorteada:'rgb(91, 155, 230)',errou:'rgb(217, 120, 131)'};return Object.entries(expected).every(([cl,color])=>{const e=document.querySelector('.cartela .casa.'+cl),style=getComputedStyle(e,'::before');return style.backgroundColor===color&&style.borderRadius==='50%'&&getComputedStyle(e.querySelector('span')).color===({acertou:'rgb(255, 255, 255)',sorteada:'rgb(9, 46, 87)',errou:'rgb(72, 22, 32)'})[cl];})`));
+ checar('cartela '+theme+': marcadores quadrados com as cores e o contraste preservados',await js(`const expected={acertou:'rgb(21, 125, 71)',sorteada:'rgb(91, 155, 230)',errou:'rgb(217, 120, 131)'};return Object.entries(expected).every(([cl,color])=>{const e=document.querySelector('.cartela .casa.'+cl),style=getComputedStyle(e,'::before');return style.backgroundColor===color&&style.borderRadius==='3px'&&getComputedStyle(e.querySelector('span')).color===({acertou:'rgb(255, 255, 255)',sorteada:'rgb(9, 46, 87)',errou:'rgb(72, 22, 32)'})[cl];})`));
  await frame418('.cartela','LotoLab-4.22-Cartela-'+theme);
 }
 for(const mod of ['mega-sena','lotofacil','quina','lotomania','dupla-sena','dia-de-sorte','timemania','mais-milionaria']){

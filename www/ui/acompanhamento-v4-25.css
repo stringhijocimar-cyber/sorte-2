@@ -44,7 +44,7 @@
 .cartela.physical-ticket .casa.marcada::before{content:"";position:absolute;inset:8%;border-radius:3px;background:#414942}
 .cartela.physical-ticket .casa.acertou,.cartela.physical-ticket .casa.sorteada,.cartela.physical-ticket .casa.errou{background:transparent!important}
 .cartela.physical-ticket .casa.acertou span{color:#fff!important}.cartela.physical-ticket .casa.sorteada span{color:#092e57!important}.cartela.physical-ticket .casa.errou span{color:#481620!important}
-.cartela.physical-ticket .casa:is(.acertou,.sorteada,.errou)::before{inset:2%!important;box-shadow:none!important}
+.cartela.physical-ticket .casa:is(.acertou,.sorteada,.errou)::before{inset:8%!important;box-shadow:none!important}
 .cartela.physical-ticket .pe{display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;margin:0 14px;padding:12px 0!important;border-top:1px dashed #c3bead!important;color:#465148!important;font-size:.67rem;line-height:1.5;background:transparent!important}
 .physical-ticket .ticket-footnote{margin:0 14px;padding:0 0 12px;color:#6f786e!important;font-size:.53rem;line-height:1.6;text-align:center;letter-spacing:.025em}
 .physical-ticket[data-modalidade="lotofacil"] .grade-volante{gap:6px 9px;padding:12px}.physical-ticket[data-modalidade="lotofacil"] .casa{max-height:44px;aspect-ratio:auto;height:40px;font-size:.94rem}
