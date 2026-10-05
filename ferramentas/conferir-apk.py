@@ -60,7 +60,7 @@ def main():
                 cadeias.update(cadeias_do_dex(z.read(nome)))
             checar("o APK tem classes compiladas para varrer", len(cadeias) > 100,
                    f"{len(cadeias)} cadeias no conjunto")
-            for classe in ["LotoLabNotificacoesPlugin", "ConferenciaWorker", "NotificacaoColorida"]:
+            for classe in ["LotoLabNotificacoesPlugin", "ConferenciaWorker", "NotificacaoColorida", "LotoLabBackupPlugin"]:
                 checar(f"{classe} está no APK", f"Lapp/lotolab/jogos/{classe};" in cadeias)
             for p in plugins:
                 caminho_classe = p["classpath"]
