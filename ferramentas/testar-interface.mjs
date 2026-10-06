@@ -1917,7 +1917,9 @@ for(const tema of ['escuro','claro']){
       irParaTela('resultados',{lateral:true});trocarModalidade('mega-sena');
       const bola=document.querySelector('.concurso .bola'),estilo=getComputedStyle(bola);
       const cs=gradiente(estilo),amarelas=cs.every(c=>{const [r,g,b]=rgb(c);return r>230&&g>175&&b<175});
-      return {erros,cores:cores.size,amarelas,redondas:estilo.borderRadius==='50%',contrasteBola:Math.min(...cs.map(c=>contraste(estilo.color,c)))};
+      const rect=bola.getBoundingClientRect(),radius=estilo.borderTopLeftRadius;
+      const redondas=Math.abs(rect.width-rect.height)<.2&&(radius.endsWith('%')?parseFloat(radius)>=50:parseFloat(radius)>=rect.width/2);
+      return {erros,cores:cores.size,amarelas,redondas,contrasteBola:Math.min(...cs.map(c=>contraste(estilo.color,c)))};
     `);
     checar('16 telas / 8 modalidades / '+tema+' em '+width+'px',audit.erros.length===0,audit.erros.join(' · '));
     checar('oito destaques distintos no '+tema+' em '+width+'px',audit.cores===8,String(audit.cores));
