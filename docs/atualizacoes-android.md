@@ -41,7 +41,7 @@ Este procedimento é uma migração única; não é uma atualização compatíve
 
 3. Guarde uma segunda cópia dos arquivos `.tar` e `.tar.sha256`. O backup inclui o armazenamento da WebView e as preferências nativas: jogos, resultados, histórico, regras de acompanhamento e memória de análise. A verificação confirma integridade e presença do armazenamento; a conferência dos dados no aparelho ocorrerá após restaurar.
 4. **Somente após o backup verificado e a publicação da versão assinada**, baixe os dois APKs da mesma release. O APK **transferencia** permite restaurar os arquivos; o APK **final** desativa essa permissão e será o aplicativo de uso normal.
-5. Remova a instalação antiga, instale `LotoLab-4.26.1-transferencia.apk` e execute:
+5. Remova a instalação antiga, instale `LotoLab-4.26.2-transferencia.apk` e execute:
 
    ```sh
    python ferramentas/migrar-dados-android.py restaurar --arquivo LotoLab-dados-antigos.tar
@@ -49,7 +49,7 @@ Este procedimento é uma migração única; não é uma atualização compatíve
 
    O comando exige confirmação digitada, recusa backup incompleto, impede caminhos externos ao app e guarda uma cópia do destino antes de substituir dados existentes. Se o aparelho não permitir `run-as` ou se o backup falhar, interrompa o procedimento e conserve a instalação antiga.
 
-6. Abra o aplicativo e confira quantidade de jogos, dezenas, histórico e acompanhamento fixo/teimosinha. Depois instale **LotoLab-4.26.1.apk por cima** do APK de transferência. Os dois usam a mesma assinatura. Reautorize as notificações caso o Android solicite.
+6. Abra o aplicativo e confira quantidade de jogos, dezenas, histórico e acompanhamento fixo/teimosinha. Depois instale **LotoLab-4.26.2.apk por cima** do APK de transferência. Os dois usam a mesma assinatura. Reautorize as notificações caso o Android solicite.
 7. Nas próximas versões finais assinadas com essa chave, instale o APK por cima, como atualização normal. O backup da migração continua guardado até você confirmar seus dados.
 
 O procedimento ainda precisa ser confirmado no celular do usuário. O script não instala nem desinstala aplicativos automaticamente. Não use o APK de transferência como versão permanente.

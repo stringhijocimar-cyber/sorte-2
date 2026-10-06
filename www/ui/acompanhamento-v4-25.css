@@ -35,21 +35,20 @@
 .cartela.physical-ticket .miolo{position:relative;padding:12px 14px 16px 28px!important;background:var(--papel)!important}
 .physical-ticket .miolo::before{content:"";position:absolute;left:9px;top:14px;bottom:17px;width:7px;background:repeating-linear-gradient(to bottom,#333c34 0 7px,transparent 7px 18px);opacity:.75}
 .cartela.physical-ticket .grade-volante{padding:10px 6px;border:1px solid color-mix(in srgb,var(--ticket-ink) 48%,#fff)!important;border-radius:8px!important;background:var(--ticket-grid)!important;gap:6px 2px;overflow:visible}
-.cartela.physical-ticket .casa{position:relative;display:flex;align-items:center;justify-content:center;min-width:0;min-height:26px;aspect-ratio:1;height:auto;padding:0;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;opacity:1!important;font-family:var(--mono);font-size:clamp(.64rem,2.7vw,.86rem);line-height:1;isolation:isolate}
-.cartela.physical-ticket .casa span{position:relative;z-index:1;display:flex;align-items:center;justify-content:center;width:100%;height:100%}
+.cartela.physical-ticket .casa{position:relative;display:flex;align-items:center;justify-content:center;min-width:0;min-height:26px;aspect-ratio:1;height:auto;padding:0;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;opacity:1!important;font-family:var(--mono);font-size:clamp(.64rem,2.7vw,.86rem);line-height:1;isolation:isolate;container-type:inline-size}
+.cartela.physical-ticket .casa span{position:relative;z-index:1;display:flex;align-items:center;justify-content:center;width:100%;height:100%;font-size:min(1em,32cqw)}
 .cartela.physical-ticket .casa.neutra{color:var(--ticket-ink)!important}
-.physical-ticket .casa.neutra span::before,.physical-ticket .casa.neutra span::after{position:absolute;top:50%;transform:translateY(-50%);font-size:.85em;opacity:.6}
-.physical-ticket .casa.neutra span::before{content:'[';left:0}.physical-ticket .casa.neutra span::after{content:']';right:0}
+.physical-ticket .casa span::before,.physical-ticket .casa span::after{position:absolute;top:50%;transform:translateY(-50%);font-size:.85em;opacity:.6;color:var(--ticket-ink)}
+.physical-ticket .casa span::before{content:'[';left:max(0px,calc((100% - 34px)/2 - .7em))}.physical-ticket .casa span::after{content:']';right:max(0px,calc((100% - 34px)/2 - .7em))}
 .cartela.physical-ticket .casa.marcada{background:transparent!important;color:white!important}
 .cartela.physical-ticket .casa.marcada::before{content:"";position:absolute;inset:8%;border-radius:3px;background:#414942}
 .cartela.physical-ticket .casa.acertou,.cartela.physical-ticket .casa.sorteada,.cartela.physical-ticket .casa.errou{background:transparent!important}
 .cartela.physical-ticket .casa.acertou span{color:#fff!important}.cartela.physical-ticket .casa.sorteada span{color:#092e57!important}.cartela.physical-ticket .casa.errou span{color:#481620!important}
-.cartela.physical-ticket .casa:is(.acertou,.sorteada,.errou)::before{inset:8%!important;box-shadow:none!important}
+/* O quadrado fica entre os colchetes; o alvo de toque mantém a casa inteira. */
+.cartela.physical-ticket .casa:is(.acertou,.sorteada,.errou,.marcada)::before{inset:auto!important;left:50%!important;top:50%!important;width:min(34px,calc(100% - 1.4em));height:auto;aspect-ratio:1;transform:translate(-50%,-50%);font-size:min(1em,32cqw);border-radius:3px!important;box-shadow:none!important}
 .cartela.physical-ticket .pe{display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;margin:0 14px;padding:12px 0!important;border-top:1px dashed #c3bead!important;color:#465148!important;font-size:.67rem;line-height:1.5;background:transparent!important}
 .physical-ticket .ticket-footnote{margin:0 14px;padding:0 0 12px;color:#6f786e!important;font-size:.53rem;line-height:1.6;text-align:center;letter-spacing:.025em}
 .physical-ticket[data-modalidade="lotofacil"] .grade-volante{gap:6px 9px;padding:12px}.physical-ticket[data-modalidade="lotofacil"] .casa{max-height:44px;aspect-ratio:auto;height:40px;font-size:.94rem}
-.cartela.physical-ticket[data-modalidade="lotofacil"] .casa:is(.acertou,.sorteada,.errou,.marcada)::before{inset:auto!important;left:50%!important;top:50%!important;width:34px;height:34px;transform:translate(-50%,-50%)}
-.physical-ticket[data-modalidade="lotofacil"] .casa.neutra span::before{left:10%}.physical-ticket[data-modalidade="lotofacil"] .casa.neutra span::after{right:10%}
 .physical-ticket .casa:focus-visible{outline:2px solid var(--ticket-ink)!important;outline-offset:3px}
 .cartela.physical-ticket .casa:not(:disabled){min-height:44px}
 @media(max-width:380px){.acomp-options{padding:12px}.acomp-choices{gap:5px}.acomp-choices label{flex-direction:column;padding:10px 7px}.acomp-choices b{font-size:.74rem}.physical-ticket .tarja b{font-size:1rem}.cartela.physical-ticket .miolo{padding-right:10px!important;padding-left:24px!important}.cartela.physical-ticket .grade-volante{padding:8px 4px;gap:5px 1px}}
