@@ -206,11 +206,11 @@ jobs:
             unzip -p android/app/build/outputs/apk/debug/app-debug.apk "assets/public/$asset" > /tmp/conferencia-apk
             cmp "$asset" /tmp/conferencia-apk
           done
-          cp android/app/build/outputs/apk/debug/app-debug.apk LotoLab-4.26.0-preview.apk
+          cp android/app/build/outputs/apk/debug/app-debug.apk LotoLab-4.26.1-preview.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: LotoLab-4.26.0-preview
-          path: LotoLab-4.26.0-preview.apk
+          name: LotoLab-4.26.1-preview
+          path: LotoLab-4.26.1-preview.apk
           retention-days: 14
 
       - name: Preparar chave temporária somente para testar a compilação de release

@@ -1,0 +1,39 @@
+{
+  "versao": "4.26.1",
+  "applicationId": "app.lotolab.jogos",
+  "versionCode": 38,
+  "commit_compilacao": "84bebe21d01ef3de8cb8649268bb72e4152f9d6e",
+  "execucao_compilacao": 37341613274,
+  "url_compilacao": "https://github.com/stringhijocimar-cyber/sorte-2/actions/runs/37341613274",
+  "artefatos": [
+    {
+      "id": 11358084820,
+      "sha256_zip": "4a1d0e9cbf313e751ce29ebaf35743e9cd6b54637eb2a1188adc2b7af9505558"
+    },
+    {
+      "id": 11359475087,
+      "sha256_zip": "7967691443fad28c199a0a34c6d414bbd7a7856d841ac009d0c5f014b3e0352d"
+    }
+  ],
+  "certificado_sha256": "5520d62f56ce112f6d63d75259c7a1e2b8999731d1ac7473996a58f4f235225f",
+  "assinatura": "Permanente, aplicada localmente; chave e senhas fora do repositório.",
+  "apks": [
+    {
+      "arquivo": "LotoLab-4.26.1.apk",
+      "bytes": 10298724,
+      "sha256": "4f7742c617b1d4362c5e1c2525512a595d6943a44012a8d446638eef55ad4950",
+      "depuracao": false
+    },
+    {
+      "arquivo": "LotoLab-4.26.1-transferencia.apk",
+      "bytes": 11252085,
+      "sha256": "c569b9bb268e3e890f99070cafa1688e431599eff0b00de5e964a1c890bd5e0c",
+      "depuracao": true
+    }
+  ],
+  "testes_interface": {
+    "run": 37341613573,
+    "artefato_capturas": 11357964592,
+    "sha256_zip": "86ef608437078298881e68c5ff219ee460b744114731c7bfdc759ef14752ad3e"
+  }
+}
