@@ -4,7 +4,7 @@ name: Preparar APK para assinatura local
 
 on:
   push:
-    branches: [codex/preparar-apk-assinado-4-26, codex/marcadores-quadrados-4-26-1]
+    branches: [codex/preparar-apk-assinado-4-26, codex/marcadores-quadrados-4-26-1, codex/corrigir-bolinhas-cartela-4-26-2]
     paths: [.github/workflows/preparar-apk-assinatura-local.yml]
   workflow_dispatch:
 

@@ -431,7 +431,11 @@ secao("F. Conferência");
 
 // Prepara uma base conhecida: dois jogos de Mega-Sena, um deles com 4 acertos
 // certos contra o sorteio que vamos digitar.
+// A busca diária não pode inserir concursos da rede neste cenário manual.
+// Sua preferência é restaurada depois das verificações de inclusão e duplicação.
+const buscaAutomaticaAntesConferencia = await js("return S.buscaAutomatica");
 await js(`
+  localStorage.setItem('lotolab:buscaAutomatica', 'false');
   localStorage.setItem('lotolab:jogos', JSON.stringify([
     {id:'c1', modalidade:'mega-sena', dezenas:[1,2,3,4,50,60], metodo:'uniforme',
      data:'2026-02-01', lote:'L1', conferencias:[]},
@@ -527,6 +531,11 @@ checar("o concurso é guardado como número, e não como texto do formulário",
 await preencherConferencia("5 6 7 8 9 10", "3002");
 checar("concurso diferente acrescenta registro",
   (await js(`return JSON.parse(localStorage.getItem('lotolab:resultados')||'[]').length`)) === 2);
+await js(`
+  S.buscaAutomatica = ${JSON.stringify(buscaAutomaticaAntesConferencia)};
+  Guardar.gravar('buscaAutomatica', S.buscaAutomatica);
+  return true;
+`);
 
 /* ---------- painel do último concurso ----------
    A tela Conferir abria com um formulário vazio pedindo as dezenas à mão
@@ -1667,7 +1676,7 @@ if(EDICAO.nome === "completa"){
   await dormir(200);
   checar('aviso de demonstração exibe quatro acertos e dois erros',await js(`return document.querySelectorAll('#corpo-avisos .dz.acertou').length===4&&document.querySelectorAll('#corpo-avisos .dz.errou').length===2`));
   const verde=await js(`const s=getComputedStyle(document.querySelector('#corpo-avisos .dz.acertou'));return {fundo:s.backgroundColor,texto:s.color,raio:s.borderRadius}`);
-  checar('acertos são quadrados verdes com números brancos',verde.fundo==='rgb(21, 125, 71)'&&verde.texto==='rgb(255, 255, 255)'&&verde.raio==='3px');
+  checar('acertos são bolinhas verdes com números brancos',verde.fundo==='rgb(21, 125, 71)'&&verde.texto==='rgb(255, 255, 255)'&&verde.raio==='50%');
   checar('números centralizados dentro dos marcadores',await js(`const b=document.querySelector('#corpo-avisos .dz.acertou'),r=document.createRange();r.selectNode(b.firstChild);const t=r.getBoundingClientRect(),c=b.getBoundingClientRect();return Math.abs(t.left+t.width/2-c.left-c.width/2)<3&&Math.abs(t.top+t.height/2-c.top-c.height/2)<3;`));
   const vermelho=await js(`return getComputedStyle(document.querySelector('#corpo-avisos .dz.errou')).backgroundColor`);
   checar('erros recebem vermelho suave',vermelho==='rgb(252, 230, 232)');
@@ -1917,11 +1926,13 @@ for(const tema of ['escuro','claro']){
       irParaTela('resultados',{lateral:true});trocarModalidade('mega-sena');
       const bola=document.querySelector('.concurso .bola'),estilo=getComputedStyle(bola);
       const cs=gradiente(estilo),amarelas=cs.every(c=>{const [r,g,b]=rgb(c);return r>230&&g>175&&b<175});
-      return {erros,cores:cores.size,amarelas,contrasteBola:Math.min(...cs.map(c=>contraste(estilo.color,c)))};
+      const rect=bola.getBoundingClientRect(),radius=estilo.borderTopLeftRadius;
+      const redondas=Math.abs(rect.width-rect.height)<.2&&(radius.endsWith('%')?parseFloat(radius)>=50:parseFloat(radius)>=rect.width/2);
+      return {erros,cores:cores.size,amarelas,redondas,contrasteBola:Math.min(...cs.map(c=>contraste(estilo.color,c)))};
     `);
     checar('16 telas / 8 modalidades / '+tema+' em '+width+'px',audit.erros.length===0,audit.erros.join(' · '));
     checar('oito destaques distintos no '+tema+' em '+width+'px',audit.cores===8,String(audit.cores));
-    checar('bolinhas amarelas e números com contraste alto no '+tema,audit.amarelas&&audit.contrasteBola>=7,audit.contrasteBola.toFixed(2)+':1');
+    checar('bolinhas amarelas e números com contraste alto no '+tema,audit.redondas&&audit.amarelas&&audit.contrasteBola>=7,audit.contrasteBola.toFixed(2)+':1');
   }
 }
 
@@ -2150,7 +2161,7 @@ checar('rodada original permanece preservada e um resultado não troca estratég
 /* ---------- Histórico 4.22: pacotes congelados, seleção e cores ---------- */
 secao('Histórico visual 4.22');
 checar('histórico abre o último concurso conferido e mostra onze estratégias e a principal',await js(`return document.querySelector('[data-auto-contest]').value==='${target419}'&&document.querySelectorAll('.auto-history-games .auto-history-game').length===11&&document.querySelectorAll('.auto-history-game.primary').length===1`));
-checar('cada cartão mostra os acertos da combinação original',await js(`const round=JSON.parse(window.round421),cards=[...document.querySelectorAll('.auto-history-games .auto-history-game')];return cards.every((e,i)=>{const n=round.testes[i].jogo.dezenas.filter(d=>[1,2,3,4,5,6].includes(d)).length;return e.querySelector('.auto-hit-count').textContent===n+' acerto'+(n===1?'':'s')&&e.querySelectorAll('.check-ticket .acertou').length===n;})`));
+checar('cada cartão mantém bolinhas e os acertos da combinação original',await js(`const round=JSON.parse(window.round421),cards=[...document.querySelectorAll('.auto-history-games .auto-history-game')];return cards.every((e,i)=>{const n=round.testes[i].jogo.dezenas.filter(d=>[1,2,3,4,5,6].includes(d)).length;return e.querySelector('.auto-hit-count').textContent===n+' acerto'+(n===1?'':'s')&&e.querySelectorAll('.check-ticket .acertou').length===n&&[...e.querySelectorAll('.check-ball')].every(b=>getComputedStyle(b).borderRadius==='50%');})`));
 await frame418('.auto-history','LotoLab-4.22-Historico');
 await input418('[data-auto-contest]',target419+1);
 checar('pacote aguardando não exibe zeros nem dezenas vermelhas',await js(`return document.querySelector('.auto-history-status').textContent==='Aguardando resultado'&&document.querySelectorAll('.auto-history .errou').length===0&&[...document.querySelectorAll('.auto-history .auto-hit-count')].every(e=>e.textContent==='Aguardando')`));
@@ -2173,7 +2184,16 @@ for(const mod of ['mega-sena','lotofacil','quina','lotomania','dupla-sena','dia-
  await js(`S.modalidade='${mod}';const c=MODALIDADES[S.modalidade],marked=Array.from({length:c.min},(_,i)=>i+c.base),drawn=Array.from({length:c.k},(_,i)=>c.N+c.base-c.k+i);S.jogos=[{id:'cores422-'+S.modalidade,modalidade:S.modalidade,dezenas:marked,data:'2026-01-01',metodo:'manual',lote:'422',conferencias:[{concurso:123,data:'2026-01-02',dezenas:drawn,acertos:marked.filter(d=>drawn.includes(d)).length}]}];S.jogoAberto=S.jogos[0].id;irParaTela('jogos',{lateral:true});return true;`);
  for(const width of [320,390,412]){
   await cmd('Emulation.setDeviceMetricsOverride',{width,height:915,deviceScaleFactor:1,mobile:true});
-  checar(mod+': cartela cabe em '+width+'px',await js(`return document.documentElement.scrollWidth<=innerWidth+1&&document.querySelectorAll('.cartela .casa').length===MODALIDADES[S.modalidade].N`));
+  checar(mod+': cartela cabe e quadrados ficam dentro dos colchetes em '+width+'px',await js(`
+   const cells=[...document.querySelectorAll('.cartela .casa')],ctx=document.createElement('canvas').getContext('2d');
+   const glyph=s=>{ctx.font=[s.fontStyle,s.fontWeight,s.fontSize,s.fontFamily].join(' ');return ctx.measureText('[').width;};
+   return document.documentElement.scrollWidth<=innerWidth+1&&cells.length===MODALIDADES[S.modalidade].N&&cells.every(e=>{
+    const span=e.querySelector('span'),left=getComputedStyle(span,'::before'),right=getComputedStyle(span,'::after');
+    if(left.content!=='"["'||right.content!=='"]"')return false;
+    if(e.classList.contains('neutra'))return true;
+    const marker=getComputedStyle(e,'::before'),w=parseFloat(marker.width),h=parseFloat(marker.height),cw=e.clientWidth,range=document.createRange();range.selectNode(span.firstChild);
+    return marker.borderRadius==='3px'&&Math.abs(w-h)<.2&&range.getBoundingClientRect().width<=w+.3&&(cw-w)/2>=parseFloat(left.left)+glyph(left)&&(cw-w)/2>=parseFloat(right.right)+glyph(right);
+   });`));
  }
 }
 await cmd('Emulation.setDeviceMetricsOverride',{width:412,height:915,deviceScaleFactor:2,mobile:true});
