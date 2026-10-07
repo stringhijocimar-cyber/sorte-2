@@ -36,5 +36,5 @@
     "commit": "79a67348de18b2a0facfff746ff9406222440576",
     "verificacoes_aprovadas": 536
   },
-  "fontes": "Conferidas byte a byte contra a revisão validada; o commit posterior à compilação altera somente o teste de forma circular."
+  "fontes": "Conferidas byte a byte contra a revisão validada; revisões posteriores à compilação alteram somente os testes de interface."
 }

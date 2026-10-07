@@ -431,7 +431,11 @@ secao("F. Conferência");
 
 // Prepara uma base conhecida: dois jogos de Mega-Sena, um deles com 4 acertos
 // certos contra o sorteio que vamos digitar.
+// A busca diária não pode inserir concursos da rede neste cenário manual.
+// Sua preferência é restaurada depois das verificações de inclusão e duplicação.
+const buscaAutomaticaAntesConferencia = await js("return S.buscaAutomatica");
 await js(`
+  localStorage.setItem('lotolab:buscaAutomatica', 'false');
   localStorage.setItem('lotolab:jogos', JSON.stringify([
     {id:'c1', modalidade:'mega-sena', dezenas:[1,2,3,4,50,60], metodo:'uniforme',
      data:'2026-02-01', lote:'L1', conferencias:[]},
@@ -527,6 +531,11 @@ checar("o concurso é guardado como número, e não como texto do formulário",
 await preencherConferencia("5 6 7 8 9 10", "3002");
 checar("concurso diferente acrescenta registro",
   (await js(`return JSON.parse(localStorage.getItem('lotolab:resultados')||'[]').length`)) === 2);
+await js(`
+  S.buscaAutomatica = ${JSON.stringify(buscaAutomaticaAntesConferencia)};
+  Guardar.gravar('buscaAutomatica', S.buscaAutomatica);
+  return true;
+`);
 
 /* ---------- painel do último concurso ----------
    A tela Conferir abria com um formulário vazio pedindo as dezenas à mão
