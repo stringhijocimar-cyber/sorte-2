@@ -1,4 +1,5 @@
 # Compila candidatos para assinatura fora do runner. Nunca publica estes APKs.
+# 4.26.3: inclui os painéis com contraste corrigido nos dois temas.
 # A chave permanente permanece no backup privado, fora do código e dos artefatos.
 name: Preparar APK para assinatura local
 
