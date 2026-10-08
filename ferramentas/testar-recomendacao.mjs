@@ -77,6 +77,18 @@ test('base escassa é explícita; percentuais ausentes não viram sucesso ou con
  assert.ok(g.principal.analise.faixas.every(f=>f.percentual===null));
  assert.equal(g.principal.aderencia.estado,'amostra insuficiente');
  assert.equal(g.jogos.length,1);
+ assert.equal(g.qualidadeEvidencia.nivel,'limitada');
+ assert.ok(g.qualidadeEvidencia.limitacoes.some(x=>/base curta/.test(x)));
+ assert.match(g.qualidadeEvidencia.motivo,/Não é uma estimativa de chance de prêmio/);
+});
+test('qualidade da evidência é determinística e distingue base validada de base curta',()=>{
+ const rng=L.rng('qualidade'),hist=Array.from({length:140},(_,i)=>({modalidade:m,concurso:i+1,...L.randomTicket(m,rng)}));
+ const a=L.recommend(m,hist,{semente:'qualidade'}),b=L.recommend(m,hist.slice(-20),{semente:'qualidade'}),a2=L.recommend(m,hist,{semente:'qualidade'});
+ assert.deepEqual(a.qualidadeEvidencia,a2.qualidadeEvidencia);
+ assert.ok(a.qualidadeEvidencia.pontuacao>b.qualidadeEvidencia.pontuacao);
+ assert.ok(a.qualidadeEvidencia.fatores.some(x=>/concursos válidos/.test(x)));
+ assert.ok(a.qualidadeEvidencia.limitacoes.length>=1);
+ assert.doesNotMatch(JSON.stringify(a.qualidadeEvidencia),/aumenta|garante|prevê/);
 });
 test('conflitos não são usados; concursos fora do recorte não alteram resultado',()=>{
  const conflicting={...rows[0],dezenas:[1,2,3,4,5,6]},g=L.recommend(m,[...rows,conflicting],{semente:'conflitos'});

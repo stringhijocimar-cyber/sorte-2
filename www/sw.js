@@ -30,7 +30,7 @@
 /* 9: a conferência passou a guardar o número do concurso como número, e a
    abertura junta as duplicatas que a versão anterior deixou gravadas. Quem
    usa pelo navegador precisa receber o index.html novo, não o do cache. */
-const VERSAO = "35";
+const VERSAO = "36"; // 4.26.3: revisão das análises e indicadores.
 const CACHE = `lotolab-v${VERSAO}`;
 
 //: A casca mínima para o app abrir offline.
@@ -47,7 +47,8 @@ self.addEventListener("install", ev => {
          assumiria depois que a pessoa fechasse TODAS as abas do app, o que
          quase nunca acontece num celular. */
       .then(() => self.skipWaiting())
-      .catch(() => self.skipWaiting())
+      // Uma casca incompleta não substitui o worker anterior que abre offline.
+      .catch(async erro => { await caches.delete(CACHE); throw erro; })
   );
 });
 
@@ -55,7 +56,7 @@ self.addEventListener("activate", ev => {
   ev.waitUntil(
     caches.keys()
       .then(nomes => Promise.all(
-        nomes.filter(n => n !== CACHE).map(n => caches.delete(n))))
+        nomes.filter(n => n.startsWith('lotolab-v') && n !== CACHE).map(n => caches.delete(n))))
       .then(() => self.clients.claim())
   );
 });

@@ -37,7 +37,7 @@ function calibrateRecommendation(m,records,op={},progress=()=>{}){
  const sizes=c.colunas?shape.colunas.map(a=>a.length):[shape.dezenas.length,shape.trevos?.length||0];
  const signature=JSON.stringify([m,b.meta.assinatura,sizes,op.fixas||[],op.excluidas||[]]);
  if(calibrationCache.has(signature))return calibrationCache.get(signature);
- const fallback={versao:'4.21.0',modalidade:m,assinatura:b.meta.assinatura,pesos:{},perfil:'neutro',estado:'insuficiente',
+ const fallback={versao:L.VERSION,modalidade:m,assinatura:b.meta.assinatura,pesos:{},perfil:'neutro',estado:'insuficiente',
    motivo:'Pesos neutros: são necessários 120 concursos consecutivos para separar treino, validação e teste.'};
  // Restrições alteram a população de comparação. Não reutilizar evidência
  // obtida para jogos livres em jogos fixados pelo usuário.
@@ -89,6 +89,48 @@ function calibrateRecommendation(m,records,op={},progress=()=>{}){
    limites:'60 alvos walk-forward, 30 para validação e 30 para teste. IC 95%, permutação em blocos, Holm em 6 comparações por etapa e estabilidade em 3 períodos. Mede o jogo principal; não certifica lucro, complementos ou o lote. Monte Carlo descreve o acaso e não fornece sinal preditivo.'};
  if(calibrationCache.size>=12)calibrationCache.delete(calibrationCache.keys().next().value);
  calibrationCache.set(signature,result);return result;
+}
+
+/* Qualidade da evidência não é probabilidade de prêmio. É um resumo operacional
+ * para impedir que o usuário confunda uma seleção bem explicada com uma
+ * previsão. A pontuação é determinística e penaliza base curta, lacunas,
+ * conflitos e ausência de validação fora da amostra. */
+function evidenceQuality(base,calibration,state){
+ const reasons=[],limits=[],penalidades=[];let score=100;
+ const n=Number(base?.n)||0,gaps=(Number(base?.lacunas)||0)+(Number(base?.semRegistroAteCorte)||0);
+ const penalizar=(p,motivo)=>{score-=p;penalidades.push({pontos:p,motivo});limits.push(motivo);};
+ // Ausência anterior ao início descreve o recorte, não uma lacuna interna.
+ if(base?.inicioAusente)limits.push(`recorte começa no concurso ${base.primeiro??Number(base.inicioAusente)+1}; concursos anteriores não foram analisados`);
+ if(n<30)penalizar(45,`base curta: ${n} concurso${n===1?'':'s'} válidos`);
+ else if(n<60)penalizar(25,`base ainda pequena: ${n} concursos válidos`);
+ else if(n<120)penalizar(12,`base moderada: ${n} concursos; validação integrada ainda é limitada`);
+ else reasons.push(`${n} concursos válidos na base`);
+ if(gaps)penalizar(Math.min(25,gaps*2),`${gaps} lacuna${gaps===1?'':'s'} no histórico`);
+ if(Number(base?.conflitos)>0)penalizar(15,`${base.conflitos} conflito${base.conflitos===1?'':'s'} excluído${base.conflitos===1?'':'s'}`);
+ for(const [campo,nome] of [['semData','sem data'],['semComplemento','sem complemento completo'],['invalidos','registros inválidos excluídos']]){
+   const k=Number(base?.[campo])||0;if(k)penalizar(Math.min(15,15*k/Math.max(1,n)),`${k} ${nome}`);
+ }
+ const cs=calibration?.estado;
+ const validacao=cs==='ajustado'?'ajuste confirmado em teste separado':cs==='neutro'?'teste separado executado; sem ajuste confirmado':
+   cs==='teste-separado'?'teste separado executado; vantagem futura não demonstrada':
+   cs==='prospectivo'?'acompanhamento prospectivo disponível; vantagem futura não demonstrada':
+   cs==='recuo-prospectivo'?'perfil suspenso pelo acompanhamento prospectivo':
+   cs==='restricoes'?'restrições não participaram desta calibração':'validação não executada ou amostra insuficiente';
+ if(cs==='ajustado')reasons.push('pesos validados em período separado');
+ else if(['prospectivo','neutro','teste-separado'].includes(cs))reasons.push(validacao);
+ else if(cs==='recuo-prospectivo')penalizar(20,'acompanhamento prospectivo suspendeu o perfil');
+ else penalizar(8,validacao);
+ if(state==='amostra-insuficiente')limits.push('seleção sem ranking histórico confiável');
+ if(state==='perfil-historico')reasons.push('ranking histórico aplicado apenas de forma descritiva');
+ if(state==='recuo-prospectivo')limits.push('perfil histórico em recuo por desempenho prospectivo inferior');
+ const validada=['ajustado','neutro','prospectivo','teste-separado'].includes(cs);
+ const teto=n===0?0:n<30?49:!validada?69:100;
+ score=Math.min(score,teto);
+ score=Math.max(0,Math.min(100,Math.round(score)));
+ const nivel=score>=75?'boa':score>=50?'moderada':'limitada';
+ return {pontuacao:score,nivel,motivo:`Qualidade operacional ${nivel} (${score}/100), por regra heurística. Não é uma estimativa de chance de prêmio nem confiança estatística.`,
+   fatores:reasons,limitacoes:[...new Set(limits)],validacao,penalidades,teto,
+   metodologia:'Índice heurístico não calibrado: parte de 100, desconta tamanho, lacunas internas, conflitos e incompletude; aplica teto 0 sem base, 49 com menos de 30 concursos e 69 sem validação. Não premia acertos nem implica previsão.',versao:'qualidade-evidencia-2'};
 }
 
 function recommend(m,records,op={},progress=()=>{}){
@@ -165,7 +207,8 @@ function recommend(m,records,op={},progress=()=>{}){
  // vantagem fora da amostra, pois os mesmos dados participaram da seleção.
  const adherence=L.reference(m,first,b.rows,{antesDe:op.antesDe??null,semente:seed+':referencia',amostras:1000});
  analysis.base=b.meta;
- return {versao:'4.21.0',motor:'integrado',modalidade:m,semente:seed,calibracao:calibration,
+ const qualidade=evidenceQuality(b.meta,calibration,suspended?'recuo-prospectivo':enough?'perfil-historico':'amostra-insuficiente');
+ return {versao:L.VERSION,motor:'integrado',modalidade:m,semente:seed,calibracao:calibration,qualidadeEvidencia:qualidade,
    parametros:{acompanhamento:monitor?{comparacao:monitor.comparacao}:null,janela:op.janela??0,antesDe:op.antesDe??null,fixas:fixed,excluidas:excluded,formato:shape,trevosFixos:op.trevosFixos||null},
    base:b.meta,totalDisponivel:b.totalDisponivel,estado:suspended?'recuo-prospectivo':enough?'perfil-historico':'amostra-insuficiente',
    jogos:selected.map(p=>p.jogo),explicacoes:explanations,
@@ -175,6 +218,6 @@ function recommend(m,records,op={},progress=()=>{}){
    motivo:suspended?calibration.motivo:enough?'Menor distância conjunta ao perfil histórico entre as candidatas avaliadas. Jogos adicionais reduzem a repetição de dezenas, pares e trios.':'Menos de 30 concursos válidos: seleção aleatória, respeitando tamanho, orçamento e restrições. Não há ranking histórico confiável.',
    evidencia:'Seleção descritiva. Esta recomendação não tem vantagem preditiva demonstrada.',aviso:L.aviso};
 }
-Object.assign(L,{recommend,recommendationBase,calibrateRecommendation});
+Object.assign(L,{recommend,recommendationBase,calibrateRecommendation,evidenceQuality});
 if(typeof module!=='undefined'&&module.exports)module.exports=L;
 })(globalThis);

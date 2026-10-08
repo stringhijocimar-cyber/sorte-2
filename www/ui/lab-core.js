@@ -1,7 +1,7 @@
 /* LotoLab 4.18: núcleo descritivo puro, compartilhado pelo worker e pelos testes. */
 (function(root){
 'use strict';
-const VERSION='4.22.0';
+const VERSION='4.26.3';
 const aviso='Este índice mede semelhança com o histórico. Não representa a probabilidade matemática de a combinação ser sorteada no próximo concurso.';
 const rules={
  'mega-sena':{nome:'Mega-Sena',N:60,k:6,min:6,max:20,base:1,preco:6,faixas:[6,5,4],slug:'megasena'},
@@ -54,6 +54,22 @@ function history(m,records,op={}){
  const meta={n:rows.length,primeiro:rows[0]?.concurso??null,ultimo:rows.at(-1)?.concurso??null,antesDe:antes,sorteio:op.sorteio||1,invalidos,duplicatas,conflitos:conflicts.size,lacunas:sum(gaps.map(([a,b])=>b-a+1)),intervalosAusentes:gaps,semComplemento:rows.filter(r=>!r.completo).length,semData:rows.filter(r=>!r.data).length,inicioAusente:rows.length&&!c.especial?rows[0].concurso-1:0,semRegistroAteCorte:antes!==null&&rows.length&&!c.especial?Math.max(0,antes-1-rows.at(-1).concurso):0,especial:!!c.especial};
  meta.assinatura=hash(JSON.stringify(rows.map(r=>[r.concurso,r.data,tokens(m,r),r[c.extra],r.dezenasSegundoSorteio,r.precoBase,r.faixasDetalhadas]))).toString(16);return {modalidade:m,rows,meta,masks:rows.map(r=>mask(tokens(m,r)))};
 }
+function historyHealth(b){
+ const {rows,meta}=b,origens=new Map();let anterior=null,datasForaDeOrdem=0,consecutivosFinais=rows.length?1:0;
+ for(const r of rows){
+  origens.set(r.origem,(origens.get(r.origem)||0)+1);
+  if(r.data){if(anterior&&r.data<anterior)datasForaDeOrdem++;anterior=r.data;}
+ }
+ for(let i=rows.length-1;i>0&&rows[i].concurso===rows[i-1].concurso+1;i--)consecutivosFinais++;
+ const amplitude=rows.length&&!meta.especial?meta.ultimo-meta.primeiro+1:null;
+ return {concursos:rows.length,primeiro:meta.primeiro,ultimo:meta.ultimo,antesDe:meta.antesDe,
+  dataPrimeiro:rows[0]?.data??null,dataUltimo:rows.at(-1)?.data??null,
+  coberturaInterna:amplitude?rows.length/amplitude:null,faltantesInternos:meta.lacunas,
+  consecutivosFinais:meta.especial?null:consecutivosFinais,especial:meta.especial,
+  semData:meta.semData,datasForaDeOrdem,invalidos:meta.invalidos,conflitos:meta.conflitos,
+  fontes:[...origens].sort(([a],[b])=>a<b?-1:a>b?1:0).map(([origem,concursos])=>({origem,concursos})),
+  nota:'Cobertura apenas entre o primeiro e o último concurso deste recorte; não certifica todo o histórico nem o último resultado oficial. Fontes são declaradas, não autenticadas.'};
+}
 function distribution(m,t){const c=cfg(m),ps=Array(c.k+1).fill(0);if(c.colunas){ps[0]=1;for(const col of t.colunas){const p=col.length/10;for(let h=c.k;h>=0;h--)ps[h]=ps[h]*(1-p)+(h?ps[h-1]*p:0);}}else{const n=t.dezenas.length;for(let h=0;h<=c.k;h++)ps[h]=comb(n,h)*comb(c.N-n,c.k-h)/comb(c.N,c.k);}return ps;}
 function wilson(k,n){if(!n)return null;const z=1.95996398454,p=k/n,d=1+z*z/n,a=(p+z*z/(2*n))/d,b=z*Math.sqrt(p*(1-p)/n+z*z/(4*n*n))/d;return [Math.max(0,a-b),Math.min(1,a+b)];}
 const percentile=(x,vs)=>vs.length?100*(vs.filter(v=>v<x-1e-12).length+.5*vs.filter(v=>Math.abs(v-x)<1e-12).length)/vs.length:null;
@@ -61,6 +77,43 @@ function quantile(xs,p){if(!xs.length)return null;const a=xs.slice().sort((a,b)=
 function intervals(indices,b){const rows=b.rows,values=[],occ=[];let ignored=0;indices.forEach((i,j)=>{const r=rows[i],prev=j?rows[indices[j-1]]:null,v=prev&&prev.bloco===r.bloco?r.concurso-prev.concurso:null;if(prev){if(v===null)ignored++;else values.push(v);}occ.push({concurso:r.concurso,data:r.data,intervalo:v});});const last=indices.length?rows[indices.at(-1)]:null;return {vezes:indices.length,ultimo:last?.concurso??null,atraso:last&&last.bloco===rows.at(-1).bloco&&!b.meta.semRegistroAteCorte?rows.at(-1).concurso-last.concurso:null,intervaloMedio:values.length?mean(values):null,menorIntervalo:values.length?Math.min(...values):null,maiorIntervalo:values.length?Math.max(...values):null,intervalosIgnorados:ignored,consecutivos:values.filter(v=>v===1).length,ocorrencias:occ,periodos:[0,1,2].map(p=>{const lo=Math.floor(rows.length*p/3),hi=Math.floor(rows.length*(p+1)/3);return {n:hi-lo,vezes:indices.filter(i=>i>=lo&&i<hi).length};})};}
 function counts(m,t,b){const a=mask(tokens(m,t)),hs=b.masks.map(x=>intersection(a,x)),dist=Array(cfg(m).k+1).fill(0);hs.forEach(h=>dist[h]++);return {hs,dist};}
 function structural(m,t){const c=cfg(m),ds=c.colunas?t.colunas.flat():t.dezenas,n=ds.length,a=ds.slice().sort((a,b)=>a-b),finais=Array(10).fill(0),faixas=Array(5).fill(0);for(const d of ds){finais[d%10]++;faixas[Math.min(4,Math.floor((d-c.base)/c.N*5))]++;}return {soma:sum(ds),media:mean(ds),amplitude:a.at(-1)-a[0],pares:ds.filter(d=>d%2===0).length,impares:ds.filter(d=>d%2!==0).length,consecutivos:a.slice(1).filter((x,i)=>x===a[i]+1).length,finais,faixas,dispersao:sd(ds),concentracao:Math.max(...faixas)/n};}
+function modalityProfile(m,t){
+ const ds=cfg(m).colunas?t.colunas.flat():t.dezenas;
+ const primos=new Set([2,3,5,7,11,13,17,19,23,29,31,37,41,43,47,53,59]);
+ if(m==='mega-sena'||m==='mega-da-virada')return {tipo:'Mega-Sena',medidas:{baixas:ds.filter(d=>d<=30).length,altas:ds.filter(d=>d>=31).length,primos:ds.filter(d=>primos.has(d)).length,soma:sum(ds)}};
+ if(m==='lotofacil'){
+  const linhas=Array(5).fill(0),colunas=Array(5).fill(0);
+  for(const d of ds){linhas[Math.floor((d-1)/5)]++;colunas[(d-1)%5]++;}
+  const moldura=ds.filter(d=>d<=5||d>=21||d%5===1||d%5===0).length;
+  return {tipo:'Lotofácil',medidas:{moldura,miolo:ds.length-moldura,linhas,colunas,linhasCheias:linhas.filter(x=>x===5).length,colunasCheias:colunas.filter(x=>x===5).length,primos:ds.filter(d=>primos.has(d)).length,soma:sum(ds)}};
+ }
+ return null;
+}
+function profileSummary(m,t,b){
+ const atual=modalityProfile(m,t);if(!atual)return null;
+ const c=cfg(m),historico=b.rows.map(r=>modalityProfile(m,r).medidas),keys=Object.keys(atual.medidas);
+ const comparavel=t.dezenas.length===c.k;
+ const resumo=values=>({media:values.length?mean(values):null,
+   faixaCentral80:values.length?[quantile(values,.1),quantile(values,.9)]:null});
+ const estatisticas=Object.fromEntries(keys.map(k=>[k,Array.isArray(atual.medidas[k])?
+   atual.medidas[k].map((v,i)=>({...resumo(historico.map(x=>x[k][i])),percentil:comparavel?percentile(v,historico.map(x=>x[k][i])):null})):
+   {...resumo(historico.map(x=>x[k])),percentil:comparavel?percentile(atual.medidas[k],historico.map(x=>x[k])):null}]));
+ const historicoMedio=Object.fromEntries(keys.map(k=>[k,Array.isArray(estatisticas[k])?
+   estatisticas[k].map(x=>x.media):estatisticas[k].media]));
+ const ultimo=b.rows.at(-1),transicoes=[];
+ for(let i=1;i<b.rows.length;i++)if(!c.especial&&b.rows[i].concurso===b.rows[i-1].concurso+1)
+   transicoes.push(hits(m,b.rows[i],b.rows[i-1]));
+ const ps=distribution(m,t),repetidas=ultimo?hits(m,t,ultimo):null;
+ const repeticao={concurso:ultimo?.concurso??null,dezenas:ultimo?t.dezenas.filter(d=>ultimo.dezenas.includes(d)):[],
+   atual:repetidas,esperadoUniforme:t.dezenas.length*c.k/c.N,
+   probabilidadeExata:repetidas===null?null:ps[repetidas],distribuicao:ps,
+   transicoes:transicoes.length,historicoMedio:transicoes.length?mean(transicoes):null};
+ return {tipo:atual.tipo,atual:atual.medidas,historicoMedio,estatisticas,concursos:historico.length,
+   comparavel,tamanhoJogo:t.dezenas.length,tamanhoResultado:c.k,repeticao,
+   nota:comparavel?'Comparação descritiva com resultados do mesmo tamanho.':
+     'Aposta ampliada: médias do histórico referem-se aos resultados simples, não a volantes do mesmo tamanho. Percentis diretos indisponíveis.',
+   metodologia:'Faixa central histórica: percentis 10 e 90 interpolados, não intervalo de confiança nem faixa prevista. Percentis com empates centrais. Repetição matemática: interseção de conjuntos uniformes, sem usar frequência ou atraso como sinal.'};
+}
 function frequency(m,t,b){const c=cfg(m);return tokens(m,t).map(d=>{const ids=[];b.masks.forEach((a,i)=>{if(a[d>>>5]&(1<<(d&31)))ids.push(i);});const v=intervals(ids,b),n=b.rows.length,nr=Math.min(30,n),p=c.colunas?.1:c.k/c.N;return {dezena:c.colunas?`${Math.floor(d/10)+1}:${d%10}`:d+c.base,...v,percentual:n?100*ids.length/n:null,frequenciaRecente:nr?ids.filter(i=>i>=n-nr).length/nr:null,frequenciaLonga:n?ids.length/n:null,janelaRecente:nr,atrasoMedio:v.intervaloMedio===null?null:v.intervaloMedio-1,maiorAtraso:v.maiorIntervalo===null?null:v.maiorIntervalo-1,esperado:p,desvio:n?ids.length/n-p:null,ic:wilson(ids.length,n)};});}
 function analyze(m,input,records,op={}){
  const t=validateTicket(m,input),b=history(m,records,op),c=cfg(m),n=b.rows.length,{hs,dist}=counts(m,t,b),p=distribution(m,t),own=tokens(m,t);
@@ -73,7 +126,7 @@ function analyze(m,input,records,op={}){
  const complementos=c.extra?{campo:c.extra,completos:0,ausentes:0,conjuntas:[]}:null;
  if(complementos)for(let i=0;i<n;i++){const r=b.rows[i];if(t[c.extra]===undefined||r[c.extra]===undefined){complementos.ausentes++;continue;}const e=c.extra==='trevos'?t.trevos.filter(x=>r.trevos.includes(x)).length:Number(t[c.extra]===r[c.extra]);complementos.completos++;let f=complementos.conjuntas.find(x=>x.acertos===hs[i]&&x.extra===e);if(!f){f={acertos:hs[i],extra:e,vezes:0};complementos.conjuntas.push(f);}f.vezes++;}
  if(complementos)complementos.conjuntas.forEach(x=>x.percentual=100*x.vezes/complementos.completos);
- return {versao:VERSION,modalidade:m,jogo:t,base:b.meta,faixas,minimos,predominantes:n?ranking.slice(0,2).map(f=>f.acertos):[],raras:faixas.filter(f=>f.vezes&&f.percentual<1).map(f=>f.acertos),naoObservadas:faixas.filter(f=>!f.vezes).map(f=>f.acertos),estrutura:structural(m,t),dezenas:frequency(m,t,b),coberturaMedia:n?sum(hs)/(n*c.k):null,coberturaMediaDezenas:n?sum(hs)/(n*own.length):null,repetidas,repeticaoCompleta:intervals(b.rows.flatMap((r,i)=>complete.has(r.concurso)?[i]:[]),b),detalhes,complementos,conclusao:n?`Maior concentração histórica nas faixas de ${ranking[0].acertos} e ${ranking[1].acertos} acertos.`:'Sem concursos válidos neste recorte.',aviso};
+ return {versao:VERSION,modalidade:m,jogo:t,base:b.meta,saudeBase:historyHealth(b),faixas,minimos,predominantes:n?ranking.slice(0,2).map(f=>f.acertos):[],raras:faixas.filter(f=>f.vezes&&f.percentual<1).map(f=>f.acertos),naoObservadas:faixas.filter(f=>!f.vezes).map(f=>f.acertos),estrutura:structural(m,t),perfilModalidade:profileSummary(m,t,b),dezenas:frequency(m,t,b),coberturaMedia:n?sum(hs)/(n*c.k):null,coberturaMediaDezenas:n?sum(hs)/(n*own.length):null,repetidas,repeticaoCompleta:intervals(b.rows.flatMap((r,i)=>complete.has(r.concurso)?[i]:[]),b),detalhes,complementos,conclusao:n?`Maior concentração histórica nas faixas de ${ranking[0].acertos} e ${ranking[1].acertos} acertos.`:'Sem concursos válidos neste recorte.',aviso};
 }
 const criterionNames=['soma','paridade','amplitude','consecutivos','dispersao','concentracao','finais','frequencia','atraso','paresTrios','repeticao','perfil'];
 function vector(m,t,b,omit=-1){const c=cfg(m),s=structural(m,t),ts=tokens(m,t),n=ts.length,all=counts(m,t,b),hs=omit<0?all.hs:all.hs.filter((_,i)=>i!==omit),dist=all.dist.slice(),H=hs.length,p=distribution(m,t);if(omit>=0)dist[all.hs[omit]]--;
@@ -106,6 +159,6 @@ function financialMetrics(rows){const valid=rows.filter(x=>x.disponivel);if(vali
 function monteCarlo(m,t,op={}){t=validateTicket(m,t);const n=op.amostras??10000;if(!Number.isInteger(n)||n<1000||n>100000)throw Error('Use 1.000–100.000 simulações.');const seed=String(op.semente||'simulacao-418'),random=rng(seed),c=cfg(m),dist=Array(c.k+1).fill(0),target=tokens(m,t),gm=mask(target),groups=Array.from({length:Math.min(5,c.k,target.length)},(_,i)=>({tamanho:i+1,tokens:target.slice(0,i+1),vezes:0,atraso:0,maiorAusencia:0}));let last=-1,maxAbs=0,repeated=0;
  for(let i=0;i<n;i++){const d=c.colunas?{colunas:Array.from({length:7},()=>[Math.floor(random()*10)])}:{dezenas:sample(Array.from({length:c.N},(_,i)=>i+c.base),c.k,random)},dm=mask(tokens(m,d)),h=intersection(gm,dm);dist[h]++;if(h===c.k){repeated++;if(last>=0)maxAbs=Math.max(maxAbs,i-last-1);last=i;}for(const g of groups)if(intersection(mask(g.tokens),dm)===g.tamanho){g.vezes++;g.atraso=0;}else{g.atraso++;g.maiorAusencia=Math.max(g.maiorAusencia,g.atraso);}}
  return {versao:VERSION,modalidade:m,jogo:t,semente:seed,n,simulado:true,faixas:dist.map((vezes,h)=>({acertos:h,vezes,percentual:100*vezes/n,ic:wilson(vezes,n),probabilidade:distribution(m,t)[h]})),coberturaCompleta:{vezes:repeated,maiorIntervaloSemCobertura:repeated>1?maxAbs:null,ausenciaAtual:last>=0?n-last-1:null},grupos:groups.map(g=>({...g,grupo:g.tokens.map(d=>c.colunas?`${Math.floor(d/10)+1}:${d%10}`:d+c.base)})),nota:'Sorteios uniformes simulados, nunca gravados como resultados reais. Cada grupo listado é específico; não representa todos os grupos desse tamanho.'};}
-root.LL18={VERSION,aviso,rules,cfg,sum,mean,sd,comb,hash,rng,sample,nums,parseTicket,validateTicket,tokens,key,mask,intersection,hits,randomTicket,normalizeDraw,history,distribution,wilson,percentile,quantile,intervals,counts,structural,frequency,analyze,criterionNames,vector,center,distance,reference,unrank,groupPage,portfolio,equivalents,currentCost,financial,financialMetrics,monteCarlo};
+root.LL18={VERSION,aviso,rules,cfg,sum,mean,sd,comb,hash,rng,sample,nums,parseTicket,validateTicket,tokens,key,mask,intersection,hits,randomTicket,normalizeDraw,isoDate,history,historyHealth,distribution,wilson,percentile,quantile,intervals,counts,structural,modalityProfile,profileSummary,frequency,analyze,criterionNames,vector,center,distance,reference,unrank,groupPage,portfolio,equivalents,currentCost,financial,financialMetrics,monteCarlo};
 if(typeof module!=='undefined'&&module.exports)module.exports=root.LL18;
 })(globalThis);

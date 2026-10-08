@@ -25,7 +25,7 @@ function historyRound(report,target){
  const label=checked?'Conferido':rejected?'Fora da avaliação':'Aguardando resultado';
  const date=observation?.data?.split('-').reverse().join('/')||'';
  return `<div class="auto-round-summary"><div><b>Concurso ${target}</b>${date?`<div class="auto-round-date">${esc(date)}</div>`:''}</div><span class="auto-history-status ${checked?'checked':''}">${label}</span></div>
-  ${rejected?'<p class="auto-history-note" role="status">Este registro não atende aos critérios de avaliação: confira a data do resultado e se o pacote foi criado antes do sorteio. Ele permanece visível, sem entrar no desempenho.</p>':''}
+  ${rejected?'<p class="auto-history-note" role="status">Este registro não atende aos critérios de avaliação: confira a data do resultado e se o pacote foi criado em um dia anterior. Pacotes do mesmo dia são excluídos porque não há hora oficial verificável. Ele permanece visível, sem entrar no desempenho.</p>':''}
   ${checked?`<div class="auto-history-result"><b>${L.cfg(m).dupla?'Resultado · 1º sorteio':'Resultado do concurso'}</b>${C.ticket(m,result)}${result.dezenasSegundoSorteio?`<b>Resultado · 2º sorteio</b>${C.ticket(m,{dezenas:result.dezenasSegundoSorteio})}`:''}</div>${C.legend()}`:'<p class="auto-history-note">As combinações originais estão preservadas. Os acertos aparecerão quando este concurso for recebido e validado.</p>'}
   ${historyCard(m,round.principal,'Sugestão principal · '+name(round.metodo),result,observation?.acertos.principal,true)}
   <p class="auto-history-note">${round.testes.length} jogos virtuais · custo R$ 0,00. As dezenas permanecem iguais às registradas para este concurso.</p>
@@ -130,11 +130,14 @@ function render(g,old=false,rec=()=>'',trevos=()=> ''){
  const n=follow.n||a.inicial?.observacoes.slice(a.inicial.nSelecao).length||0;
  const goal=a.objetivo,goalMain=goal?.linhas.find(x=>x.id==='principal'),k=L.cfg(g.modalidade).k;
  const ticket=(t,i)=>`<article class="int-ticket ${i===0?'int-principal':''}"><div class="int-section-title"><h3>${i===0?'Sua sugestão principal':'Jogo adicional '+i}</h3><span>${i===0?'CONCURSO '+(round.concursoAlvo||'A DEFINIR'):'OPCIONAL'}</span></div>${balls(g.modalidade,t)}${t.trevos?trevos(t.trevos):''}${rec(t)}${i===0?`<p class="int-help">${esc(g.motivo)}</p>`:''}<button class="acao secundaria" data-int-analisar="${i}">Ver estatísticas deste jogo</button></article>`;
- return `<section class="int-results auto-results" aria-label="Sugestão automática"><div class="int-section-title"><h2>Sugestão + laboratório automático</h2><span>4.26</span></div>
+ return `<section class="int-results auto-results" aria-label="Sugestão automática"><div class="int-section-title"><h2>Sugestão + laboratório automático</h2><span>${esc(L.VERSION)}</span></div>
   ${old?'<p class="nota atencao">O histórico mudou. A atualização automática está preparando o próximo concurso.</p>':''}
   ${!a.persistido?'<p class="nota atencao" role="alert">A memória do aparelho não pôde ser gravada. Este pacote ainda não está registrado para avaliação; libere espaço e atualize a sugestão.</p>':''}
   ${!g.base.n?'<p class="nota atencao">Sem histórico disponível. A sugestão usa apenas referências combinatórias; a comparação começará quando os resultados chegarem.</p>':''}
   ${ticket(g.jogos[0],0)}
+  ${root.LL18UI?.baseHealthView(g.principal.analise.saudeBase,{historico:g.parametros.antesDe!==null})||''}
+  ${root.LL18UI?.evidenceView(g)||''}
+  ${root.LL18UI?.modalidadeProfileView(g.principal.analise.perfilModalidade)||''}
   <div class="auto-summary"><div><b>${num(g.base.n,0)}</b><small>concursos analisados</small></div><div><b>${a.pacoteVirtual.length}</b><small>jogos de teste virtual</small></div><div><b>${num(follow.n,0)}</b><small>sorteios conferidos</small></div></div>
   <article class="auto-decision"><span class="int-eyebrow">DECISÃO AUTOMÁTICA · ${esc(a.decisao.acao)}</span><h3>${esc(name(round.metodo))}</h3><p>${esc(a.decisao.motivo)}</p><p class="int-help">${last?`Último resultado: concurso ${last.concurso}; principal com ${last.acertos.principal} acertos. `:'O pacote atual aguarda o próximo resultado. '}Revisão de estratégia a partir de ${a.proximaRevisao} sorteios conferidos neste perfil; o pacote é renovado a cada novo concurso.</p></article>
   ${historyReport(g)}

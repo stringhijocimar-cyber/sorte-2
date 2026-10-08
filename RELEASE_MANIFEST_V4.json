@@ -1,12 +1,12 @@
 {
   "product": "LotoLab",
-  "version": "4.21.0",
-  "versionLabel": "V4.21",
+  "version": "4.26.3",
+  "versionLabel": "V4.26.3",
   "sourceBranch": "main",
   "visualLayer": "Sugestão e aprendizado automáticos",
   "android": {
-    "versionCode": 30,
-    "versionName": "4.21.0"
+    "versionCode": 40,
+    "versionName": "4.26.3"
   },
   "versionFiles": [
     "VERSION",
@@ -14,8 +14,8 @@
     "package-lock.json",
     "android/app/build.gradle"
   ],
-  "releaseState": "source-ready",
-  "notes": "Dez estratégias e controle aleatório, pacotes virtuais por concurso e decisão automática com avaliação prospectiva.",
+  "releaseState": "source-ready-unpublished",
+  "notes": "Revisão: análise específica Mega-Sena/Lotofácil, médias por posição, repetição combinatória, indicador operacional nos dois fluxos e consistência de distribuição. APK ainda não compilado.",
   "editions": [
     {
       "name": "LotoLab 4.3.0",

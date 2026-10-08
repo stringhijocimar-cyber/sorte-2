@@ -1,0 +1,28 @@
+import {readFileSync} from 'node:fs';
+import {dirname,resolve,join} from 'node:path';
+import {fileURLToPath} from 'node:url';
+import {createRequire} from 'node:module';
+import assert from 'node:assert/strict';
+const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
+const text=name=>readFileSync(join(root,name),'utf8');
+const json=name=>JSON.parse(text(name));
+const version=text('VERSION').trim(),pkg=json('package.json'),lock=json('package-lock.json');
+assert.match(version,/^\d+\.\d+\.\d+$/);
+for(const v of [pkg.version,lock.version,lock.packages[''].version])assert.equal(v,version);
+const gradle=text('android/app/build.gradle');
+const code=Number(gradle.match(/versionCode\s+(\d+)/)?.[1]);
+assert.equal(gradle.match(/versionName\s+"([^"]+)"/)?.[1],version);
+assert.ok(Number.isInteger(code)&&code>0);
+const manifest=json('RELEASE_MANIFEST_V4.json');
+assert.equal(manifest.version,version);
+assert.equal(manifest.android.versionName,version);
+assert.equal(manifest.android.versionCode,code);
+const L=createRequire(import.meta.url)('../ui/lab-auto.js');
+assert.equal(L.VERSION,version);
+assert.ok(text('index.html').includes(`<span class="foco-versao">${version}</span>`));
+assert.ok(text(`docs/release-${version}.md`).startsWith(`# LotoLab ${version}`));
+assert.ok(text('ui/lab-auto.js').includes('VERSION=L.VERSION'));
+assert.doesNotMatch(text('ui/lab-recommendation.js'),/versao:'\d+\.\d+\.\d+'/);
+for(const asset of ['lab-core.js','lab-recommendation.js','lab-ui.js','lab-auto.js','lab-auto-ui.js','lab-v4-18.css'])
+  assert.ok(text('index.html').includes(`ui/${asset}?v=${version}`),`Token de cache antigo: ${asset}`);
+console.log(`Versão consistente: ${version} · Android ${code}.`);
