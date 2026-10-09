@@ -3,7 +3,7 @@
 'use strict';
 const L=root.LL18||(typeof require==='function'?require('./lab-recommendation.js'):null);
 // O protocolo dos bilhetes permanece igual: rodadas antigas continuam congeladas.
-const PROTOCOL='auto-421-1', EVALUATION='objetivo-426-2', VERSION='4.26.0', POOL=96, REFERENCES=32;
+const PROTOCOL='auto-421-1', EVALUATION='objetivo-426-3', VERSION=L.VERSION, POOL=96, REFERENCES=32;
 const experts={
  equilibrio:'Equilíbrio de soma e paridade', frequencia:'Frequência com suavização bayesiana',
  recencia:'Frequência recente ponderada', atraso:'Atrasos como hipótese',
@@ -218,9 +218,10 @@ function prospective(m,rows,state,o){
  for(const round of state.rodadas||[]){
   const draw=byNumber.get(round.concursoAlvo);if(!draw){pending.push(round.concursoAlvo);continue;}
   if(round.geradoAte>=draw.concurso||round.protocolo!==PROTOCOL){rejected.push(draw.concurso);continue;}
-  // Se já existia data comprovadamente anterior à criação, não foi prospectivo.
+  // A fonte fornece somente a data, não a hora da apuração. Mesmo dia não
+  // comprova que o pacote existia antes do sorteio: fica fora da evidência.
   const localDay=new Date(round.criadoEm).toLocaleDateString('en-CA',{timeZone:'America/Sao_Paulo'});
-  if(!draw.data||localDay>draw.data){rejected.push(draw.concurso);continue;}
+  if(!draw.data||localDay>=draw.data){rejected.push(draw.concurso);continue;}
   observations.push(observation(m,round,draw,o));
  }
  observations.sort((a,b)=>a.concurso-b.concurso);
@@ -266,6 +267,13 @@ function autoCycle(m,records,input={},op={},progress=()=>{}){
   if(!state.decisoes.length)state.metodo=state.inicial.metodo;
  }
  const follow=prospective(m,evaluation.rows,state,o),count=follow.n;
+ if(state.decisoes.length&&state.decisoes.at(-1).protocoloAvaliacao!==EVALUATION){
+  const old=state.metodo;
+  state.metodo=state.inicial?.metodo||'consenso';
+  state.decisoes.push({n:count,protocoloAvaliacao:EVALUATION,concurso:follow.observacoes.at(-1)?.concurso??null,
+   anterior:old,metodo:state.metodo,acao:'REVALIDAR',
+   motivo:'Critério temporal atualizado: pacotes do mesmo dia sem hora oficial não entram na evidência. Método retorna à referência inicial até nova confirmação; rodadas originais preservadas.'});
+ }
  const lastDecision=state.decisoes.at(-1),ready=count>=60&&(lastDecision?.protocoloAvaliacao!==EVALUATION||count>=(lastDecision?.n||30)+30);
  if(ready){
   const candidates=follow.ranking.filter(x=>qualified(x)&&x.pContinuoAcaso<.05&&x.pContinuoConsenso<.05&&x.objetivo.pContinuoAcaso<.05&&x.objetivo.pContinuoConsenso<.05).sort((a,b)=>b.objetivo.consenso.ic[0]-a.objetivo.consenso.ic[0]);
@@ -310,12 +318,15 @@ function autoRecommend(m,records,input={},op={},progress=()=>{}){
  const analysis=L.analyze(m,selected[0],base.rows),adherence=L.reference(m,selected[0],base.rows,{amostras:1000,semente:cycle.rodada.semente+':explicacao'});
  const explanations=selected.map(jogo=>({jogo,distancia:null,criterios:[]}));
  const {pool:unused,...publicCycle}=cycle;
+ analysis.base=base.meta;
+ const estadoValidacao=cycle.acompanhamento.n>=60?'prospectivo':cycle.inicial?.estado==='concluido'?'teste-separado':'insuficiente';
+ const qualidadeEvidencia=L.evidenceQuality(base.meta,{estado:estadoValidacao},base.meta.n>=30?'perfil-historico':'amostra-insuficiente');
  return {versao:VERSION,motor:'automatico',modalidade:m,semente:cycle.rodada.semente,
   parametros:{janela:o.janela,antesDe:op.antesDe??null,formato:o.shape,fixas:o.fixed,excluidas:o.excluded,trevosFixos:o.trevosFixos},
   base:base.meta,totalDisponivel:base.totalDisponivel,jogos:selected,explicacoes:explanations,
   principal:{...explanations[0],analise:analysis,aderencia:adherence},diversidade:L.portfolio(m,selected),
   custo:selected.length*unit,unitario:unit,solicitados:q,candidatos:cycle.rodada.candidatos,estado:base.meta.n>=30?'perfil-historico':'amostra-insuficiente',
-  calibracao:{perfil:cycle.rodada.metodo,pesos:{},motivo:cycle.decisao.motivo,particao:cycle.inicial?.particao},
+  calibracao:{estado:estadoValidacao,perfil:cycle.rodada.metodo,pesos:{},motivo:cycle.decisao.motivo,particao:cycle.inicial?.particao},qualidadeEvidencia,
   motivo:cycle.rodada.metodo==='consenso'?'Combinação com maior concordância entre as dez estratégias do pacote virtual.':'Estratégia selecionada automaticamente: '+experts[cycle.rodada.metodo]+'.',
   evidencia:'Seleção e comparação automáticas; vantagem futura não demonstrada.',automatico:publicCycle,aviso:L.aviso};
 }

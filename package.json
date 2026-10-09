@@ -1,15 +1,17 @@
 {
   "name": "lotolab",
-  "version": "4.26.2",
+  "version": "4.26.3",
   "description": "Monta jogos das loterias brasileiras, guarda no aparelho e confere contra os concursos, mostrando o desempenho comparado ao acaso.",
   "private": true,
   "scripts": {
     "start": "python3 servir.py",
-    "android:init": "cap init LotoLab app.lotolab.jogos --web-dir=.",
+    "sync:www": "node ferramentas/sincronizar-www.mjs sync",
+    "check:distribution": "node ferramentas/sincronizar-www.mjs check",
+    "android:init": "cap init LotoLab app.lotolab.jogos --web-dir=www",
     "android:add": "cap add android",
-    "android:sync": "cap sync android",
+    "android:sync": "npm run sync:www && npm run check:distribution && cap sync android",
     "android:open": "cap open android",
-    "android:build": "cap sync android && cd android && ./gradlew assembleDebug",
+    "android:build": "npm run android:sync && cd android && ./gradlew assembleDebug",
     "test:inteligencia": "node ferramentas/testar-inteligencia.mjs",
     "test:analitica": "node ferramentas/testar-analitica.mjs",
     "test:laboratorio": "node --test ferramentas/testar-laboratorio.mjs",
@@ -17,7 +19,9 @@
     "test:recomendacao": "node --test ferramentas/testar-recomendacao.mjs",
     "test:automatico": "node --test ferramentas/testar-automatico.mjs",
     "test:backup": "node --test ferramentas/testar-backup.mjs",
-    "aprendizado:atualizar": "node ferramentas/atualizar-aprendizado.mjs"
+    "aprendizado:atualizar": "node ferramentas/atualizar-aprendizado.mjs",
+    "check:version": "node ferramentas/verificar-versao.mjs",
+    "test:revisao": "node --test ferramentas/testar-revisao.mjs"
   },
   "devDependencies": {
     "@capacitor/cli": "^6.1.2"

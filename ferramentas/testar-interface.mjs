@@ -1687,7 +1687,7 @@ if(EDICAO.nome === "completa"){
   for(const tema of ['escuro','claro'])for(const width of [360,412,1024]){
     await cmd('Emulation.setDeviceMetricsOverride',{width,height:915,deviceScaleFactor:1,mobile:width<600});
     await js(`document.documentElement.dataset.tema=${JSON.stringify(tema)};return true;`);
-    checar(`plano ${tema} cabe em ${width}px`,await js(`return document.documentElement.scrollWidth<=innerWidth+1`));
+    checar(`plano ${tema} cabe em ${width}px`,await js(`return document.documentElement.scrollWidth<=(window.visualViewport?.width||innerWidth)+1`));
   }
   await cmd('Emulation.setDeviceMetricsOverride',{width:412,height:915,deviceScaleFactor:2,mobile:true});
   await js(`window.scrollTo(0,0);return true;`);await capturar('plano-tema-claro');
@@ -1753,7 +1753,7 @@ for(const retorno of ['objeto','promessa','falha']){
     for(const tema of ['escuro','claro'])for(const width of [360,412,1024]){
       await cmd('Emulation.setDeviceMetricsOverride',{width,height:915,deviceScaleFactor:1,mobile:width<600});
       await js(`document.documentElement.dataset.tema=${JSON.stringify(tema)};return true;`);
-      checar('painel '+tema+' cabe em '+width+'px',await js('return document.documentElement.scrollWidth<=innerWidth+1'));
+      checar('painel '+tema+' cabe em '+width+'px',await js('return document.documentElement.scrollWidth<=(window.visualViewport?.width||innerWidth)+1'));
       if(width===412&&tema==='claro')await capturar('inicio-claro-411');
     }
     await cmd('Emulation.setDeviceMetricsOverride',{width:412,height:915,deviceScaleFactor:2,mobile:true});
@@ -1796,41 +1796,15 @@ checar('ponte nativa recebe também o segundo sorteio',await js(`return __foco41
 for(const tema of ['escuro','claro'])for(const m of ['dupla-sena','mais-milionaria']){
   await cmd('Emulation.setDeviceMetricsOverride',{width:360,height:915,deviceScaleFactor:1,mobile:true});
   await js(`S.modalidade=${JSON.stringify(m)};document.documentElement.dataset.tema=${JSON.stringify(tema)};irParaTela('sugestoes');return true;`);
-  checar('campos adicionais cabem em 360px: '+m+' '+tema,await js('return document.documentElement.scrollWidth<=innerWidth+1'));
+  checar('campos adicionais cabem em 360px: '+m+' '+tema,await js('return document.documentElement.scrollWidth<=(window.visualViewport?.width||innerWidth)+1'));
 }
 
-secao('P. Avaliação analítica 4.13');
-await js(`S.modalidade='mega-sena';S.autoAnalise=false;S.pesquisaAutomatica=false;S.buscaAutomatica=false;S.jogos=[];S.intLotes={};S.intConfig={};S.intTestes={};S.auditorias={};S.resultados=[];irParaTela('sugestoes');return true;`);
-checar('avaliação explica histórico insuficiente',await js(`return document.querySelector('#aud-iniciar').disabled&&document.querySelector('.aud-painel').textContent.includes('90 concursos')`));
-await js(`S.resultados=Array.from({length:100},(_,i)=>({modalidade:'mega-sena',concurso:i+1,data:'2026-01-01',dezenas:Array.from({length:6},(_,j)=>(i*7+j*11)%60+1).sort((a,b)=>a-b)}));irParaTela('sugestoes');return true;`);
-checar('histórico contínuo libera a avaliação',await js(`return !document.querySelector('#aud-iniciar').disabled`));
-const modoAntesAud413=await js(`return intConfig('mega-sena').modo`);
-await tocar('#tela [data-abrir-analitica]');
-checar('diagnóstico opcional abre pelo atalho antes de iniciar',await js(`return document.querySelector('#ux-analitica').closest('details').open`));
-await tocar('#aud-iniciar');
-let prontoAud=false;
-for(let i=0;i<150;i++){
-  prontoAud=await js(`return !!S.auditorias['mega-sena']`);if(prontoAud)break;await dormir(200);
-}
-checar('avaliação completa pela interface',prontoAud);
-checar('resultado mostra separação, referências e intervalo',await js(`const t=document.querySelector('#aud-resultado').textContent;return /Seleção/.test(t)&&/Teste final/.test(t)&&/32 lotes aleatórios/.test(t)&&/IC 95%/.test(t)`));
-checar('avaliar não cria jogos nem muda a estratégia do usuário',await js(`return S.jogos.length===0&&intConfig('mega-sena').modo===${JSON.stringify(modoAntesAud413)}`));
-await js(`document.querySelector('#aud-resultado').scrollIntoView({block:'start'});return true;`);
-await capturar('analitica-413-resultado');
-await tocar('#aud-exportar');
-checar('exportação Android conserva configuração e amostra real',await js(`const d=JSON.parse(document.querySelector('#aud-json').value);return d.versao==='4.16'&&d.final.n===30&&d.replicas===32&&d.etapas.selecao.ultimo<d.etapas.teste.primeiro`));
-for(const tema of ['escuro','claro'])for(const width of [360,412,1024]){
-  await cmd('Emulation.setDeviceMetricsOverride',{width,height:915,deviceScaleFactor:1,mobile:width<600});
-  await js(`document.documentElement.dataset.tema=${JSON.stringify(tema)};return true;`);
-  checar('avaliação '+tema+' cabe em '+width+'px',await js(`return document.documentElement.scrollWidth<=innerWidth+1`));
-}
-await cmd('Emulation.setDeviceMetricsOverride',{width:412,height:915,deviceScaleFactor:2,mobile:true});
-await js(`document.documentElement.dataset.tema='escuro';const r=S.resultados.at(-1);r.dezenas=r.dezenas.map(d=>d%60+1).sort((a,b)=>a-b);irParaTela('sugestoes');return true;`);
-checar('corrigir o histórico identifica avaliação anterior',await js(`return document.querySelector('#aud-resultado').textContent.includes('O histórico mudou')`));
-await js(`delete S.auditorias['mega-sena'];document.querySelector('#aud-iniciar').click();trocarModalidade('lotofacil');return true;`);
-await dormir(250);
-checar('trocar de modalidade cancela a avaliação em andamento',await js(`return S.modalidade==='lotofacil'&&!S.auditorias['mega-sena']&&!document.querySelector('.aud-result')`));
-
+// O painel 4.13 foi retirado do produto. Seus cálculos continuam cobertos
+// em testar-analitica.mjs; não montar uma UI fictícia para fingir navegação.
+secao('P. Recomendação atual sem painel legado');
+await js(`S.modalidade='mega-sena';S.autoAnalise=false;S.pesquisaAutomatica=false;S.buscaAutomatica=false;S.jogos=[];S.intLotes={};S.intConfig={};S.resultados=[];irParaTela('sugestoes');return true;`);
+checar('tela principal não reintroduz diagnóstico legado removido',await js(`return !document.querySelector('#tela #aud-iniciar')&&!!document.querySelector('#int-gerar')`));
+checar('fluxo ativo disponibiliza os painéis compartilhados de evidência e modalidade',await js(`return typeof LL18UI.evidenceView==='function'&&typeof LL18UI.modalidadeProfileView==='function'&&typeof LL18Auto.render==='function'`));
 secao('Q. Navegação e experiência 4.14');
 await js(`S.modalidade='mega-sena';S.jogos=[];S.teimosinhas=[];S.avisos=[];S.intConfig={};S.intLotes={};S.metaConfig={};S.ajustesAbertos=false;irParaTela('inicio',{lateral:true});return true;`);
 checar('as cinco ações principais têm destino direto',await js(`return [...document.querySelectorAll('#abas [data-secao]')].map(b=>b.dataset.secao).join(',')==='inicio,sugestoes,jogos,resultados,analise'`));
@@ -1857,7 +1831,7 @@ await tocar('#abas [data-secao="sugestoes"]');
 checar('aba Sugestões retorna ao formulário a partir de Plano',await js(`return S.tela==='sugestoes'`));
 await tocar('#abas [data-secao="inicio"]');
 await tocar('.ux-acessos [data-abrir-analitica]');await dormir(500);
-checar('atalho da avaliação chega ao painel com foco e botão visível',await js(`const p=document.querySelector('#ux-analitica'),r=p.getBoundingClientRect();return S.tela==='sugestoes'&&document.activeElement===p&&r.top>=0&&r.top<innerHeight/2`));
+checar('atalho da avaliação chega ao painel com foco e botão visível',await js(`const p=document.querySelector('#ll-lab'),r=p.getBoundingClientRect();return S.tela==='estatisticas'&&document.querySelector('[data-ll-tab="comite"]').getAttribute('aria-selected')==='true'&&document.activeElement===p&&r.top>=0&&r.top<innerHeight/2`));
 await tocar('#abas [data-secao="resultados"]');
 await tocar('[data-ux-historico]');
 checar('importação fica acessível sem percorrer a lista de concursos',await js(`return document.querySelector('#r-ajustes').open&&document.activeElement.id==='r-tudo'`));
@@ -1871,7 +1845,7 @@ for(const tema of ['escuro','claro'])for(const width of [360,412,1024]){
   await js(`document.documentElement.dataset.tema=${JSON.stringify(tema)};return true;`);
   for(const rota of ['inicio','sugestoes','jogos','resultados','pesquisa']){
     await js(`irParaTela(${JSON.stringify(rota)},{lateral:true});return true;`);await dormir(350);
-    checar(rota+' 4.14 cabe em '+width+'px no '+tema,await js('return document.documentElement.scrollWidth<=innerWidth+1'));
+    checar(rota+' 4.14 cabe em '+width+'px no '+tema,await js('return document.documentElement.scrollWidth<=(window.visualViewport?.width||innerWidth)+1'));
     if(tema==='claro'&&width===412&&rota==='sugestoes'){
       const contraste=await js(`const s=getComputedStyle(document.querySelector('.segmento [aria-selected="true"]'));const ctx=document.createElement('canvas').getContext('2d');const lum=c=>{ctx.fillStyle=c;ctx.fillRect(0,0,1,1);const a=[...ctx.getImageData(0,0,1,1).data].slice(0,3).map(x=>x/255).map(x=>x<=.04045?x/12.92:((x+.055)/1.055)**2.4);return a[0]*.2126+a[1]*.7152+a[2]*.0722;};const a=lum(s.color),b=lum(s.backgroundColor);return (Math.max(a,b)+.05)/(Math.min(a,b)+.05);`);
       checar('aba selecionada tem contraste de leitura no tema claro',contraste>=4.5,contraste.toFixed(2)+':1');
@@ -1956,48 +1930,13 @@ await capturar('LotoLab-4.18-Tema-Claro-lotofacil');
 await js(`document.documentElement.dataset.tema='escuro';trocarModalidade('mega-sena');irParaTela('inicio',{lateral:true});return true;`);
 await tocar('#btn-avisos');await tocar('#meta-testar-aviso');await capturar('LotoLab-4.18-Notificacoes');
 
-secao('S. Análise ampliada e memória 4.16');
+// Substitui expectativas de botões removidos por regressões do fluxo ativo.
+secao('S. Indicadores e perfis revisados');
 await tocar('#folha-avisos [data-fechar]:not(.fundo)');
-// Trecho real e contínuo da base; a ponta recente do arquivo tem lacunas.
-const reais416=JSON.parse(readFileSync(join(RAIZ,'dados/mega-sena.json'),'utf8')).concursos.filter(r=>r.concurso>=2638&&r.concurso<=2797).sort((a,b)=>a.concurso-b.concurso).map(r=>({...r,modalidade:'mega-sena'}));
-await js(`S.resultados=${JSON.stringify(reais416)};S.audMemoria={versao:1,entradas:[]};S.auditorias={};S.jogos=[];S.intConfig={};S.modalidade='mega-sena';irParaTela('sugestoes',{lateral:true});return true;`);
-checar('histórico suficiente escolhe a análise ampliada',await js(`return document.querySelector('#aud-rigor').value==='ampliado'&&!document.querySelector('#aud-iniciar').disabled`));
-await js(`document.querySelector('#aud-concursos').value='60';document.querySelector('#aud-concursos').dispatchEvent(new Event('change'));return true;`);
-checar('ampliar o teste exige 190 concursos sem reduzir o rigor em silêncio',await js(`return document.querySelector('#aud-iniciar').disabled&&document.querySelector('#aud-requisitos').textContent.includes('190 concursos')`));
-await js(`document.querySelector('#aud-concursos').value='30';document.querySelector('#aud-concursos').dispatchEvent(new Event('change'));document.querySelector('#int-semente').value='avaliacao-real-416';return true;`);
-await tocar('#tela [data-abrir-analitica]');
-await tocar('#aud-iniciar');
-checar('os critérios ficam fixos durante a análise',await js(`return document.querySelector('#aud-rigor').disabled&&document.querySelector('#aud-metrica').disabled`));
-checar('religar ações preserva critérios e suspende entrega automática durante a avaliação',await js(`intLigarAcoes();return LL18_BRIDGE.busy()&&document.querySelector('#aud-iniciar').disabled&&document.querySelector('#aud-rigor').disabled&&document.querySelector('#aud-metrica').disabled`));
-let ampliado416=false;
-for(let i=0;i<225;i++){
-  ampliado416=await js(`return !!S.auditorias['mega-sena']&&!document.querySelector('#aud-iniciar').disabled`);
-  if(ampliado416)break;await dormir(200);
-}
-checar('avaliação ampliada termina e explica o motivo da escolha',ampliado416&&await js(`const r=S.auditorias['mega-sena'];return r.etapas.selecao.n===90&&r.final.n===30&&document.querySelector('#aud-resultado').textContent.includes('Por que o app fez esta escolha')`));
-if(!ampliado416)throw new Error('Análise ampliada não concluiu: '+await js(`return document.querySelector('#aud-resultado').textContent+' / '+document.querySelector('#aud-requisitos').textContent`));
-checar('memória registra também a decisão de manter a referência',await js(`const m=JSON.parse(localStorage.getItem('lotolab:audMemoria'));return m.entradas.length===1&&m.entradas[0].status===S.auditorias['mega-sena'].status&&S.jogos.length===0`));
-for(const tema of ['escuro','claro'])for(const width of [320,412]){
-  await cmd('Emulation.setDeviceMetricsOverride',{width,height:915,deviceScaleFactor:2,mobile:true});
-  await js(`document.documentElement.dataset.tema=${JSON.stringify(tema)};return true;`);
-  checar('análise ampliada cabe em '+width+'px no '+tema,await js(`return document.documentElement.scrollWidth<=innerWidth+1`));
-}
-await cmd('Emulation.setDeviceMetricsOverride',{width:412,height:915,deviceScaleFactor:2,mobile:true});
-await js(`document.documentElement.dataset.tema='escuro';const e=document.querySelector('#ux-analitica');window.scrollTo({top:scrollY+e.getBoundingClientRect().top-document.querySelector('header').getBoundingClientRect().height-12,behavior:'instant'});return true;`);
-await dormir(250);
-await capturar('LotoLab-4.18-Analise-ampliada');
-await js(`const e=document.querySelector('#aud-resultado');e.querySelector('details').open=true;window.scrollTo({top:scrollY+e.getBoundingClientRect().top-document.querySelector('header').getBoundingClientRect().height-12,behavior:'instant'});return true;`);
-await dormir(250);
-await capturar('LotoLab-4.18-Diagnostico');
-await tocar('#aud-exportar-memoria');
-checar('memória pode ser exportada no Android',await js(`const m=JSON.parse(document.querySelector('#aud-json-memoria').value);return m.entradas.length===1&&m.entradas[0].n===30`));
-await js(`for(const k of ['autoAnalise','pesquisaAutomatica','buscaAutomatica'])Guardar.gravar(k,false);Guardar.gravar('modalidade','mega-sena');Guardar.gravar('resultados',S.resultados);return true;`);
-await cmd('Page.reload');await dormir(2200);
-await js(`irParaTela('sugestoes',{lateral:true});return true;`);
-checar('a memória das avaliações sobrevive a fechar e reabrir o app',await js(`return S.audMemoria.entradas.length===1&&document.querySelector('#aud-memoria').textContent.includes('1 avaliação diferente')`));
-await js(`trocarModalidade('lotofacil');return true;`);
-checar('outra modalidade não herda resultados de avaliação da Mega-Sena',await js(`return document.querySelector('#aud-memoria').textContent.includes('0 avaliações diferentes')`));
-
+await js(`S.modalidade='mega-sena';irParaTela('estatisticas',{lateral:true});return true;`);
+checar('laboratório mostra a versão real do motor',await js(`return document.querySelector('#ll-lab').textContent.includes(LL18.VERSION)`));
+checar('sem base o indicador não apresenta confiança artificial',await js(`const q=LL18.evidenceQuality({n:0},{estado:'insuficiente'},'amostra-insuficiente');return q.pontuacao===0&&q.nivel==='limitada'&&LL18UI.evidenceView({qualidadeEvidencia:q}).includes('regra heurística')`));
+checar('ausência de validação é explicitada mesmo com muitos concursos',await js(`const q=LL18.evidenceQuality({n:180},{estado:'insuficiente'},'perfil-historico');return q.pontuacao<=69&&q.validacao.includes('não executada')`));
 secao('T. Recorrência de combinações 4.17');
 const alvo417=[2,4,35,46,54,60];
 const linhas417=[alvo417,[2,4,35,46,54,59],[2,4,35,46,57,58],[2,4,35,55,56,57],[2,4,50,51,52,53],[1,3,5,7,9,11],alvo417];
@@ -2036,7 +1975,7 @@ for(const m of ['mega-sena','lotofacil','quina','lotomania','dupla-sena','dia-de
   for(const tema of ['escuro','claro'])for(const width of [320,412,1024]){
     await cmd('Emulation.setDeviceMetricsOverride',{width,height:915,deviceScaleFactor:2,mobile:width<650});
     await js(`document.documentElement.dataset.tema=${JSON.stringify(tema)};return true;`);
-    checar('recorrência '+m+' cabe em '+width+'px no '+tema,await js(`return document.documentElement.scrollWidth<=innerWidth+1&&[...document.querySelectorAll('.rec-painel input,.rec-painel select,.rec-painel button')].every(e=>e.getBoundingClientRect().height>=44)`));
+    checar('recorrência '+m+' cabe em '+width+'px no '+tema,await js(`return document.documentElement.scrollWidth<=(window.visualViewport?.width||innerWidth)+1&&[...document.querySelectorAll('.rec-painel input,.rec-painel select,.rec-painel button')].every(e=>e.getBoundingClientRect().height>=44)`));
   }
 }
 const baseReal417=JSON.parse(readFileSync(join(RAIZ,'dados/mega-sena.json'),'utf8')).concursos.map(r=>({...r,modalidade:'mega-sena'}));
@@ -2084,12 +2023,12 @@ for(const m of Object.keys(await js('return LL18.rules'))){
  checar('analisa ou informa falta de base em '+m,await js(`return document.querySelector('#ll-content').textContent.includes('Distribuição completa')&&!/inválid|exige/.test(document.querySelector('#ll-status').textContent)`));
  // A translação animada pode medir 43.999938px para um botão de 44px.
  // Tolerância só para arredondamento subpixel, sem aceitar controles menores.
- for(const theme of ['escuro','claro'])for(const width of [320,412,1024]){await cmd('Emulation.setDeviceMetricsOverride',{width,height:915,deviceScaleFactor:2,mobile:width<650});await js(`document.documentElement.dataset.tema=${JSON.stringify(theme)};return true;`);await js('return new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)))');checar('laboratório '+m+' '+theme+' '+width+'px',await js(`return document.documentElement.scrollWidth<=innerWidth+1&&[...document.querySelectorAll('#ll-lab input,#ll-lab select,#ll-lab button')].filter(e=>e.getBoundingClientRect().height>0).every(e=>e.getBoundingClientRect().height+0.001>=44)`));}
+ for(const theme of ['escuro','claro'])for(const width of [320,412,1024]){await cmd('Emulation.setDeviceMetricsOverride',{width,height:915,deviceScaleFactor:2,mobile:width<650});await js(`document.documentElement.dataset.tema=${JSON.stringify(theme)};return true;`);await js('return new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)))');checar('laboratório '+m+' '+theme+' '+width+'px',await js(`return document.documentElement.scrollWidth<=(window.visualViewport?.width||innerWidth)+1&&[...document.querySelectorAll('#ll-lab input,#ll-lab select,#ll-lab button')].filter(e=>e.getBoundingClientRect().height>0).every(e=>e.getBoundingClientRect().height+0.001>=44)`));}
 }
 await cmd('Emulation.setDeviceMetricsOverride',{width:412,height:915,deviceScaleFactor:2,mobile:true});await js(`document.documentElement.dataset.tema='escuro';return true;`);await input418('#ll-modalidade','super-sete');await tab418('analise');await frame418('#ll-lab','LotoLab-4.18-Super-Sete');
 await input418('#ll-modalidade','lotofacil');await tab418('analise');await frame418('#ll-lab','LotoLab-4.18-Lotofacil');await js(`document.documentElement.dataset.tema='claro';return true;`);await frame418('#ll-lab','LotoLab-4.18-Laboratorio-claro');
 await js(`window.__cap418=window.Capacitor;window.Capacitor={isNativePlatform:()=>true};document.querySelector('[data-ll-action="exportar"]').click();return true;`);
-checar('Android oferece relatório JSON para copiar',await js(`return !!document.querySelector('#ll-json')&&JSON.parse(document.querySelector('#ll-json').value).versao==='4.22.0'`));await js(`window.Capacitor=window.__cap418;return true;`);
+checar('Android oferece relatório JSON para copiar',await js(`return !!document.querySelector('#ll-json')&&JSON.parse(document.querySelector('#ll-json').value).versao===LL18.VERSION`));await js(`window.Capacitor=window.__cap418;return true;`);
 
 /* ---------- R. Recomendação integrada 4.19 ---------- */
 async function esperarRecomendacao(){
@@ -2114,7 +2053,7 @@ await frame418('.int-principal','LotoLab-4.21-Recomendacao-principal');
 for(const tema of ['escuro','claro'])for(const width of [320,412,1024]){
  await cmd('Emulation.setDeviceMetricsOverride',{width,height:915,deviceScaleFactor:1,mobile:width<600});
  await js(`document.documentElement.dataset.tema='${tema}';return true;`);
- checar(`recomendação ${tema} cabe em ${width}px`,await js(`return document.documentElement.scrollWidth<=innerWidth+1`));
+ checar(`recomendação ${tema} cabe em ${width}px`,await js(`return document.documentElement.scrollWidth<=(window.visualViewport?.width||innerWidth)+1`));
 }
 await cmd('Emulation.setDeviceMetricsOverride',{width:412,height:915,deviceScaleFactor:2,mobile:true});
 await frame418('.int-principal','LotoLab-4.21-Recomendacao-claro');
@@ -2152,6 +2091,7 @@ for(let i=0;i<200;i++){automaticReady=await js(`return S.intLotes['mega-sena']?.
 checar('abrir Sugestões prepara principal e pacote sem clicar em gerar',automaticReady);
 checar('pacote virtual registrado sem criar apostas',await js(`const a=S.intLotes['mega-sena'].laboratorio.automatico;window.round421=JSON.stringify(a.rodada);return S.jogos.length===0&&a.persistido&&Guardar.ler('automatico421:'+a.estado.perfil,{}).rodadas.some(r=>r.concursoAlvo===${target419})`));
 await frame418('.auto-results','LotoLab-4.21-Automatico');
+await js(`const g=S.intLotes['mega-sena'].laboratorio;const r=g.automatico.estado.rodadas.find(x=>x.concursoAlvo===${target419});r.criadoEm=new Date(Date.now()-48*3600000).toISOString();Guardar.gravar('automatico421:'+g.automatico.estado.perfil,g.automatico.estado);window.round421=JSON.stringify(r);return true;`);
 await js(`guardarResultados([{modalidade:'mega-sena',concurso:${target419},data:new Date().toISOString().slice(0,10),dezenas:[1,2,3,4,5,6]}]);return true;`);
 let advanced421=false;
 for(let i=0;i<200;i++){advanced421=await js(`return S.intLotes['mega-sena']?.laboratorio.automatico?.rodada.concursoAlvo===${target419+1}`);if(advanced421)break;await dormir(100);}
@@ -2168,6 +2108,7 @@ checar('pacote aguardando não exibe zeros nem dezenas vermelhas',await js(`retu
 await input418('[data-auto-contest]',target419);
 await js(`pintar();return true;`);
 checar('seleção do concurso é preservada ao redesenhar sem inserir apostas',await js(`return document.querySelector('[data-auto-contest]').value==='${target419}'&&S.jogos.length===0&&JSON.stringify(S.intLotes['mega-sena'].laboratorio.automatico.estado.rodadas.find(r=>r.concursoAlvo===${target419}))===window.round421`));
+await js(`const g=S.intLotes['mega-sena'].laboratorio;const r=g.automatico.estado.rodadas.find(x=>x.concursoAlvo===${target419});r.criadoEm=new Date(Date.now()-48*3600000).toISOString();Guardar.gravar('automatico421:'+g.automatico.estado.perfil,g.automatico.estado);window.round421=JSON.stringify(r);return true;`);
 await js(`guardarResultados([{modalidade:'mega-sena',concurso:${target419},data:new Date().toISOString().slice(0,10),dezenas:[7,8,9,10,11,12]}]);return true;`);
 let corrected422=false;
 for(let i=0;i<200;i++){corrected422=await js(`return S.intLotes['mega-sena'].laboratorio.automatico.acompanhamento.observacoes.find(o=>o.concurso===${target419})?.resultado.dezenas.join()==='7,8,9,10,11,12'&&!document.querySelector('#int-salvar')?.disabled`);if(corrected422)break;await dormir(100);}
@@ -2187,7 +2128,7 @@ for(const mod of ['mega-sena','lotofacil','quina','lotomania','dupla-sena','dia-
   checar(mod+': cartela cabe e quadrados ficam dentro dos colchetes em '+width+'px',await js(`
    const cells=[...document.querySelectorAll('.cartela .casa')],ctx=document.createElement('canvas').getContext('2d');
    const glyph=s=>{ctx.font=[s.fontStyle,s.fontWeight,s.fontSize,s.fontFamily].join(' ');return ctx.measureText('[').width;};
-   return document.documentElement.scrollWidth<=innerWidth+1&&cells.length===MODALIDADES[S.modalidade].N&&cells.every(e=>{
+   return document.documentElement.scrollWidth<=(window.visualViewport?.width||innerWidth)+1&&cells.length===MODALIDADES[S.modalidade].N&&cells.every(e=>{
     const span=e.querySelector('span'),left=getComputedStyle(span,'::before'),right=getComputedStyle(span,'::after');
     if(left.content!=='"["'||right.content!=='"]"')return false;
     if(e.classList.contains('neutra'))return true;
@@ -2224,7 +2165,7 @@ await frame418('.physical-ticket','LotoLab-4.25-Fixo');
 for(const theme of ['escuro','claro'])for(const mod of ['mega-sena','lotofacil']){
  await js(`S.tema='${theme}';document.documentElement.dataset.tema=S.tema;S.modalidade='${mod}';const c=MODALIDADES[S.modalidade];const ds=Array.from({length:c.min},(_,i)=>c.base+i);S.jogos=[{id:'papel425',lote:'papel425',modalidade:S.modalidade,metodo:'manual',data:'2026-10-01',dezenas:ds,...planoAcompanhamento('fixo',100),conferencias:[{concurso:100,data:'2026-10-02',dezenas:Array.from({length:c.k},(_,i)=>c.base+i+3),acertos:c.k-3}]}];S.resultados=[];S.jogoAberto='papel425';pintar();return true;`);
  await frame418('.physical-ticket','LotoLab-4.25-Bilhete-'+mod+'-'+theme);
- checar(mod+' '+theme+': volante e análise sem rolagem horizontal',await js(`return document.documentElement.scrollWidth<=innerWidth+1&&document.querySelector('.physical-ticket').textContent.includes('VOLANTE DIGITAL')&&document.querySelectorAll('.physical-ticket .casa').length===MODALIDADES[S.modalidade].N`));
+ checar(mod+' '+theme+': volante e análise sem rolagem horizontal',await js(`return document.documentElement.scrollWidth<=(window.visualViewport?.width||innerWidth)+1&&document.querySelector('.physical-ticket').textContent.includes('VOLANTE DIGITAL')&&document.querySelectorAll('.physical-ticket .casa').length===MODALIDADES[S.modalidade].N`));
 }
 await js(`window.__confirm425=window.confirm;window.confirm=()=>true;document.querySelector('[data-excluir-jogo]').click();window.confirm=window.__confirm425;return true;`);
 checar('exclusão manual remove o fixo do armazenamento e da conferência',await js(`return S.jogos.length===0&&Guardar.ler('jogos',[]).length===0&&conferenciaAutomatica().novas===0`));
@@ -2248,7 +2189,7 @@ await js(`S.modalidade='mega-sena';S.resultados=${JSON.stringify(rows419)};S.int
 for(let i=0;i<200;i++){if(await js(`return !!document.querySelector('.auto-goal')`))break;await dormir(100);}
 checar('objetivo de acertos altos está conectado à recomendação principal',await js(`return document.querySelector('.auto-goal').textContent.includes('FOCO NO PRÊMIO MÁXIMO')&&S.intLotes['mega-sena'].laboratorio.automatico.objetivo.protocolo===LL18.autoEvaluation`));
 await frame418('.auto-goal','LotoLab-4.26-Objetivo');
-checar('entrega automática mantém a posição de leitura nos diagnósticos abaixo dos ajustes',await js(`const pack=document.querySelector('.auto-pack');pack.open=!pack.open;const p=document.querySelector('#ux-analitica');p.closest('details').open=true;p.scrollIntoView({block:'start',behavior:'instant'});const before=p.getBoundingClientRect().top;LL18_BRIDGE.deliver('mega-sena',S.intLotes['mega-sena'].laboratorio,S.resultados.slice());return Math.abs(before-p.getBoundingClientRect().top)<2;`));
+checar('entrega automática mantém a posição de leitura nos diagnósticos abaixo dos ajustes',await js(`const pack=document.querySelector('.auto-pack');pack.open=!pack.open;const p=document.querySelector('.int-compare');p.open=true;p.scrollIntoView({block:'start',behavior:'instant'});const before=p.getBoundingClientRect().top;LL18_BRIDGE.deliver('mega-sena',S.intLotes['mega-sena'].laboratorio,S.resultados.slice());return Math.abs(before-p.getBoundingClientRect().top)<2;`));
 
 /* ---------- S. Formatos especiais no motor integrado 4.20 ---------- */
 secao('S. Recomendação única nos formatos especiais');

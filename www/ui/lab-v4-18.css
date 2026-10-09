@@ -68,3 +68,24 @@ html[data-tema="claro"] .ll-lab{--ll-acento:color-mix(in srgb,var(--ll-cor) 48%,
 /* Resumo da validação diretamente na recomendação. */
 .int-validation{margin:16px 0;padding:16px;border:1px solid var(--linha);border-radius:14px;background:color-mix(in srgb,var(--acaso) 7%,var(--carta))}
 .int-validation>p{margin-bottom:0}.int-validation .int-details{margin-top:12px}
+
+/* Qualidade da evidência: informa confiabilidade da base, nunca chance de prêmio. */
+.ll-evidence{margin:14px 0;padding:12px 14px;border:1px solid color-mix(in srgb,var(--linha,#334155) 70%,#42caa0);border-left:4px solid #42caa0;border-radius:12px;background:color-mix(in srgb,var(--carta,#0f172a) 88%,#42caa0)}
+.ll-evidence h4{margin:0 0 6px;color:var(--tinta,#0B1E27)}
+.ll-evidence p{margin:4px 0}
+
+.ll-special-profile{margin:14px 0;padding:10px 12px;border-top:1px solid var(--linha,#334155);border-bottom:1px solid var(--linha,#334155)}
+.ll-special-profile summary{font-weight:700;color:var(--tinta,#0B1E27)}
+
+/* A largura intrínseca das tabelas pertence ao scroller, nunca à página. */
+.ll-evidence,.ll-special-profile{width:100%;max-width:100%;min-width:0;overflow:hidden;overflow-wrap:anywhere}
+.ll-evidence details,.ll-special-profile .ll-table{min-width:0;max-width:100%}
+.ll-evidence .ll-table,.ll-special-profile .ll-table{width:100%;overflow-x:auto}
+
+.ll-base-health{width:100%;max-width:100%;min-width:0;overflow:hidden;overflow-wrap:anywhere;margin:14px 0;padding:12px;border:1px solid var(--linha);border-radius:12px}
+.ll-base-health summary{font-weight:700;color:var(--tinta)}
+.ll-base-health .ll-table{width:100%;max-width:100%;min-width:0;overflow-x:auto}
+
+/* Painéis da recomendação precisam da superfície do próprio tema. */
+.ll-base-health,.ll-special-profile{background:var(--carta);color:var(--tinta)}
+.ll-evidence{color:var(--tinta)}

@@ -24,6 +24,14 @@ ws.onmessage=e=>{const m=JSON.parse(e.data),p=pending.get(m.id);if(p){pending.de
 const cmd=(method,params={})=>new Promise((resolve,reject)=>{const id=++seq;pending.set(id,{resolve,reject});ws.send(JSON.stringify({id,method,params}));});
 async function js(code){const r=await cmd('Runtime.evaluate',{expression:`(()=>{${code}})()`,awaitPromise:true,returnByValue:true});if(r.exceptionDetails)throw Error(r.exceptionDetails.exception?.description||JSON.stringify(r.exceptionDetails));return r.result.value;}
 async function ready(){await until(()=>js('return !!globalThis.LL18UI && typeof S!=="undefined"'),'app');}
+async function tap(selector){
+ await js(`document.querySelector(${JSON.stringify(selector)}).scrollIntoView({block:'center',behavior:'instant'});`);await sleep(100);
+ const p=await js(`const e=document.querySelector(${JSON.stringify(selector)}),r=e.getBoundingClientRect(),x=r.left+r.width/2,y=r.top+r.height/2,h=document.elementFromPoint(x,y);return {x,y,atingivel:!!h&&(e===h||e.contains(h)),hit:h?.outerHTML.slice(0,180),disabled:e.disabled};`);
+ assert.ok(p.atingivel,selector+' '+JSON.stringify(p));
+ assert.ok(!p.disabled,selector+' desabilitado');
+ await cmd('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:p.x,y:p.y,radiusX:2,radiusY:2,force:1}]});
+ await cmd('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await sleep(450);
+}
 async function recommend(){
  await js(`S.modalidade='mega-sena';S.intConfig={};S.intLotes={};irParaTela('sugestoes',{lateral:true});document.querySelector('#int-semente').value='distribuicao-419';document.querySelector('#int-gerar').click();`);
  await until(async()=>{
@@ -54,8 +62,34 @@ try{
  await js(`S.resultados=${JSON.stringify(rows)};S.buscaAutomatica=false;S.pesquisaAutomatica=false;`);
  await analyze();
  assert.ok(await js(`return document.querySelector('#ll-content').textContent.includes('2.000 jogos aleatórios')&&document.querySelector('#ll-content').textContent.includes('120 concursos')`));
+ assert.ok(await js(`return document.querySelector('#ll-content').textContent.includes('Leitura específica da Mega-Sena')&&document.querySelector('#ll-content').textContent.includes('Repetição do último resultado')`));
+ assert.ok(await js(`return document.querySelector('#ll-content').textContent.includes('Cobertura e atualização do histórico')&&document.querySelector('#ll-content').textContent.includes('Cobertura dentro dos limites')`));
  console.log('ok — primeiro worker offline analisa 120 resultados e 2.000 referências, com servidor desligado');
  await recommend();console.log('ok — recomendação integrada funciona offline com a mesma base');
+ assert.ok(await js(`return document.querySelector('.auto-results').textContent.includes('Qualidade operacional da base')&&document.querySelector('.auto-results').textContent.includes('Leitura específica da Mega-Sena')`));
+ assert.ok(await js(`return document.querySelector('.auto-results').textContent.includes('Fonte declarada')&&document.querySelector('.auto-results').textContent.includes('Cobertura e atualização do histórico')`));
+ await cmd('Emulation.setDeviceMetricsOverride',{width:412,height:915,deviceScaleFactor:1,mobile:true});
+ await cmd('Emulation.setTouchEmulationEnabled',{enabled:true,maxTouchPoints:1});
+ await js(`S.jogos=[];Guardar.gravar('jogos',[]);S.opcoesAcompanhamento={};`);
+ assert.ok(await js(`return document.documentElement.scrollWidth<=visualViewport.width+1;`),'painéis novos não alargam o viewport móvel');
+ await tap('#int-salvar-opcoes input[value="teimosinha"]');
+ await js(`const n=document.querySelector('#int-salvar-opcoes input[type=number]');n.value='2.5';n.dispatchEvent(new Event('input',{bubbles:true}));`);
+ await tap('#int-salvar');
+ const invalid=await js(`return S.jogos.length===0&&document.querySelector('#int-salvar-opcoes .acomp-error').textContent.includes('inteiros');`);
+ await js(`const n=document.querySelector('#int-salvar-opcoes input[type=number]');n.value='3';n.dispatchEvent(new Event('input',{bubbles:true}));`);
+ await tap('#int-salvar');
+ const saved=await js(`return {tela:S.tela,j:S.jogos[0],mensagem:document.querySelector('#int-mensagem')?.textContent,stale:intRecomendacaoDesatualizada(S.intLotes['mega-sena'])};`);
+ assert.ok(invalid,JSON.stringify(saved));assert.equal(saved.tela,'jogos',JSON.stringify(saved));
+ assert.equal(saved.j.acompanhamento,'teimosinha');assert.equal(saved.j.concursos,3);
+ assert.equal(saved.j.inteligencia.motor,'automatico');assert.equal(saved.j.inteligencia.papel,'principal');
+ await js(`irParaTela('sugestoes',{lateral:true});`);await tap('#int-salvar-opcoes [value="fixo"]');await tap('#int-salvar');
+ assert.ok(await js(`return S.jogos.some(j=>j.acompanhamento==='fixo')`));
+ console.log('ok — salvar valida a duração, preserva os metadados e separa teimosinha de fixo');
+ const lf=JSON.parse(readFileSync(join(root,'dados/lotofacil.json'),'utf8')).concursos.slice(0,120);
+ await js(`S.resultados=S.resultados.concat(${JSON.stringify(lf)});S.modalidade='lotofacil';irParaTela('estatisticas',{lateral:true});const e=document.querySelector('#ll-texto');e.value='1 2 3 4 5 6 7 8 9 10 11 12 13 14 15';e.dispatchEvent(new Event('input'));document.querySelector('[data-ll-action="analisar"]').click();`);
+ await until(()=>js(`return !document.querySelector('[data-ll-action="cancelar"]')&&document.querySelector('#ll-content').textContent.includes('Leitura específica da Lotofácil')`),'perfil Lotofácil offline',90000);
+ assert.ok(await js(`return document.querySelector('#ll-content').textContent.includes('Média histórica da linha')&&document.querySelector('#ll-content').textContent.includes('Média combinatória de referência')`));
+ console.log('ok — perfis Mega-Sena/Lotofácil e indicador da sugestão automática disponíveis offline');
  const first=rows.slice(0,2).sort((a,b)=>a.concurso-b.concurso);
  await js(`Guardar.gravar('resultados',${JSON.stringify(first)});Guardar.gravar('laboratorio418',{lotes:[{modalidade:'mega-sena',geradoAte:${first[0].concurso},concursoAlvo:${first[1].concurso},jogos:[{dezenas:[14,23,53,56,57,60]}]}],historicoExtra:[],tentativas:[],monitor:{},comites:{}});`);
  await cmd('Page.reload');await sleep(300);await ready();
@@ -70,5 +104,5 @@ try{
  console.log('ok — HTML único file:// executa worker Blob com 600 concursos e 2.000 referências');
  await recommend();console.log('ok — HTML único também gera a recomendação integrada');
  completed=true;
- console.log('5 testes de distribuição passaram');
+ console.log('7 cenários de distribuição passaram');
 }finally{ws.close();close();}

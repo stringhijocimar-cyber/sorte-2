@@ -51,6 +51,12 @@ jobs:
           # sintoma seria aviso errado no aparelho, sem nada vermelho aqui.
           diff -r runner www/runner
 
+      - name: Versão e regressões da revisão funcional
+        run: |
+          npm run check:version
+          npm run check:distribution
+          npm run test:revisao
+
       - name: Testes do motor
         run: node ferramentas/testar-motor.mjs
 
@@ -206,11 +212,11 @@ jobs:
             unzip -p android/app/build/outputs/apk/debug/app-debug.apk "assets/public/$asset" > /tmp/conferencia-apk
             cmp "$asset" /tmp/conferencia-apk
           done
-          cp android/app/build/outputs/apk/debug/app-debug.apk LotoLab-4.26.2-preview.apk
+          cp android/app/build/outputs/apk/debug/app-debug.apk "LotoLab-$(cat VERSION)-preview.apk"
       - uses: actions/upload-artifact@v4
         with:
-          name: LotoLab-4.26.2-preview
-          path: LotoLab-4.26.2-preview.apk
+          name: LotoLab-preview
+          path: LotoLab-*-preview.apk
           retention-days: 14
 
       - name: Preparar chave temporária somente para testar a compilação de release
