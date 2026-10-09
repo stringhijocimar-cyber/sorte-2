@@ -14,8 +14,8 @@
     "package-lock.json",
     "android/app/build.gradle"
   ],
-  "releaseState": "source-ready-unpublished",
-  "notes": "Revisão: análise específica Mega-Sena/Lotofácil, médias por posição, repetição combinatória, indicador operacional nos dois fluxos e consistência de distribuição. APK ainda não compilado.",
+  "releaseState": "signed-verified",
+  "notes": "Revisão 4.26.3 validada, com APKs assinados pelo certificado permanente e verificação de compatibilidade com a 4.26.2. Binários e proveniência em distribuicao/4.26.3.",
   "editions": [
     {
       "name": "LotoLab 4.3.0",
