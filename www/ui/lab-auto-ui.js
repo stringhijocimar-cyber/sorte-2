@@ -141,6 +141,7 @@ function render(g,old=false,rec=()=>'',trevos=()=> ''){
   ${ticket(g.jogos[0],0)}
   ${root.LL18UI?.baseHealthView(g.principal.analise.saudeBase,{historico:g.parametros.antesDe!==null})||''}
   ${root.LL18UI?.evidenceView(g)||''}
+  ${root.LL18UI?.recommendationPlanView(g.plano)||''}
   ${root.LL18UI?.frequencyDiagnosisView(g.principal.analise.diagnosticoFrequencia)||''}
   ${root.LL18UI?.modalidadeProfileView(g.principal.analise.perfilModalidade)||''}
   <div class="auto-summary"><div><b>${num(g.base.n,0)}</b><small>concursos analisados</small></div><div><b>${a.pacoteVirtual.length}</b><small>jogos de teste virtual</small></div><div><b>${num(follow.n,0)}</b><small>sorteios conferidos</small></div></div>

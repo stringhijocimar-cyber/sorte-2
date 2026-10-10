@@ -62,6 +62,24 @@ function baseHealthView(h,{historico=false,referencia}={}){
   table(['Fonte declarada','Concursos'],(h.fontes||[]).map(x=>[esc(x.origem),num(x.concursos)]))+
   `<p class="ll-sub">${esc(h.nota)}</p></details>`;
 }
+function recommendationPlanView(p){
+ if(!p)return '';
+ const integer=v=>{try{return BigInt(v).toLocaleString('pt-BR');}catch{return 'indisponível';}};
+ return `<details class="ll-recommendation-plan" ${!p.viavel?'open':''}><summary>Impacto das escolhas e viabilidade do lote</summary>`+
+  `<p>${p.viavel?'Configuração viável em teoria; a geração ainda precisa encontrar candidatas distintas.':'O lote não cabe no universo permitido. Reduza a quantidade ou revise as restrições.'}</p>`+
+  table(['Configuração','Resultado'],[
+   ['Dezenas/marcações por jogo',num(p.marcadas)],['Fixas / excluídas',`${num(p.fixas.length)} / ${num(p.excluidas.length)}`],
+   ['Livres disponíveis / a escolher',p.livresDisponiveis===null?'por coluna':`${num(p.livresDisponiveis)} / ${num(p.aEscolher)}`],
+   ['Configurações principais',integer(p.combinacoesPrincipais)],['Configurações completas (com complementos)',integer(p.combinacoesCompletas)],
+   ['Limite de jogos distintos deste motor',integer(p.capacidadeMotor)],['Solicitados / dentro do orçamento',`${num(p.solicitados)} / ${num(p.efetivos)}`],
+   ['Custo unitário / lote previsto',`${money(p.unitario)} / ${money(p.custo)}`],
+   ['Variedade principal mantida pelas restrições',p.fracaoPrincipal<.000001?'menos de 0,0001%':pct(100*p.fracaoPrincipal,4)],
+   ['Sobreposição de referência nas mesmas restrições',`${num(p.sobreposicaoReferencia,2)} dezenas/posições`],
+   ['Sobreposição de referência sem fixas/exclusões',`${num(p.sobreposicaoSemRestricoes,2)} dezenas/posições`]
+  ])+`<p class="ll-sub">Identidade: ${esc(p.identidade)}</p>`+
+  p.avisos.map(x=>`<p class="ll-sub" role="status">${esc(x)}</p>`).join('')+
+  `<p class="ll-sub">${esc(p.metodologia)}</p><p class="ll-sub">${esc(p.limites)}</p></details>`;
+}
 function frequencyDiagnosisView(d){
  if(!d)return '';
  const pvalue=p=>p===null||p===undefined?'indisponível':p<.0001?'&lt;0,0001':num(p,4);
@@ -98,9 +116,19 @@ function modalidadeProfileView(p){
    `<p class="ll-sub">${esc(p.metodologia||'Métricas descritivas; não são filtros de previsão.')} Isso não indica quais dezenas sairão.</p></details>`;
 }
 function groupView(s){let n=6;try{n=L.tokens(s.m,ticket(s)).length;}catch(e){}const g=s.grupos;return `<h3>Pares, trios e subconjuntos</h3><p class="ll-sub">Todas as combinações são acessíveis por páginas exatas, sem substituir contagens por amostras.</p>${select(s,'tamanho','Grupo',[[2,'Pares'],[3,'Trios'],[4,'Quartetos'],[5,'Quintetos'],...(n>5?[[n,'Conjunto completo']]:[])])}${button('grupos','Analisar subconjuntos')}${g?baseInfo(g.base)+`<p>${num(g.total)} grupos · ${num(g.inicio+1)} a ${num(g.inicio+g.linhas.length)}.</p><label class="ll-field">Página<input id="ll-pagina-grupos" type="number" min="1" max="${Math.ceil(g.total/30)}" value="${s.pagina+1}"></label>${button('grupo-pagina','Ir à página',true)}${g.linhas.map(x=>detail(x.grupo.join(' · ')+' — '+num(x.vezes)+' vezes · '+pct(x.percentual),`<p>${esc(timeText(x))}</p><p>Repetições consecutivas: ${x.consecutivos}.</p>`+table(['Período','Concursos','Ocorrências'],x.periodos.map((p,i)=>[i+1,p.n,p.vezes]))+`<p>Concursos: ${esc(x.ocorrencias.map(o=>o.concurso+' ('+(o.data||'data ausente')+'; intervalo '+(o.intervalo??'indisponível')+')').join('; ')||'nunca observado')}.</p>`)).join('')}`:''}`;}
+function specialPlanView(s){
+ try{return recommendationPlanView(L.recommendationPlan(s.m,{...opts(s),formato:shape(s),quantidade:Number(s.quantidade),orcamento:s.orcamento},'integrado'));}
+ catch(e){return note(e.message);}
+}
+function updateSpecialPlan(s){
+ const el=document.getElementById('ll-plan-preview');if(!el)return;
+ const open=el.querySelector('details')?.open;el.innerHTML=specialPlanView(s);
+ if(open&&el.querySelector('details'))el.querySelector('details').open=true;
+}
 function generatorView(s){
  const special=['super-sete','mega-da-virada'].includes(s.m),g=s.recomendacao;
- const main=special?`<h3>Uma recomendação integrada</h3><p>O mesmo motor da tela Sugestões reúne estrutura, frequência, atrasos, subconjuntos e perfil de acertos.</p><div class="ll-grid">${field(s,'quantidade','Total de jogos','number','min="1" max="60"')}${field(s,'orcamento','Limite do lote (R$)','number','min="0" step="0.50"')}</div>${button('recomendar-especial','Gerar recomendação')}${g?baseInfo(g.base)+baseHealthView(g.principal.analise.saudeBase,{historico:s.antes!==''})+evidenceView(g)+frequencyDiagnosisView(g.principal.analise.diagnosticoFrequencia)+note(g.calibracao.motivo)+g.jogos.map((t,i)=>`<article class="ll-game"><h3>${i?'Adicional '+i:'Recomendação principal'}</h3>${balls(s.m,t)}<p>${esc(i?'Reduz a repetição com os outros jogos do lote.':g.motivo)}</p><button class="acao secundaria" data-ll-recommend-inspect="${i}">Ver análise deste jogo</button></article>`).join('')+detail('Distribuição histórica da principal',distribution(g.principal.analise.faixas))+`<p>Custo estimado: ${money(g.custo)}.</p><label class="ll-field">Concurso futuro para acompanhar<input id="ll-alvo-integrado" type="number" min="1" value=""></label>${button('salvar-integrado','Salvar recomendação e acompanhar')}`:''}`:
+ const configPlan=special?specialPlanView(s):'';
+ const main=special?`<h3>Uma recomendação integrada</h3><p>O mesmo motor da tela Sugestões reúne estrutura, frequência, atrasos, subconjuntos e perfil de acertos.</p><div class="ll-grid">${field(s,'quantidade','Total de jogos','number','min="1" max="60"')}${field(s,'orcamento','Limite do lote (R$)','number','min="0" step="0.50"')}</div><div id="ll-plan-preview" aria-live="polite">${configPlan}</div>${button('recomendar-especial','Gerar recomendação')}${g?baseInfo(g.base)+baseHealthView(g.principal.analise.saudeBase,{historico:s.antes!==''})+evidenceView(g)+recommendationPlanView(g.plano)+frequencyDiagnosisView(g.principal.analise.diagnosticoFrequencia)+note(g.calibracao.motivo)+g.jogos.map((t,i)=>`<article class="ll-game"><h3>${i?'Adicional '+i:'Recomendação principal'}</h3>${balls(s.m,t)}<p>${esc(i?'Reduz a repetição com os outros jogos do lote.':g.motivo)}</p><button class="acao secundaria" data-ll-recommend-inspect="${i}">Ver análise deste jogo</button></article>`).join('')+detail('Distribuição histórica da principal',distribution(g.principal.analise.faixas))+`<p>Custo estimado: ${money(g.custo)}.</p><label class="ll-field">Concurso futuro para acompanhar<input id="ll-alvo-integrado" type="number" min="1" value=""></label>${button('salvar-integrado','Salvar recomendação e acompanhar')}`:''}`:
  `<h3>Sua sugestão está em um só lugar</h3><p>Os cálculos deste laboratório alimentam a recomendação principal, com validação automática dos pesos.</p>${button('recomendacao','Abrir recomendação integrada')}`;
  return special?main:main+`<details id="ll-experimentos" ${s.experimental?'open':''}><summary>Experimentos com métodos individuais</summary><p class="ll-sub">Área de pesquisa. Os métodos individuais são diagnósticos; a recomendação integrada valida seus próprios pesos.</p>${experimentalGeneratorView(s)}</details>`;
 }
@@ -155,7 +183,7 @@ async function action(s,id){switch(id){
  case 'cancelar':worker?.terminate();worker=null;for(const p of pending.values())p.reject(Error('Análise cancelada.'));pending.clear();break;
 }}
 function bind(s){document.querySelectorAll('[data-ll-recommend-inspect]').forEach(e=>e.onclick=()=>{const i=Number(e.dataset.llRecommendInspect);inspect(s.m,s.recomendacao.jogos[i],i===0?{analise:s.recomendacao.principal.analise,aderencia:s.recomendacao.principal.aderencia}:null);render();});document.querySelectorAll('#ll-lab [data-ll-action]').forEach(e=>e.onclick=()=>action(s,e.dataset.llAction).catch(err=>{status(s,err.message);render();}));}
-function mount(b){bridge=b;mem();if(firstMount){firstMount=false;historyChanged();}const el=document.getElementById('ll-lab');if(!el)return;const s=state(current);const experiments=document.getElementById('ll-experimentos');if(experiments)experiments.ontoggle=()=>{s.experimental=experiments.open;};document.getElementById('ll-modalidade').onchange=e=>{if(s.ocupado){status(s,'Aguarde ou cancele a análise.');e.target.value=s.m;return;}current=e.target.value;if(!['super-sete','mega-da-virada'].includes(current))bridge.changeMode(current);render();};el.querySelectorAll('[data-ll-field]').forEach(e=>{e.oninput=()=>s[e.dataset.llField]=e.type==='checkbox'?e.checked:e.value;e.onchange=()=>{s[e.dataset.llField]=e.type==='checkbox'?e.checked:e.value;if(e.dataset.llField==='faixa'){s.paginaConcursos=0;document.getElementById('ll-concursos').innerHTML=contests(s);bind(s);}};});el.querySelectorAll('[data-ll-tab]').forEach(e=>e.onclick=()=>{s.tab=e.dataset.llTab;render();document.querySelector('#ll-lab [aria-selected="true"]')?.scrollIntoView({block:'nearest',inline:'nearest'});});el.querySelectorAll('[data-ll-inspect]').forEach(e=>e.onclick=()=>{const t=s.geracao.jogos[Number(e.dataset.llInspect)],c=L.cfg(s.m);s.texto=c.colunas?t.colunas.map(a=>a.join(' ')).join(' | '):t.dezenas.join(' ');s.extra=Array.isArray(t[c.extra])?t[c.extra].join(' '):String(t[c.extra]??'');s.tab='analise';action(s,'analisar').catch(err=>{status(s,err.message);render();});});bind(s);}
+function mount(b){bridge=b;mem();if(firstMount){firstMount=false;historyChanged();}const el=document.getElementById('ll-lab');if(!el)return;const s=state(current);const experiments=document.getElementById('ll-experimentos');if(experiments)experiments.ontoggle=()=>{s.experimental=experiments.open;};document.getElementById('ll-modalidade').onchange=e=>{if(s.ocupado){status(s,'Aguarde ou cancele a análise.');e.target.value=s.m;return;}current=e.target.value;if(!['super-sete','mega-da-virada'].includes(current))bridge.changeMode(current);render();};el.querySelectorAll('[data-ll-field]').forEach(e=>{e.oninput=()=>{s[e.dataset.llField]=e.type==='checkbox'?e.checked:e.value;updateSpecialPlan(s);};e.onchange=()=>{s[e.dataset.llField]=e.type==='checkbox'?e.checked:e.value;updateSpecialPlan(s);if(e.dataset.llField==='faixa'){s.paginaConcursos=0;document.getElementById('ll-concursos').innerHTML=contests(s);bind(s);}};});el.querySelectorAll('[data-ll-tab]').forEach(e=>e.onclick=()=>{s.tab=e.dataset.llTab;render();document.querySelector('#ll-lab [aria-selected="true"]')?.scrollIntoView({block:'nearest',inline:'nearest'});});el.querySelectorAll('[data-ll-inspect]').forEach(e=>e.onclick=()=>{const t=s.geracao.jogos[Number(e.dataset.llInspect)],c=L.cfg(s.m);s.texto=c.colunas?t.colunas.map(a=>a.join(' ')).join(' | '):t.dezenas.join(' ');s.extra=Array.isArray(t[c.extra])?t[c.extra].join(' '):String(t[c.extra]??'');s.tab='analise';action(s,'analisar').catch(err=>{status(s,err.message);render();});});bind(s);}
 let scheduled=false;
 function historyChanged(){if(!bridge||scheduled)return;scheduled=true;setTimeout(async()=>{scheduled=false;for(const m of new Set(book().map(x=>x.modalidade))){const s=state(m);try{const result=await compute('acompanhar',s,{livro:book()});memory.monitor[m]=result;s.acompanhamento=result;persist();}catch(e){status(s,'Acompanhamento pendente: '+e.message);}}if(current&&state(current).tab==='carteira')render();},50);}
 function inspect(m,t,analysis){
@@ -176,5 +204,5 @@ function openCommittee(m){
  const el=document.getElementById('ll-lab');
  if(el){el.tabIndex=-1;el.focus({preventScroll:true});el.scrollIntoView({block:'start',behavior:'instant'});}
 }
-root.LL18UI={frequencyDiagnosisView,baseHealthView,evidenceView,modalidadeProfileView,automatic:(m,registros,estado,op,onProgress)=>compute('automatico',state(m),{registros,estado,op},onProgress),panel,mount,historyChanged,inspect,openRecommendation,openCommittee,recommend:(m,registros,op,onProgress)=>compute('recomendar',state(m),{registros,op},onProgress)};
+root.LL18UI={recommendationPlanView,frequencyDiagnosisView,baseHealthView,evidenceView,modalidadeProfileView,automatic:(m,registros,estado,op,onProgress)=>compute('automatico',state(m),{registros,estado,op},onProgress),panel,mount,historyChanged,inspect,openRecommendation,openCommittee,recommend:(m,registros,op,onProgress)=>compute('recomendar',state(m),{registros,op},onProgress)};
 })(globalThis);

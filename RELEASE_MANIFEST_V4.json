@@ -1,12 +1,12 @@
 {
   "product": "LotoLab",
-  "version": "4.26.5",
-  "versionLabel": "V4.26.5",
-  "sourceBranch": "main",
+  "version": "4.26.6",
+  "versionLabel": "V4.26.6",
+  "sourceBranch": "melhorias/inteligencia-pos-4.26.4",
   "visualLayer": "Sugestão e aprendizado automáticos",
   "android": {
-    "versionCode": 42,
-    "versionName": "4.26.5"
+    "versionCode": 43,
+    "versionName": "4.26.6"
   },
   "versionFiles": [
     "VERSION",
@@ -14,8 +14,8 @@
     "package-lock.json",
     "android/app/build.gradle"
   ],
-  "releaseState": "source-ready",
-  "notes": "Hotfix de abertura: migração de dados em segundo plano e conferência linear de jogos fixos, para eliminar o travamento no logo sem apagar dados.",
+  "releaseState": "development-unpublished",
+  "notes": "Diagnóstico de frequência/estabilidade e pré-diagnóstico combinatório das escolhas, com orçamento e identidade do motor. Preserva hotfix 4.26.5 de abertura/migração. Ainda não publicado.",
   "editions": [
     {
       "name": "LotoLab 4.3.0",
