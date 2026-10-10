@@ -960,12 +960,12 @@ td{padding:6px 7px;border-bottom:1px solid var(--trama)}
 <link rel="stylesheet" href="ui/experiencia-v4-14.css?v=4.22.1">
 <link rel="stylesheet" href="ui/modalidades-v4-15.css?v=4.22.1">
 <link rel="stylesheet" href="ui/recorrencia-v4-17.css?v=4.22.1">
-<link rel="stylesheet" href="ui/lab-v4-18.css?v=4.26.5">
+<link rel="stylesheet" href="ui/lab-v4-18.css?v=4.26.6">
 <link rel="stylesheet" href="ui/auto-v4-21.css?v=4.22.1">
-<link rel="stylesheet" href="ui/conferencia-v4-22.css?v=4.26.5">
+<link rel="stylesheet" href="ui/conferencia-v4-22.css?v=4.26.6">
 <link rel="stylesheet" href="ui/lotolab-ui-v4-23.css?v=4.23.0" data-lotolab-ui-refino="4.23.0">
 <link rel="stylesheet" href="ui/lotolab-ui-v4-24.css?v=4.24.0" data-lotolab-ui-experiencia="4.24.0">
-<link rel="stylesheet" href="ui/acompanhamento-v4-25.css?v=4.26.5">
+<link rel="stylesheet" href="ui/acompanhamento-v4-25.css?v=4.26.6">
 </head>
 <body>
 <header>
@@ -1044,15 +1044,15 @@ td{padding:6px 7px;border-bottom:1px solid var(--trama)}
   <div class="corpo"><div class="alca"></div><div id="corpo-avisos"></div></div>
 </div>
 
-<script src="ui/lab-core.js?v=4.26.5"></script>
+<script src="ui/lab-core.js?v=4.26.6"></script>
 <script src="ui/lab-strategies.js?v=4.22.1"></script>
-<script src="ui/lab-recommendation.js?v=4.26.5"></script>
-<script src="ui/lab-auto.js?v=4.26.5"></script>
-<script src="ui/lab-ui.js?v=4.26.5"></script>
+<script src="ui/lab-recommendation.js?v=4.26.6"></script>
+<script src="ui/lab-auto.js?v=4.26.6"></script>
+<script src="ui/lab-ui.js?v=4.26.6"></script>
 <script src="ui/lab-check.js?v=4.25.0"></script>
-<script src="ui/lab-auto-ui.js?v=4.26.5"></script>
-<script src="ui/lab-storage.js?v=4.26.5"></script>
-<script src="ui/lab-backup.js?v=4.26.5"></script>
+<script src="ui/lab-auto-ui.js?v=4.26.6"></script>
+<script src="ui/lab-storage.js?v=4.26.6"></script>
+<script src="ui/lab-backup.js?v=4.26.6"></script>
 <script>
 "use strict";
 
@@ -2876,6 +2876,20 @@ function intConfigDaTela(m){
   if($('#int-trevos'))o.trevos=$('#int-trevos').value;
   return o;
 }
+function intRecommendationOptions(m,o){
+  const formato=LL18.randomTicket(m,LL18.rng("formato:"+m));formato.dezenas=universo(m).slice(0,o.tam);
+  const trevos=MODALIDADES[m].trevos?lerTrevos(o.trevos):null;
+  return {formato,quantidade:o.quantidade,orcamento:o.orcamento,janela:o.janela,fixas:intDezenas(o.fixas,m),excluidas:intDezenas(o.excluidas,m),concursoAlvo:o.concurso===""?null:Number(o.concurso),...(trevos?.length?{trevosFixos:trevos}:{})};
+}
+function intPlanPreview(m,o){
+  try{return LL18UI.recommendationPlanView(LL18.recommendationPlan(m,intRecommendationOptions(m,o),'automatico'));}
+  catch(e){return `<p class="nota atencao" role="status">Confira a configuração: ${esc(e.message)}</p>`;}
+}
+function intUpdatePlan(m,o){
+  const el=document.getElementById('int-plan-preview');if(!el)return;
+  const open=el.querySelector('details')?.open;el.innerHTML=intPlanPreview(m,o);
+  if(open&&el.querySelector('details'))el.querySelector('details').open=true;
+}
 function intStatusBase(base){
   const hist=base.hist;
   return `<div class="int-base"><span class="int-dot"></span><span>${hist.length
@@ -2915,6 +2929,7 @@ T.sugestoes = () => {
         <p class="int-help">O pacote fica fixo até o próximo concurso. Alterar formato ou restrições inicia um perfil separado de avaliação. Fixar ou excluir dezenas limita a variedade; não altera a chance de cada combinação.</p>
       </details>
       <div class="int-price"><span>Estimativa antes do limite</span><strong id="int-preco">${brl(custoDoJogo(m,o.tam)*o.quantidade)}</strong></div>
+      <div id="int-plan-preview" aria-live="polite">${intPlanPreview(m,o)}</div>
       <button class="acao int-primary" id="int-gerar" ${calculando?'disabled':''}>${calculando?'Atualizando sugestão…':'Atualizar sugestão'}</button>
       <div id="int-mensagem" role="status" aria-live="polite">${calculando?'Comparando candidatas com o histórico disponível. Você pode navegar enquanto o cálculo termina.':''}</div>
       <details class="int-details"><summary>Base da seleção: ${inf(base.hist.length)} concursos${base.lacunas?" · com lacunas":""}</summary>${intStatusBase(base)}</details>
@@ -2973,6 +2988,8 @@ function intRenderRecomendacao(r){
     ${ticket(g.jogos[0],0)}
     ${LL18UI.baseHealthView(g.principal.analise.saudeBase,{historico:g.parametros.antesDe!==null})}
     ${LL18UI.evidenceView(g)}
+    ${LL18UI.recommendationPlanView(g.plano)}
+    ${LL18UI.frequencyDiagnosisView(a.diagnosticoFrequencia)}
     ${LL18UI.modalidadeProfileView(a.perfilModalidade)}
     <div class="int-analysis-link"><span class="int-eyebrow">DO HISTÓRICO À SUGESTÃO</span><h3>Por que esta combinação?</h3>
       <p class="int-help">${g.base.n?`${inf(g.base.n)} concursos válidos, do ${g.base.primeiro} ao ${g.base.ultimo}. ${g.base.lacunas?inf(g.base.lacunas)+' concursos ausentes nesse intervalo. ':''}As faixas mais observadas foram ${a.predominantes.map(h=>h+' acertos ('+nf(a.faixas[h].percentual,1)+'%)').join(' e ')}.`:'Sem histórico válido disponível. Importe resultados para ativar a seleção por perfil.'}</p>
@@ -3043,6 +3060,7 @@ function intLigarAcoes(){
     if($("#int-trevos"))o.trevos=$("#int-trevos").value;
     o.modo="integrado";
     for(const k of ["fixas","excluidas","orcamento","semente","concurso"]) o[k]=$("#int-"+k).value;
+    intUpdatePlan(m,o);
   };
   document.querySelectorAll('.int-form input,.int-form select').forEach(el=>el.onchange=()=>{
     ler();
@@ -3955,7 +3973,7 @@ T.inicio = () => {
   const avisos=S.avisos.filter(a=>!a.lido).length;
   const meus=S.jogos.filter(j=>j.modalidade===m).length,idade=idadeDoHistorico(m);
   return `<div class="foco-inicio ux-inicio" style="--foco-cor:${FOCO_CORES[m]}">
-    <div class="foco-boasvindas"><div><span class="foco-label">BEM-VINDO AO SEU LABORATÓRIO</span><${podeVoltar()?'h2':'h1'}>Seu jogo,<br>bem planejado.</${podeVoltar()?'h2':'h1'}></div><span class="foco-versao">4.26.5</span></div>
+    <div class="foco-boasvindas"><div><span class="foco-label">BEM-VINDO AO SEU LABORATÓRIO</span><${podeVoltar()?'h2':'h1'}>Seu jogo,<br>bem planejado.</${podeVoltar()?'h2':'h1'}></div><span class="foco-versao">4.26.6</span></div>
     <section class="foco-hero"><div class="foco-hero-topo"><span class="foco-label">UM PLANO PARA CADA CONCURSO</span><span class="foco-tag">${esc(c.nome)}</span></div>
       <div class="foco-objetivo"><div><h2>Crie seus jogos.<br>Veja os acertos.</h2><p>Defina seus critérios e seu limite. O LotoLab organiza e confere.</p></div><div class="foco-alvo" aria-label="Meta de ${c.k} dezenas"><strong>${c.k}</strong><span>${c.trevos?"+ 2 trevos":"dezenas"}</span></div></div>
       <button class="acao foco-primary" data-atalho="sugestoes">Criar sugestões <span aria-hidden="true">→</span></button>
@@ -6911,9 +6929,7 @@ const LL18_BRIDGE={
   fetchJson:async url=>{const r=await buscarComLimite(url,12000);if(!r.ok)throw Error('Fonte respondeu HTTP '+r.status);return r.json();},
   records:()=>S.resultados,currentMode:()=>S.modalidade,
   currentScreen:()=>S.tela,busy:()=>!!intPendente||audEmAndamento(),
-  options:m=>{const o=intConfigDaTela(m);if(o.concurso&&S.intLotes[m]?.concursoAlvo===Number(o.concurso)&&Number(o.concurso)<=(LL18.history(m,S.resultados).meta.ultimo||0))o.concurso="";const formato=LL18.randomTicket(m,LL18.rng("formato:"+m));formato.dezenas=universo(m).slice(0,o.tam);
-    const trevos=MODALIDADES[m].trevos?lerTrevos(o.trevos):null;
-    return {formato,quantidade:o.quantidade,orcamento:o.orcamento,janela:o.janela,fixas:intDezenas(o.fixas,m),excluidas:intDezenas(o.excluidas,m),concursoAlvo:o.concurso===""?null:Number(o.concurso),...(trevos?.length?{trevosFixos:trevos}:{})};},
+  options:m=>{const o=intConfigDaTela(m);if(o.concurso&&S.intLotes[m]?.concursoAlvo===Number(o.concurso)&&Number(o.concurso)<=(LL18.history(m,S.resultados).meta.ultimo||0))o.concurso="";return intRecommendationOptions(m,o);},
   deliver:(m,g,records)=>{const r=intReceberRecomendacao(g,{historico:records});r.concursoAlvo=g.automatico.rodada.concursoAlvo;S.intLotes[m]=r;
     if(S.tela==="sugestoes"&&S.modalidade===m){
       // Atualiza só a saída: preserva os campos, foco e ancoragem da rolagem.

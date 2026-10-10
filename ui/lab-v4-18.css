@@ -89,3 +89,11 @@ html[data-tema="claro"] .ll-lab{--ll-acento:color-mix(in srgb,var(--ll-cor) 48%,
 /* Painéis da recomendação precisam da superfície do próprio tema. */
 .ll-base-health,.ll-special-profile{background:var(--carta);color:var(--tinta)}
 .ll-evidence{color:var(--tinta)}
+
+.ll-frequency-diagnosis{width:100%;max-width:100%;min-width:0;overflow:hidden;overflow-wrap:anywhere;margin:14px 0;padding:12px;border:1px solid var(--linha);border-radius:12px}
+.ll-frequency-diagnosis summary{font-weight:700;color:var(--tinta)}
+.ll-frequency-diagnosis .ll-table{width:100%;max-width:100%;min-width:0;overflow-x:auto}
+
+.ll-recommendation-plan{width:100%;max-width:100%;min-width:0;overflow:hidden;overflow-wrap:anywhere;margin:12px 0;padding:12px;border:1px solid var(--linha);border-radius:12px}
+.ll-recommendation-plan summary{font-weight:700;color:var(--tinta)}
+.ll-recommendation-plan .ll-table{width:100%;max-width:100%;min-width:0;overflow-x:auto}

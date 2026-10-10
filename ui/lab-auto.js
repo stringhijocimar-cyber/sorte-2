@@ -304,6 +304,7 @@ function autoCycle(m,records,input={},op={},progress=()=>{}){
   limite:'Os testes virtuais não são apostas. Acertos históricos e convergência não representam probabilidade futura. Comparação principal: dezenas/colunas; complementos e retorno financeiro são informados separadamente.'};
 }
 function autoRecommend(m,records,input={},op={},progress=()=>{}){
+ const plano=L.assertRecommendationPlan(L.recommendationPlan(m,op,'automatico'));
  const cycle=autoCycle(m,records,input,op,progress),o=options(m,op),base=L.recommendationBase(m,records,op),q=op.quantidade??1;
  if(!Number.isInteger(q)||q<1||q>60)throw Error('Escolha de 1 a 60 jogos.');
  const unit=L.currentCost(m,o.shape),budget=op.orcamento==null||op.orcamento===''?q*unit:Number(op.orcamento);
@@ -319,9 +320,11 @@ function autoRecommend(m,records,input={},op={},progress=()=>{}){
  const explanations=selected.map(jogo=>({jogo,distancia:null,criterios:[]}));
  const {pool:unused,...publicCycle}=cycle;
  analysis.base=base.meta;
+ analysis.saudeBase=L.historyHealth(base);
+ analysis.diagnosticoFrequencia=L.frequencyDiagnosis(m,base);
  const estadoValidacao=cycle.acompanhamento.n>=60?'prospectivo':cycle.inicial?.estado==='concluido'?'teste-separado':'insuficiente';
  const qualidadeEvidencia=L.evidenceQuality(base.meta,{estado:estadoValidacao},base.meta.n>=30?'perfil-historico':'amostra-insuficiente');
- return {versao:VERSION,motor:'automatico',modalidade:m,semente:cycle.rodada.semente,
+ return {versao:VERSION,motor:'automatico',plano,modalidade:m,semente:cycle.rodada.semente,
   parametros:{janela:o.janela,antesDe:op.antesDe??null,formato:o.shape,fixas:o.fixed,excluidas:o.excluded,trevosFixos:o.trevosFixos},
   base:base.meta,totalDisponivel:base.totalDisponivel,jogos:selected,explicacoes:explanations,
   principal:{...explanations[0],analise:analysis,aderencia:adherence},diversidade:L.portfolio(m,selected),
