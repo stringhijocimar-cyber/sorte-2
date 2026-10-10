@@ -960,12 +960,12 @@ td{padding:6px 7px;border-bottom:1px solid var(--trama)}
 <link rel="stylesheet" href="ui/experiencia-v4-14.css?v=4.22.1">
 <link rel="stylesheet" href="ui/modalidades-v4-15.css?v=4.22.1">
 <link rel="stylesheet" href="ui/recorrencia-v4-17.css?v=4.22.1">
-<link rel="stylesheet" href="ui/lab-v4-18.css?v=4.26.3">
+<link rel="stylesheet" href="ui/lab-v4-18.css?v=4.26.4">
 <link rel="stylesheet" href="ui/auto-v4-21.css?v=4.22.1">
-<link rel="stylesheet" href="ui/conferencia-v4-22.css?v=4.26.3">
+<link rel="stylesheet" href="ui/conferencia-v4-22.css?v=4.26.4">
 <link rel="stylesheet" href="ui/lotolab-ui-v4-23.css?v=4.23.0" data-lotolab-ui-refino="4.23.0">
 <link rel="stylesheet" href="ui/lotolab-ui-v4-24.css?v=4.24.0" data-lotolab-ui-experiencia="4.24.0">
-<link rel="stylesheet" href="ui/acompanhamento-v4-25.css?v=4.26.3">
+<link rel="stylesheet" href="ui/acompanhamento-v4-25.css?v=4.26.4">
 </head>
 <body>
 <header>
@@ -1044,14 +1044,15 @@ td{padding:6px 7px;border-bottom:1px solid var(--trama)}
   <div class="corpo"><div class="alca"></div><div id="corpo-avisos"></div></div>
 </div>
 
-<script src="ui/lab-core.js?v=4.26.3"></script>
+<script src="ui/lab-core.js?v=4.26.4"></script>
 <script src="ui/lab-strategies.js?v=4.22.1"></script>
-<script src="ui/lab-recommendation.js?v=4.26.3"></script>
-<script src="ui/lab-auto.js?v=4.26.3"></script>
-<script src="ui/lab-ui.js?v=4.26.3"></script>
+<script src="ui/lab-recommendation.js?v=4.26.4"></script>
+<script src="ui/lab-auto.js?v=4.26.4"></script>
+<script src="ui/lab-ui.js?v=4.26.4"></script>
 <script src="ui/lab-check.js?v=4.25.0"></script>
-<script src="ui/lab-auto-ui.js?v=4.26.3"></script>
-<script src="ui/lab-backup.js?v=4.26.0"></script>
+<script src="ui/lab-auto-ui.js?v=4.26.4"></script>
+<script src="ui/lab-storage.js?v=4.26.4"></script>
+<script src="ui/lab-backup.js?v=4.26.4"></script>
 <script>
 "use strict";
 
@@ -1153,13 +1154,15 @@ const S = {
 let backupRestaurando = false;
 const Guardar = {
   ler(chave, padrao){
-    try{ const v = localStorage.getItem("lotolab:"+chave);
-      return v ? JSON.parse(v) : padrao; }catch(e){ return padrao; }
+    try{ const fallback=()=>{const v=localStorage.getItem("lotolab:"+chave);return v?JSON.parse(v):padrao;};
+      return typeof LL18Storage==='undefined'?fallback():LL18Storage.read(chave,fallback); }catch(e){ return padrao; }
   },
   gravar(chave, valor){
     if(backupRestaurando) return false;
     try{
-      localStorage.setItem("lotolab:"+chave, JSON.stringify(valor));
+      const fallback=()=>{localStorage.setItem("lotolab:"+chave,JSON.stringify(valor));return true;};
+      const saved=typeof LL18Storage==='undefined'?fallback():LL18Storage.write(chave,valor,fallback);
+      if(!saved)return false;
       /* Espelhar aqui, e não em cada lugar que grava jogo, porque são dez
          lugares e o décimo primeiro vai ser esquecido. Enganchado na gravação,
          não há como salvar um jogo sem que o executor em segundo plano fique
@@ -1168,6 +1171,11 @@ const Guardar = {
         agendarEspelho();
       return true;
     }catch(e){ return false; }
+  },
+  async gravarAsync(chave,valor){
+    if(backupRestaurando)return false;
+    try{return typeof LL18Storage==='undefined'?this.gravar(chave,valor):await LL18Storage.writeAsync(chave,valor,()=>this.gravar(chave,valor));}
+    catch(e){return false;}
   }
 };
 
@@ -3947,7 +3955,7 @@ T.inicio = () => {
   const avisos=S.avisos.filter(a=>!a.lido).length;
   const meus=S.jogos.filter(j=>j.modalidade===m).length,idade=idadeDoHistorico(m);
   return `<div class="foco-inicio ux-inicio" style="--foco-cor:${FOCO_CORES[m]}">
-    <div class="foco-boasvindas"><div><span class="foco-label">BEM-VINDO AO SEU LABORATÓRIO</span><${podeVoltar()?'h2':'h1'}>Seu jogo,<br>bem planejado.</${podeVoltar()?'h2':'h1'}></div><span class="foco-versao">4.26.3</span></div>
+    <div class="foco-boasvindas"><div><span class="foco-label">BEM-VINDO AO SEU LABORATÓRIO</span><${podeVoltar()?'h2':'h1'}>Seu jogo,<br>bem planejado.</${podeVoltar()?'h2':'h1'}></div><span class="foco-versao">4.26.4</span></div>
     <section class="foco-hero"><div class="foco-hero-topo"><span class="foco-label">UM PLANO PARA CADA CONCURSO</span><span class="foco-tag">${esc(c.nome)}</span></div>
       <div class="foco-objetivo"><div><h2>Crie seus jogos.<br>Veja os acertos.</h2><p>Defina seus critérios e seu limite. O LotoLab organiza e confere.</p></div><div class="foco-alvo" aria-label="Meta de ${c.k} dezenas"><strong>${c.k}</strong><span>${c.trevos?"+ 2 trevos":"dezenas"}</span></div></div>
       <button class="acao foco-primary" data-atalho="sugestoes">Criar sugestões <span aria-hidden="true">→</span></button>
@@ -6873,16 +6881,16 @@ function lerColagem(texto, modalidade){
 function guardarResultados(novos){
   // Renovar a identidade invalida os índices mesmo quando só chegam detalhes.
   S.resultados=S.resultados.slice();
+  const posicoes=new Map(S.resultados.map((r,i)=>[r.modalidade+':'+r.concurso,i]));
   let inseridos = 0;
   novos.forEach(r => {
-    const i = S.resultados.findIndex(x =>
-      x.modalidade === r.modalidade && x.concurso === r.concurso);
-    if(i >= 0){
+    const chave=r.modalidade+':'+r.concurso,i=posicoes.get(chave);
+    if(i !== undefined){
       const anterior=S.resultados[i];
       // Uma fonte sem campos adicionais não apaga detalhes já confirmados do mesmo sorteio.
       const mesmos=anterior.dezenas.slice().sort((a,b)=>a-b).join()===r.dezenas.slice().sort((a,b)=>a-b).join();
       S.resultados[i]=mesmos?{...anterior,...r}:r;
-    }else { S.resultados.push(r); inseridos++; }
+    }else { posicoes.set(chave,S.resultados.length);S.resultados.push(r); inseridos++; }
   });
   S.resultados.sort((a,b)=> a.modalidade === b.modalidade
     ? a.concurso - b.concurso : a.modalidade.localeCompare(b.modalidade));
@@ -6896,6 +6904,7 @@ function guardarResultados(novos){
 /* Integração preserva os jogos e as telas existentes. */
 const LL18_BRIDGE={
   read:(k,p)=>Guardar.ler(k,p),write:(k,v)=>Guardar.gravar(k,v),
+  writeAsync:(k,v)=>Guardar.gravarAsync(k,v),
   native:()=>typeof Capacitor!=='undefined'&&Capacitor.isNativePlatform?.(),
   fetchJson:async url=>{const r=await buscarComLimite(url,12000);if(!r.ok)throw Error('Fonte respondeu HTTP '+r.status);return r.json();},
   records:()=>S.resultados,currentMode:()=>S.modalidade,
@@ -10435,6 +10444,7 @@ function ligarControlesCabecalho(){
 }
 
 (function iniciar(){
+  if(typeof LL18Storage!=='undefined'&&!LL18Storage.started){void LL18Storage.start().then(iniciar);return;}
   S.audMemoria = audLerMemoria(Guardar.ler('audMemoria',{}));
   S.metaConfig = Guardar.ler("metaConfig", {});
   S.jogos = Guardar.ler("jogos", []);

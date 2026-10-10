@@ -30,11 +30,11 @@
 /* 9: a conferência passou a guardar o número do concurso como número, e a
    abertura junta as duplicatas que a versão anterior deixou gravadas. Quem
    usa pelo navegador precisa receber o index.html novo, não o do cache. */
-const VERSAO = "36"; // 4.26.3: revisão das análises e indicadores.
+const VERSAO = "37"; // 4.26.4: armazenamento de históricos e sugestões.
 const CACHE = `lotolab-v${VERSAO}`;
 
 //: A casca mínima para o app abrir offline.
-const CASCA = ["./", "./index.html", "./manifest.webmanifest", "./icone.svg", "./ui/sorte2-ui-final.css", "./ui/brain-network.svg", "./ui/lotolab-ui-v4-3.css", "./ui/inteligencia-v4-9.css", "./ui/visual-metas-v4-10.css", "./ui/visual-foco-v4-11.css", "./ui/experiencia-v4-14.css", "./ui/modalidades-v4-15.css", "./ui/recorrencia-v4-17.css", "./ui/lab-core.js", "./ui/lab-strategies.js", "./ui/lab-recommendation.js", "./ui/lab-ui.js", "./ui/lab-worker.js", "./ui/lab-auto.js", "./ui/lab-auto-ui.js", "./ui/lab-backup.js", "./ui/lab-check.js", "./ui/conferencia-v4-22.css", "./ui/lotolab-ui-v4-23.css", "./ui/lotolab-ui-v4-24.css", "./ui/acompanhamento-v4-25.css", "./ui/auto-v4-21.css", "./ui/lab-v4-18.css"];
+const CASCA = ["./", "./index.html", "./manifest.webmanifest", "./icone.svg", "./ui/sorte2-ui-final.css", "./ui/brain-network.svg", "./ui/lotolab-ui-v4-3.css", "./ui/inteligencia-v4-9.css", "./ui/visual-metas-v4-10.css", "./ui/visual-foco-v4-11.css", "./ui/experiencia-v4-14.css", "./ui/modalidades-v4-15.css", "./ui/recorrencia-v4-17.css", "./ui/lab-core.js", "./ui/lab-strategies.js", "./ui/lab-recommendation.js", "./ui/lab-ui.js", "./ui/lab-worker.js", "./ui/lab-auto.js", "./ui/lab-auto-ui.js", "./ui/lab-storage.js", "./ui/lab-backup.js", "./ui/lab-check.js", "./ui/conferencia-v4-22.css", "./ui/lotolab-ui-v4-23.css", "./ui/lotolab-ui-v4-24.css", "./ui/acompanhamento-v4-25.css", "./ui/auto-v4-21.css", "./ui/lab-v4-18.css"];
 
 //: Recursos que praticamente não mudam. Ícone novo sai com versão nova.
 const IMUTAVEIS = /\.(png|svg|webmanifest)$/i;

@@ -1,12 +1,12 @@
 {
   "product": "LotoLab",
-  "version": "4.26.3",
-  "versionLabel": "V4.26.3",
+  "version": "4.26.4",
+  "versionLabel": "V4.26.4",
   "sourceBranch": "main",
   "visualLayer": "Sugestão e aprendizado automáticos",
   "android": {
-    "versionCode": 40,
-    "versionName": "4.26.3"
+    "versionCode": 41,
+    "versionName": "4.26.4"
   },
   "versionFiles": [
     "VERSION",
@@ -14,8 +14,8 @@
     "package-lock.json",
     "android/app/build.gradle"
   ],
-  "releaseState": "signed-verified",
-  "notes": "Revisão 4.26.3 validada, com APKs assinados pelo certificado permanente e verificação de compatibilidade com a 4.26.2. Binários e proveniência em distribuicao/4.26.3.",
+  "releaseState": "source-ready",
+  "notes": "Correção de armazenamento e travamento ao salvar sugestões. Históricos e análises passam a usar IndexedDB, com migração verificada e backup dos dois armazenamentos. APKs permanentes em preparação.",
   "editions": [
     {
       "name": "LotoLab 4.3.0",
