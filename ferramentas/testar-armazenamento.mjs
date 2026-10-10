@@ -74,7 +74,8 @@ try{
  await cmd('Page.addScriptToEvaluateOnNewDocument',{source});
  await cmd('Page.navigate',{url:`http://127.0.0.1:${port}/index.html`});await ready();
  assert.equal(await js('return legacyQuota'),'QuotaExceededError','a instalação antiga excedia a quota real');
- assert.ok(await js(`return LL18Storage.enabled&&localStorage.getItem('lotolab:automatico421:teste-migracao')===null&&Guardar.ler('automatico421:teste-migracao',{}).marcador.length===legacySize`));
+ assert.ok(await js(`return LL18Storage.enabled&&Guardar.ler('automatico421:teste-migracao',{}).marcador.length===legacySize`));
+ await until(()=>js(`return localStorage.getItem('lotolab:automatico421:teste-migracao')===null`),'migração em segundo plano');
  assert.equal(await js(`return localStorage.getItem('storage-regression-seeded')`),'preservar');
  assert.equal(await js(`return S.jogos[0].id`),'legado-teste');
  assert.equal(await js(`return S.tema`),'claro');

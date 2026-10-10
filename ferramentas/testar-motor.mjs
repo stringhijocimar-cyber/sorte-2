@@ -4075,15 +4075,16 @@ secao("34. Concurso é número, em todo caminho");
     dezenas:[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15], conferencias:[],
   });
 
-  /* O estrago, reproduzido: conferência gravada como texto e o mesmo concurso
-     chegando depois como número. */
+  /* Conferência antiga gravada como texto e o mesmo concurso chegando depois
+     como número. A busca indexada também deve tratá-los como a mesma chave,
+     mesmo antes da normalização persistir a correção. */
   S.jogos = [jogo()];
   S.jogos[0].conferencias.push({concurso:"3765", data:"2026-08-18", dezenas, acertos:13});
   S.resultados = [{concurso:3765, data:"2026-08-18", modalidade:"lotofacil", dezenas}];
   motor.conferenciaAutomatica();
-  checar("sem normalizar, o mesmo concurso entraria duas vezes",
-    S.jogos[0].conferencias.length === 2,
-    `${S.jogos[0].conferencias.length} conferências — é o defeito que motivou isto`);
+  checar("a conferência indexada não duplica concurso antigo em texto",
+    S.jogos[0].conferencias.length === 1,
+    `${S.jogos[0].conferencias.length} conferência`);
 
   /* A cura: junta as duplicatas e deixa tudo numérico. */
   const ajustes = motor.normalizarConcursos();

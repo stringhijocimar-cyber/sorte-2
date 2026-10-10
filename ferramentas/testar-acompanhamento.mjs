@@ -40,6 +40,15 @@ test('fixo continua após acerto máximo, reapertura e novo resultado; excluir i
  assert.equal(b.conferenciaAutomatica().novas,0);
  assert.equal(b.Guardar.ler('jogos',[]).length,0);
 });
+test('reabertura de jogo fixo longo não faz busca quadrática nas conferências',()=>{
+ const b=app(),total=4000,j={...jogo('fixo'),deConcurso:1};
+ b.S.jogos=[j];b.S.teimosinhas=[];
+ b.S.resultados=Array.from({length:total},(_,i)=>resultado(i+1));
+ j.conferencias=b.S.resultados.map(r=>({concurso:r.concurso,data:r.data,dezenas:r.dezenas,acertos:3}));
+ const inicio=performance.now(),r=b.conferenciaAutomatica(),ms=performance.now()-inicio;
+ assert.equal(r.novas,0);assert.equal(j.conferencias.length,total);
+ assert.ok(ms<1500,`conferência de abertura levou ${Math.round(ms)} ms`);
+});
 test('teimosinha mantém histórico, conta resultados ausentes e aceita correção sem duplicar',()=>{
  const j=jogo('teimosinha');a.S.jogos=[j];a.S.resultados=[resultado(100),resultado(102),resultado(103)];
  assert.equal(a.conferenciaAutomatica().novas,2);
