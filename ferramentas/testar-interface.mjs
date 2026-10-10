@@ -186,6 +186,30 @@ async function capturar(nome) {
   writeFileSync(join(CAPTURAS, `${nome}.png`), Buffer.from(data, "base64"));
 }
 
+/* Confere o armazenamento físico depois do commit, sem usar o cache do app.
+   Desde a 4.26.4, resultados podem estar no IndexedDB. */
+async function resultadosPersistidos() {
+  return js(`return (async()=>{
+    if(!globalThis.LL18Storage?.enabled)
+      return JSON.parse(localStorage.getItem('lotolab:resultados')||'[]');
+    if(!await LL18Storage.flush())throw Error('A gravação dos resultados falhou.');
+    const db=await new Promise((resolve,reject)=>{
+      const req=indexedDB.open('lotolab-dados',1);
+      req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);
+    });
+    try{
+      const raw=await new Promise((resolve,reject)=>{
+        const tx=db.transaction('entries','readonly');
+        const req=tx.objectStore('entries').get('lotolab:resultados');let value;
+        req.onsuccess=()=>{value=req.result;};
+        tx.oncomplete=()=>resolve(value);
+        tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error);
+      });
+      return JSON.parse(raw||'[]');
+    }finally{db.close();}
+  })()`);
+}
+
 /* ---------- relatório ---------- */
 let passou = 0, falhou = 0;
 const linhas = [];
@@ -493,10 +517,10 @@ const conf = await js(`
   const saida = document.querySelector('#c-saida');
   const acertadas = [...saida.querySelectorAll('.dz.acertou')].map(e => e.textContent.trim());
   const cor = getComputedStyle(saida.querySelector('.dz.acertou')).backgroundColor;
-  const guardado = JSON.parse(localStorage.getItem('lotolab:resultados')||'[]');
-  return { acertadas, cor, registros: guardado.length,
+  return { acertadas, cor,
            texto: saida.innerText.slice(0, 200) };
 `);
+conf.registros=(await resultadosPersistidos()).length;
 checar("conferência válida marca dezenas acertadas", conf.acertadas.length > 0,
   `${conf.acertadas.length} dezenas marcadas`);
 checar("dezena acertada usa a cor de acerto (verde-teal)",
@@ -508,7 +532,6 @@ await capturar("conferir-resultado");
 // F5 — conferir o mesmo concurso duas vezes não duplica
 await preencherConferencia("1 2 3 4 40 41", "3001");
 const dupl = await js(`
-  const res = JSON.parse(localStorage.getItem('lotolab:resultados')||'[]');
   const jogos = JSON.parse(localStorage.getItem('lotolab:jogos')||'[]');
   /* NÚMERO, não texto. Esta linha já procurou '3001' entre aspas — e assim
      media o defeito em vez do conserto: o formulário guardava o concurso como
@@ -517,8 +540,9 @@ const dupl = await js(`
      o defeito e ainda dava a impressão de cobri-lo. */
   const conf3001 = jogos.map(j => (j.conferencias||[]).filter(c => c.concurso === 3001).length);
   const tipos = [...new Set(jogos.flatMap(j => (j.conferencias||[]).map(c => typeof c.concurso)))];
-  return { registros: res.length, porJogo: conf3001, tipos };
+  return { porJogo: conf3001, tipos };
 `);
+dupl.registros=(await resultadosPersistidos()).length;
 checar("mesmo concurso conferido 2× não duplica o resultado",
   dupl.registros === 1, `${dupl.registros} registro`);
 checar("mesmo concurso conferido 2× não duplica na ficha do jogo",
@@ -530,7 +554,7 @@ checar("o concurso é guardado como número, e não como texto do formulário",
 // F6 — concurso diferente é somado
 await preencherConferencia("5 6 7 8 9 10", "3002");
 checar("concurso diferente acrescenta registro",
-  (await js(`return JSON.parse(localStorage.getItem('lotolab:resultados')||'[]').length`)) === 2);
+  (await resultadosPersistidos()).length === 2);
 await js(`
   S.buscaAutomatica = ${JSON.stringify(buscaAutomaticaAntesConferencia)};
   Guardar.gravar('buscaAutomatica', S.buscaAutomatica);
@@ -1561,14 +1585,13 @@ secao("F15. A busca de histórico responde onde foi pedida");
   const depois = await js(`
     const caixa = document.querySelector("#r-saida-ajustes");
     const botao = document.querySelector("#r-tudo");
-    const guardados = JSON.parse(localStorage.getItem("lotolab:resultados") || "[]")
-      .filter(r => r.concurso === 9001 || r.concurso === 9002).length;
     return {texto: caixa ? caixa.textContent.trim() : "",
             distancia: (caixa && botao)
               ? Math.round(Math.abs(caixa.getBoundingClientRect().top
                                     - botao.getBoundingClientRect().bottom)) : -1,
-            ajustesAbertos: !!document.querySelector("#r-ajustes[open]"),
-            guardados};`);
+            ajustesAbertos: !!document.querySelector("#r-ajustes[open]")};`);
+  depois.guardados=(await resultadosPersistidos())
+    .filter(r=>r.concurso===9001||r.concurso===9002).length;
 
   checar("a busca guarda os concursos", depois.guardados === 2,
     `${depois.guardados} guardados`);
