@@ -20,13 +20,29 @@ async function until(fn,label,ms=90000){const start=Date.now();while(Date.now()-
 let target;
 await until(async()=>{try{target=await(await fetch(`http://127.0.0.1:${debug}/json/new?about:blank`,{method:'PUT'})).json();return !!target.webSocketDebuggerUrl;}catch{return false;}},'Chrome');
 await until(async()=>{try{return(await fetch(`http://127.0.0.1:${port}/index.html`)).ok;}catch{return false;}},'servidor');
-ws=new WebSocket(target.webSocketDebuggerUrl);await new Promise(r=>ws.onopen=r);
-let seq=0;const pending=new Map();
-ws.onclose=()=>{for(const p of pending.values())p.reject(Error('Chrome encerrou.'));pending.clear();};
-ws.onmessage=e=>{const m=JSON.parse(e.data),p=pending.get(m.id);if(p){pending.delete(m.id);m.error?p.reject(Error(JSON.stringify(m.error))):p.resolve(m.result);}};
-const cmd=(method,params={})=>new Promise((resolve,reject)=>{const id=++seq;pending.set(id,{resolve,reject});ws.send(JSON.stringify({id,method,params}));});
+let cmd;
+async function connect(){
+ const connection=new WebSocket(target.webSocketDebuggerUrl);ws=connection;
+ await new Promise((resolve,reject)=>{connection.onopen=resolve;connection.onerror=reject;});
+ let seq=0;const pending=new Map();
+ connection.onclose=()=>{for(const p of pending.values())p.reject(Error('Chrome encerrou.'));pending.clear();};
+ connection.onmessage=e=>{const m=JSON.parse(e.data),p=pending.get(m.id);if(p){pending.delete(m.id);m.error?p.reject(Error(JSON.stringify(m.error))):p.resolve(m.result);}};
+ cmd=(method,params={})=>new Promise((resolve,reject)=>{const id=++seq;pending.set(id,{resolve,reject});connection.send(JSON.stringify({id,method,params}));});
+}
+await connect();
 async function js(code){const r=await cmd('Runtime.evaluate',{expression:`(async()=>{${code}})()`,awaitPromise:true,returnByValue:true});if(r.exceptionDetails)throw Error(r.exceptionDetails.exception?.description||JSON.stringify(r.exceptionDetails));return r.result.value;}
 async function ready(){await until(()=>js(`return globalThis.LL18Storage?.started&&!!document.querySelector('#tela .foco-hero [data-atalho="sugestoes"]')`),'abertura do app');}
+async function reopen(source,url){
+ // Cada cenário recebe uma sessão própria. IDs de scripts do DevTools
+ // podem deixar de existir quando uma recarga troca o processo da página.
+ // Fechar a aba também impede tarefas da sessão anterior de alterar o banco.
+ const closed=await fetch(`http://127.0.0.1:${debug}/json/close/${target.id}`);
+ assert.ok(closed.ok,'a sessão anterior foi encerrada');
+ target=await(await fetch(`http://127.0.0.1:${debug}/json/new?about:blank`,{method:'PUT'})).json();
+ await connect();await cmd('Page.enable');await cmd('Runtime.enable');
+ await cmd('Page.addScriptToEvaluateOnNewDocument',{source});
+ await cmd('Page.navigate',{url});await ready();
+}
 const source=`
  const originalFetch=globalThis.fetch;
  globalThis.fetch=(input,options)=>{
@@ -52,7 +68,7 @@ const source=`
 `;
 try{
  await cmd('Page.enable');await cmd('Runtime.enable');
- const preload=await cmd('Page.addScriptToEvaluateOnNewDocument',{source});
+ await cmd('Page.addScriptToEvaluateOnNewDocument',{source});
  await cmd('Page.navigate',{url:`http://127.0.0.1:${port}/index.html`});await ready();
  assert.equal(await js('return legacyQuota'),'QuotaExceededError','a instalação antiga excedia a quota real');
  assert.ok(await js(`return LL18Storage.enabled&&localStorage.getItem('lotolab:automatico421:teste-migracao')===null&&Guardar.ler('automatico421:teste-migracao',{}).marcador.length===legacySize`));
@@ -115,18 +131,16 @@ try{
  assert.ok(reopened.some(r=>JSON.stringify(r)===JSON.stringify(round)));
  console.log('ok — reabertura conserva histórico, jogos e pacote original');
 
- await cmd('Page.removeScriptToEvaluateOnNewDocument',{identifier:preload.identifier});
- const failure=await cmd('Page.addScriptToEvaluateOnNewDocument',{source:`${source}
+ await reopen(`${source}
   globalThis.originalPut=IDBObjectStore.prototype.put;
-  IDBObjectStore.prototype.put=function(){throw new DOMException('Falha simulada','QuotaExceededError');};`});
- await cmd('Page.navigate',{url:`http://localhost:${port}/index.html`});await ready();
+  IDBObjectStore.prototype.put=function(){throw new DOMException('Falha simulada','QuotaExceededError');};`,
+  `http://localhost:${port}/index.html`);
  assert.equal(await js(`return legacyQuota`),'QuotaExceededError');
  assert.ok(await js(`return LL18Storage.enabled&&!!localStorage.getItem('lotolab:automatico421:teste-migracao')&&Guardar.ler('automatico421:teste-migracao',{}).marcador.length===legacySize`));
  assert.equal(await js(`return await Guardar.gravarAsync('resultados',[{marcador:'sessao'}])`),false);
  assert.ok(await js(`const b=await LL18Backup.create(localStorage);return new Map(b.conteudo.entradas).get('lotolab:resultados')==='[{"marcador":"sessao"}]'`),'backup conserva dados da sessão quando a gravação falha');
  await js(`IDBObjectStore.prototype.put=originalPut;await Guardar.gravarAsync('resultados',[]);await Guardar.gravarAsync('automatico421:teste-migracao',{marcador:'recuperado'});`);
- await cmd('Page.removeScriptToEvaluateOnNewDocument',{identifier:failure.identifier});
- await cmd('Page.reload');await ready();
+ await reopen(source,`http://localhost:${port}/index.html`);
  assert.equal(await js(`return Guardar.ler('automatico421:teste-migracao',{}).marcador`),'recuperado');
  assert.equal(await js(`return S.jogos[0].id`),'legado-teste');
  console.log('ok — migração interrompida preserva originais; nova tentativa confirma a gravação sem reverter para cópia antiga');
