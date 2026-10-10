@@ -44,6 +44,9 @@ async function reopen(source,url){
  await cmd('Page.navigate',{url});await ready();
 }
 const source=`
+ // A casca offline é verificada em testar-distribuicao.mjs. Aqui, sua
+ // ativação não deve recarregar a página e desfazer a falha de quota injetada.
+ Object.defineProperty(navigator,'serviceWorker',{value:undefined,configurable:true});
  const originalFetch=globalThis.fetch;
  globalThis.fetch=(input,options)=>{
   const url=new URL(typeof input==='string'?input:input.url,location.href);
