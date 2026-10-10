@@ -97,23 +97,26 @@ test('renderizador de qualidade escapa conteúdo externo',()=>{
  const html=ctx.LL18UI.evidenceView({qualidadeEvidencia:{nivel:'<script>alert(1)</script>',pontuacao:0,motivo:'<img src=x onerror=alert(1)>',validacao:'<script>',limitacoes:['<svg>']}});
  assert.doesNotMatch(html,/<script|<img|<svg/);assert.match(html,/&lt;script/);
 });
+const swSource=readFileSync(new URL('../sw.js',import.meta.url),'utf8');
+const currentCache='lotolab-v'+swSource.match(/const VERSAO = "(\d+)"/)[1];
+const previousCache='lotolab-v'+(Number(currentCache.replace('lotolab-v',''))-1);
 function worker(fail=false){
  const handlers={},deleted=[];let skipped=0,claimed=0;
- vm.runInNewContext(readFileSync(new URL('../sw.js',import.meta.url),'utf8'),{
+ vm.runInNewContext(swSource,{
   self:{addEventListener:(k,f)=>handlers[k]=f,skipWaiting:()=>{skipped++;},clients:{claim:()=>{claimed++;}}},
   caches:{open:async()=>({addAll:async()=>{if(fail)throw Error('offline');}}),
-   delete:async k=>{deleted.push(k);return true;},keys:async()=>['lotolab-v35','lotolab-v36','outro-app']}
+   delete:async k=>{deleted.push(k);return true;},keys:async()=>[previousCache,currentCache,'outro-app']}
  });
  return {handlers,deleted,skipped:()=>skipped,claimed:()=>claimed};
 }
 test('falha de instalação PWA mantém o worker anterior e não ativa casca incompleta',async()=>{
  const w=worker(true);let task;w.handlers.install({waitUntil:p=>task=p});
  await assert.rejects(task,/offline/);assert.equal(w.skipped(),0);
- assert.deepEqual(w.deleted,['lotolab-v36']);
+ assert.deepEqual(w.deleted,[currentCache]);
 });
 test('ativação PWA limpa somente caches do LotoLab',async()=>{
  const w=worker();let task;w.handlers.activate({waitUntil:p=>task=p});await task;
- assert.deepEqual(w.deleted,['lotolab-v35']);assert.equal(w.claimed(),1);
+ assert.deepEqual(w.deleted,[previousCache]);assert.equal(w.claimed(),1);
 });
 
 test('mesmo dia sem hora oficial não entra como evidência prospectiva, inclusive após a apuração',()=>{

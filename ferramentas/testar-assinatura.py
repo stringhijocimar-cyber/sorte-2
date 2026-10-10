@@ -5,6 +5,7 @@ import io
 import json
 import os
 from pathlib import Path
+import re
 import shutil
 import shlex
 import subprocess
@@ -216,11 +217,13 @@ class RelatorioAssinatura(unittest.TestCase):
     def tearDown(self):
         self.tmp.cleanup()
 
-    def verificar(self, linhas, modo='final', debug=False):
+    def verificar(self, linhas, modo='final', debug=False, codigo=None):
         signer = self.sdk / 'apksigner'
         signer.write_text("#!/bin/sh\nprintf '%s\\n' " + shlex.quote('\n'.join(linhas)) + '\n')
         signer.chmod(0o700)
-        badging = f"package: name='app.lotolab.jogos' versionCode='40' versionName='{(RAIZ / 'VERSION').read_text().strip()}'"
+        if codigo is None:
+            codigo = re.search(r'versionCode\s+(\d+)', (RAIZ / 'android/app/build.gradle').read_text()).group(1)
+        badging = f"package: name='app.lotolab.jogos' versionCode='{codigo}' versionName='{(RAIZ / 'VERSION').read_text().strip()}'"
         if debug:
             badging += '\napplication-debuggable'
         aapt = self.sdk / 'aapt'
@@ -262,6 +265,9 @@ class RelatorioAssinatura(unittest.TestCase):
 
     def test_final_nao_permite_depuracao(self):
         self.assertNotEqual(self.verificar(['Signer #1 certificate SHA-256 digest: ' + self.sha], debug=True), 0)
+
+    def test_versioncode_diferente_bloqueia_publicacao(self):
+        self.assertNotEqual(self.verificar(['Signer #1 certificate SHA-256 digest: ' + self.sha], codigo=1), 0)
 
     def test_transferencia_exige_depuracao(self):
         linhas = ['Signer #1 certificate SHA-256 digest: ' + self.sha]

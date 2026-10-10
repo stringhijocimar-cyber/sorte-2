@@ -38,9 +38,11 @@ echo 'APK verificado com a assinatura permanente.'
 aapt=$(localizar aapt)
 metadados=$("$aapt" dump badging "$apk")
 versao=$(cat VERSION)
+codigo=$(sed -nE 's/^[[:space:]]*versionCode[[:space:]]+([0-9]+)[[:space:]]*$/\1/p' android/app/build.gradle)
+[[ "$codigo" =~ ^[0-9]+$ ]] || { echo '::error::versionCode do projeto ausente ou inválido.'; exit 1; }
 case "$metadados" in
-  *"package: name='app.lotolab.jogos'"*"versionName='$versao'"*) ;;
-  *) echo '::error::APK com identidade ou versão incorreta.'; exit 1 ;;
+  *"package: name='app.lotolab.jogos'"*"versionCode='$codigo'"*"versionName='$versao'"*) ;;
+  *) echo '::error::APK com identidade, versão ou versionCode incorreto.'; exit 1 ;;
 esac
 if [ "${2:-final}" = transferencia ]; then
   depuracao
