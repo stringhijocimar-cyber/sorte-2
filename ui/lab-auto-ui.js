@@ -141,6 +141,7 @@ function render(g,old=false,rec=()=>'',trevos=()=> ''){
   ${ticket(g.jogos[0],0)}
   ${root.LL18UI?.baseHealthView(g.principal.analise.saudeBase,{historico:g.parametros.antesDe!==null})||''}
   ${root.LL18UI?.evidenceView(g)||''}
+  ${root.LL18UI?.frequencyDiagnosisView(g.principal.analise.diagnosticoFrequencia)||''}
   ${root.LL18UI?.modalidadeProfileView(g.principal.analise.perfilModalidade)||''}
   <div class="auto-summary"><div><b>${num(g.base.n,0)}</b><small>concursos analisados</small></div><div><b>${a.pacoteVirtual.length}</b><small>jogos de teste virtual</small></div><div><b>${num(follow.n,0)}</b><small>sorteios conferidos</small></div></div>
   <article class="auto-decision"><span class="int-eyebrow">DECISÃO AUTOMÁTICA · ${esc(a.decisao.acao)}</span><h3>${esc(name(round.metodo))}</h3><p>${esc(a.decisao.motivo)}</p><p class="int-help">${last?`Último resultado: concurso ${last.concurso}; principal com ${last.acertos.principal} acertos. `:'O pacote atual aguarda o próximo resultado. '}Revisão de estratégia a partir de ${a.proximaRevisao} sorteios conferidos neste perfil; o pacote é renovado a cada novo concurso.</p></article>

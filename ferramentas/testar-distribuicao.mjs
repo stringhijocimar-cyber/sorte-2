@@ -64,10 +64,12 @@ try{
  assert.ok(await js(`return document.querySelector('#ll-content').textContent.includes('2.000 jogos aleatórios')&&document.querySelector('#ll-content').textContent.includes('120 concursos')`));
  assert.ok(await js(`return document.querySelector('#ll-content').textContent.includes('Leitura específica da Mega-Sena')&&document.querySelector('#ll-content').textContent.includes('Repetição do último resultado')`));
  assert.ok(await js(`return document.querySelector('#ll-content').textContent.includes('Cobertura e atualização do histórico')&&document.querySelector('#ll-content').textContent.includes('Cobertura dentro dos limites')`));
+ assert.ok(await js(`return document.querySelector('.ll-frequency-diagnosis')?.textContent.includes('Holm aplicado conjuntamente')`));
  console.log('ok — primeiro worker offline analisa 120 resultados e 2.000 referências, com servidor desligado');
  await recommend();console.log('ok — recomendação integrada funciona offline com a mesma base');
  assert.ok(await js(`return document.querySelector('.auto-results').textContent.includes('Qualidade operacional da base')&&document.querySelector('.auto-results').textContent.includes('Leitura específica da Mega-Sena')`));
  assert.ok(await js(`return document.querySelector('.auto-results').textContent.includes('Fonte declarada')&&document.querySelector('.auto-results').textContent.includes('Cobertura e atualização do histórico')`));
+ assert.ok(await js(`return document.querySelector('.auto-results .ll-frequency-diagnosis')?.textContent.includes('Não é um ranking para apostar')`));
  await cmd('Emulation.setDeviceMetricsOverride',{width:412,height:915,deviceScaleFactor:1,mobile:true});
  await cmd('Emulation.setTouchEmulationEnabled',{enabled:true,maxTouchPoints:1});
  await js(`S.jogos=[];Guardar.gravar('jogos',[]);S.opcoesAcompanhamento={};`);
@@ -89,6 +91,7 @@ try{
  await js(`S.resultados=S.resultados.concat(${JSON.stringify(lf)});S.modalidade='lotofacil';irParaTela('estatisticas',{lateral:true});const e=document.querySelector('#ll-texto');e.value='1 2 3 4 5 6 7 8 9 10 11 12 13 14 15';e.dispatchEvent(new Event('input'));document.querySelector('[data-ll-action="analisar"]').click();`);
  await until(()=>js(`return !document.querySelector('[data-ll-action="cancelar"]')&&document.querySelector('#ll-content').textContent.includes('Leitura específica da Lotofácil')`),'perfil Lotofácil offline',90000);
  assert.ok(await js(`return document.querySelector('#ll-content').textContent.includes('Média histórica da linha')&&document.querySelector('#ll-content').textContent.includes('Média combinatória de referência')`));
+ assert.ok(await js(`return document.querySelector('.ll-frequency-diagnosis')?.textContent.includes('IC 95% individual')`));
  console.log('ok — perfis Mega-Sena/Lotofácil e indicador da sugestão automática disponíveis offline');
  const first=rows.slice(0,2).sort((a,b)=>a.concurso-b.concurso);
  await js(`await Guardar.gravarAsync('resultados',${JSON.stringify(first)});await Guardar.gravarAsync('laboratorio418',{lotes:[{modalidade:'mega-sena',geradoAte:${first[0].concurso},concursoAlvo:${first[1].concurso},jogos:[{dezenas:[14,23,53,56,57,60]}]}],historicoExtra:[],tentativas:[],monitor:{},comites:{}});`);
@@ -101,6 +104,7 @@ try{
  assert.equal(await js(`return typeof LL18_WORKER_SOURCE`),'string');
  await analyze();
  assert.ok(await js(`const t=document.querySelector('#ll-content').textContent;return t.includes('600 concursos')&&t.includes('2.000 jogos aleatórios')`));
+ assert.ok(await js(`return document.querySelector('.ll-frequency-diagnosis')?.textContent.includes('Comparar todas as dezenas entre as duas janelas')`));
  console.log('ok — HTML único file:// executa worker Blob com 600 concursos e 2.000 referências');
  await recommend();console.log('ok — HTML único também gera a recomendação integrada');
  completed=true;

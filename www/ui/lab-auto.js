@@ -319,6 +319,8 @@ function autoRecommend(m,records,input={},op={},progress=()=>{}){
  const explanations=selected.map(jogo=>({jogo,distancia:null,criterios:[]}));
  const {pool:unused,...publicCycle}=cycle;
  analysis.base=base.meta;
+ analysis.saudeBase=L.historyHealth(base);
+ analysis.diagnosticoFrequencia=L.frequencyDiagnosis(m,base);
  const estadoValidacao=cycle.acompanhamento.n>=60?'prospectivo':cycle.inicial?.estado==='concluido'?'teste-separado':'insuficiente';
  const qualidadeEvidencia=L.evidenceQuality(base.meta,{estado:estadoValidacao},base.meta.n>=30?'perfil-historico':'amostra-insuficiente');
  return {versao:VERSION,motor:'automatico',modalidade:m,semente:cycle.rodada.semente,

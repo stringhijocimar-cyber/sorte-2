@@ -56,6 +56,7 @@ jobs:
           npm run check:version
           npm run check:distribution
           npm run test:revisao
+          npm run test:diagnostico
 
       - name: Testes do motor
         run: node ferramentas/testar-motor.mjs

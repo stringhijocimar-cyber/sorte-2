@@ -207,6 +207,8 @@ function recommend(m,records,op={},progress=()=>{}){
  // vantagem fora da amostra, pois os mesmos dados participaram da seleção.
  const adherence=L.reference(m,first,b.rows,{antesDe:op.antesDe??null,semente:seed+':referencia',amostras:1000});
  analysis.base=b.meta;
+ analysis.saudeBase=L.historyHealth(b);
+ analysis.diagnosticoFrequencia=L.frequencyDiagnosis(m,b);
  const qualidade=evidenceQuality(b.meta,calibration,suspended?'recuo-prospectivo':enough?'perfil-historico':'amostra-insuficiente');
  return {versao:L.VERSION,motor:'integrado',modalidade:m,semente:seed,calibracao:calibration,qualidadeEvidencia:qualidade,
    parametros:{acompanhamento:monitor?{comparacao:monitor.comparacao}:null,janela:op.janela??0,antesDe:op.antesDe??null,fixas:fixed,excluidas:excluded,formato:shape,trevosFixos:op.trevosFixos||null},
