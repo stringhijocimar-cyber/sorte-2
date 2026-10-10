@@ -2,7 +2,7 @@
   "product": "LotoLab",
   "version": "4.26.5",
   "versionLabel": "V4.26.5",
-  "sourceBranch": "melhorias/inteligencia-pos-4.26.4",
+  "sourceBranch": "main",
   "visualLayer": "Sugestão e aprendizado automáticos",
   "android": {
     "versionCode": 42,
@@ -14,8 +14,8 @@
     "package-lock.json",
     "android/app/build.gradle"
   ],
-  "releaseState": "development-unpublished",
-  "notes": "Diagnóstico de frequência total e estabilidade recente com incerteza e Holm conjunto; metadados de integridade preservados. Sem alteração de jogos ou protocolos. APK final não publicado.",
+  "releaseState": "source-ready",
+  "notes": "Hotfix de abertura: migração de dados em segundo plano e conferência linear de jogos fixos, para eliminar o travamento no logo sem apagar dados.",
   "editions": [
     {
       "name": "LotoLab 4.3.0",

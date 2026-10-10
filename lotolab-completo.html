@@ -4392,6 +4392,18 @@ function enqueue(k,v){
  });
  tail=done;return done;
 }
+function migrate(k,v){
+ const done=tail.then(async()=>{
+  /* Uma gravação nova da sessão tem prioridade sobre a cópia antiga. */
+  if(cache.get(k)!==v)return true;
+  try{
+   await saveRaw(k,v);
+   if(local.getItem(k)===v)local.removeItem(k);
+   lastError=null;return true;
+  }catch(e){lastError=e;return false;}
+ });
+ tail=done;return done;
+}
 function start(storage){
  if(starting)return starting;
  starting=(async()=>{
@@ -4406,13 +4418,15 @@ function start(storage){
     req.onsuccess=()=>{if(cancelled){req.result.close();return;}resolve(req.result);};
    });
    db.onversionchange=()=>db.close();
-   cache=await all();enabled=true;
-   // A cópia antiga só é retirada depois do commit e da leitura de conferência.
-   // Uma falha mantém o original e o valor disponível nesta sessão.
-   for(const [k,v] of localEntries().filter(([k])=>managed(k))){
-    cache.set(k,v);
-    try{await saveRaw(k,v);if(local.getItem(k)===v)local.removeItem(k);}catch(e){lastError=e;}
-   }
+   cache=await all();
+   const legacy=localEntries().filter(([k])=>managed(k));
+   /* A abertura não espera cada gravação e releitura da migração. Em aparelhos
+      com muitos resultados e pacotes automáticos, essa espera prendia o app
+      no logo. Os valores antigos entram primeiro no cache da sessão; a fila
+      confirma cada um no IndexedDB antes de remover a cópia original. */
+   for(const [k,v] of legacy)cache.set(k,v);
+   enabled=true;
+   for(const [k,v] of legacy)migrate(k,v);
    return true;
   }catch(e){lastError=e;enabled=false;return false;}
   finally{started=true;}
@@ -4508,7 +4522,7 @@ function checkEntries(entries){
  }
  return entries;
 }
-async function create(storage,version='4.26.4',now=new Date().toISOString()){
+async function create(storage,version='4.26.5',now=new Date().toISOString()){
  const entries=checkEntries(Array.isArray(storage)?storage:root.LL18Storage?.owns(storage)?await root.LL18Storage.snapshot():collect(storage)),payload={versao:version,criadoEm:now,entradas:entries};
  return {formato:FORMAT,esquema:SCHEMA,conteudo:payload,sha256:await digest(JSON.stringify(payload))};
 }
@@ -9524,19 +9538,21 @@ function conferenciaAutomatica(){
   const todos = S.jogos.concat(S.teimosinhas || []);
   todos.forEach(j => {
     j.conferencias = j.conferencias || [];
-    const jaFeitas = new Set(j.conferencias.map(cf => cf.concurso));
+    /* Antes, cada concurso já conferido fazia uma nova busca linear na lista.
+       Um jogo fixo longo transformava a abertura em milhões de comparações. */
+    const porConcurso = new Map(j.conferencias.map(cf => [Number(cf.concurso),cf]));
     concursosDoJogo(j).forEach(r => {
       const cf=metaValidarConferencia(metaConferencia(j,r));if(!cf)return;
       const detalhes={...(r.trevos?{trevos:r.trevos}:{}),...(r.dezenasSegundoSorteio?{dezenasSegundoSorteio:r.dezenasSegundoSorteio}:{})};
       const acertos=cf.acertos;
-      if(jaFeitas.has(r.concurso)){
-        const antiga=j.conferencias.find(x=>x.concurso===r.concurso);
+      const antiga=porConcurso.get(Number(r.concurso));
+      if(antiga){
         const atualizada={...antiga,data:r.data,dezenas:r.dezenas,acertos,...(j.modalidade==='mais-milionaria'?{trevos:r.trevos,acertosTrevos:cf.acertosTrevos}:{}),...(j.modalidade==='dupla-sena'?{dezenasSegundoSorteio:r.dezenasSegundoSorteio,acertosSegundo:cf.acertosSegundo}:{})};
         if(JSON.stringify(antiga)===JSON.stringify(atualizada))return;
         Object.assign(antiga,atualizada);enriquecidas++;
       }else{
-      j.conferencias.push({concurso:r.concurso, data:r.data, dezenas:r.dezenas, acertos,...detalhes,...(j.modalidade==='mais-milionaria'?{acertosTrevos:cf.acertosTrevos}:{}),...(j.modalidade==='dupla-sena'?{acertosSegundo:cf.acertosSegundo}:{})});
-      novas++;jaFeitas.add(r.concurso);
+      const nova={concurso:r.concurso, data:r.data, dezenas:r.dezenas, acertos,...detalhes,...(j.modalidade==='mais-milionaria'?{acertosTrevos:cf.acertosTrevos}:{}),...(j.modalidade==='dupla-sena'?{acertosSegundo:cf.acertosSegundo}:{})};
+      j.conferencias.push(nova);porConcurso.set(Number(r.concurso),nova);novas++;
       }
       const resumo=resumos[j.modalidade];
       if(!resumo||r.concurso>resumo.concurso||(r.concurso===resumo.concurso&&metaOrdemAcerto(cf)>metaOrdemAcerto(resumo)))resumos[j.modalidade]=cf;
@@ -13981,9 +13997,9 @@ function ligarControlesCabecalho(){
      memória útil, é confusão. Cada abertura começa na raiz. */
   S.pilha = [];
   ligarControlesCabecalho();
-  /* Conferir na abertura: quem digitou um resultado e fechou o app antes de
-     conferir os jogos encontra tudo conferido ao voltar. */
-  conferenciaAutomatica();
+  /* A tela vem antes da conferência. Instalações antigas podem ter milhares
+     de resultados ligados a jogos fixos; fazer esse lote antes de pintar
+     mantinha o Android preso no logo. */
   pintar();
   ligarBotaoVoltarDoAndroid();
   ligarToqueNaNotificacao();
@@ -13992,7 +14008,11 @@ function ligarControlesCabecalho(){
      esperando o próximo concurso para ver a primeira análise — e quem fechou o
      app no meio de uma análise nunca a veria terminar. Roda depois do pintar()
      para a tela aparecer primeiro; o processamento é fatiado e não trava. */
-  if(S.autoAnalise !== false) analisarPendentes();
+  setTimeout(()=>{
+    try{conferenciaAutomatica();pintarContaAvisos();}
+    catch(e){avisar('erro','Falha ao conferir jogos',`${e.message}. O aplicativo continua disponível.`,`erroAbertura:${Date.now()}`);}
+    if(S.autoAnalise !== false) analisarPendentes();
+  },0);
   /* Busca diária em segundo plano. Não bloqueia a abertura e não avisa quando
      falha: sem sinal é o caso comum, e um aviso a cada abertura offline
      treinaria a pessoa a ignorar o sino. */

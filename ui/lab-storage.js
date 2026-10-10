@@ -40,6 +40,18 @@ function enqueue(k,v){
  });
  tail=done;return done;
 }
+function migrate(k,v){
+ const done=tail.then(async()=>{
+  /* Uma gravação nova da sessão tem prioridade sobre a cópia antiga. */
+  if(cache.get(k)!==v)return true;
+  try{
+   await saveRaw(k,v);
+   if(local.getItem(k)===v)local.removeItem(k);
+   lastError=null;return true;
+  }catch(e){lastError=e;return false;}
+ });
+ tail=done;return done;
+}
 function start(storage){
  if(starting)return starting;
  starting=(async()=>{
@@ -54,13 +66,15 @@ function start(storage){
     req.onsuccess=()=>{if(cancelled){req.result.close();return;}resolve(req.result);};
    });
    db.onversionchange=()=>db.close();
-   cache=await all();enabled=true;
-   // A cópia antiga só é retirada depois do commit e da leitura de conferência.
-   // Uma falha mantém o original e o valor disponível nesta sessão.
-   for(const [k,v] of localEntries().filter(([k])=>managed(k))){
-    cache.set(k,v);
-    try{await saveRaw(k,v);if(local.getItem(k)===v)local.removeItem(k);}catch(e){lastError=e;}
-   }
+   cache=await all();
+   const legacy=localEntries().filter(([k])=>managed(k));
+   /* A abertura não espera cada gravação e releitura da migração. Em aparelhos
+      com muitos resultados e pacotes automáticos, essa espera prendia o app
+      no logo. Os valores antigos entram primeiro no cache da sessão; a fila
+      confirma cada um no IndexedDB antes de remover a cópia original. */
+   for(const [k,v] of legacy)cache.set(k,v);
+   enabled=true;
+   for(const [k,v] of legacy)migrate(k,v);
    return true;
   }catch(e){lastError=e;enabled=false;return false;}
   finally{started=true;}

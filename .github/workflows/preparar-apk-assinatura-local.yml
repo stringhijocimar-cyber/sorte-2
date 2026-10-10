@@ -1,5 +1,5 @@
 # Compila candidatos para assinatura fora do runner. Nunca publica estes APKs.
-# 4.26.4: corrige quota de armazenamento; regressão isola as sessões do Chrome.
+# 4.26.5: abertura imediata, migração em segundo plano e conferência linear.
 # A chave permanente permanece no backup privado, fora do código e dos artefatos.
 name: Preparar APK para assinatura local
 
