@@ -89,8 +89,9 @@ try{
  const games=await js(`return JSON.stringify(S.jogos)`);
  console.log('ok — sugestão registrada e salva pela interface com histórico completo');
 
- const before=await js(`await LL18Storage.flush();return await LL18Storage.snapshot();`);
+ await until(()=>js(`return !!Guardar.ler('laboratorio418',{}).monitor?.lotofacil`),'registro do acompanhamento após salvar');
  const backup=await js(`globalThis.storageBackup=await LL18Backup.create(localStorage);return {summary:LL18Backup.summary(storageBackup),bytes:JSON.stringify(storageBackup).length};`);
+ const before=await js(`return storageBackup.conteudo.entradas;`);
  assert.equal(backup.summary.jogos,2);assert.equal(backup.summary.resultados,count);
  assert.ok(backup.bytes<LLIMIT());
  await js(`Guardar.gravar('jogos',[]);await Guardar.gravarAsync('resultados',[]);await LL18Backup.restore(localStorage,JSON.stringify(storageBackup));`);
