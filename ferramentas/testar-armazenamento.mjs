@@ -26,7 +26,7 @@ ws.onclose=()=>{for(const p of pending.values())p.reject(Error('Chrome encerrou.
 ws.onmessage=e=>{const m=JSON.parse(e.data),p=pending.get(m.id);if(p){pending.delete(m.id);m.error?p.reject(Error(JSON.stringify(m.error))):p.resolve(m.result);}};
 const cmd=(method,params={})=>new Promise((resolve,reject)=>{const id=++seq;pending.set(id,{resolve,reject});ws.send(JSON.stringify({id,method,params}));});
 async function js(code){const r=await cmd('Runtime.evaluate',{expression:`(async()=>{${code}})()`,awaitPromise:true,returnByValue:true});if(r.exceptionDetails)throw Error(r.exceptionDetails.exception?.description||JSON.stringify(r.exceptionDetails));return r.result.value;}
-async function ready(){await until(()=>js(`return globalThis.LL18Storage?.started&&!!document.querySelector('#tela .carta')`),'abertura do app');}
+async function ready(){await until(()=>js(`return globalThis.LL18Storage?.started&&!!document.querySelector('#tela .foco-hero [data-atalho="sugestoes"]')`),'abertura do app');}
 const source=`
  const originalFetch=globalThis.fetch;
  globalThis.fetch=(input,options)=>{
