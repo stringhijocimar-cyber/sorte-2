@@ -2165,13 +2165,14 @@ await js(`document.documentElement.dataset.tema='escuro';S.modalidade='mega-sena
 
 /* ---------- Participação 4.25: salvar, persistir e rever ---------- */
 secao('Acompanhamento 4.25');
-await js(`S.modalidade='mega-sena';S.jogos=[];S.resultados=${JSON.stringify(rows419)};S.intLotes={};S.intConfig={};irParaTela('sugestoes',{lateral:true});LL18Auto.historyChanged();return true;`);
+await js(`S.modalidade='mega-sena';S.jogos=[];S.teimosinhas=[];await Guardar.gravarAsync('jogos',[]);await Guardar.gravarAsync('teimosinhas',[]);S.resultados=${JSON.stringify(rows419)};S.intLotes={};S.intConfig={};irParaTela('sugestoes',{lateral:true});LL18Auto.historyChanged();return true;`);
 for(let i=0;i<200;i++){if(await js(`return !!S.intLotes['mega-sena']?.laboratorio&&!document.querySelector('#int-salvar')?.disabled`))break;await dormir(100);}
 checar('salvar oferece concurso único, teimosinha e jogo fixo',await js(`return document.querySelectorAll('#int-salvar-opcoes input[type=radio]').length===3&&document.querySelector('#int-salvar-opcoes input:checked').value==='unico'`));
 await tocar('#int-salvar-opcoes input[value="teimosinha"]');
 await input418('#int-salvar-opcoes input[type=number]',2.5);
 await tocar('#int-salvar');
-checar('teimosinha recusa duração fracionária sem salvar',await js(`return S.jogos.length===0&&document.querySelector('.acomp-error').textContent.includes('inteiros')`));
+const teimosinhaFracionaria=await js(`const erro=document.querySelector('#int-salvar-opcoes .acomp-error')?.textContent||'';return {ok:S.jogos.length===0&&erro.includes('inteiros'),jogos:S.jogos.length,erro};`);
+checar('teimosinha recusa duração fracionária sem salvar',teimosinhaFracionaria.ok,JSON.stringify(teimosinhaFracionaria));
 await input418('#int-salvar-opcoes input[type=number]',3);
 await frame418('#int-salvar-opcoes','LotoLab-4.25-Salvar');
 await tocar('#int-salvar');
