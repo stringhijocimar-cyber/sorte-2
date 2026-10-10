@@ -81,7 +81,7 @@ jobs:
           cp VERSION compilacao/VERSION
           cp android/assinatura.sha256 compilacao/assinatura.sha256
           git rev-parse HEAD > compilacao/commit.txt
-          (cd compilacao && sha256sum final-compilacao.apk transferencia-compilacao.apk > compilacao/compilacao.sha256)
+          (cd compilacao && sha256sum final-compilacao.apk transferencia-compilacao.apk > compilacao.sha256)
           printf '%s\n' 'Candidatos de compilação: não instalar nem publicar antes de assinar com a chave permanente e conferir o certificado.' > compilacao/LEIA-ME.txt
       - uses: actions/upload-artifact@v4
         with:
