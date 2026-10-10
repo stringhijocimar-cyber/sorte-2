@@ -22,8 +22,8 @@ let seq=0;const pending=new Map();
 ws.onclose=()=>{for(const p of pending.values())p.reject(Error('Chrome encerrou antes de responder.'));pending.clear();};
 ws.onmessage=e=>{const m=JSON.parse(e.data),p=pending.get(m.id);if(p){pending.delete(m.id);m.error?p.reject(Error(JSON.stringify(m.error))):p.resolve(m.result);}};
 const cmd=(method,params={})=>new Promise((resolve,reject)=>{const id=++seq;pending.set(id,{resolve,reject});ws.send(JSON.stringify({id,method,params}));});
-async function js(code){const r=await cmd('Runtime.evaluate',{expression:`(()=>{${code}})()`,awaitPromise:true,returnByValue:true});if(r.exceptionDetails)throw Error(r.exceptionDetails.exception?.description||JSON.stringify(r.exceptionDetails));return r.result.value;}
-async function ready(){await until(()=>js('return !!globalThis.LL18UI && typeof S!=="undefined"'),'app');}
+async function js(code){const r=await cmd('Runtime.evaluate',{expression:`(async()=>{${code}})()`,awaitPromise:true,returnByValue:true});if(r.exceptionDetails)throw Error(r.exceptionDetails.exception?.description||JSON.stringify(r.exceptionDetails));return r.result.value;}
+async function ready(){await until(()=>js('return !!globalThis.LL18UI && globalThis.LL18Storage?.started && !!document.querySelector("#tela .foco-hero")'),'app');}
 async function tap(selector){
  await js(`document.querySelector(${JSON.stringify(selector)}).scrollIntoView({block:'center',behavior:'instant'});`);await sleep(100);
  const p=await js(`const e=document.querySelector(${JSON.stringify(selector)}),r=e.getBoundingClientRect(),x=r.left+r.width/2,y=r.top+r.height/2,h=document.elementFromPoint(x,y);return {x,y,atingivel:!!h&&(e===h||e.contains(h)),hit:h?.outerHTML.slice(0,180),disabled:e.disabled};`);
@@ -91,7 +91,7 @@ try{
  assert.ok(await js(`return document.querySelector('#ll-content').textContent.includes('Média histórica da linha')&&document.querySelector('#ll-content').textContent.includes('Média combinatória de referência')`));
  console.log('ok — perfis Mega-Sena/Lotofácil e indicador da sugestão automática disponíveis offline');
  const first=rows.slice(0,2).sort((a,b)=>a.concurso-b.concurso);
- await js(`Guardar.gravar('resultados',${JSON.stringify(first)});Guardar.gravar('laboratorio418',{lotes:[{modalidade:'mega-sena',geradoAte:${first[0].concurso},concursoAlvo:${first[1].concurso},jogos:[{dezenas:[14,23,53,56,57,60]}]}],historicoExtra:[],tentativas:[],monitor:{},comites:{}});`);
+ await js(`await Guardar.gravarAsync('resultados',${JSON.stringify(first)});await Guardar.gravarAsync('laboratorio418',{lotes:[{modalidade:'mega-sena',geradoAte:${first[0].concurso},concursoAlvo:${first[1].concurso},jogos:[{dezenas:[14,23,53,56,57,60]}]}],historicoExtra:[],tentativas:[],monitor:{},comites:{}});`);
  await cmd('Page.reload');await sleep(300);await ready();
  await until(()=>js(`return Guardar.ler('laboratorio418',{}).monitor?.['mega-sena']?.observacoes?.length===1`),'conferência ao reabrir');
  assert.equal(await js(`return Guardar.ler('laboratorio418',{}).monitor['mega-sena'].diagnostico.acao`),'MANTER');
