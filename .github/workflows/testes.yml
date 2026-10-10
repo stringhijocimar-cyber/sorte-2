@@ -158,6 +158,7 @@ jobs:
             curl -sf http://127.0.0.1:8123/index.html >/dev/null && break
             sleep 0.5
           done
+          node ferramentas/testar-armazenamento.mjs
           node ferramentas/testar-distribuicao.mjs
           node ferramentas/testar-interface.mjs
 
@@ -208,7 +209,7 @@ jobs:
           cmp ui/lab-auto.js /tmp/automatico-apk.js
           unzip -p android/app/build/outputs/apk/debug/app-debug.apk assets/public/ui/lab-auto-ui.js > /tmp/automatico-ui-apk.js
           cmp ui/lab-auto-ui.js /tmp/automatico-ui-apk.js
-          for asset in ui/lab-check.js ui/lab-backup.js ui/conferencia-v4-22.css ui/acompanhamento-v4-25.css runner/segundo-plano.js; do
+          for asset in ui/lab-check.js ui/lab-storage.js ui/lab-backup.js ui/conferencia-v4-22.css ui/acompanhamento-v4-25.css runner/segundo-plano.js; do
             unzip -p android/app/build/outputs/apk/debug/app-debug.apk "assets/public/$asset" > /tmp/conferencia-apk
             cmp "$asset" /tmp/conferencia-apk
           done

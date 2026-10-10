@@ -32,8 +32,8 @@ function checkEntries(entries){
  }
  return entries;
 }
-async function create(storage,version='4.26.0',now=new Date().toISOString()){
- const entries=checkEntries(Array.isArray(storage)?storage:collect(storage)),payload={versao:version,criadoEm:now,entradas:entries};
+async function create(storage,version='4.26.4',now=new Date().toISOString()){
+ const entries=checkEntries(Array.isArray(storage)?storage:root.LL18Storage?.owns(storage)?await root.LL18Storage.snapshot():collect(storage)),payload={versao:version,criadoEm:now,entradas:entries};
  return {formato:FORMAT,esquema:SCHEMA,conteudo:payload,sha256:await digest(JSON.stringify(payload))};
 }
 async function validate(raw){
@@ -52,7 +52,9 @@ function summary(data){
 }
 // Substitui apenas o namespace do app. Falhas revertem ao snapshot anterior.
 async function restore(storage,raw){
- const data=await validate(raw),before=collect(storage);
+ const data=await validate(raw);
+ if(root.LL18Storage?.owns(storage)){await root.LL18Storage.restore(data.conteudo.entradas);return summary(data);}
+ const before=collect(storage);
  const replace=entries=>{for(const [key] of collect(storage))storage.removeItem(key);for(const [key,value] of entries)storage.setItem(key,value);};
  try{replace(data.conteudo.entradas);}catch(error){
   try{replace(before);}catch(rollback){root.LL18Backup.recovery=before;throw Error('Restauração interrompida. Conserve o backup anterior e exporte a cópia de recuperação.');}

@@ -168,7 +168,7 @@ test('resultado sem data fica fora da evidência prospectiva',()=>{
  assert.equal(r.acompanhamento.n,0);assert.deepEqual(r.acompanhamento.rejeitados,[41]);
 });
 
-function preparation(compute){
+function preparation(compute,canSave=()=>true){
  const rows=history(40),memory=new Map(),delivered=[];
  let screen='';
  const context=vm.createContext({LL18:L,document:{getElementById:()=>null},setTimeout,
@@ -179,10 +179,36 @@ function preparation(compute){
   options:()=>({agora:now}),records:()=>rows,loadHistory:async()=>{},
   fetchJson:async()=>{throw Error('offline');},
   read:(k,p)=>memory.has(k)?structuredClone(memory.get(k)):p,
-  write:(k,v)=>{memory.set(k,structuredClone(v));return true;},
+  write:(k,v)=>{if(!canSave())return false;memory.set(k,structuredClone(v));return true;},
   deliver:(mode,result)=>delivered.push(result)});
  return {api,delivered,screen:value=>{screen=value;}};
 }
+test('falha de quota não recalcula a cada redesenho e a nova tentativa preserva a rodada',async()=>{
+ let calls=0,saving=false;
+ const p=preparation(async(...args)=>{calls++;return L.autoRecommend(...args);},()=>saving);
+ p.screen('sugestoes');await p.api.prepare(m);
+ const first=p.delivered[0];assert.equal(first.automatico.persistido,false);
+ await p.api.prepare(m);await p.api.prepare(m);assert.equal(calls,1);
+ saving=true;
+ const retry=await p.api.recommend(m,history(40),{agora:now});
+ assert.equal(retry.automatico.persistido,true);
+ assert.deepEqual(retry.automatico.rodada,first.automatico.rodada);
+});
+test('registro só é declarado persistido depois do commit assíncrono',async()=>{
+ let commit,started;
+ const ready=new Promise(resolve=>{started=resolve;});
+ const context=vm.createContext({LL18:L,document:{getElementById:()=>null},setTimeout,
+  LL18UI:{automatic:async(...args)=>L.autoRecommend(...args)}});
+ vm.runInContext(readFileSync(new URL('../ui/lab-auto-ui.js',import.meta.url),'utf8'),context);
+ let writes=0;
+ context.LL18Auto.mount({currentScreen:()=>'',currentMode:()=>m,read:(k,p)=>p,
+  writeAsync:async()=>{if(++writes===1){started();return new Promise(resolve=>{commit=resolve;});}return true;},
+  fetchJson:async()=>{throw Error('offline');}});
+ let finished=false;
+ const pending=context.LL18Auto.recommend(m,history(40),{agora:now}).then(r=>{finished=true;return r;});
+ await ready;assert.equal(finished,false);commit(true);
+ assert.equal((await pending).automatico.persistido,true);assert.equal(writes,2);
+});
 test('voltar à tela retoma a sugestão que terminou durante a navegação',async()=>{
  let release,started;
  const ready=new Promise(resolve=>{started=resolve;});

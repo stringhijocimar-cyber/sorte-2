@@ -109,11 +109,11 @@ function worker(fail=false){
 test('falha de instalação PWA mantém o worker anterior e não ativa casca incompleta',async()=>{
  const w=worker(true);let task;w.handlers.install({waitUntil:p=>task=p});
  await assert.rejects(task,/offline/);assert.equal(w.skipped(),0);
- assert.deepEqual(w.deleted,['lotolab-v36']);
+ assert.deepEqual(w.deleted,['lotolab-v37']);
 });
 test('ativação PWA limpa somente caches do LotoLab',async()=>{
  const w=worker();let task;w.handlers.activate({waitUntil:p=>task=p});await task;
- assert.deepEqual(w.deleted,['lotolab-v35']);assert.equal(w.claimed(),1);
+ assert.deepEqual(w.deleted,['lotolab-v35','lotolab-v36']);assert.equal(w.claimed(),1);
 });
 
 test('mesmo dia sem hora oficial não entra como evidência prospectiva, inclusive após a apuração',()=>{

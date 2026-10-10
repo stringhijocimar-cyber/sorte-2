@@ -1,7 +1,7 @@
 /* Memória persistente e apresentação do ciclo automático. */
 (function(root){
 'use strict';
-const L=root.LL18, jobs=new Map(), loaded=new Map(), remote=new Map(), cache=new Map(), preparing=new Map();
+const L=root.LL18, jobs=new Map(), loaded=new Map(), remote=new Map(), cache=new Map(), preparing=new Map(),session=new Map();
 let bridge=null, scheduled=false;
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const num=(v,d=2)=>v==null||!Number.isFinite(v)?'—':v.toLocaleString('pt-BR',{maximumFractionDigits:d});
@@ -66,15 +66,17 @@ async function recommend(m,records,op={},progress=()=>{}){
  const previous=jobs.get(profile)||Promise.resolve();
  const task=previous.catch(()=>{}).then(async()=>{
   const base=L.recommendationBase(m,records,op);
-  let state=bridge.read(key(profile),null);
+  let state=session.get(profile)||bridge.read(key(profile),null);
   state=merge(state,await source(m,profile),profile,base.meta.ultimo||0);
   const result=await root.LL18UI.automatic(m,records,state||{},op,progress);
-  const saved=bridge.write(key(profile),result.automatico.estado);
+  session.set(profile,result.automatico.estado);
+  const write=(k,v)=>bridge.writeAsync?bridge.writeAsync(k,v):bridge.write(k,v);
+  const saved=await write(key(profile),result.automatico.estado);
   result.automatico.persistido=saved;
   if(saved){
    const profiles=bridge.read('automatico421:perfis',[]),i=profiles.findIndex(x=>x.perfil===profile),entry={m,perfil:profile,op};
    if(i<0)profiles.push(entry);else profiles[i]=entry;
-   bridge.write('automatico421:perfis',profiles);
+   result.automatico.persistido=await write('automatico421:perfis',profiles);
   }
   return result;
  });
@@ -104,7 +106,9 @@ async function prepare(m){
   if(JSON.stringify(op)!==JSON.stringify(bridge.options(m)))return;
   if(result.base.assinatura!==L.recommendationBase(m,bridge.records(),op).meta.assinatura){cache.delete(m);historyChanged();return;}
   bridge.deliver(m,result,records);
-  if(result.automatico.persistido)cache.set(m,JSON.stringify([op,result.base.assinatura]));
+  // Evita refazer a calibração em cada redesenho se o armazenamento falhar.
+  // Atualizar sugestão continua permitindo uma tentativa explícita de gravação.
+  cache.set(m,JSON.stringify([op,result.base.assinatura]));
  }catch(e){if(active())status('Preparação automática pendente: '+e.message+' Toque em Atualizar sugestão para tentar novamente.');}
  finally{if(preparing.get(m)===attempt)preparing.delete(m);}
 }
@@ -132,7 +136,7 @@ function render(g,old=false,rec=()=>'',trevos=()=> ''){
  const ticket=(t,i)=>`<article class="int-ticket ${i===0?'int-principal':''}"><div class="int-section-title"><h3>${i===0?'Sua sugestão principal':'Jogo adicional '+i}</h3><span>${i===0?'CONCURSO '+(round.concursoAlvo||'A DEFINIR'):'OPCIONAL'}</span></div>${balls(g.modalidade,t)}${t.trevos?trevos(t.trevos):''}${rec(t)}${i===0?`<p class="int-help">${esc(g.motivo)}</p>`:''}<button class="acao secundaria" data-int-analisar="${i}">Ver estatísticas deste jogo</button></article>`;
  return `<section class="int-results auto-results" aria-label="Sugestão automática"><div class="int-section-title"><h2>Sugestão + laboratório automático</h2><span>${esc(L.VERSION)}</span></div>
   ${old?'<p class="nota atencao">O histórico mudou. A atualização automática está preparando o próximo concurso.</p>':''}
-  ${!a.persistido?'<p class="nota atencao" role="alert">A memória do aparelho não pôde ser gravada. Este pacote ainda não está registrado para avaliação; libere espaço e atualize a sugestão.</p>':''}
+  ${!a.persistido?'<p class="nota atencao" role="alert">Não foi possível registrar o pacote de análise. Os jogos já salvos foram preservados. Toque em Atualizar sugestão para tentar novamente ou salve uma cópia em Meus jogos → Backup.</p>':''}
   ${!g.base.n?'<p class="nota atencao">Sem histórico disponível. A sugestão usa apenas referências combinatórias; a comparação começará quando os resultados chegarem.</p>':''}
   ${ticket(g.jogos[0],0)}
   ${root.LL18UI?.baseHealthView(g.principal.analise.saudeBase,{historico:g.parametros.antesDe!==null})||''}
