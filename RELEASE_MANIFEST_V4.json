@@ -1,12 +1,12 @@
 {
   "product": "LotoLab",
-  "version": "4.26.4",
-  "versionLabel": "V4.26.4",
+  "version": "4.26.5",
+  "versionLabel": "V4.26.5",
   "sourceBranch": "main",
   "visualLayer": "Sugestão e aprendizado automáticos",
   "android": {
-    "versionCode": 41,
-    "versionName": "4.26.4"
+    "versionCode": 42,
+    "versionName": "4.26.5"
   },
   "versionFiles": [
     "VERSION",
@@ -15,7 +15,7 @@
     "android/app/build.gradle"
   ],
   "releaseState": "source-ready",
-  "notes": "Correção de armazenamento e travamento ao salvar sugestões. Históricos e análises passam a usar IndexedDB, com migração verificada e backup dos dois armazenamentos. APKs permanentes em preparação.",
+  "notes": "Hotfix de abertura: migração de dados em segundo plano e conferência linear de jogos fixos, para eliminar o travamento no logo sem apagar dados.",
   "editions": [
     {
       "name": "LotoLab 4.3.0",

@@ -109,7 +109,7 @@ function worker(fail=false){
 test('falha de instalação PWA mantém o worker anterior e não ativa casca incompleta',async()=>{
  const w=worker(true);let task;w.handlers.install({waitUntil:p=>task=p});
  await assert.rejects(task,/offline/);assert.equal(w.skipped(),0);
- assert.deepEqual(w.deleted,['lotolab-v37']);
+ assert.deepEqual(w.deleted,['lotolab-v38']);
 });
 test('ativação PWA limpa somente caches do LotoLab',async()=>{
  const w=worker();let task;w.handlers.activate({waitUntil:p=>task=p});await task;

@@ -32,7 +32,7 @@ function checkEntries(entries){
  }
  return entries;
 }
-async function create(storage,version='4.26.4',now=new Date().toISOString()){
+async function create(storage,version='4.26.5',now=new Date().toISOString()){
  const entries=checkEntries(Array.isArray(storage)?storage:root.LL18Storage?.owns(storage)?await root.LL18Storage.snapshot():collect(storage)),payload={versao:version,criadoEm:now,entradas:entries};
  return {formato:FORMAT,esquema:SCHEMA,conteudo:payload,sha256:await digest(JSON.stringify(payload))};
 }
