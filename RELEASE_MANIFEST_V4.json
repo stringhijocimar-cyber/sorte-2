@@ -1,12 +1,12 @@
 {
   "product": "LotoLab",
-  "version": "4.26.6",
-  "versionLabel": "V4.26.6",
+  "version": "4.26.7",
+  "versionLabel": "V4.26.7",
   "sourceBranch": "melhorias/inteligencia-pos-4.26.4",
   "visualLayer": "Sugestão e aprendizado automáticos",
   "android": {
-    "versionCode": 43,
-    "versionName": "4.26.6"
+    "versionCode": 44,
+    "versionName": "4.26.7"
   },
   "versionFiles": [
     "VERSION",
@@ -15,7 +15,7 @@
     "android/app/build.gradle"
   ],
   "releaseState": "development-unpublished",
-  "notes": "Diagnóstico de frequência/estabilidade e pré-diagnóstico combinatório das escolhas, com orçamento e identidade do motor. Preserva hotfix 4.26.5 de abertura/migração. Ainda não publicado.",
+  "notes": "Layout funcional: jogo, custo e ações juntos, resumos de evidência e tipografia legível. Motores, dados persistidos e certificados preservados. Em revisão, não publicado.",
   "editions": [
     {
       "name": "LotoLab 4.3.0",

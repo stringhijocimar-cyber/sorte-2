@@ -960,12 +960,12 @@ td{padding:6px 7px;border-bottom:1px solid var(--trama)}
 <link rel="stylesheet" href="ui/experiencia-v4-14.css?v=4.22.1">
 <link rel="stylesheet" href="ui/modalidades-v4-15.css?v=4.22.1">
 <link rel="stylesheet" href="ui/recorrencia-v4-17.css?v=4.22.1">
-<link rel="stylesheet" href="ui/lab-v4-18.css?v=4.26.6">
+<link rel="stylesheet" href="ui/lab-v4-18.css?v=4.26.7">
 <link rel="stylesheet" href="ui/auto-v4-21.css?v=4.22.1">
-<link rel="stylesheet" href="ui/conferencia-v4-22.css?v=4.26.6">
+<link rel="stylesheet" href="ui/conferencia-v4-22.css?v=4.26.7">
 <link rel="stylesheet" href="ui/lotolab-ui-v4-23.css?v=4.23.0" data-lotolab-ui-refino="4.23.0">
-<link rel="stylesheet" href="ui/lotolab-ui-v4-24.css?v=4.24.0" data-lotolab-ui-experiencia="4.24.0">
-<link rel="stylesheet" href="ui/acompanhamento-v4-25.css?v=4.26.6">
+<link rel="stylesheet" href="ui/lotolab-ui-v4-24.css?v=4.26.7" data-lotolab-ui-experiencia="4.24.0">
+<link rel="stylesheet" href="ui/acompanhamento-v4-25.css?v=4.26.7">
 </head>
 <body>
 <header>
@@ -1044,15 +1044,15 @@ td{padding:6px 7px;border-bottom:1px solid var(--trama)}
   <div class="corpo"><div class="alca"></div><div id="corpo-avisos"></div></div>
 </div>
 
-<script src="ui/lab-core.js?v=4.26.6"></script>
+<script src="ui/lab-core.js?v=4.26.7"></script>
 <script src="ui/lab-strategies.js?v=4.22.1"></script>
-<script src="ui/lab-recommendation.js?v=4.26.6"></script>
-<script src="ui/lab-auto.js?v=4.26.6"></script>
-<script src="ui/lab-ui.js?v=4.26.6"></script>
+<script src="ui/lab-recommendation.js?v=4.26.7"></script>
+<script src="ui/lab-auto.js?v=4.26.7"></script>
+<script src="ui/lab-ui.js?v=4.26.7"></script>
 <script src="ui/lab-check.js?v=4.25.0"></script>
-<script src="ui/lab-auto-ui.js?v=4.26.6"></script>
-<script src="ui/lab-storage.js?v=4.26.6"></script>
-<script src="ui/lab-backup.js?v=4.26.6"></script>
+<script src="ui/lab-auto-ui.js?v=4.26.7"></script>
+<script src="ui/lab-storage.js?v=4.26.7"></script>
+<script src="ui/lab-backup.js?v=4.26.7"></script>
 <script>
 "use strict";
 
@@ -2883,12 +2883,14 @@ function intRecommendationOptions(m,o){
 }
 function intPlanPreview(m,o){
   try{return LL18UI.recommendationPlanView(LL18.recommendationPlan(m,intRecommendationOptions(m,o),'automatico'));}
-  catch(e){return `<p class="nota atencao" role="status">Confira a configuração: ${esc(e.message)}</p>`;}
+  catch(e){return `<p class="nota atencao">Confira a configuração: ${esc(e.message)}</p>`;}
 }
 function intUpdatePlan(m,o){
   const el=document.getElementById('int-plan-preview');if(!el)return;
   const open=el.querySelector('details')?.open;el.innerHTML=intPlanPreview(m,o);
   if(open&&el.querySelector('details'))el.querySelector('details').open=true;
+  const announcement=document.getElementById('int-plan-status'),message=el.querySelector('p')?.textContent||'';
+  if(announcement&&announcement.textContent!==message)announcement.textContent=message;
 }
 function intStatusBase(base){
   const hist=base.hist;
@@ -2911,7 +2913,7 @@ T.sugestoes = () => {
   const calculando=intPendente?.token===intTrabalho&&intPendente.modalidade===m;
   return `<p class="int-help">O sistema prepara a sugestão, testa estratégias e confere os resultados automaticamente.</p><div id="auto-status" class="auto-status" role="status" aria-live="polite"></div>
     <div id="int-lote">${S.intLotes[m]?intRenderLote(S.intLotes[m]):""}</div>
-    <details class="auto-settings" open><summary>Personalizar meus jogos (opcional)</summary>
+    <details class="auto-settings" ${o.personalizacaoAberta??!S.intLotes[m]?'open':''}><summary>Personalizar formato e orçamento</summary>
     <section class="carta int-form ux-form"><div class="int-section-title"><h2>Configure seu jogo</h2><span>${esc(c.nome)}</span></div>
       <div class="int-integrated-intro"><span class="int-eyebrow">CICLO AUTOMÁTICO · 4.26</span><p class="int-help">A sugestão e o pacote virtual aparecem nesta tela sem treinamento manual. Ajuste apenas o tamanho, a quantidade ou o orçamento se desejar.</p></div>
       <div class="int-grid"><label class="campo" for="int-tam">Dezenas por jogo
@@ -2929,7 +2931,7 @@ T.sugestoes = () => {
         <p class="int-help">O pacote fica fixo até o próximo concurso. Alterar formato ou restrições inicia um perfil separado de avaliação. Fixar ou excluir dezenas limita a variedade; não altera a chance de cada combinação.</p>
       </details>
       <div class="int-price"><span>Estimativa antes do limite</span><strong id="int-preco">${brl(custoDoJogo(m,o.tam)*o.quantidade)}</strong></div>
-      <div id="int-plan-preview" aria-live="polite">${intPlanPreview(m,o)}</div>
+      <div id="int-plan-preview">${intPlanPreview(m,o)}</div><div id="int-plan-status" class="ll-sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
       <button class="acao int-primary" id="int-gerar" ${calculando?'disabled':''}>${calculando?'Atualizando sugestão…':'Atualizar sugestão'}</button>
       <div id="int-mensagem" role="status" aria-live="polite">${calculando?'Comparando candidatas com o histórico disponível. Você pode navegar enquanto o cálculo termina.':''}</div>
       <details class="int-details"><summary>Base da seleção: ${inf(base.hist.length)} concursos${base.lacunas?" · com lacunas":""}</summary>${intStatusBase(base)}</details>
@@ -3068,6 +3070,8 @@ function intLigarAcoes(){
     else $("#int-preco").textContent=brl(custoDoJogo(m,o.tam)*o.quantidade);
   });
   document.querySelectorAll('.int-form input').forEach(el=>el.oninput=ler);
+  const personalizacao=document.querySelector('.auto-settings');
+  if(personalizacao)personalizacao.ontoggle=()=>{o.personalizacaoAberta=personalizacao.open;};
   const avancado=$('#int-avancado');
   if(avancado) avancado.ontoggle=()=>{o.avancado=avancado.open;};
   for(const id of ['int-quantidade','int-orcamento']) $('#'+id).oninput=()=>{
@@ -3973,7 +3977,7 @@ T.inicio = () => {
   const avisos=S.avisos.filter(a=>!a.lido).length;
   const meus=S.jogos.filter(j=>j.modalidade===m).length,idade=idadeDoHistorico(m);
   return `<div class="foco-inicio ux-inicio" style="--foco-cor:${FOCO_CORES[m]}">
-    <div class="foco-boasvindas"><div><span class="foco-label">BEM-VINDO AO SEU LABORATÓRIO</span><${podeVoltar()?'h2':'h1'}>Seu jogo,<br>bem planejado.</${podeVoltar()?'h2':'h1'}></div><span class="foco-versao">4.26.6</span></div>
+    <div class="foco-boasvindas"><div><span class="foco-label">BEM-VINDO AO SEU LABORATÓRIO</span><${podeVoltar()?'h2':'h1'}>Seu jogo,<br>bem planejado.</${podeVoltar()?'h2':'h1'}></div><span class="foco-versao">4.26.7</span></div>
     <section class="foco-hero"><div class="foco-hero-topo"><span class="foco-label">UM PLANO PARA CADA CONCURSO</span><span class="foco-tag">${esc(c.nome)}</span></div>
       <div class="foco-objetivo"><div><h2>Crie seus jogos.<br>Veja os acertos.</h2><p>Defina seus critérios e seu limite. O LotoLab organiza e confere.</p></div><div class="foco-alvo" aria-label="Meta de ${c.k} dezenas"><strong>${c.k}</strong><span>${c.trevos?"+ 2 trevos":"dezenas"}</span></div></div>
       <button class="acao foco-primary" data-atalho="sugestoes">Criar sugestões <span aria-hidden="true">→</span></button>

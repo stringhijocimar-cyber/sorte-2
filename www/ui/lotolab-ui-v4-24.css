@@ -1,4 +1,4 @@
-/* LotoLab 4.24 — experiência da recomendação
+/* LotoLab 4.26.7 — experiência da recomendação
    Refinamento visual sem alteração de cálculo, conferência ou navegação. */
 
 :root{
@@ -13,6 +13,10 @@
 .auto-results{
   display:grid!important;
   gap:12px!important;
+  padding:16px!important;
+  background:var(--carta)!important;
+  border-color:var(--linha)!important;
+  box-shadow:none!important;
 }
 .auto-results>.int-section-title{
   padding:2px 2px 4px!important;
@@ -20,8 +24,10 @@
 }
 .auto-results>.int-section-title h2{
   color:#F8FBFC!important;
-  font-size:.92rem!important;
-  letter-spacing:.02em!important;
+  font-size:1.2rem!important;
+  line-height:1.3!important;
+  margin:0!important;
+  letter-spacing:-.02em!important;
 }
 .auto-results>.int-section-title span{
   color:#D7C5FF!important;
@@ -29,7 +35,7 @@
   border:1px solid rgba(169,121,255,.30)!important;
   border-radius:999px!important;
   padding:4px 8px!important;
-  font-size:.58rem!important;
+  font-size:.75rem!important;
 }
 
 /* Cartão principal: a única recomendação fica visualmente acima dos testes. */
@@ -45,11 +51,11 @@
   box-shadow:0 16px 34px rgba(44,25,92,.22)!important;
 }
 .int-ticket.int-principal::before{
-  content:"RECOMENDAÇÃO DO LABORATÓRIO";
+  content:"SEU JOGO PRINCIPAL";
   display:inline-flex!important;
   margin-bottom:10px!important;
   color:#DCCBFF!important;
-  font-size:.56rem!important;
+  font-size:.75rem!important;
   font-weight:800!important;
   letter-spacing:.12em!important;
 }
@@ -57,7 +63,7 @@
   margin-bottom:12px!important;
 }
 .int-ticket.int-principal .int-section-title h3{
-  font-size:1.08rem!important;
+  font-size:1.3rem!important;
   color:#FFFFFF!important;
 }
 .int-ticket.int-principal .dezenas{
@@ -65,15 +71,15 @@
   margin:6px 0 12px!important;
 }
 .int-ticket.int-principal .dz{
-  min-width:39px!important;
-  width:39px!important;
-  height:39px!important;
-  font-size:.76rem!important;
+  min-width:42px!important;
+  width:42px!important;
+  height:42px!important;
+  font-size:1rem!important;
   box-shadow:0 6px 14px rgba(0,0,0,.20)!important;
 }
 .int-ticket.int-principal .int-help{
   color:#C4D0D6!important;
-  font-size:.69rem!important;
+  font-size:.875rem!important;
   line-height:1.45!important;
 }
 .int-ticket.int-principal .acao.secundaria{
@@ -92,7 +98,7 @@
 .auto-decision .int-eyebrow{
   display:inline-flex!important;
   color:#D9C9FF!important;
-  font-size:.56rem!important;
+  font-size:.75rem!important;
   font-weight:800!important;
 }
 .auto-decision h3{
@@ -102,7 +108,7 @@
 }
 .auto-decision p{
   color:#B9C8D0!important;
-  font-size:.68rem!important;
+  font-size:.875rem!important;
   line-height:1.48!important;
 }
 
@@ -121,7 +127,7 @@
   text-align:center!important;
 }
 .auto-summary b{font-variant-numeric:tabular-nums!important}
-.auto-summary small{line-height:1.22!important}
+.auto-summary small{line-height:1.4!important}
 
 /* Detalhes secundários se comportam como módulos recolhíveis, não como blocos
    concorrentes com a recomendação. */
@@ -133,7 +139,7 @@
 .int-details>summary,.auto-history>summary{
   min-height:44px!important;
   padding:12px 13px!important;
-  font-size:.72rem!important;
+  font-size:.9375rem!important;
   font-weight:720!important;
 }
 .int-details[open]>summary,.auto-history[open]>summary{
@@ -147,7 +153,7 @@
   display:block!important;
   min-height:30px!important;
   color:#EAF3F5!important;
-  font-size:.66rem!important;
+  font-size:.875rem!important;
   line-height:1.25!important;
 }
 .auto-test .dz{transform:scale(.94)!important}
@@ -256,3 +262,57 @@ html[data-tema="claro"] .auto-test b{
 [class*="card"][class*="card"],[class*="ficha"][class*="ficha"],
 [class*="item"][class*="item"],[class*="nota"][class*="nota"],
 [class*="painel"][class*="painel"]{border-radius:14px!important}
+
+/* Componentes da hierarquia 4.26.7, sem outra folha de overrides. */
+.auto-context{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;font-size:.875rem;color:var(--secundaria)}
+.auto-state{display:inline-flex;padding:5px 9px;border:1px solid var(--linha);border-radius:8px;font-size:.8125rem;color:var(--tinta);background:var(--fundo)}
+.auto-lot-cost{display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;align-items:center;padding:14px 2px;border-bottom:1px solid var(--linha)}
+.auto-lot-cost span,.auto-lot-cost strong{display:block}
+.auto-lot-cost span{font-size:.875rem;color:var(--secundaria)}
+.auto-lot-cost strong{font-size:1.7rem;color:var(--tinta);font-variant-numeric:tabular-nums;letter-spacing:-.04em}
+.auto-lot-cost p{font-size:.875rem;line-height:1.5;margin:0;color:var(--secundaria)}
+.auto-overview{padding:16px 0;border-top:1px solid var(--linha)}
+.auto-overview h3,.auto-section-heading h3{font-size:1.125rem;margin:0 0 8px;color:var(--tinta)}
+.auto-limitation{font-size:.875rem;color:var(--secundaria);line-height:1.5}
+.auto-section-heading{margin:8px 0 0}
+.auto-section-heading p{margin:4px 0;font-size:.875rem;color:var(--secundaria)}
+.auto-reason{margin:8px 0 12px;border-top:1px solid var(--linha)}
+.auto-reason summary{font-size:.875rem;line-height:1.5;min-height:44px;padding:12px 0;cursor:pointer;color:var(--tinta)}
+.auto-results .int-actions{margin:0;gap:10px}
+.auto-results .int-actions .acao{min-height:48px;font-size:1rem!important;white-space:normal}
+.auto-results .int-help,.auto-overview .int-help{font-size:.875rem!important;line-height:1.55!important}
+.auto-results .auto-summary{margin:12px 0}
+.auto-results .auto-summary small{font-size:.875rem!important;color:var(--secundaria)!important}
+.auto-results .auto-summary b{font-size:1.5rem!important;color:var(--tinta)!important}
+.auto-results .auto-summary>div{background:var(--fundo)!important;border-color:var(--linha)!important;box-shadow:none!important}
+.auto-results details{max-width:100%;min-width:0}
+.auto-results .auto-decision{margin:0;border-left:0;padding:0;background:var(--carta)!important;border:1px solid var(--linha)!important;box-shadow:none!important}
+.auto-results .auto-decision summary{min-height:48px;padding:14px;font-size:.9375rem;color:var(--tinta);cursor:pointer;font-weight:650}
+.auto-results .auto-decision>:not(summary){margin-left:14px;margin-right:14px}
+.auto-results .auto-history{margin:0;box-shadow:none!important}
+.auto-results .ll-table table{font-size:.875rem;line-height:1.5}
+.auto-results .ll-sub,.auto-results .ll-evidence p{font-size:.875rem;line-height:1.55;color:var(--secundaria)}
+.auto-results .ll-evidence summary{color:var(--tinta);font-size:.9375rem;min-height:44px;line-height:1.45;font-weight:650;cursor:pointer}
+.auto-results .ll-special-profile summary,.auto-results .ll-base-health summary,.auto-results .ll-frequency-diagnosis summary,.auto-results .ll-recommendation-plan summary{font-size:.9375rem;line-height:1.5;min-height:44px;cursor:pointer}
+#tela .int-form .int-help{font-size:.875rem!important;line-height:1.55!important}
+#tela .int-form .campo{font-size:.9375rem!important;color:var(--tinta)}
+#tela .int-form input:not([type=hidden]),#tela .int-form select{font-size:1rem!important;min-height:48px}
+#tela .auto-settings>summary{font-size:1rem!important;line-height:1.5;padding:14px 4px;min-height:48px}
+#tela .int-form .int-integrated-intro{border:0;background:transparent;padding:0}
+#tela .int-form .int-integrated-intro .int-eyebrow{display:none}
+.auto-results .auto-history-note,.auto-results .auto-history label{font-size:.875rem!important;line-height:1.5}
+.auto-results .ll-table th{font-size:.875rem;text-align:left}
+.auto-results .ll-table td{font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.auto-results .ll-table td:not(:first-child){text-align:right}
+.auto-results[data-auto-modalidade="lotofacil"] .int-principal .dezenas{display:grid;grid-template-columns:repeat(5,42px);justify-content:start}
+.auto-results[data-auto-modalidade="lotofacil"] .int-principal .dz{width:42px!important;height:42px!important;min-width:42px!important}
+@media(max-width:440px){
+ .auto-results .auto-pack-grid{grid-template-columns:minmax(0,1fr)!important}
+ .auto-results .int-actions{grid-template-columns:minmax(0,1fr)}
+ .auto-results .auto-summary small{font-size:.875rem!important}
+ .auto-results .auto-summary>div{padding:12px 5px!important}
+}
+@media(max-width:300px){
+ .auto-results .auto-summary{grid-template-columns:1fr!important}
+ .auto-results[data-auto-modalidade="lotofacil"] .int-principal .dezenas{grid-template-columns:repeat(4,42px)}
+}
