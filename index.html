@@ -960,12 +960,12 @@ td{padding:6px 7px;border-bottom:1px solid var(--trama)}
 <link rel="stylesheet" href="ui/experiencia-v4-14.css?v=4.22.1">
 <link rel="stylesheet" href="ui/modalidades-v4-15.css?v=4.22.1">
 <link rel="stylesheet" href="ui/recorrencia-v4-17.css?v=4.22.1">
-<link rel="stylesheet" href="ui/lab-v4-18.css?v=4.26.7">
+<link rel="stylesheet" href="ui/lab-v4-18.css?v=4.26.8">
 <link rel="stylesheet" href="ui/auto-v4-21.css?v=4.22.1">
-<link rel="stylesheet" href="ui/conferencia-v4-22.css?v=4.26.7">
+<link rel="stylesheet" href="ui/conferencia-v4-22.css?v=4.26.8">
 <link rel="stylesheet" href="ui/lotolab-ui-v4-23.css?v=4.23.0" data-lotolab-ui-refino="4.23.0">
-<link rel="stylesheet" href="ui/lotolab-ui-v4-24.css?v=4.26.7" data-lotolab-ui-experiencia="4.24.0">
-<link rel="stylesheet" href="ui/acompanhamento-v4-25.css?v=4.26.7">
+<link rel="stylesheet" href="ui/lotolab-ui-v4-24.css?v=4.26.8" data-lotolab-ui-experiencia="4.24.0">
+<link rel="stylesheet" href="ui/acompanhamento-v4-25.css?v=4.26.8">
 </head>
 <body>
 <header>
@@ -1044,15 +1044,15 @@ td{padding:6px 7px;border-bottom:1px solid var(--trama)}
   <div class="corpo"><div class="alca"></div><div id="corpo-avisos"></div></div>
 </div>
 
-<script src="ui/lab-core.js?v=4.26.7"></script>
+<script src="ui/lab-core.js?v=4.26.8"></script>
 <script src="ui/lab-strategies.js?v=4.22.1"></script>
-<script src="ui/lab-recommendation.js?v=4.26.7"></script>
-<script src="ui/lab-auto.js?v=4.26.7"></script>
-<script src="ui/lab-ui.js?v=4.26.7"></script>
+<script src="ui/lab-recommendation.js?v=4.26.8"></script>
+<script src="ui/lab-auto.js?v=4.26.8"></script>
+<script src="ui/lab-ui.js?v=4.26.8"></script>
 <script src="ui/lab-check.js?v=4.25.0"></script>
-<script src="ui/lab-auto-ui.js?v=4.26.7"></script>
-<script src="ui/lab-storage.js?v=4.26.7"></script>
-<script src="ui/lab-backup.js?v=4.26.7"></script>
+<script src="ui/lab-auto-ui.js?v=4.26.8"></script>
+<script src="ui/lab-storage.js?v=4.26.8"></script>
+<script src="ui/lab-backup.js?v=4.26.8"></script>
 <script>
 "use strict";
 
@@ -3124,7 +3124,8 @@ function intLigarAcoes(){
         $("#int-mensagem").textContent="O histórico mudou. Gere uma nova recomendação antes de salvar.";return;
       }
       const plano=lerAcompanhamento("int-salvar");if(!plano)return;
-      const data=hoje(),loteId="I"+Date.now().toString(36);
+      const data=hoje(),loteId="I"+Date.now().toString(36),criadoEm=new Date().toISOString();
+      const geradoAte=lote.laboratorio?.base.ultimo??LL18.history(m,S.resultados).meta.ultimo??0;
       const existentes=new Set(S.jogos.filter(j=>j.modalidade===m&&(plano.acompanhamento==='fixo'?j.acompanhamento==='fixo':j.data===data&&(j.acompanhamento||'unico')===plano.acompanhamento&&(j.concursoAlvo??null)===(plano.concursoAlvo??null)&&(j.deConcurso??null)===(plano.deConcurso??null)&&(j.concursos??null)===(plano.concursos??null))).map(chaveDoJogo));
       const novos=lote.jogos.map((ds,i)=>({id:loteId+"-"+i,
         dezenas:ds.slice(),...(lote.laboratorio?lote.laboratorio.jogos[i]:{}),...(lote.trevos?{trevos:lote.trevos[i].slice()}:{}),modalidade:m,metodo:"int-"+lote.modo,data,lote:loteId,conferencias:[],
@@ -3132,7 +3133,7 @@ function intLigarAcoes(){
         inteligencia:{concursoOriginal:lote.concursoAlvo,versao:lote.versao,semente:lote.semente,assinatura:lote.base.assinatura,
           janela:lote.janela,fixas:lote.fixas,excluidas:lote.excluidas,preco:lote.metricas.unitario,
           calibracao:lote.laboratorio?.calibracao,
-          ...(lote.laboratorio?{motor:lote.laboratorio.motor,geradoAte:lote.laboratorio.base.ultimo||0,papel:i===0?"principal":"adicional",criterios:lote.laboratorio.explicacoes[i].criterios}: {})}})).filter(j=>!existentes.has(chaveDoJogo(j)));
+          ...(lote.laboratorio?{motor:lote.laboratorio.motor,geradoAte:lote.laboratorio.base.ultimo||0,papel:i===0?"principal":"adicional",criterios:lote.laboratorio.explicacoes[i].criterios}: {})}})).filter(j=>!existentes.has(chaveDoJogo(j))).map(j=>({...j,registroProspectivo:LL18.freezeSavedGame(m,j,geradoAte,criadoEm)}));
       if(!novos.length){$("#int-mensagem").textContent="Este jogo já está salvo com esse acompanhamento.";$("#int-salvar").disabled=true;$("#int-salvar").dataset.duplicado='1';return;}
       const todos=S.jogos.concat(novos);
       if(!Guardar.gravar("jogos",todos)){ $("#int-mensagem").textContent="Não foi possível salvar no aparelho. Exporte o CSV para conservar o lote.";return; }
@@ -3977,7 +3978,7 @@ T.inicio = () => {
   const avisos=S.avisos.filter(a=>!a.lido).length;
   const meus=S.jogos.filter(j=>j.modalidade===m).length,idade=idadeDoHistorico(m);
   return `<div class="foco-inicio ux-inicio" style="--foco-cor:${FOCO_CORES[m]}">
-    <div class="foco-boasvindas"><div><span class="foco-label">BEM-VINDO AO SEU LABORATÓRIO</span><${podeVoltar()?'h2':'h1'}>Seu jogo,<br>bem planejado.</${podeVoltar()?'h2':'h1'}></div><span class="foco-versao">4.26.7</span></div>
+    <div class="foco-boasvindas"><div><span class="foco-label">BEM-VINDO AO SEU LABORATÓRIO</span><${podeVoltar()?'h2':'h1'}>Seu jogo,<br>bem planejado.</${podeVoltar()?'h2':'h1'}></div><span class="foco-versao">4.26.8</span></div>
     <section class="foco-hero"><div class="foco-hero-topo"><span class="foco-label">UM PLANO PARA CADA CONCURSO</span><span class="foco-tag">${esc(c.nome)}</span></div>
       <div class="foco-objetivo"><div><h2>Crie seus jogos.<br>Veja os acertos.</h2><p>Defina seus critérios e seu limite. O LotoLab organiza e confere.</p></div><div class="foco-alvo" aria-label="Meta de ${c.k} dezenas"><strong>${c.k}</strong><span>${c.trevos?"+ 2 trevos":"dezenas"}</span></div></div>
       <button class="acao foco-primary" data-atalho="sugestoes">Criar sugestões <span aria-hidden="true">→</span></button>
@@ -6696,7 +6697,8 @@ async function baixarHistoricoDoRepositorio(modalidade){
     Array.isArray(x.dezenas) && x.dezenas.length === c.k &&
     Number.isFinite(x.concurso));
   if(!validos.length) throw new Error("nenhum concurso válido no arquivo");
-  return validos.map(x => Object.assign({}, x, {modalidade, origem:"repositorio"}));
+  const proveniencia={fonte:'repositorio',urlFonte:`${REPO_DADOS}/${modalidade}.json`,consultadoEm:new Date().toISOString(),ultimoSolicitado:false,confirmacaoDireta:false};
+  return validos.map(x => Object.assign({}, x, {modalidade, origem:"repositorio",proveniencia}));
 }
 
 const FONTES = [
@@ -6844,6 +6846,7 @@ async function buscarNaCaixa(modalidade, concurso){
       if(!resp.ok) throw new Error(`respondeu ${resp.status}`);
       const r = fonte.converter(await resp.json(), modalidade, concurso);
       r.fonte = fonte.id;
+      r.proveniencia={fonte:fonte.id,urlFonte:fonte.url(slug,concurso,modalidade),consultadoEm:new Date().toISOString(),ultimoSolicitado:!concurso,confirmacaoDireta:fonte.id==='caixa'};
       if(concurso&&r.concurso!==Number(concurso))throw new Error('A fonte respondeu outro concurso.');
       if(parcial&&r.concurso<parcial.concurso)continue;
       if(faltamComplementos(r)){if(!parcial||r.concurso>=parcial.concurso)parcial=r;continue;}
@@ -6893,7 +6896,7 @@ function lerColagem(texto, modalidade){
       .match(/\d+/g);
     const dez = (dezenas || []).map(Number).filter(d => d >= c.base && d <= c.N + c.base - 1);
     if(dez.length < c.k) throw new Error(`linha ${i+1}: só reconheci ${dez.length} dezenas válidas`);
-    saida.push({concurso, data: dataBruta ? dataBrParaIso(dataBruta[0]) : hoje(),
+    saida.push({concurso, data: dataBruta ? dataBrParaIso(dataBruta[0]) : null,
                 dezenas: dez.slice(0, c.k).sort((a,b)=>a-b), modalidade, origem:"colado"});
   });
   if(!saida.length) throw new Error("nenhuma linha reconhecida");
@@ -6904,21 +6907,30 @@ function lerColagem(texto, modalidade){
    conhecido é substituído, não repetido. */
 function guardarResultados(novos){
   // Renovar a identidade invalida os índices mesmo quando só chegam detalhes.
-  S.resultados=S.resultados.slice();
-  const posicoes=new Map(S.resultados.map((r,i)=>[r.modalidade+':'+r.concurso,i]));
+  const anteriores=S.resultados,instant=new Date().toISOString();
+  const working=S.resultados.slice();
+  const posicoes=new Map(working.map((r,i)=>[r.modalidade+':'+r.concurso,i]));
   let inseridos = 0;
   novos.forEach(r => {
     const chave=r.modalidade+':'+r.concurso,i=posicoes.get(chave);
     if(i !== undefined){
-      const anterior=S.resultados[i];
+      const anterior=working[i];
       // Uma fonte sem campos adicionais não apaga detalhes já confirmados do mesmo sorteio.
       const mesmos=anterior.dezenas.slice().sort((a,b)=>a-b).join()===r.dezenas.slice().sort((a,b)=>a-b).join();
-      S.resultados[i]=mesmos?{...anterior,...r}:r;
-    }else { posicoes.set(chave,S.resultados.length);S.resultados.push(r); inseridos++; }
+      const candidate=mesmos?{...anterior,...r,data:r.data||anterior.data}:r;
+      const revision=typeof LL18!=='undefined'?LL18.historyRevision(r.modalidade,anterior,candidate,instant):null;
+      const revisoes=[...(anterior.revisoes||[]),...(revision?[revision]:[])];
+      const consultas=[...(anterior.consultasRecentes||[]),...(anterior.proveniencia?[anterior.proveniencia]:[]),...(r.proveniencia?[r.proveniencia]:[])];
+      const queryKeys=new Set(),unicas=consultas.filter(q=>{const key=JSON.stringify(q);if(queryKeys.has(key))return false;queryKeys.add(key);return true;});
+      working[i]={...candidate,...(revisoes.length?{revisoes:revisoes.slice(-20),totalRevisoes:(anterior.totalRevisoes||anterior.revisoes?.length||0)+(revision?1:0)}:{}),...(unicas.length?{consultasRecentes:unicas.slice(-20)}:{})};
+    }else { posicoes.set(chave,working.length);working.push(r); inseridos++; }
   });
-  S.resultados.sort((a,b)=> a.modalidade === b.modalidade
+  working.sort((a,b)=> a.modalidade === b.modalidade
     ? a.concurso - b.concurso : a.modalidade.localeCompare(b.modalidade));
-  Guardar.gravar("resultados", S.resultados);
+  if(!Guardar.gravar("resultados", working)){
+    S.resultados=anteriores;throw new Error('Não foi possível registrar os resultados. A base anterior foi preservada.');
+  }
+  S.resultados=working;
   if(typeof LL18UI!=="undefined")LL18UI.historyChanged();
   if(typeof LL18Auto!=="undefined")LL18Auto.historyChanged();
   return inseridos;
@@ -6931,7 +6943,7 @@ const LL18_BRIDGE={
   writeAsync:(k,v)=>Guardar.gravarAsync(k,v),
   native:()=>typeof Capacitor!=='undefined'&&Capacitor.isNativePlatform?.(),
   fetchJson:async url=>{const r=await buscarComLimite(url,12000);if(!r.ok)throw Error('Fonte respondeu HTTP '+r.status);return r.json();},
-  records:()=>S.resultados,currentMode:()=>S.modalidade,
+  records:()=>S.resultados,savedGames:()=>S.jogos.concat(S.teimosinhas||[]),currentMode:()=>S.modalidade,
   currentScreen:()=>S.tela,busy:()=>!!intPendente||audEmAndamento(),
   options:m=>{const o=intConfigDaTela(m);if(o.concurso&&S.intLotes[m]?.concursoAlvo===Number(o.concurso)&&Number(o.concurso)<=(LL18.history(m,S.resultados).meta.ultimo||0))o.concurso="";return intRecommendationOptions(m,o);},
   deliver:(m,g,records)=>{const r=intReceberRecomendacao(g,{historico:records});r.concursoAlvo=g.automatico.rodada.concursoAlvo;S.intLotes[m]=r;
@@ -6956,7 +6968,7 @@ const LL18_BRIDGE={
   loadHistory:async m=>{const lote=await baixarHistoricoDoRepositorio(m);const validos=LL18.history(m,lote);if(validos.meta.invalidos||validos.meta.conflitos)throw Error('Histórico contém registros inválidos ou conflitantes.');const n=guardarResultados(validos.rows);aoMudarHistorico(n,'histórico do laboratório');return n;},
   saveGames:b=>{
     if(!MODALIDADES[b.modalidade]||b.jogos.some(t=>(t.trevos?.length||2)>2))return false;
-    const id='L418'+Date.now().toString(36),novos=b.jogos.map((t,i)=>({...t,id:id+'-'+i,modalidade:b.modalidade,metodo:'int-lab418',data:hoje(),lote:id,conferencias:[],concursoAlvo:b.concursoAlvo,inteligencia:{versao:'4.18',semente:b.semente,modelo:b.modelo}}));
+    const id='L418'+Date.now().toString(36),criadoEm=new Date().toISOString(),novos=b.jogos.map((t,i)=>({...t,id:id+'-'+i,modalidade:b.modalidade,metodo:'int-lab418',data:hoje(),lote:id,conferencias:[],concursoAlvo:b.concursoAlvo,inteligencia:{versao:'4.18',semente:b.semente,modelo:b.modelo}})).map(j=>({...j,registroProspectivo:LL18.freezeSavedGame(b.modalidade,j,b.geradoAte,criadoEm)}));
     const todos=S.jogos.concat(novos);if(!Guardar.gravar('jogos',todos))return false;S.jogos=todos;return true;
   }
 };

@@ -88,7 +88,7 @@ async function prepare(m){
  if(!bridge||bridge.currentScreen()!=='sugestoes'||bridge.currentMode()!==m||bridge.busy())return;
  let op;try{op=bridge.options(m);}catch(e){status(e.message);return;}
  const before=L.recommendationBase(m,bridge.records(),op).meta.assinatura;
- const stamp=JSON.stringify([op,before]);
+ const walletStamp=JSON.stringify(bridge.savedGames?.()||[]),stamp=JSON.stringify([op,before,walletStamp]);
  if(cache.get(m)===stamp||preparing.get(m)?.stamp===stamp)return;
  // Só uma resposta entregue entra no cache. Navegar ou uma falha transitória
  // não pode marcar a preparação como concluída e bloquear a próxima abertura.
@@ -105,10 +105,11 @@ async function prepare(m){
   if(!active())return;
   if(JSON.stringify(op)!==JSON.stringify(bridge.options(m)))return;
   if(result.base.assinatura!==L.recommendationBase(m,bridge.records(),op).meta.assinatura){cache.delete(m);historyChanged();return;}
+  if(walletStamp!==JSON.stringify(bridge.savedGames?.()||[])){cache.delete(m);setTimeout(()=>prepare(m),0);return;}
   bridge.deliver(m,result,records);
   // Evita refazer a calibração em cada redesenho se o armazenamento falhar.
   // Atualizar sugestão continua permitindo uma tentativa explícita de gravação.
-  cache.set(m,JSON.stringify([op,result.base.assinatura]));
+  cache.set(m,JSON.stringify([op,result.base.assinatura,walletStamp]));
  }catch(e){if(active())status('Preparação automática pendente: '+e.message+' Toque em Atualizar sugestão para tentar novamente.');}
  finally{if(preparing.get(m)===attempt)preparing.delete(m);}
 }
@@ -149,6 +150,8 @@ function render(g,old=false,rec=()=>'',trevos=()=> ''){
   <p class="auto-limitation">Histórico descreve; não prevê. Estes indicadores não são chance de prêmio.</p></section>
   <div class="auto-section-heading"><h3>Entenda esta sugestão</h3><p>Abra os detalhes que deseja consultar.</p></div>
   ${g.base.invalidos||g.base.conflitos?`<p class="nota atencao" role="status">Base com ${num(g.base.invalidos,0)} registros inválidos e ${num(g.base.conflitos,0)} conflitos excluídos. Confira a integridade abaixo.</p>`:''}
+  ${root.LL18UI?.diagnosticAlerts(g.diagnostico)||''}
+  ${root.LL18UI?.observatoryView(g.diagnostico)||''}
   ${root.LL18UI?.baseHealthView(g.principal.analise.saudeBase,{historico:g.parametros.antesDe!==null})||''}
   ${root.LL18UI?.evidenceView(g)||''}
   ${root.LL18UI?.recommendationPlanView(g.plano)||''}

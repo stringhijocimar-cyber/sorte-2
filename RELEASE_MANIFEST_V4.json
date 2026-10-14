@@ -1,12 +1,12 @@
 {
   "product": "LotoLab",
-  "version": "4.26.7",
-  "versionLabel": "V4.26.7",
-  "sourceBranch": "melhorias/inteligencia-pos-4.26.4",
+  "version": "4.26.8",
+  "versionLabel": "V4.26.8",
+  "sourceBranch": "codex/lotolab-diagnostico-4-26-8",
   "visualLayer": "Sugestão e aprendizado automáticos",
   "android": {
-    "versionCode": 44,
-    "versionName": "4.26.7"
+    "versionCode": 45,
+    "versionName": "4.26.8"
   },
   "versionFiles": [
     "VERSION",
@@ -15,7 +15,7 @@
     "android/app/build.gradle"
   ],
   "releaseState": "development-unpublished",
-  "notes": "Layout funcional: jogo, custo e ações juntos, resumos de evidência e tipografia legível. Motores, dados persistidos e certificados preservados. Em revisão, não publicado.",
+  "notes": "Diagnósticos por faixa de acertos, redundância do lote e proveniência. Protocolos de geração, dados legados e certificado preservados. Branch de revisão, sem publicação final.",
   "editions": [
     {
       "name": "LotoLab 4.3.0",

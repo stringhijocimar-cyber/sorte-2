@@ -49,6 +49,7 @@ try{
  await cmd('Network.setBlockedURLs',{urls:['*githubusercontent.com*','*caixa.gov.br*']});
  await cmd('Emulation.setTouchEmulationEnabled',{enabled:true,maxTouchPoints:1});
  await recommend('mega-sena');
+ check(await js(`const d=S.intLotes['mega-sena'].laboratorio.diagnostico;return d.faixas.escopos.length===3&&d.faixas.protocolo==='faixas-diagnostico-4268-1'&&document.querySelector('.ll-tier-diagnosis')&&document.querySelector('.ll-portfolio-diagnosis')&&document.querySelector('.ll-provenance')`),'worker real entrega faixas, redundância e proveniência');
  check(await js(`const save=document.querySelector('#int-salvar'),freq=document.querySelector('.ll-frequency-diagnosis');return !!(save.compareDocumentPosition(freq)&Node.DOCUMENT_POSITION_FOLLOWING)&&document.querySelectorAll('#int-salvar').length===1`),'Salvar único antes dos detalhes analíticos');
  check(await js(`return !document.querySelector('.auto-pack').open&&!document.querySelector('.auto-goal').open&&!document.querySelector('.ll-evidence').open`),'conteúdo de pesquisa recolhido, sem remover dados');
  check(await js(`return document.querySelector('.auto-lot-cost').textContent.includes(S.intLotes['mega-sena'].laboratorio.custo.toLocaleString('pt-BR',{style:'currency',currency:'BRL'}))`),'custo exibido igual ao motor');
@@ -66,8 +67,14 @@ try{
  await tap('#int-salvar-opcoes input[value="teimosinha"]');
  await js(`const e=document.querySelector('#int-salvar-opcoes input[type=number]');e.value='3';e.dispatchEvent(new Event('input',{bubbles:true}));`);
  await tap('#int-salvar');check(await js(`return S.tela==='jogos'&&S.jogos.at(-1).acompanhamento==='teimosinha'&&S.jogos.at(-1).concursos===3`),'salvamento real mantém acompanhamento e dados');
+ check(await js(`const j=S.jogos.at(-1),f=j.registroProspectivo;return f.protocolo==='carteira-congelada-4268-1'&&f.fim-f.inicio+1===3&&JSON.stringify(f.jogo.dezenas)===JSON.stringify(j.dezenas)`),'carteira salva ganha snapshot prospectivo sem modificar o jogo');
  await recommend('lotofacil');
  await shot('03-lotofacil-escuro.png','.auto-results');
+ await tap('.ll-tier-diagnosis>summary');await tap('.ll-tier-scope>summary');
+ await tap('.ll-portfolio-diagnosis>summary');await tap('.ll-provenance>summary');
+ check(await js(`return document.querySelectorAll('.ll-tier-scope').length===3&&document.querySelector('.ll-tier-scope').querySelectorAll('tbody tr').length===32&&document.querySelector('.ll-tier-diagnosis').textContent.includes('Exatamente 0')&&document.querySelector('.ll-tier-diagnosis').textContent.includes('Pelo menos 15')`),'Lotofácil mantém todas as faixas e os três escopos, sem omitir faixas não observadas');
+ check(await js(`const e=document.querySelector('.ll-tier-scope td');return getComputedStyle(e).whiteSpace==='nowrap'&&e.getBoundingClientRect().width>=100`),'rótulos de faixas permanecem inteiros na tabela com rolagem interna');
+ await shot('08-faixas-lotofacil-escuro.png','.ll-tier-diagnosis');
  for(const tema of ['escuro','claro']){
   await js(`document.documentElement.dataset.tema=${JSON.stringify(tema)};`);
   for(const width of [360,390,412,768,1280]){
@@ -80,14 +87,16 @@ try{
  check(await js(`return document.documentElement.scrollWidth<=visualViewport.width+1`),'texto ampliado 150% sem overflow em 360px');
  await js(`document.documentElement.style.fontSize='';`);
  await viewport();await shot('04-lotofacil-claro.png','.auto-results');
+ await shot('09-proveniencia-claro.png','.ll-provenance');
  await tap('[data-int-analisar="0"]');
  check(await js(`return document.querySelector('.ll-analysis-summary').textContent.includes('Descrição retrospectiva')&&document.querySelector('#ll-content').textContent.includes('Distribuição completa')`),'laboratório usa análise verdadeira da sugestão e indica origem retrospectiva');
  await shot('05-analise-lotofacil.png','.ll-analysis-summary');
  await viewport(1280,900);await shot('06-analise-desktop.png','#ll-lab');
  await viewport(412,1100);await js(`document.documentElement.dataset.tema='escuro';document.querySelector('.ll-special-profile').open=true;`);await shot('07-perfil-lotofacil.png','.ll-special-profile');
  await recommend('mega-sena',true);
+ check(await js(`return S.intLotes['mega-sena'].laboratorio.diagnostico.faixas.escopos.every(s=>s.n===0&&s.linhas.every(x=>x.observado===null&&x.intervaloDiferenca===null))`),'base vazia mantém diagnósticos sem acertos ou incerteza inventados');
  check(await js(`return S.intLotes['mega-sena'].laboratorio.base.n===0&&document.querySelector('.auto-results').textContent.includes('Sem histórico disponível')`),'estado sem histórico permanece explícito e não inventa evidência');
- const metrics={versao:await js(`return LL18.VERSION`),checks,capturas:7,fonte:'Resultados reais do acervo local, últimos 180 concursos. Não certifica última atualização oficial.'};
+ const metrics={versao:await js(`return LL18.VERSION`),checks,capturas:9,fonte:'Resultados reais do acervo local, últimos 180 concursos. Não certifica última atualização oficial.'};
  writeFileSync(join(output,'validacao-layout.json'),JSON.stringify(metrics,null,2)+'\n');
- console.log(`${checks} verificações de layout passaram; 7 capturas reais.`);
+ console.log(`${checks} verificações de layout passaram; 9 capturas reais.`);
 }finally{ws.close();close();}

@@ -304,6 +304,15 @@ html[data-tema="claro"] .auto-test b{
 .auto-results .ll-table th{font-size:.875rem;text-align:left}
 .auto-results .ll-table td{font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
 .auto-results .ll-table td:not(:first-child){text-align:right}
+.auto-results .ll-tier-diagnosis,.auto-results .ll-portfolio-diagnosis,.auto-results .ll-provenance{border:1px solid var(--linha);border-radius:16px;padding:14px;margin:16px 0;overflow-wrap:anywhere}
+.auto-results .ll-tier-diagnosis>summary,.auto-results .ll-portfolio-diagnosis>summary,.auto-results .ll-provenance>summary,.auto-results .ll-tier-scope>summary{min-height:44px;cursor:pointer;color:var(--tinta);font-size:1rem;line-height:1.5;font-weight:650}
+.auto-results .ll-tier-scope{border-top:1px solid var(--linha);padding-top:12px;margin-top:14px}
+.auto-results .ll-tier-scope .ll-table table{min-width:1050px;table-layout:auto}
+.auto-results .ll-tier-scope .ll-table td{white-space:nowrap;overflow-wrap:normal;text-align:left;padding:12px 10px}
+.auto-results .ll-tier-scope .ll-table th{min-width:130px;white-space:normal;overflow-wrap:normal;padding:12px 10px}
+.auto-results .ll-provenance .ll-table table{min-width:0;table-layout:fixed}
+.auto-results .ll-provenance .ll-table th:first-child{width:45%}
+.auto-results .ll-provenance .ll-table td{overflow-wrap:anywhere;text-align:left;white-space:normal}
 .auto-results[data-auto-modalidade="lotofacil"] .int-principal .dezenas{display:grid;grid-template-columns:repeat(5,42px);justify-content:start}
 .auto-results[data-auto-modalidade="lotofacil"] .int-principal .dz{width:42px!important;height:42px!important;min-width:42px!important}
 @media(max-width:440px){
