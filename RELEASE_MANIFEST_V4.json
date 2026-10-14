@@ -1,12 +1,12 @@
 {
   "product": "LotoLab",
-  "version": "4.26.5",
-  "versionLabel": "V4.26.5",
+  "version": "4.26.8",
+  "versionLabel": "V4.26.8",
   "sourceBranch": "main",
   "visualLayer": "Sugestão e aprendizado automáticos",
   "android": {
-    "versionCode": 42,
-    "versionName": "4.26.5"
+    "versionCode": 45,
+    "versionName": "4.26.8"
   },
   "versionFiles": [
     "VERSION",
@@ -14,8 +14,8 @@
     "package-lock.json",
     "android/app/build.gradle"
   ],
-  "releaseState": "source-ready",
-  "notes": "Hotfix de abertura: migração de dados em segundo plano e conferência linear de jogos fixos, para eliminar o travamento no logo sem apagar dados.",
+  "releaseState": "release-ready",
+  "notes": "Diagnósticos por faixa de acertos, redundância do lote e proveniência. Protocolos de geração, dados legados e certificado preservados. Versão preparada para publicação com a assinatura permanente.",
   "editions": [
     {
       "name": "LotoLab 4.3.0",

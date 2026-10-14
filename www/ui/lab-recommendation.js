@@ -133,12 +133,76 @@ function evidenceQuality(base,calibration,state){
    metodologia:'Índice heurístico não calibrado: parte de 100, desconta tamanho, lacunas internas, conflitos e incompletude; aplica teto 0 sem base, 49 com menos de 30 concursos e 69 sem validação. Não premia acertos nem implica previsão.',versao:'qualidade-evidencia-2'};
 }
 
+// BigInt preserva contagens como C(100,50); a saída usa strings serializáveis.
+function exactChoose(n,k){
+ if(k<0||k>n)return 0n;
+ let value=1n;for(let i=1;i<=Math.min(k,n-k);i++)value=value*BigInt(n-i+1)/BigInt(i);
+ return value;
+}
+function recommendationPlan(m,op={},motor='automatico'){
+ if(!['automatico','integrado'].includes(motor))throw Error('Motor de recomendação inválido.');
+ const c=L.cfg(m),shape=L.validateTicket(m,op.formato||L.randomTicket(m,L.rng('formato:'+m)),{completo:true});
+ const parse=value=>{const a=L.nums(value??[]);if(new Set(a).size!==a.length||a.some(d=>d<c.base||d>=c.base+c.N))throw Error('Dezenas fixas ou excluídas inválidas.');return a.sort((a,b)=>a-b);};
+ const fixed=parse(op.fixas),excluded=parse(op.excluidas);
+ if(c.colunas&&(fixed.length||excluded.length))throw Error('Restrições por dezena não se aplicam às colunas.');
+ if(fixed.some(d=>excluded.includes(d)))throw Error('Uma dezena não pode estar fixa e excluída ao mesmo tempo.');
+ if(op.trevosFixos!==undefined&&op.trevosFixos!==null){
+  if(c.extra!=='trevos')throw Error('Trevos fixos não se aplicam a esta modalidade.');
+  shape.trevos=L.validateTicket(m,{...shape,trevos:op.trevosFixos},{completo:true}).trevos;
+ }
+ const marked=c.colunas?L.sum(shape.colunas.map(a=>a.length)):shape.dezenas.length;
+ const free=c.colunas?null:c.N-fixed.length-excluded.length,remaining=c.colunas?null:marked-fixed.length;
+ if(remaining!==null&&remaining<0)throw Error('Há mais dezenas fixas do que posições no jogo.');
+ if(remaining!==null&&remaining>free)throw Error('As exclusões não deixam dezenas suficientes para montar o jogo.');
+ const q=op.quantidade??1;
+ if(!Number.isInteger(q)||q<1||q>60)throw Error('Escolha de 1 a 60 jogos.');
+ const unit=L.currentCost(m,shape),budget=op.orcamento==null||op.orcamento===''?q*unit:Number(op.orcamento);
+ if(!Number.isFinite(budget)||budget<unit)throw Error('O orçamento não cobre um jogo. Reduza as dezenas ou ajuste o limite.');
+ const size=Math.min(q,Math.floor((budget+1e-8)/unit));
+ const main=c.colunas?shape.colunas.reduce((a,col)=>a*exactChoose(10,col.length),1n):exactChoose(free,remaining);
+ const fullMain=c.colunas?main:exactChoose(c.N,marked);
+ const extra=c.extra==='trevos'?(op.trevosFixos!=null?1n:exactChoose(6,shape.trevos.length)):
+  ['mes','time'].includes(c.extra)?BigInt(c.extraN):1n;
+ const complete=main*extra,capacity=motor==='automatico'?complete:main;
+ const overlap=c.colunas?L.sum(shape.colunas.map(a=>a.length*a.length/10)):fixed.length+(free?remaining*remaining/free:0);
+ const originalOverlap=c.colunas?overlap:marked*marked/c.N;
+ const janela=op.janela??0,antesDe=op.antesDe??null;
+ if(!Number.isInteger(janela)||janela<0)throw Error('Janela de histórico inválida.');
+ if(antesDe!==null&&(!Number.isSafeInteger(antesDe)||antesDe<1))throw Error('Corte de concurso inválido.');
+ const alerts=[];
+ if(size<q)alerts.push(`O limite comporta ${size} dos ${q} jogos solicitados; o orçamento não será aumentado.`);
+ if(fixed.length||excluded.length||op.trevosFixos!=null)alerts.push('Restrições mudam a população de jogos e limitam a variedade; não tornam suas dezenas mais prováveis.');
+ if(janela)alerts.push(`Seleção limitada aos últimos ${janela} registros válidos anteriores ao corte; isso não significa ${janela} concursos consecutivos.`);
+ if(antesDe)alerts.push(`Somente resultados anteriores ao concurso ${antesDe} podem participar da seleção.`);
+ if(capacity<BigInt(size))alerts.push(`As restrições permitem somente ${capacity} jogo(s) diferente(s) pela identidade deste motor, menos que o lote de ${size}. Reduza a quantidade ou revise as restrições.`);
+ else if(capacity===BigInt(size))alerts.push('O lote utiliza todas as configurações disponíveis pela identidade deste motor; não há outra combinação distinta dentro dessas restrições.');
+ if(extra>1n)alerts.push(motor==='automatico'?'A identidade inclui o complemento: jogos com as mesmas dezenas e complementos diferentes podem aparecer no lote.':'Neste motor, jogos adicionais precisam ter dezenas/colunas diferentes; mudar somente o complemento não cria um adicional.');
+ return {protocolo:'plano-recomendacao-1',modalidade:m,motor,viavel:capacity>=BigInt(size),formato:shape,
+  fixas:fixed,excluidas:excluded,trevosFixos:op.trevosFixos!=null?shape.trevos:null,
+  marcadas:marked,livresDisponiveis:free,aEscolher:remaining,
+  combinacoesPrincipais:main.toString(),combinacoesCompletas:complete.toString(),capacidadeMotor:capacity.toString(),
+  principaisSemRestricoes:fullMain.toString(),complementosPossiveis:extra.toString(),
+  fracaoPrincipal:main===fullMain?1:Number(main)/Number(fullMain),
+  identidade:motor==='automatico'?'Jogo completo, incluindo complementos.':'Dezenas/colunas principais; complementos diferentes não criam adicionais.',
+  solicitados:q,efetivos:size,unitario:unit,orcamento:budget,custo:size*unit,reduzidoPorOrcamento:size<q,
+  sobreposicaoReferencia:overlap,sobreposicaoSemRestricoes:originalOverlap,
+  janela,antesDe,avisos:alerts,
+  metodologia:c.colunas?'Configurações principais = produto de C(10, marcações por coluna). Sobreposição = soma de marcações²/10.':
+   'Configurações principais = C(dezenas livres disponíveis, posições restantes). Sobreposição de referência = fixas + posições restantes²/dezenas livres disponíveis (zero se não há livres).',
+  limites:'Contagens exatas de formatos possíveis, não de candidatas avaliadas. Referência de sobreposição para dois jogos uniformes independentes sob as mesmas restrições; admite repetições e não descreve o lote otimizado. Não é probabilidade de prêmio, vantagem ou cobertura garantida. Não somamos chances de jogos sobrepostos. Custo usa os preços configurados no app, sem compra de apostas.'};
+}
+function assertRecommendationPlan(plan){
+ if(!plan.viavel)throw Error(`As restrições permitem somente ${plan.capacidadeMotor} jogo(s) diferente(s). Reduza a quantidade ou revise as restrições.`);
+ return plan;
+}
+
 function recommend(m,records,op={},progress=()=>{}){
  const c=L.cfg(m),seed=String(op.semente??'recomendacao-419'),random=L.rng(seed);
  const q=op.quantidade??1,N=op.candidatos??Math.max(600,q*25);
  if(!Number.isInteger(q)||q<1||q>60||!Number.isInteger(N)||N<q||N>10000)
    throw Error('Escolha de 1 a 60 jogos e até 10.000 candidatos.');
- const shape=op.formato?L.validateTicket(m,op.formato,{completo:true}):L.randomTicket(m,L.rng(seed+':formato'));
+ const originalShape=op.formato?L.validateTicket(m,op.formato,{completo:true}):L.randomTicket(m,L.rng(seed+':formato'));
+ const plano=assertRecommendationPlan(recommendationPlan(m,{...op,formato:originalShape},'integrado')),shape=plano.formato;
  const parse=value=>{const a=L.nums(value);if(new Set(a).size!==a.length||a.some(d=>d<c.base||d>=c.base+c.N))throw Error('Dezenas fixas ou excluídas inválidas.');return a.sort((a,b)=>a-b);};
  const fixed=parse(op.fixas||[]),excluded=parse(op.excluidas||[]);
  if(c.colunas&&(fixed.length||excluded.length))throw Error('Restrições por dezena não se aplicam às colunas.');
@@ -207,8 +271,10 @@ function recommend(m,records,op={},progress=()=>{}){
  // vantagem fora da amostra, pois os mesmos dados participaram da seleção.
  const adherence=L.reference(m,first,b.rows,{antesDe:op.antesDe??null,semente:seed+':referencia',amostras:1000});
  analysis.base=b.meta;
+ analysis.saudeBase=L.historyHealth(b);
+ analysis.diagnosticoFrequencia=L.frequencyDiagnosis(m,b);
  const qualidade=evidenceQuality(b.meta,calibration,suspended?'recuo-prospectivo':enough?'perfil-historico':'amostra-insuficiente');
- return {versao:L.VERSION,motor:'integrado',modalidade:m,semente:seed,calibracao:calibration,qualidadeEvidencia:qualidade,
+ return {versao:L.VERSION,motor:'integrado',plano,modalidade:m,semente:seed,calibracao:calibration,qualidadeEvidencia:qualidade,
    parametros:{acompanhamento:monitor?{comparacao:monitor.comparacao}:null,janela:op.janela??0,antesDe:op.antesDe??null,fixas:fixed,excluidas:excluded,formato:shape,trevosFixos:op.trevosFixos||null},
    base:b.meta,totalDisponivel:b.totalDisponivel,estado:suspended?'recuo-prospectivo':enough?'perfil-historico':'amostra-insuficiente',
    jogos:selected.map(p=>p.jogo),explicacoes:explanations,
@@ -218,6 +284,6 @@ function recommend(m,records,op={},progress=()=>{}){
    motivo:suspended?calibration.motivo:enough?'Menor distância conjunta ao perfil histórico entre as candidatas avaliadas. Jogos adicionais reduzem a repetição de dezenas, pares e trios.':'Menos de 30 concursos válidos: seleção aleatória, respeitando tamanho, orçamento e restrições. Não há ranking histórico confiável.',
    evidencia:'Seleção descritiva. Esta recomendação não tem vantagem preditiva demonstrada.',aviso:L.aviso};
 }
-Object.assign(L,{recommend,recommendationBase,calibrateRecommendation,evidenceQuality});
+Object.assign(L,{recommendationPlan,assertRecommendationPlan,recommend,recommendationBase,calibrateRecommendation,evidenceQuality});
 if(typeof module!=='undefined'&&module.exports)module.exports=L;
 })(globalThis);

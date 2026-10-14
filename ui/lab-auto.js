@@ -303,7 +303,106 @@ function autoCycle(m,records,input={},op={},progress=()=>{}){
   pacoteVirtual:round.testes.map(x=>({...x,nome:experts[x.id]})),custoVirtual:0,pool:p?.pool||null,
   limite:'Os testes virtuais não são apostas. Acertos históricos e convergência não representam probabilidade futura. Comparação principal: dezenas/colunas; complementos e retorno financeiro são informados separadamente.'};
 }
+// Protocolo exclusivo do painel, sem participação em pesos/decisões/sementes.
+const TIER_PROTOCOL='faixas-diagnostico-4268-1',WALLET_PROTOCOL='carteira-congelada-4268-1';
+function frozenDay(instant){
+ if(typeof instant!=='string'||!/^\d{4}-\d{2}-\d{2}T.*(?:Z|[+-]\d{2}:\d{2})$/.test(instant)||!Number.isFinite(Date.parse(instant)))return null;
+ return new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(instant));
+}
+function freezeSavedGame(m,game,generatedUntil,instant=new Date().toISOString()){
+ if(!frozenDay(instant)||!Number.isSafeInteger(generatedUntil)||generatedUntil<0)throw Error('Registro prospectivo inválido.');
+ const kind=game.acompanhamento||'unico',start=kind==='unico'?game.concursoAlvo:game.deConcurso;
+ if(!['unico','fixo','teimosinha'].includes(kind)||!Number.isSafeInteger(start)||start<=generatedUntil)throw Error('Defina um concurso futuro para registrar a carteira.');
+ const count=kind==='teimosinha'?game.concursos:1;
+ if(!Number.isSafeInteger(count)||count<1||count>10000)throw Error('Quantidade de concursos inválida.');
+ return {protocolo:WALLET_PROTOCOL,criadoEm:instant,geradoAte:generatedUntil,
+  acompanhamento:kind,inicio:start,fim:kind==='fixo'?null:start+count-1,jogo:L.validateTicket(m,game,{completo:true})};
+}
+function hitTiers(m,groups,{prospectivo=true,familia}={}){
+ const c=L.cfg(m),M=familia||3*(2*(c.k+1)+2*(c.extra==='trevos'?3:c.extra?2:0));
+ const n=groups.length,rows=[];
+ const summarize=(h,minimum,component=false)=>{
+  const complete=component?groups.filter(g=>g.resultado[c.extra]!==undefined&&g.jogos.every(t=>t[c.extra]!==undefined)):groups;
+  const observations=complete.map(g=>{
+   const values=g.jogos.map(t=>{
+    const hit=component?(c.extra==='trevos'?t.trevos.filter(d=>g.resultado.trevos.includes(d)).length:Number(t[c.extra]===g.resultado[c.extra])):L.hits(m,t,g.resultado);
+    const ps=component?(c.extra==='trevos'?Array.from({length:3},(_,i)=>L.comb(t.trevos.length,i)*L.comb(6-t.trevos.length,2-i)/L.comb(6,2)):[1-1/c.extraN,1/c.extraN]):L.distribution(m,t);
+    return {observado:Number(minimum?hit>=h:hit===h),referencia:minimum?L.sum(ps.slice(h)):ps[h]};
+   });
+   return {observado:L.mean(values.map(x=>x.observado)),referencia:L.mean(values.map(x=>x.referencia))};
+  });
+  const count=observations.length,actual=count?L.mean(observations.map(x=>x.observado)):null,expected=count?L.mean(observations.map(x=>x.referencia)):null;
+  // Hoeffding condicional + união sobre faixas/escopos e n: soma 1/[n(n+1)]=1.
+  // Cada concurso fornece UMA observação limitada a [0,1], mesmo com jogos sobrepostos.
+  const radius=count&&prospectivo?Math.sqrt(Math.log(2*M*count*(count+1)/.05)/(2*count)):null;
+  return {acertos:h,tipo:minimum?'pelo-menos':'exatamente',n:count,observado:actual,referencia:expected,
+   diferenca:count?actual-expected:null,intervaloDiferenca:radius===null?null:[Math.max(-1,actual-expected-radius),Math.min(1,actual-expected+radius)],
+   ocorrencias:complete.reduce((total,g)=>total+Number(g.jogos.some(t=>{const v=component?(c.extra==='trevos'?t.trevos.filter(d=>g.resultado.trevos.includes(d)).length:Number(t[c.extra]===g.resultado[c.extra])):L.hits(m,t,g.resultado);return minimum?v>=h:v===h;})),0)};
+ };
+ for(let h=0;h<=c.k;h++)rows.push(summarize(h,false),summarize(h,true));
+ const complement=c.extra?Array.from({length:c.extra==='trevos'?3:2},(_,h)=>[summarize(h,false,true),summarize(h,true,true)]).flat():[];
+ const formats=[...new Set(groups.flatMap(g=>g.jogos.map(t=>c.colunas?t.colunas.map(a=>a.length).join('/')+' marcações por coluna':t.dezenas.length+' dezenas'+(c.extra==='trevos'?' + '+t.trevos?.length+' trevos':''))))];
+ return {n,bilhetes:groups.reduce((total,g)=>total+g.jogos.length,0),formatos:formats,linhas:rows,complementos:complement,
+  periodo:n?{primeiro:groups[0].concurso,ultimo:groups.at(-1).concurso,dataPrimeiro:groups[0].data,dataUltimo:groups.at(-1).data}:null,
+  familia:M,prospectivo,unidade:'Média por concurso da fração de jogos na faixa. Bilhetes do mesmo concurso não são observações independentes.',
+  protocolo:TIER_PROTOCOL,extracao:c.dupla?'Primeiro sorteio; segunda extração e prêmios não são agregados.':'Dezenas/colunas; complementos conferidos separadamente.'};
+}
+function prospectiveTiers(m,records,input,op={},saved=[]){
+ const c=L.cfg(m),o=options(m,op),state=validateState(m,input,o),b=L.history(m,records,{antesDe:op.antesDe??null});
+ const byNumber=new Map(b.rows.map(r=>[r.concurso,r])),principal=[],virtual=[],wallet=[],pending=[],rejected=[];
+ for(const round of state.rodadas){
+  const draw=byNumber.get(round.concursoAlvo);
+  if(!draw){pending.push(round.concursoAlvo);continue;}
+  const day=frozenDay(round.criadoEm);
+  if(!draw.data||!day||day>=draw.data){rejected.push({concurso:round.concursoAlvo,motivo:!draw.data?'Resultado sem data':'Data de geração não comprova antecedência ao resultado'});continue;}
+  const base={concurso:draw.concurso,data:draw.data,resultado:draw};
+  principal.push({...base,jogos:[round.principal]});virtual.push({...base,jogos:round.testes.map(t=>t.jogo)});
+ }
+ let legacy=0,changed=0;const entries=[],savedForMode=saved.filter(t=>t.modalidade===m),walletLimited=savedForMode.length>200;
+ for(const game of walletLimited?[]:savedForMode){
+  const f=game.registroProspectivo;
+  if(!f||f.protocolo!==WALLET_PROTOCOL){legacy++;continue;}
+  try{
+   const checked=freezeSavedGame(m,{...f.jogo,acompanhamento:f.acompanhamento,concursoAlvo:f.inicio,deConcurso:f.inicio,concursos:f.fim===null?1:f.fim-f.inicio+1},f.geradoAte,f.criadoEm);
+   if(JSON.stringify(checked)!==JSON.stringify(f)||L.key(m,game)!==L.key(m,f.jogo)){changed++;continue;}
+   const day=frozenDay(f.criadoEm);entries.push({f,day});
+  }catch{changed++;}
+ }
+ let noDate=0,sameDay=0;
+ for(const draw of b.rows){
+  const eligible=entries.filter(({f})=>draw.concurso>=f.inicio&&(f.fim===null||draw.concurso<=f.fim));
+  if(!eligible.length)continue;
+  if(!draw.data){noDate++;continue;}
+  const games=eligible.filter(({day})=>day<draw.data).map(({f})=>f.jogo);
+  if(games.length)wallet.push({concurso:draw.concurso,data:draw.data,resultado:draw,jogos:games});
+  if(games.length<eligible.length)sameDay++;
+ }
+ const sorted=xs=>xs.sort((a,b)=>a.concurso-b.concurso),M=3*(2*(c.k+1)+2*(c.extra==='trevos'?3:c.extra?2:0));
+ const scopes=[['principal','Principal congelada',principal],['carteira','Carteira salva no aparelho',wallet],['virtual','Pacote virtual',virtual]].map(([id,nome,g])=>({id,nome,...hitTiers(m,sorted(g),{familia:M,prospectivo:id!=='carteira'})}));
+ return {modalidade:m,perfil:o.profile,protocolo:TIER_PROTOCOL,protocoloBilhetes:PROTOCOL,escopos:scopes,
+  pendentes:[...new Set(pending)].sort((a,b)=>a-b),rejeitados:rejected,carteiraLimitada:walletLimited,carteiraExcluida:{legados:legacy,alterados:changed,semData:noDate,semAntecedencia:sameDay},
+  integridade:{conflitos:b.meta.conflitos,invalidos:b.meta.invalidos,lacunas:b.meta.lacunas,correcoes:b.rows.filter(r=>r.revisoes?.length).length},
+  metodo:'Diagnóstico sem sinal de superioridade. H0: sorteios uniformes independentes, condicionados aos jogos congelados. Referência analítica por bilhete; média e diferença calculadas por concurso. Limite de Hoeffding bilateral com 95% de cobertura conjunta nas faixas, três escopos e consultas sucessivas deste perfil: alfa/(M n(n+1)). Não é intervalo para chance de prêmio da carteira. Comparar outros perfis não fica coberto por esta família.',
+  nota:'Resultado ausente não vira zero. Exatamente h e pelo menos h são eventos distintos. Jogos salvos não comprovam compra. A carteira é o recorte dos jogos que continuam salvos: exclusões podem selecionar resultados a posteriori; sem trilha imutável de exclusões, ela recebe somente descrição, sem limites inferenciais. O painel não altera pesos, métodos, sementes ou rodadas.'};
+}
+const diagnosticCache=new Map();
+function observatory(m,records,state,op={},saved=[],tickets=[]){
+ // Chave completa no worker: inclui metadados, correções, carteira, formato e corte.
+ const cacheKey=JSON.stringify([m,records,state,op,saved,tickets]);
+ if(diagnosticCache.has(cacheKey))return clone(diagnosticCache.get(cacheKey));
+ const b=L.history(m,records,{antesDe:op.antesDe??null}),tiers=prospectiveTiers(m,records,state,op,saved),c=L.cfg(m);
+ const initial=state.inicial,observations=initial?.estado==='concluido'?initial.observacoes.slice(initial.nSelecao):[];
+ // As observações do teste guardam o consenso histórico, não a principal do usuário.
+ const historical=observations.map(x=>({concurso:x.concurso,data:x.data,acertos:x.acertos.consenso}));
+ const separate={n:historical.length,periodo:initial?.particao?.teste||null,protocolo:initial?.protocoloAvaliacao||null,
+  linhas:Array.from({length:c.k+1},(_,h)=>({acertos:h,exatamente:historical.filter(x=>x.acertos===h).length,peloMenos:historical.filter(x=>x.acertos>=h).length})),
+  nota:'Teste histórico separado do consenso; não é carteira real nem principal prospectiva. Nenhum intervalo de consultas futuras é aplicado ao teste histórico.'};
+ const result={faixas:tiers,testeSeparado:separate,carteira:L.portfolioDiagnosis(m,tickets,op),proveniencia:L.historyProvenance(b)};
+ if(diagnosticCache.size>=3)diagnosticCache.delete(diagnosticCache.keys().next().value);
+ diagnosticCache.set(cacheKey,clone(result));return result;
+}
 function autoRecommend(m,records,input={},op={},progress=()=>{}){
+ const plano=L.assertRecommendationPlan(L.recommendationPlan(m,op,'automatico'));
  const cycle=autoCycle(m,records,input,op,progress),o=options(m,op),base=L.recommendationBase(m,records,op),q=op.quantidade??1;
  if(!Number.isInteger(q)||q<1||q>60)throw Error('Escolha de 1 a 60 jogos.');
  const unit=L.currentCost(m,o.shape),budget=op.orcamento==null||op.orcamento===''?q*unit:Number(op.orcamento);
@@ -312,16 +411,18 @@ function autoRecommend(m,records,input={},op={},progress=()=>{}){
  const selected=[cycle.rodada.principal],seen=new Set(selected.map(t=>L.key(m,t)));
  while(selected.length<size){
   const next=pool.filter(x=>!seen.has(L.key(m,x.jogo))).map(x=>({...x,value:x.score-L.mean(selected.map(t=>L.hits(m,t,x.jogo)/L.tokens(m,t).length))})).sort((a,b)=>b.value-a.value)[0];
-  if(!next)throw Error('As restrições não permitem essa quantidade de jogos diferentes.');selected.push(next.jogo);seen.add(L.key(m,next.jogo));
+  if(!next)throw Error('O espaço matemático comporta o lote, mas a amostragem não encontrou candidatas diferentes suficientes. Reduza a quantidade ou revise as restrições. Nenhum jogo foi alterado.');selected.push(next.jogo);seen.add(L.key(m,next.jogo));
  }
  progress({etapa:'Explicando a decisão automática',feitos:1,total:1});
  const analysis=L.analyze(m,selected[0],base.rows),adherence=L.reference(m,selected[0],base.rows,{amostras:1000,semente:cycle.rodada.semente+':explicacao'});
  const explanations=selected.map(jogo=>({jogo,distancia:null,criterios:[]}));
  const {pool:unused,...publicCycle}=cycle;
  analysis.base=base.meta;
+ analysis.saudeBase=L.historyHealth(base);
+ analysis.diagnosticoFrequencia=L.frequencyDiagnosis(m,base);
  const estadoValidacao=cycle.acompanhamento.n>=60?'prospectivo':cycle.inicial?.estado==='concluido'?'teste-separado':'insuficiente';
  const qualidadeEvidencia=L.evidenceQuality(base.meta,{estado:estadoValidacao},base.meta.n>=30?'perfil-historico':'amostra-insuficiente');
- return {versao:VERSION,motor:'automatico',modalidade:m,semente:cycle.rodada.semente,
+ return {versao:VERSION,motor:'automatico',plano,modalidade:m,semente:cycle.rodada.semente,
   parametros:{janela:o.janela,antesDe:op.antesDe??null,formato:o.shape,fixas:o.fixed,excluidas:o.excluded,trevosFixos:o.trevosFixos},
   base:base.meta,totalDisponivel:base.totalDisponivel,jogos:selected,explicacoes:explanations,
   principal:{...explanations[0],analise:analysis,aderencia:adherence},diversidade:L.portfolio(m,selected),
@@ -330,6 +431,6 @@ function autoRecommend(m,records,input={},op={},progress=()=>{}){
   motivo:cycle.rodada.metodo==='consenso'?'Combinação com maior concordância entre as dez estratégias do pacote virtual.':'Estratégia selecionada automaticamente: '+experts[cycle.rodada.metodo]+'.',
   evidencia:'Seleção e comparação automáticas; vantagem futura não demonstrada.',automatico:publicCycle,aviso:L.aviso};
 }
-Object.assign(L,{autoProtocol:PROTOCOL,autoEvaluation:EVALUATION,autoObjective:objective,autoExperts:experts,autoOptions:options,autoCycle,autoRecommend,autoProspective:prospective,autoAnytime:anytime});
+Object.assign(L,{autoProtocol:PROTOCOL,autoEvaluation:EVALUATION,autoObjective:objective,autoExperts:experts,autoOptions:options,autoCycle,autoRecommend,autoProspective:prospective,autoAnytime:anytime,tierProtocol:TIER_PROTOCOL,walletProtocol:WALLET_PROTOCOL,freezeSavedGame,hitTiers,prospectiveTiers,observatory});
 if(typeof module!=='undefined'&&module.exports)module.exports=L;
 })(globalThis);

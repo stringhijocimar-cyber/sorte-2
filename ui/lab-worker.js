@@ -1,11 +1,17 @@
 if(typeof LL18==='undefined')importScripts('lab-core.js','lab-strategies.js','lab-recommendation.js','lab-auto.js');
 self.onmessage=event=>{
- const {id,acao,modalidade:m,jogo,registros=[],op={},estado={},jogos=[],livro=[]}=event.data;
+ const {id,acao,modalidade:m,jogo,registros=[],op={},estado={},jogos=[],jogosSalvos=[],livro=[]}=event.data;
  const progress=p=>self.postMessage({id,progresso:p});
  try{let resultado;
   switch(acao){
-   case 'automatico':resultado=LL18.autoRecommend(m,registros,estado,op,progress);break;
+   case 'automatico':{
+    resultado=LL18.autoRecommend(m,registros,estado,op,progress);
+    resultado.diagnostico=LL18.observatory(m,registros,resultado.automatico.estado,resultado.parametros,jogosSalvos,resultado.jogos);break;
+   }
+   case 'diagnostico':resultado=LL18.observatory(m,registros,estado,op,jogosSalvos,jogos);break;
    case 'recomendar':{
+    const formato=op.formato||LL18.randomTicket(m,LL18.rng(String(op.semente??'recomendacao-419')+':formato'));
+    LL18.assertRecommendationPlan(LL18.recommendationPlan(m,{...op,formato},'integrado'));
     const integrados=livro.filter(b=>b.modalidade===m&&(!b.modelo||b.modelo==='integrado'));
     const acompanhamento=integrados.length?LL18.monitor(m,LL18.recommendationBase(m,registros,op).rows,integrados):null;
     resultado=LL18.recommend(m,registros,{...op,acompanhamento},progress);break;

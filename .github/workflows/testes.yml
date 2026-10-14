@@ -56,6 +56,9 @@ jobs:
           npm run check:version
           npm run check:distribution
           npm run test:revisao
+          npm run test:diagnostico
+          npm run test:plano
+          npm run test:observatorio
 
       - name: Testes do motor
         run: node ferramentas/testar-motor.mjs
@@ -161,6 +164,7 @@ jobs:
           node ferramentas/testar-armazenamento.mjs
           node ferramentas/testar-distribuicao.mjs
           node ferramentas/testar-interface.mjs
+          LOTOLAB_LAYOUT_OUTPUT=capturas/layout node ferramentas/testar-layout.mjs
 
       - name: Guardar as capturas de tela
         # As capturas são o único registro visual do que a build viu. Quando um
