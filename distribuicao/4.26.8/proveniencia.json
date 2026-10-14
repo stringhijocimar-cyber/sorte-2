@@ -1,0 +1,47 @@
+{
+  "versao": "4.26.8",
+  "applicationId": "app.lotolab.jogos",
+  "versionCode": 45,
+  "commit_compilacao": "3eb3016818314148845bc1dccac25b8910b8b135",
+  "execucao_compilacao": 38615859054,
+  "url_compilacao": "https://github.com/stringhijocimar-cyber/sorte-2/actions/runs/38615859054",
+  "artefatos": [
+    {
+      "id": 11920091931,
+      "sha256_zip": "b7cc942ec9869da11cab6141a6c0d2d8d0ae50873a48d88b908caa51e425d7ec"
+    },
+    {
+      "id": 11920761581,
+      "sha256_zip": "69cf65227f603bba63057276c7185239bd639c67d02339cfc13d68b32bf4bcea"
+    }
+  ],
+  "certificado_sha256": "5520d62f56ce112f6d63d75259c7a1e2b8999731d1ac7473996a58f4f235225f",
+  "assinatura": "Permanente, aplicada localmente; chave e senhas fora do repositório.",
+  "apks": [
+    {
+      "arquivo": "LotoLab-4.26.8.apk",
+      "bytes": 10323377,
+      "sha256": "e32f91cd6b5044dc0fee1d31025b8ff091496a703b1c7d2017c473be7856810b",
+      "depuracao": false
+    },
+    {
+      "arquivo": "LotoLab-4.26.8-transferencia.apk",
+      "bytes": 11280834,
+      "sha256": "0f9458a15b7cf407570926992f0a20af281044ceaf9bca4d0bd6f27a29743374",
+      "depuracao": true
+    }
+  ],
+  "testes": {
+    "run": 38615859021,
+    "commit": "3eb3016818314148845bc1dccac25b8910b8b135",
+    "resultado": "success",
+    "android_nativo": "testDebugUnitTest, assembleRelease final e transferência aprovados na execução de compilação"
+  },
+  "atualizacao": {
+    "versao_anterior": "4.26.4",
+    "versionCode_anterior": 41,
+    "mesmo_identificador": true,
+    "mesmo_certificado": true
+  },
+  "fontes": "Interface, service worker, manifesto, módulos e executor conferidos byte a byte contra o commit da compilação. Certificado do APK 4.26.4 publicado também conferido. A instalação em aparelho físico do usuário permanece pendente."
+}

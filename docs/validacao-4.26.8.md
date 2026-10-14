@@ -55,8 +55,10 @@ Mudanças de aplicação: `index.html`, `sw.js`, núcleo, automático, renderiza
 ## Estados de entrega
 
 - Implementação: concluída e validada localmente.
-- Código: preparado em branch própria para PR; aprovação remota precisa ser consultada no commit enviado.
+- Código: PR #81 direcionado à main, incluindo a fonte da 4.26.7 do PR #80. A CI de testes aprovou o commit `3eb3016818314148845bc1dccac25b8910b8b135` em 14/10/2026, execução `38615859021`.
 - Site Manus: não atualizado nesta tarefa.
-- APK final: não compilado, assinado ou publicado nesta tarefa. CI pode gerar um APK de revisão pelo workflow existente.
+- APKs finais: compilados na execução `38615859054`, com testes nativos aprovados, e assinados localmente com o certificado permanente. Versão 4.26.8, versionCode 45 e identificador `app.lotolab.jogos` conferidos; fontes comparadas byte a byte com o checkout. O APK final desativa a depuração; a edição de transferência mantém a permissão somente para migração.
+- Compatibilidade: o certificado dos dois APKs coincide com o pino do projeto e com o APK 4.26.4 publicado, cujo versionCode é 41. A chave privada foi recuperada do backup existente e não foi enviada ao repositório. Não foi criada uma assinatura substituta.
+- Distribuição: APKs, hashes e proveniência em `distribuicao/4.26.8/`. A publicação da release `v4.26.8` utiliza o workflow de APKs pré-assinados, que repete as verificações antes de disponibilizar os downloads.
 
 Uma branch/PR ou um APK de revisão não atualiza o aplicativo instalado. Limites pendentes: fonte oficial em rede não foi validada de ponta a ponta neste ambiente; a carteira restante permanece descritiva por falta de trilha imutável de exclusões; não há política nova de enumeração ou prova de vantagem preditiva. Detalhes em `analise-observatorio-4.26.8.md` e `release-4.26.8.md`.
