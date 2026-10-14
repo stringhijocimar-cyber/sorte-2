@@ -1,6 +1,8 @@
 # LotoLab 4.26.8 - acompanhamento e transparência
 
-Versão de revisão na branch `codex/lotolab-diagnostico-4-26-8`, baseada na 4.26.7 do PR #80. Android versionCode 45; cache PWA 41. Sem merge na main, publicação no site Manus ou APK final.
+A 4.26.8 reúne as melhorias da 4.26.7 com acompanhamento por faixa de acertos, diagnóstico de redundância e proveniência dos resultados. Android versionCode 45; cache PWA 41.
+
+Para atualizar uma instalação com a assinatura permanente do LotoLab, instale `LotoLab-4.26.8.apk` por cima do aplicativo existente. O identificador `app.lotolab.jogos` e o certificado permanente são preservados. Jogos, histórico e configurações continuam no aparelho. O APK `transferencia` é destinado somente à migração documentada em `docs/atualizacoes-android.md`.
 
 ## Acompanhamento por faixa de acertos
 
@@ -38,7 +40,7 @@ O diagnóstico do lote aceita até 200 jogos e apresenta os 20 pares de maior ex
 
 Regressões novas em `test:observatorio`: matemática por enumeração independente em universos pequenos, faixas acumuladas, denominadores por concurso, falta de dados, cortes, conflitos, eventos anuais, formatos ampliados, complementos, snapshots, falhas de gravação, cache completo, worker real e escape na apresentação.
 
-`test:layout` inclui os novos painéis abertos nos dois temas, 360/390/412/768/1280 px, texto ampliado, salvamento com snapshot e nove capturas reais. A distribuição `www/` e o HTML único são sincronizados pelas ferramentas existentes. Resultados efetivamente executados estão em `docs/validacao-4.26.8.md`; a CI remota deve ser consultada para este commit.
+`test:layout` inclui os novos painéis abertos nos dois temas, 360/390/412/768/1280 px, texto ampliado, salvamento com snapshot e nove capturas reais. A distribuição `www/` e o HTML único são sincronizados pelas ferramentas existentes. A validação local registrou 172 regressões analíticas, 808 verificações do motor, 513 da interface e 28 de layout, todas aprovadas. A CI do PR #81 também aprovou os testes e a compilação Android. Os detalhes estão em `docs/validacao-4.26.8.md`.
 
 ## Compatibilidade
 
