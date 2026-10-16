@@ -129,18 +129,69 @@ function historyChanged(){
  },200);
 }
 function balls(m,t){const c=L.cfg(m);return `<div class="dezenas">${c.colunas?t.colunas.map((a,i)=>`<span class="auto-column"><small>Coluna ${i+1}</small>${a.join(' / ')}</span>`).join(''):t.dezenas.map(d=>`<span class="dz marcada">${String(d).padStart(2,'0')}</span>`).join('')}</div>${c.extra?`<p class="int-help">${esc(c.extra)}: ${esc(Array.isArray(t[c.extra])?t[c.extra].join(' · '):t[c.extra]??'não informado')}</p>`:''}`;}
+const icon=type=>`<svg class="auto-status-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${type==='trocar'?'<path d="M4 7h15m-4-4 4 4-4 4M20 17H5m4-4-4 4 4 4"/>':type==='manter'?'<path d="m5 12 4 4L19 6"/>':'<path d="M20 7v5h-5M4 17v-5h5M6 7a7 7 0 0 1 12-1l2 6M4 12l2 6a7 7 0 0 0 12-1"/>'}</svg>`;
+function decisionView(a,old=false){
+ const d=a.decisao,round=a.rodada,last=a.acompanhamento.observacoes.at(-1);
+ const kind=old?'pendente':d.acao==='ALTERAR'?'trocar':d.acao==='REVALIDAR'?'revalidar':'manter';
+ const title={manter:'Manter estratégia',trocar:'Trocar estratégia',revalidar:'Reavaliar estratégia',pendente:'Reavaliando decisão'}[kind];
+ const deferred=!old&&d.metodo&&d.metodo!==round.metodo;
+ const reason=old?'O histórico mudou. Aguarde a atualização automática para consultar a decisão atual.':d.motivo;
+ return `<section class="auto-main-decision" data-decision="${kind}" aria-label="Decisão da sugestão principal"><div class="auto-status-heading">${icon(kind)}<strong>${title}</strong></div><p class="auto-decision-reason"><b>Por quê:</b> ${esc(reason)}</p><p class="int-help">Nesta sugestão: <b>${esc(name(round.metodo))}</b>. ${deferred?`A decisão indica ${esc(name(d.metodo))} para a próxima rodada; este jogo já estava registrado no pacote de análise.`:'A orientação é sobre a estratégia; as dezenas são renovadas a cada concurso.'}</p>${!old&&d.concurso?`<p class="int-help">Última decisão após o concurso ${num(d.concurso,0)} · ${num(d.n,0)} concursos avaliados.</p>`:''}<details class="auto-decision-context"><summary>Última conferência e próxima revisão</summary><p class="int-help">${last?`Concurso ${num(last.concurso,0)}: principal com ${last.acertos.principal} acertos.`:'O pacote atual aguarda resultados elegíveis.'} Próxima revisão a partir de ${num(a.proximaRevisao,0)} concursos conferidos neste perfil.</p></details></section>`;
+}
+function savedSequence(m,t,saved=[],target=null,covers=null){
+ const c=L.cfg(m),main=x=>L.key(m,c.colunas?{colunas:x.colunas}:{dezenas:x.dezenas});
+ const fullKey=L.key(m,t),mainKey=main(t),exact=[],partial=[];
+ for(const j of saved){
+  if(j.modalidade!==m)continue;
+  try{if(main(j)!==mainKey)continue;(L.key(m,j)===fullKey?exact:partial).push(j);}catch(e){/* Registros inválidos não viram correspondências. */}
+ }
+ const coverage=exact.map(j=>target&&covers?covers(j,target):null);
+ return {registros:exact.length,mesmasDezenas:partial.length,cobertos:coverage.filter(x=>x===true).length,indefinidos:coverage.filter(x=>x==null).length,
+  tipos:[...new Set(exact.map(j=>j.acompanhamento==='fixo'?'Jogo fixo':j.deConcurso&&!j.concursoAlvo?'Teimosinha':j.concursoAlvo?'Concurso único':'Acompanhamento contínuo'))]};
+}
+function savedSequenceView(m,t,target){
+ const s=savedSequence(m,t,bridge?.savedGames?.()||[],target,bridge?.savedGameCoverage);
+ const extra={trevos:'trevos',mes:'Mês da Sorte',time:'Time do Coração'}[L.cfg(m).extra];
+ const title=s.registros?'Já registrada em Meus Jogos':s.mesmasDezenas?'Dezenas já registradas; complemento diferente':'Sequência ainda não registrada em Meus Jogos';
+ const text=s.registros?`${s.registros} registro${s.registros===1?'':'s'} · ${s.tipos.join(' / ')}. ${!target?'Concurso da sugestão ainda não definido.':s.cobertos?`O acompanhamento inclui o concurso ${target}.`:s.indefinidos?'Confira a participação deste registro em Meus Jogos.':`Os registros encontrados não cobrem o concurso ${target}.`}`:s.mesmasDezenas?`As dezenas coincidem, mas o complemento (${extra}) é diferente ou não foi informado.`:'Salve a sugestão para acompanhá-la na sua base de jogos.';
+ return `<div class="auto-saved-sequence" data-saved-sequence="${s.registros?'registrada':s.mesmasDezenas?'parcial':'nova'}" role="status"><div class="auto-status-heading">${icon(s.registros?'manter':'pendente')}<strong>${title}</strong></div><p class="int-help">${esc(text)}</p></div>`;
+}
+function strategyDiagnosis(a){
+ const future=a.acompanhamento.n>0;
+ const obs=future?a.acompanhamento.observacoes:a.inicial?.particao?a.inicial.observacoes.slice(a.inicial.nSelecao):[];
+ const n=obs.length,stats=n?(future?a.acompanhamento.ranking:a.inicial?.teste||[]):[],last=obs.at(-1);
+ const rows=a.pacoteVirtual.map(t=>{
+  const x=stats.find(s=>s.id===t.id),control=t.id==='uniforme';
+  const media=control&&n?L.mean(obs.map(o=>o.acertos.uniforme)):n&&Number.isFinite(x?.media)?x.media:null;
+  const confirmed=!!x&&(future?n>=60&&L.autoEligible(x):a.inicial?.metodo===x.id);
+  return {id:t.id,media,ultimo:n?last.acertos[t.id]??null:null,confirmado:confirmed,controle:control,estatistica:x};
+ });
+ const tested=rows.filter(x=>!x.controle&&x.media!==null),max=tested.length?Math.max(...tested.map(x=>x.media)):null;
+ const leaders=max===null?[]:tested.filter(x=>Math.abs(x.media-max)<1e-9).map(x=>x.id);
+ const lastMax=tested.some(x=>x.ultimo!==null)?Math.max(...tested.filter(x=>x.ultimo!==null).map(x=>x.ultimo)):null;
+ return {n,origem:future?'prospectivo':n?'historico':'sem-base',ultimoConcurso:last?.concurso??null,melhorMedia:max,lideres:leaders,
+  melhoresUltimo:lastMax===null?[]:tested.filter(x=>x.ultimo===lastMax).map(x=>x.id),melhorUltimo:lastMax,
+  confirmadas:tested.filter(x=>x.confirmado).map(x=>x.id),linhas:rows.sort((x,y)=>(y.media??-1)-(x.media??-1))};
+}
+function strategyView(a,old=false){
+ const d=strategyDiagnosis(a),names=ids=>ids.map(id=>name(id)).join(' · ');
+ const highlight=!d.n?'Nenhuma estratégia se destacou: ainda não há concursos elegíveis para comparação.':d.lideres.length===10?`Empate entre as estratégias na média observada: ${num(d.melhorMedia)} acertos.`:`Maior média observada: ${names(d.lideres)} · ${num(d.melhorMedia)} acertos.`;
+ const confirmation=d.confirmadas.length?(d.origem==='prospectivo'?`Atendem aos critérios de evidência do motor: ${names(d.confirmadas)}.`:`Destaque confirmado nas etapas históricas: ${names(d.confirmadas)}. Ainda em observação nos próximos sorteios.`):'Nenhuma melhora confirmada pelos critérios do motor para trocar de estratégia.';
+ const status=x=>x.controle?'Referência virtual':x.confirmado?d.origem==='prospectivo'?'Atende aos critérios de troca':'Confirmada no teste histórico':x.media===null?'Aguardando conferência':d.lideres.includes(x.id)?'Maior média; sem confirmação':'Sem melhora confirmada';
+ return `<section class="auto-strategy-diagnosis" aria-label="Diagnóstico das outras estratégias"><div class="int-section-title"><h3>Diagnóstico das outras estratégias</h3><span>${d.n?num(d.n,0)+' concursos':'Aguardando'}</span></div><p class="auto-strategy-highlight">${esc(highlight)}</p><p class="int-help">${esc(confirmation)}</p>${old?'<p class="nota atencao">Histórico alterado: este diagnóstico aguarda atualização.</p>':''}${d.ultimoConcurso?`<p class="int-help"><b>${d.origem==='historico'?'Último concurso do teste histórico':'Última conferência'} · ${d.ultimoConcurso}:</b> ${esc(names(d.melhoresUltimo))} · ${d.melhorUltimo} acertos. Um resultado isolado não determina a troca.</p>`:''}<p class="int-help">${d.origem==='prospectivo'?'Jogos registrados antes dos resultados.':d.n?'Teste histórico separado; estes não são jogos feitos por você.':'Aguardando histórico suficiente ou resultados válidos.'} A maior média, sozinha, não confirma superioridade.</p>
+  <details class="int-details auto-ranking"><summary>Comparar ${a.pacoteVirtual.filter(t=>t.id!=='uniforme').length} estratégias e controle</summary><div class="ll-table" tabindex="0" role="region" aria-label="Comparação das estratégias"><table><thead><tr><th scope="col">Estratégia</th><th scope="col">${d.origem==='historico'?'Último no teste':'Último conferido'}</th><th scope="col">Média de acertos</th><th scope="col">Diagnóstico</th><th scope="col">${L.cfg(a.modalidade).k-1}+ acertos</th><th scope="col">Diferença para o acaso</th><th scope="col">IC 95%</th></tr></thead><tbody>${d.linhas.map(x=>`<tr data-strategy-diagnosis="${esc(x.id)}"><th scope="row">${esc(name(x.id))}</th><td>${num(x.ultimo,0)}</td><td>${num(x.media)}</td><td>${esc(status(x))}</td><td>${d.n?a.objetivo?.linhas.find(row=>row.id===x.id)?.proximos??'—':'—'}</td><td>${num(x.estatistica?.acaso.media,3)}</td><td>${x.estatistica?.acaso.ic?.map(v=>num(v,3)).join(' a ')||'—'}</td></tr>`).join('')}</tbody></table></div><p class="int-help">Controle: média de 32 jogos aleatórios independentes por concurso, além do controle visível no pacote. A troca exige melhora de média e acertos altos em períodos distintos, correção conjunta de 40 comparações e teste válido para consultas repetidas. A linha Controle aleatório mostra somente o bilhete virtual visível.</p>${a.inicial?.particao?`<p class="int-help">Seleção inicial: ${a.inicial.particao.validacao.join('–')} · teste separado: ${a.inicial.particao.teste.join('–')}.</p>`:''}</details></section>`;
+}
 function render(g,old=false,rec=()=>'',trevos=()=> ''){
- const a=g.automatico,follow=a.acompanhamento,last=follow.observacoes.at(-1),round=a.rodada;
- const ranking=(follow.n?follow.ranking:a.inicial?.teste||[]).slice().sort((x,y)=>y.media-x.media);
- const n=follow.n||a.inicial?.observacoes.slice(a.inicial.nSelecao).length||0;
+ const a=g.automatico,follow=a.acompanhamento,round=a.rodada;
  const goal=a.objetivo,goalMain=goal?.linhas.find(x=>x.id==='principal'),k=L.cfg(g.modalidade).k;
- const ticket=(t,i)=>`<article class="int-ticket ${i===0?'int-principal':''}"><div class="int-section-title"><h3>${i===0?'Sua sugestão principal':'Jogo adicional '+i}</h3><span>${i===0?'CONCURSO '+(round.concursoAlvo||'A DEFINIR'):'OPCIONAL'}</span></div>${balls(g.modalidade,t)}${t.trevos?trevos(t.trevos):''}${rec(t)}${i===0?`<details class="auto-reason"><summary>Como esta sugestão foi escolhida</summary><p class="int-help">${esc(g.motivo)}</p></details>`:''}<button class="acao secundaria" data-int-analisar="${i}">Ver estatísticas deste jogo</button></article>`;
+ const ticket=(t,i)=>`<article class="int-ticket ${i===0?'int-principal':''}"><div class="int-section-title"><h3>${i===0?'Sua sugestão principal':'Jogo adicional '+i}</h3><span>${i===0?'CONCURSO '+(round.concursoAlvo||'A DEFINIR'):'OPCIONAL'}</span></div>${balls(g.modalidade,t)}${t.trevos?trevos(t.trevos):''}${i===0?decisionView(a,old)+savedSequenceView(g.modalidade,t,round.concursoAlvo):''}${rec(t)}${i===0?`<details class="auto-reason"><summary>Como esta sugestão foi escolhida</summary><p class="int-help">${esc(g.motivo)}</p></details>`:''}<button class="acao secundaria" data-int-analisar="${i}">Ver estatísticas deste jogo</button></article>`;
  return `<section class="int-results auto-results" data-auto-modalidade="${esc(g.modalidade)}" aria-label="Sugestão automática"><div class="int-section-title"><h2>Seu lote está pronto</h2><span>${esc(L.VERSION)}</span></div>
   ${old?'<p class="nota atencao">O histórico mudou. A atualização automática está preparando o próximo concurso.</p>':''}
   ${!a.persistido?'<p class="nota atencao" role="alert">Não foi possível registrar o pacote de análise. Os jogos já salvos foram preservados. Toque em Atualizar sugestão para tentar novamente ou salve uma cópia em Meus jogos → Backup.</p>':''}
   ${!g.base.n?'<p class="nota atencao">Sem histórico disponível. A sugestão usa apenas referências combinatórias; a comparação começará quando os resultados chegarem.</p>':''}
   <div class="auto-context"><span>${esc(L.cfg(g.modalidade).nome)} · ${round.concursoAlvo?'concurso '+num(round.concursoAlvo,0):'concurso a definir'}</span><span class="auto-state">${old?'Histórico alterado':round.concursoAlvo?'Aguardando resultado':'Prévia'}</span></div>
   ${ticket(g.jogos[0],0)}
+  ${strategyView(a,old)}
   <div class="auto-lot-cost"><div><span>Seu lote · ${g.jogos.length} ${g.jogos.length===1?'jogo':'jogos'}</span><strong>${money(g.custo)}</strong></div><p>${money(g.unitario)} por jogo<br>Testes virtuais: R$ 0,00</p></div>
   ${g.jogos.length>1?`<details class="int-details"><summary>Jogos adicionais escolhidos (${g.jogos.length-1})</summary>${g.jogos.slice(1).map((t,i)=>ticket(t,i+1)).join('')}</details>`:''}
   ${g.jogos.length<g.solicitados?`<p class="nota">O orçamento comporta ${g.jogos.length} dos ${g.solicitados} jogos solicitados.</p>`:''}
@@ -157,11 +208,9 @@ function render(g,old=false,rec=()=>'',trevos=()=> ''){
   ${root.LL18UI?.recommendationPlanView(g.plano)||''}
   ${root.LL18UI?.frequencyDiagnosisView(g.principal.analise.diagnosticoFrequencia)||''}
   ${root.LL18UI?.modalidadeProfileView(g.principal.analise.perfilModalidade,{open:false})||''}
-  <details class="auto-decision"><summary>Decisão automática · ${esc(a.decisao.acao)}</summary><h3>${esc(name(round.metodo))}</h3><p>${esc(a.decisao.motivo)}</p><p class="int-help">${last?`Último resultado: concurso ${last.concurso}; principal com ${last.acertos.principal} acertos. `:'O pacote atual aguarda o próximo resultado. '}Revisão de estratégia a partir de ${a.proximaRevisao} sorteios conferidos neste perfil; o pacote é renovado a cada novo concurso.</p></details>
   ${historyReport(g)}
   <details class="auto-decision auto-goal"><summary>Acertos altos e critério de escolha</summary><span class="int-eyebrow">FOCO NO PRÊMIO MÁXIMO</span><h3>Acertos altos também decidem a escolha</h3><p class="int-help">A troca de estratégia exige melhora na média e em um índice que dá mais peso aos acertos próximos de ${k}. A diferença precisa aparecer em períodos distintos e superar o controle aleatório.</p>${goalMain&&goal.n?`<div class="auto-summary"><div><b>${goalMain.melhor}</b><small>melhor acerto de dezenas${L.cfg(g.modalidade).colunas?' / colunas':''}</small></div><div><b>${goalMain.proximos}</b><small>com ${k-1} ou ${k} acertos</small></div><div><b>${goalMain.maximos}</b><small>acertos completos${g.modalidade==='mais-milionaria'?' com trevos':''}</small></div></div><p class="int-help">${follow.n?'Sua principal registrada antes dos sorteios.':'Referência: consenso histórico no teste separado; não representa jogos feitos por você.'} ${goal.n} concursos avaliados${L.cfg(g.modalidade).dupla?' (primeiro sorteio)':''}${goalMain.completos<goal.n?`; ${goal.n-goalMain.completos} sem trevos para conferir o prêmio máximo`:''}. Esses números descrevem o que aconteceu.</p>`:'<p class="int-help">Os acertos altos aparecerão após a conferência. Um prêmio isolado não muda a estratégia.</p>'}</details>
   <details class="int-details auto-pack"><summary>Pacote de estratégias · ${a.pacoteVirtual.length} jogos virtuais</summary><p class="int-help">${round.concursoAlvo?'Registrados para o concurso '+round.concursoAlvo+'.':'Prévia sem concurso definido; ainda não entra na avaliação.'} A conferência e a comparação acontecem automaticamente. Custo dos testes: R$ 0,00.</p><div class="auto-pack-grid">${a.pacoteVirtual.map(t=>`<article class="auto-test" data-auto-strategy="${esc(t.id)}"><b>${esc(t.nome)}</b>${balls(g.modalidade,t.jogo)}</article>`).join('')}</div></details>
-  <details class="int-details auto-ranking"><summary>Desempenho e motivo da escolha</summary><p class="int-help">${follow.n?`${follow.n} concursos com jogos registrados antes do resultado.`:`Comparação histórica inicial: ${n} concursos de teste, separados dos 60 usados para escolher o método. Ainda não é acompanhamento futuro.`}</p>${ranking.length?`<div class="ll-table"><table><thead><tr><th>Estratégia</th><th>Acertos médios</th><th>Diferença para o acaso</th><th>IC 95%</th><th>${k-1}+ acertos</th></tr></thead><tbody>${ranking.map(x=>`<tr><td>${esc(name(x.id))}</td><td>${num(x.media)}</td><td>${num(x.acaso.media,3)}</td><td>${x.acaso.ic?.map(v=>num(v,3)).join(' a ')||'—'}</td><td>${goal?.linhas.find(row=>row.id===x.id)?.proximos??'—'}</td></tr>`).join('')}</tbody></table></div>`:'<p>Aguardando histórico suficiente; nenhuma estratégia é declarada vencedora.</p>'}<p class="int-help">Controle: média de 32 jogos aleatórios independentes por concurso, além do controle visível no pacote. A troca exige melhora de média e acertos altos em períodos distintos, correção conjunta de 40 comparações e teste válido para consultas repetidas. O maior número da tabela, sozinho, não basta.</p>${a.inicial?.particao?`<p class="int-help">Seleção inicial: ${a.inicial.particao.validacao.join('–')} · teste separado: ${a.inicial.particao.teste.join('–')}.</p>`:''}</details>
   <details class="int-details"><summary>Como o ciclo funciona</summary><p class="int-help">Analisa o histórico disponível, registra o pacote para o próximo concurso, confere os acertos e decide manter ou alterar a estratégia. O perfil padrão das oito modalidades é acompanhado também pelo repositório, com o app fechado; formatos personalizados são conferidos quando o app recebe os resultados. Offline, utiliza o histórico salvo. Você não precisa treinar o sistema.</p><p class="int-help">${esc(a.limite)} Sorteios independentes não se tornam previsíveis pelo histórico. O aplicativo compara hipóteses; não promete vantagem ou lucro.</p><p class="int-help">Base: ${esc(g.base.assinatura)} · ${g.base.primeiro||'—'}–${g.base.ultimo||'—'} · ${g.base.lacunas} lacunas. Motor ${esc(g.versao)}.</p></details>
  </section>`;
 }
@@ -174,5 +223,5 @@ root.addEventListener?.('change',event=>{
  historyChoices.set(host.dataset.autoHistory,target);
  host.querySelector('[data-auto-round]').innerHTML=historyRound(report,target);
 });
-root.LL18Auto={mount,recommend,historyChanged,render,merge,prepare,historyReport};
+root.LL18Auto={mount,recommend,historyChanged,render,merge,prepare,historyReport,savedSequence,strategyDiagnosis};
 })(globalThis);
