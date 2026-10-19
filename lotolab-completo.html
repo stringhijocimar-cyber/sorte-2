@@ -4744,7 +4744,8 @@ function savedSequenceView(m,t,target){
 }
 function strategyDiagnosis(a){
  const future=a.acompanhamento.n>0;
- const obs=future?a.acompanhamento.observacoes:a.inicial?.particao?a.inicial.observacoes.slice(a.inicial.nSelecao):[];
+ // Uma calibração persistida não é evidência disponível numa base removida.
+ const obs=future?a.acompanhamento.observacoes:a.base.n>0&&a.inicial?.particao?a.inicial.observacoes.slice(a.inicial.nSelecao):[];
  const n=obs.length,stats=n?(future?a.acompanhamento.ranking:a.inicial?.teste||[]):[],last=obs.at(-1);
  const rows=a.pacoteVirtual.map(t=>{
   const x=stats.find(s=>s.id===t.id),control=t.id==='uniforme';

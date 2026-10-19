@@ -65,9 +65,16 @@ test('confirmação prospectiva usa o mesmo predicado do motor e exige a amostra
 });
 test('histórico de teste não usa o vencedor apenas da seleção e cede à primeira observação futura',()=>{
  const a=cycle(),obs=observed().acompanhamento.observacoes;
+ a.base.n=180;
  a.inicial={particao:{},observacoes:obs,nSelecao:0,teste:[stat('frequencia',3,true)],metodo:'consenso',selecao:'frequencia'};
  assert.equal(UI.strategyDiagnosis(a).origem,'historico');assert.equal(UI.strategyDiagnosis(a).confirmadas.length,0);
  a.inicial.metodo='frequencia';assert.equal(UI.strategyDiagnosis(a).confirmadas.length,1);
  a.acompanhamento=observed(1).acompanhamento;
  const r=UI.strategyDiagnosis(a);assert.equal(r.n,1);assert.equal(r.origem,'prospectivo');assert.equal(r.confirmadas.length,0);
+});
+test('comparação histórica persistida fica indisponível depois de remover a base',()=>{
+ const a=cycle();a.inicial={particao:{},observacoes:observed().acompanhamento.observacoes,nSelecao:0,teste:[stat('frequencia',3,true)],metodo:'frequencia'};
+ const before=copy(a),r=UI.strategyDiagnosis(a);
+ assert.equal(r.n,0);assert.equal(r.origem,'sem-base');assert.equal(r.confirmadas.length,0);
+ assert.ok(r.linhas.every(x=>x.media===null));assert.deepEqual(a,before);
 });
