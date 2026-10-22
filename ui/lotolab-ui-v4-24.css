@@ -325,3 +325,39 @@ html[data-tema="claro"] .auto-test b{
  .auto-results .auto-summary{grid-template-columns:1fr!important}
  .auto-results[data-auto-modalidade="lotofacil"] .int-principal .dezenas{grid-template-columns:repeat(4,42px)}
 }
+
+/* Decisão e registro ficam junto das dezenas; o comparativo vem em seguida. */
+.auto-main-decision,.auto-saved-sequence{
+  --auto-status-color:#9CAEB8;
+  padding:12px;
+  margin:12px 0;
+  border:1px solid var(--linha);
+  border-left:3px solid var(--auto-status-color);
+  border-radius:10px;
+  background:rgba(8,20,31,.38);
+  min-width:0;
+  overflow-wrap:anywhere;
+}
+.auto-main-decision[data-decision="manter"],.auto-saved-sequence[data-saved-sequence="registrada"]{--auto-status-color:#83D9BA}
+.auto-main-decision[data-decision="trocar"],.auto-main-decision[data-decision="revalidar"]{--auto-status-color:#C2A4FF}
+.auto-status-heading{display:flex;gap:9px;align-items:flex-start;line-height:1.4}
+.auto-status-heading strong{font-size:1rem;color:var(--auto-status-color)}
+.auto-status-icon{width:22px;height:22px;flex:0 0 22px;color:var(--auto-status-color)}
+.auto-main-decision p,.auto-saved-sequence p{margin:8px 0 0;font-size:.875rem;line-height:1.55}
+.auto-main-decision .auto-decision-reason{color:#EDF3F6}
+.auto-decision-context{margin-top:8px}
+.auto-decision-context summary{min-height:44px;cursor:pointer;font-size:.875rem;line-height:1.5;padding:10px 0;color:#C4D0D6}
+.auto-strategy-diagnosis{padding:14px;border:1px solid var(--linha);border-radius:14px;background:var(--fundo);min-width:0;overflow-wrap:anywhere}
+.auto-strategy-diagnosis .int-section-title{flex-wrap:wrap;gap:8px;margin-bottom:10px}
+.auto-strategy-diagnosis h3{margin:0;font-size:1.0625rem;line-height:1.4;color:var(--tinta)}
+.auto-strategy-diagnosis .int-section-title>span{font-size:.8125rem;color:var(--secundaria)}
+.auto-strategy-highlight{margin:0 0 8px;font-size:.9375rem;font-weight:650;line-height:1.5;color:var(--tinta)}
+.auto-strategy-diagnosis .int-help{margin:8px 0}
+.auto-strategy-diagnosis .auto-ranking{margin-top:12px}
+.auto-ranking .ll-table{max-width:100%;overflow-x:auto}
+.auto-ranking th[scope="row"]{min-width:170px;max-width:250px;white-space:normal;line-height:1.4}
+.auto-ranking td{white-space:nowrap}
+html[data-tema="claro"] .auto-main-decision,html[data-tema="claro"] .auto-saved-sequence{--auto-status-color:#52697B;background:rgba(255,255,255,.72)}
+html[data-tema="claro"] .auto-main-decision[data-decision="manter"],html[data-tema="claro"] .auto-saved-sequence[data-saved-sequence="registrada"]{--auto-status-color:#206B52}
+html[data-tema="claro"] .auto-main-decision[data-decision="trocar"],html[data-tema="claro"] .auto-main-decision[data-decision="revalidar"]{--auto-status-color:#6E43AA}
+html[data-tema="claro"] .auto-main-decision .auto-decision-reason,html[data-tema="claro"] .auto-decision-context summary{color:#203244}

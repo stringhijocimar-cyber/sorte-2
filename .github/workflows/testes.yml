@@ -59,6 +59,7 @@ jobs:
           npm run test:diagnostico
           npm run test:plano
           npm run test:observatorio
+          npm run test:decisao
 
       - name: Testes do motor
         run: node ferramentas/testar-motor.mjs

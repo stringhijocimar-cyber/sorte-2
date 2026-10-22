@@ -1,11 +1,11 @@
 # Compila candidatos para assinatura fora do runner. Nunca publica estes APKs.
-# 4.26.8: acompanhamento por faixa, redundância e proveniência dos resultados.
+# A versão segue o arquivo VERSION da revisão compilada.
 # A chave permanente permanece no backup privado, fora do código e dos artefatos.
 name: Preparar APK para assinatura local
 
 on:
   push:
-    branches: [main, codex/lotolab-diagnostico-4-26-8]
+    branches: [main, codex/lotolab-diagnostico-4-26-8, codex/lotolab-decisao-proxima-sugestao-4-26-9]
     paths: [VERSION, .github/workflows/preparar-apk-assinatura-local.yml]
   workflow_dispatch:
 

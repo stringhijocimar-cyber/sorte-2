@@ -176,6 +176,8 @@ function statistics(obs,seed){
  list.forEach((x,j)=>{[x.acaso,x.consenso,x.objetivo.acaso,x.objetivo.consenso].forEach((s,i)=>s.pAjustado=adj[j*4+i]);});return list;
 }
 const qualified=x=>L.robust(x.acaso)&&L.robust(x.consenso)&&L.robust(x.objetivo.acaso)&&L.robust(x.objetivo.consenso);
+// A apresentação consulta o mesmo critério usado na revisão prospectiva.
+const eligible=x=>qualified(x)&&x.pContinuoAcaso<.05&&x.pContinuoConsenso<.05&&x.objetivo.pContinuoAcaso<.05&&x.objetivo.pContinuoConsenso<.05;
 function winner(stats){return stats.filter(qualified).sort((a,b)=>b.objetivo.consenso.ic[0]-a.objetivo.consenso.ic[0])[0]?.id||'consenso';}
 function goalReport(m,obs){
  const k=L.cfg(m).k;
@@ -276,7 +278,7 @@ function autoCycle(m,records,input={},op={},progress=()=>{}){
  }
  const lastDecision=state.decisoes.at(-1),ready=count>=60&&(lastDecision?.protocoloAvaliacao!==EVALUATION||count>=(lastDecision?.n||30)+30);
  if(ready){
-  const candidates=follow.ranking.filter(x=>qualified(x)&&x.pContinuoAcaso<.05&&x.pContinuoConsenso<.05&&x.objetivo.pContinuoAcaso<.05&&x.objetivo.pContinuoConsenso<.05).sort((a,b)=>b.objetivo.consenso.ic[0]-a.objetivo.consenso.ic[0]);
+  const candidates=follow.ranking.filter(eligible).sort((a,b)=>b.objetivo.consenso.ic[0]-a.objetivo.consenso.ic[0]);
   const old=state.metodo||'consenso',chosen=candidates[0]?.id;
   const current=follow.ranking.find(x=>x.id===old),bad=current&&current.pContinuoAbaixo<.05&&current.acaso.ic?.[1]<0&&current.acaso.periodos.every(x=>x<0);
   const badObjective=current&&current.objetivo.pContinuoAbaixo<.05&&current.objetivo.acaso.ic?.[1]<0&&current.objetivo.acaso.periodos.every(x=>x<0);
@@ -431,6 +433,6 @@ function autoRecommend(m,records,input={},op={},progress=()=>{}){
   motivo:cycle.rodada.metodo==='consenso'?'Combinação com maior concordância entre as dez estratégias do pacote virtual.':'Estratégia selecionada automaticamente: '+experts[cycle.rodada.metodo]+'.',
   evidencia:'Seleção e comparação automáticas; vantagem futura não demonstrada.',automatico:publicCycle,aviso:L.aviso};
 }
-Object.assign(L,{autoProtocol:PROTOCOL,autoEvaluation:EVALUATION,autoObjective:objective,autoExperts:experts,autoOptions:options,autoCycle,autoRecommend,autoProspective:prospective,autoAnytime:anytime,tierProtocol:TIER_PROTOCOL,walletProtocol:WALLET_PROTOCOL,freezeSavedGame,hitTiers,prospectiveTiers,observatory});
+Object.assign(L,{autoProtocol:PROTOCOL,autoEvaluation:EVALUATION,autoObjective:objective,autoExperts:experts,autoOptions:options,autoCycle,autoRecommend,autoProspective:prospective,autoAnytime:anytime,autoEligible:eligible,tierProtocol:TIER_PROTOCOL,walletProtocol:WALLET_PROTOCOL,freezeSavedGame,hitTiers,prospectiveTiers,observatory});
 if(typeof module!=='undefined'&&module.exports)module.exports=L;
 })(globalThis);
