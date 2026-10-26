@@ -52,3 +52,9 @@
 .physical-ticket .casa:focus-visible{outline:2px solid var(--ticket-ink)!important;outline-offset:3px}
 .cartela.physical-ticket .casa:not(:disabled){min-height:44px}
 @media(max-width:380px){.acomp-options{padding:12px}.acomp-choices{gap:5px}.acomp-choices label{flex-direction:column;padding:10px 7px}.acomp-choices b{font-size:.74rem}.physical-ticket .tarja b{font-size:1rem}.cartela.physical-ticket .miolo{padding-right:10px!important;padding-left:24px!important}.cartela.physical-ticket .grade-volante{padding:8px 4px;gap:5px 1px}}
+
+/* Revisão individual dos jogos pessoais, legível nos dois temas. */
+.saved-review{border:1px solid var(--linha);border-left:3px solid var(--acaso);border-radius:12px;padding:12px;margin:12px 0;overflow-wrap:anywhere;background:var(--fundo)}
+.saved-review.retirar{border-left-color:var(--acumulou-tinta)}.saved-review.reavaliar{border-left-color:var(--secundaria)}
+.saved-review-heading{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.saved-review-heading>span{font-size:1.3rem;line-height:1}.saved-review-heading strong{font-size:.9rem}.saved-review-heading small{margin-left:auto;color:var(--secundaria);font-size:.7rem}
+.saved-review p,.saved-review details{font-size:.78rem;line-height:1.55;margin:8px 0}.saved-review summary{cursor:pointer}.saved-review-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:12px 0}.saved-review-metrics span{font-size:.71rem;color:var(--secundaria)}.saved-review-metrics b{display:block;color:var(--tinta);font-size:1rem}.saved-review button{min-height:44px;margin:8px 0}.saved-review-footnote{display:block;font-size:.7rem;line-height:1.5;color:var(--secundaria)}.saved-review-error:empty{display:none}.saved-review.inactive{border-left-style:dashed}.saved-review-summary p{line-height:1.55}

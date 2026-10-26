@@ -960,12 +960,12 @@ td{padding:6px 7px;border-bottom:1px solid var(--trama)}
 <link rel="stylesheet" href="ui/experiencia-v4-14.css?v=4.22.1">
 <link rel="stylesheet" href="ui/modalidades-v4-15.css?v=4.22.1">
 <link rel="stylesheet" href="ui/recorrencia-v4-17.css?v=4.22.1">
-<link rel="stylesheet" href="ui/lab-v4-18.css?v=4.26.9">
+<link rel="stylesheet" href="ui/lab-v4-18.css?v=4.26.10">
 <link rel="stylesheet" href="ui/auto-v4-21.css?v=4.22.1">
-<link rel="stylesheet" href="ui/conferencia-v4-22.css?v=4.26.9">
+<link rel="stylesheet" href="ui/conferencia-v4-22.css?v=4.26.10">
 <link rel="stylesheet" href="ui/lotolab-ui-v4-23.css?v=4.23.0" data-lotolab-ui-refino="4.23.0">
-<link rel="stylesheet" href="ui/lotolab-ui-v4-24.css?v=4.26.9" data-lotolab-ui-experiencia="4.24.0">
-<link rel="stylesheet" href="ui/acompanhamento-v4-25.css?v=4.26.9">
+<link rel="stylesheet" href="ui/lotolab-ui-v4-24.css?v=4.26.10" data-lotolab-ui-experiencia="4.24.0">
+<link rel="stylesheet" href="ui/acompanhamento-v4-25.css?v=4.26.10">
 </head>
 <body>
 <header>
@@ -1044,15 +1044,16 @@ td{padding:6px 7px;border-bottom:1px solid var(--trama)}
   <div class="corpo"><div class="alca"></div><div id="corpo-avisos"></div></div>
 </div>
 
-<script src="ui/lab-core.js?v=4.26.9"></script>
+<script src="ui/lab-core.js?v=4.26.10"></script>
 <script src="ui/lab-strategies.js?v=4.22.1"></script>
-<script src="ui/lab-recommendation.js?v=4.26.9"></script>
-<script src="ui/lab-auto.js?v=4.26.9"></script>
-<script src="ui/lab-ui.js?v=4.26.9"></script>
+<script src="ui/lab-recommendation.js?v=4.26.10"></script>
+<script src="ui/lab-auto.js?v=4.26.10"></script>
+<script src="ui/lab-ui.js?v=4.26.10"></script>
 <script src="ui/lab-check.js?v=4.25.0"></script>
-<script src="ui/lab-auto-ui.js?v=4.26.9"></script>
-<script src="ui/lab-storage.js?v=4.26.9"></script>
-<script src="ui/lab-backup.js?v=4.26.9"></script>
+<script src="ui/lab-auto-ui.js?v=4.26.10"></script>
+<script src="ui/lab-saved-review.js?v=4.26.10"></script>
+<script src="ui/lab-storage.js?v=4.26.10"></script>
+<script src="ui/lab-backup.js?v=4.26.10"></script>
 <script>
 "use strict";
 
@@ -3405,17 +3406,19 @@ function ultimasConferencias(limite){
 
 T.jogos = () => {
   const vazio=()=>`<section class="ux-vazio"><span class="ux-icone" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="3"/><path d="M8 9h8M8 14h5"/></svg></span><h2>Seus jogos começam aqui</h2><p>Nenhum jogo salvo de ${esc(MODALIDADES[S.modalidade].nome)}. Crie sugestões ou marque suas dezenas. Depois, salve para acompanhar os acertos.</p><button class="acao" data-atalho="sugestoes">Criar minhas sugestões</button><button class="acao secundaria" data-atalho="montar">Montar um jogo à mão</button></section>`;
-  if(!S.jogos.length) return vazio();
+  const todosSalvos=S.jogos.concat(S.teimosinhas||[]);
+  if(!todosSalvos.length) return vazio();
 
   /* Filtra pela modalidade escolhida no cabeçalho. Sem isto a tela empilhava
      Mega-Sena, Lotofácil e Quina numa lista só — e como cada modalidade tem
      universo e quantidade de dezenas diferentes, a lista misturada não dá para
      ler nem para comparar. A escolha do cabeçalho vale em todas as telas; esta
      era a única que a ignorava. */
-  const meus = S.jogos.filter(j => j.modalidade === S.modalidade);
-  const outras = S.jogos.length - meus.length;
+  const meus = todosSalvos.filter(j => j.modalidade === S.modalidade);
+  S.avaliacaoJogos=LL18SavedReview.review(meus,S.resultados);
+  const outras = todosSalvos.length - meus.length;
   const noutras = {};
-  S.jogos.forEach(j => { if(j.modalidade !== S.modalidade)
+  todosSalvos.forEach(j => { if(j.modalidade !== S.modalidade)
     noutras[j.modalidade] = (noutras[j.modalidade] || 0) + 1; });
 
   const rodape = !outras ? "" : `<div class="nota">Você tem
@@ -3429,12 +3432,14 @@ T.jogos = () => {
 
   const porLote = {};
   meus.forEach(j => (porLote[j.lote] = porLote[j.lote] || []).push(j));
-  return resumoDeMeusJogos(meus) + Object.entries(porLote).reverse().map(([lote, jogos])=>{
+  const avaliacoes=[...S.avaliacaoJogos.values()],ativos=meus.filter(LL18SavedReview.active).length;
+  const revisao=`<section class="carta saved-review-summary"><h2>Avaliação da IA · meus jogos</h2><p>${ativos} de ${meus.length} jogos na análise · ${avaliacoes.filter(r=>r.acao==='manter').length} para manter · ${avaliacoes.filter(r=>r.acao==='retirar').length} para retirar · ${avaliacoes.filter(r=>r.acao==='reavaliar').length} para revisar.</p><p class="int-help">Todos os seus jogos recebem uma avaliação, inclusive manuais, sugestões, fixos e teimosinhas. A decisão aparece em cada cartão e é atualizada com os resultados disponíveis. Retirar da análise exclui dos comparativos de jogos ativos; as conferências e os avisos continuam, e você pode reincluir depois.</p></section>`;
+  return revisao + resumoDeMeusJogos(meus) + Object.entries(porLote).reverse().map(([lote, jogos])=>{
     const p = jogos[0];
     return `<h2 style="margin:14px 0 8px">${esc(MODALIDADES[p.modalidade].nome)} ·
       ${esc(p.data)} · ${esc(nomeDoMetodo(p.metodo))}</h2>
     ${jogos.map(j=>ficha(j)).join("")}
-    <div class="botoes" style="margin-bottom:16px">
+    <div class="botoes" style="margin-bottom:16px" ${jogos.every(j=>S.jogos.includes(j))?'':'hidden'}>
       <button class="acao contorno mini" data-copiar="${esc(lote)}">Copiar lote</button>
       <button class="acao perigo mini" data-apagar="${esc(lote)}">Apagar lote</button>
     </div>`;
@@ -3534,6 +3539,7 @@ function ficha(j){
         : `<span class="selo seu">não conferido</span>`}
     </div>
     ${painelAcompanhamento(j)}
+    ${LL18SavedReview.card(j,S.avaliacaoJogos?.get(j))}
     <div class="dezenas">${j.dezenas.map(d=>{
       const acertou = ultima && ultima.dezenas.includes(d);
       return `<span class="dz ${acertou?"acertou":ultima?"errou":""}">${pad(d)}</span>`;
@@ -3684,7 +3690,7 @@ function jogosContraConcurso(r){
      defeito esperando data. */
   if(!r) return {conferidos:[], fora:[], melhor:null, coincidencias:0, total:0};
   const todos = S.jogos.concat(S.teimosinhas || [])
-    .filter(j => j.modalidade === r.modalidade);
+    .filter(j => j.modalidade === r.modalidade && LL18SavedReview.active(j));
   const conferidos = [], fora = [];
   todos.forEach(j => {
     const cf = (j.conferencias || []).find(x => x.concurso === r.concurso);
@@ -3978,7 +3984,7 @@ T.inicio = () => {
   const avisos=S.avisos.filter(a=>!a.lido).length;
   const meus=S.jogos.filter(j=>j.modalidade===m).length,idade=idadeDoHistorico(m);
   return `<div class="foco-inicio ux-inicio" style="--foco-cor:${FOCO_CORES[m]}">
-    <div class="foco-boasvindas"><div><span class="foco-label">BEM-VINDO AO SEU LABORATÓRIO</span><${podeVoltar()?'h2':'h1'}>Seu jogo,<br>bem planejado.</${podeVoltar()?'h2':'h1'}></div><span class="foco-versao">4.26.9</span></div>
+    <div class="foco-boasvindas"><div><span class="foco-label">BEM-VINDO AO SEU LABORATÓRIO</span><${podeVoltar()?'h2':'h1'}>Seu jogo,<br>bem planejado.</${podeVoltar()?'h2':'h1'}></div><span class="foco-versao">4.26.10</span></div>
     <section class="foco-hero"><div class="foco-hero-topo"><span class="foco-label">UM PLANO PARA CADA CONCURSO</span><span class="foco-tag">${esc(c.nome)}</span></div>
       <div class="foco-objetivo"><div><h2>Crie seus jogos.<br>Veja os acertos.</h2><p>Defina seus critérios e seu limite. O LotoLab organiza e confere.</p></div><div class="foco-alvo" aria-label="Meta de ${c.k} dezenas"><strong>${c.k}</strong><span>${c.trevos?"+ 2 trevos":"dezenas"}</span></div></div>
       <button class="acao foco-primary" data-atalho="sugestoes">Criar sugestões <span aria-hidden="true">→</span></button>
@@ -9214,6 +9220,7 @@ T.teimosinha = () => {
   const c = MODALIDADES[S.modalidade];
   const dez = marcadasDe(S.modalidade).slice().sort((a,b)=>a-b);
   const minhas = (S.teimosinhas||[]).concat(S.jogos.filter(j=>j.acompanhamento==='teimosinha')).filter(t => t.modalidade === S.modalidade);
+  S.avaliacaoJogos=LL18SavedReview.review(S.jogos.concat(S.teimosinhas||[]).filter(j=>j.modalidade===S.modalidade),S.resultados);
   const podeCriar = dez.length >= c.min && dez.length <= c.max;
   const ultimo = ultimoResultado(S.modalidade);
   return `<div class="carta">
@@ -9248,6 +9255,7 @@ T.teimosinha = () => {
             <h3>Concursos ${t.deConcurso}–${fim}</h3>
             <span class="selo ${restam?"seu":"ok"}">${restam?`${restam} a conferir`:"encerrada"}</span>
           </div>
+          ${LL18SavedReview.card(t,S.avaliacaoJogos.get(t))}
           ${cartela(t.modalidade, t.dezenas, {
             sorteadas: conf.length ? conf[conf.length-1].dezenas : null,
             selo:`${t.dezenas.length} dezenas`})}
@@ -9672,11 +9680,20 @@ function acoesNovas(){
   document.querySelectorAll('[data-rever-jogo]').forEach(el=>el.onchange=()=>{
     S.concursoDoJogo=S.concursoDoJogo||{};S.concursoDoJogo[el.dataset.reverJogo]=Number(el.value);pintar();
   });
+  document.querySelectorAll('[data-alternar-analise]').forEach(b=>b.onclick=()=>{
+    const id=b.dataset.alternarAnalise,chave=S.jogos.some(j=>j.id===id)?'jogos':'teimosinhas';
+    const jogo=(S[chave]||[]).find(j=>j.id===id);if(!jogo)return;
+    const novos=S[chave].map(j=>j===jogo?{...j,analiseAtiva:!LL18SavedReview.active(j)}:j);
+    if(!Guardar.gravar(chave,novos)){b.closest('.saved-review').querySelector('.saved-review-error').textContent='Não foi possível salvar a decisão. Tente novamente.';return;}
+    S[chave]=novos;pintar();
+  });
+
   document.querySelectorAll('[data-excluir-jogo]').forEach(b=>b.onclick=()=>{
     if(!confirm('Excluir este jogo e seu histórico? Ele deixará de ser conferido.'))return;
-    const novos=S.jogos.filter(j=>j.id!==b.dataset.excluirJogo);
-    if(!Guardar.gravar('jogos',novos)){b.textContent='Não foi possível excluir';return;}
-    S.jogos=novos;espelharParaSegundoPlano();pintar();
+    const chave=S.jogos.some(j=>j.id===b.dataset.excluirJogo)?'jogos':'teimosinhas';
+    const novos=(S[chave]||[]).filter(j=>j.id!==b.dataset.excluirJogo);
+    if(!Guardar.gravar(chave,novos)){b.textContent='Não foi possível excluir';return;}
+    S[chave]=novos;espelharParaSegundoPlano();pintar();
   });
 
   document.querySelectorAll('[data-salvar-trevos]').forEach(b=>b.onclick=()=>{

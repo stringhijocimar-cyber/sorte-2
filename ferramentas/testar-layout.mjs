@@ -105,6 +105,21 @@ try{
  check(await js(`return S.intLotes['mega-sena'].laboratorio.diagnostico.faixas.escopos.every(s=>s.n===0&&s.linhas.every(x=>x.observado===null&&x.intervaloDiferenca===null))`),'base vazia mantém diagnósticos sem acertos ou incerteza inventados');
  check(await js(`return S.intLotes['mega-sena'].laboratorio.base.n===0&&document.querySelector('.auto-results').textContent.includes('Sem histórico disponível')`),'estado sem histórico permanece explícito e não inventa evidência');
  check(await js(`return document.querySelector('.auto-strategy-diagnosis').textContent.includes('ainda não há concursos elegíveis')&&document.querySelectorAll('[data-strategy-diagnosis]')[0].children[2].textContent==='—'`),'comparativo sem amostra exibe indisponível, sem média ou líder inventados');
+ await js(`S.modalidade='mega-sena';S.resultados=${JSON.stringify(rows('mega-sena'))};const last=ultimoResultado(S.modalidade),base={modalidade:'mega-sena',data:'2020-01-01',acompanhamento:'fixo',deConcurso:1,dezenas:[1,2,3,4,5,6],conferencias:[{concurso:last.concurso,data:last.data,dezenas:last.dezenas,acertos:2}]};S.jogos=[{...base,id:'manual-review',lote:'manual-review',metodo:'manual'},{...base,id:'ai-ended',lote:'ai-ended',metodo:'automatico',acompanhamento:'unico',concursoAlvo:1}];S.teimosinhas=[{...base,id:'legacy-review',acompanhamento:undefined,deConcurso:last.concurso,concursos:3}];Guardar.gravar('jogos',S.jogos);Guardar.gravar('teimosinhas',S.teimosinhas);irParaTela('jogos',{lateral:true});`);
+ check(await js(`return document.querySelectorAll('[data-saved-review]').length===3&&document.querySelector('[data-saved-review="ai-ended"]').textContent.includes('Retirar da análise')&&document.querySelector('[data-saved-review="legacy-review"]').textContent.includes('duplicata')`),'todos os jogos recebem revisão individual, incluindo legado, encerrado e duplicata');
+ await tap('[data-alternar-analise="manual-review"]');
+ check(await js(`return S.jogos[0].analiseAtiva===false&&Guardar.ler('jogos',[])[0].analiseAtiva===false&&jogosContraConcurso(ultimoResultado('mega-sena')).total===2&&S.jogos[0].conferencias.length===1&&document.querySelector('[data-saved-review="manual-review"]').textContent.includes('Reincluir na análise')`),'retirada salva a escolha, exclui dos comparativos e preserva conferências');
+ await js(`S.jogos=Guardar.ler('jogos',[]);pintar();`);
+ check(await js(`return document.querySelector('[data-saved-review="manual-review"]').textContent.includes('Fora da análise')`),'releitura dos dados preserva a retirada');
+ await tap('[data-alternar-analise="manual-review"]');
+ check(await js(`return S.jogos[0].analiseAtiva===true&&jogosContraConcurso(ultimoResultado('mega-sena')).total===3`),'reinclusão restaura comparativos sem excluir jogos');
+ await js(`const save=Guardar.gravar;Guardar.gravar=()=>false;document.querySelector('[data-alternar-analise="manual-review"]').click();Guardar.gravar=save;`);
+ check(await js(`return S.jogos[0].analiseAtiva===true&&document.querySelector('[data-saved-review="manual-review"] .saved-review-error').textContent.includes('Não foi possível')`),'falha de gravação mantém estado e mostra erro junto ao jogo');
+ for(const tema of ['claro','escuro']){
+  await viewport(360);await js(`document.documentElement.dataset.tema=${JSON.stringify(tema)};document.querySelector('[data-saved-review="manual-review"] details').open=true;`);
+  check(await js(`return document.documentElement.scrollWidth<=visualViewport.width+1`),'avaliação dos salvos sem overflow em 360px · '+tema);
+  await shot('meus-jogos-avaliacao-'+tema+'.png','[data-saved-review="manual-review"]');
+ }
  const metrics={versao:await js(`return LL18.VERSION`),checks,capturas:9,fonte:'Resultados reais do acervo local, últimos 180 concursos. Não certifica última atualização oficial.'};
  writeFileSync(join(output,'validacao-layout.json'),JSON.stringify(metrics,null,2)+'\n');
  console.log(`${checks} verificações de layout passaram; 9 capturas reais.`);

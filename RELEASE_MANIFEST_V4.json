@@ -1,12 +1,12 @@
 {
   "product": "LotoLab",
-  "version": "4.26.9",
-  "versionLabel": "V4.26.9",
+  "version": "4.26.10",
+  "versionLabel": "V4.26.10",
   "sourceBranch": "main",
   "visualLayer": "Sugestão e aprendizado automáticos",
   "android": {
-    "versionCode": 46,
-    "versionName": "4.26.9"
+    "versionCode": 47,
+    "versionName": "4.26.10"
   },
   "versionFiles": [
     "VERSION",
@@ -15,7 +15,7 @@
     "android/app/build.gradle"
   ],
   "releaseState": "review",
-  "notes": "Decisão de manter ou trocar junto da sugestão, registro em Meus Jogos e diagnóstico das estratégias. Critérios de seleção e assinatura preservados. Código para revisão; APK final ainda não publicado.",
+  "notes": "Avaliação individual de todos os jogos salvos, com recomendação, motivo e inclusão reversível nos comparativos. Jogos e conferências preservados.",
   "editions": [
     {
       "name": "LotoLab 4.3.0",

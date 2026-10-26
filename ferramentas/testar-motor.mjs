@@ -147,6 +147,8 @@ const contexto = {
 contexto.globalThis = contexto;
 contexto.self = contexto;
 vm.createContext(contexto);
+for (const asset of ["lab-core.js", "lab-saved-review.js"])
+  vm.runInContext(readFileSync(new URL("../ui/"+asset, import.meta.url), "utf8"), contexto);
 
 /* `const` e `function` no topo de um script não viram propriedades do objeto
    global do contexto. Em vez de alterar o index.html para os testes — o que
