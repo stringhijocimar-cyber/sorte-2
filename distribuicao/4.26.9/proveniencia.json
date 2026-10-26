@@ -1,0 +1,30 @@
+{
+  "versao": "4.26.9",
+  "applicationId": "app.lotolab.jogos",
+  "versionCode": 46,
+  "commit_compilacao": "7f247295484fbfb6140d8506edc6d6545f993758",
+  "execucao_compilacao": 39838860206,
+  "artefatos": [
+    {
+      "id": 12451687899,
+      "sha256_zip": "d187bf77f8a15fcb1eb987a975017f33207a888b5039eaf51affc0a330d17d88"
+    },
+    {
+      "id": 12451998221,
+      "sha256_zip": "24062632aa52c1d0dc1e83d7185930515d8a8759161106133df308b658b7e360"
+    }
+  ],
+  "certificado_sha256": "5520d62f56ce112f6d63d75259c7a1e2b8999731d1ac7473996a58f4f235225f",
+  "assinatura": "Permanente, aplicada localmente; chave e senhas fora do repositório.",
+  "testes": {
+    "run": 39838860437,
+    "resultado": "success"
+  },
+  "atualizacao": {
+    "versao_anterior": "4.26.8",
+    "versionCode_anterior": 45,
+    "mesmo_identificador": true,
+    "mesmo_certificado": true
+  },
+  "fontes": "Interface, service worker, manifesto, módulos e executor conferidos byte a byte contra os fontes atuais. Instalação em aparelho físico pendente."
+}
