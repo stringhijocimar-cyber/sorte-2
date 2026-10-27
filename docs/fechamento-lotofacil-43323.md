@@ -13,3 +13,7 @@ A avaliação percorre até 60 concursos, com pelo menos 30 anteriores ao primei
 Os 15 pontos são cobertos apenas quando o resultado coincide exatamente com uma das duas opções de cada grupo, incluindo a distribuição 4-3-3-2-3. Não é um fechamento irrestrito das 25 dezenas e não há garantia geral de premiação. A escolha manual dos grupos após consultar resultados também torna a avaliação retrospectiva exploratória.
 
 Validação: `npm run test:fechamento`, testes de padrões, sintaxe dos três scripts e sincronização de `www/`. Esta alteração de código não substitui o APK já publicado; a próxima compilação deve receber uma nova versão.
+
+## Parâmetros da sugestão principal
+
+As telas automática, integrada e clássica passam a reunir estratégia, parâmetros e distribuições históricas no painel “Parâmetros estatísticos encontrados”. O perfil atual é destacado nas categorias com ocorrência, porcentagem e último concurso. A soma ganha faixas fixas para Mega-Sena e Lotofácil. A leitura conjunta conta diretamente os concursos com mesma paridade, primos, Fibonacci, pares consecutivos e faixa de soma, sem multiplicar porcentagens marginais. Apostas ampliadas permanecem sem comparação direta com resultados de tamanho menor. Os indicadores descrevem o histórico e não alteram os pesos ou a estratégia por conta própria.

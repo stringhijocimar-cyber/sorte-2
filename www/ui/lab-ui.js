@@ -101,20 +101,21 @@ function baseHealthView(h,{historico=false,referencia}={}){
   table(['Fonte declarada','Concursos'],(h.fontes||[]).map(x=>[esc(x.origem),num(x.concursos)]))+
   `<p class="ll-sub">${esc(h.nota)}</p></details>`;
 }
-function patternView(p){
+function patternView(p,op={}){
  if(!p)return '';
  const rows=p.distribuicoes.map(d=>[esc(d.nome),num(d.atual),num(d.media,2),pct(d.percentualDoPerfil)]);
  let body=`<p>${num(p.base.n)} concursos da ${esc(L.cfg(p.modalidade).nome)} · ${num(p.base.primeiro)} a ${num(p.base.ultimo)}.</p>`+
   `<p>${esc(p.nota)}</p>`+(!p.comparavel?`<p class="ll-sub">Aposta ampliada com ${p.tamanhoJogo} dezenas: os resultados têm ${p.tamanhoResultado}. A frequência do perfil do jogo não é comparada diretamente.</p>`:'')+
-  table(['Indicador','Seu jogo','Média dos resultados','Frequência histórica do perfil'],rows);
+  (op.hideSummary?'':table(['Indicador','Seu jogo','Média dos resultados','Frequência histórica do perfil'],rows));
  body+=p.distribuicoes.map(d=>detail(`${d.nome} · distribuição`,
   `<p>${num(d.n)} ${d.id==='repetidas'?'transições consecutivas válidas':'resultados válidos'}. Percentuais por categoria, não por combinação.</p>`+
   table(['Quantidade','Ocorrências','Histórico','Referência uniforme','Último concurso'],d.categorias.map(x=>[
    p.comparavel&&d.atual===x.valor?`<strong>${x.valor} · seu perfil</strong>`:x.valor,
-   num(x.vezes),pct(x.percentual),pct(x.esperado===null?null:100*x.esperado),num(x.ultimo)])))).join('');
+   num(x.vezes),`${pct(x.percentual)}<div class="ll-bar"><i style="width:${x.percentual||0}%"></i></div>`,pct(x.esperado===null?null:100*x.esperado),num(x.ultimo)])))).join('');
  for(const axis of ['linhas','colunas'])body+=detail(axis==='linhas'?'Linhas do volante':'Colunas do volante',
   `<p>Denominador: ${num(p.grade.denominador)} dezenas sorteadas (${num(p.base.n)} resultados × ${p.tamanhoResultado}). Uma posição pode receber várias dezenas no mesmo concurso.</p>`+
   table(['Posição','No jogo','Ocorrências','% das dezenas','Último concurso'],p.grade[axis].map((x,i)=>[x.posicao,p.atual[axis][i],num(x.vezes),pct(x.percentual),num(x.ultimo)])));
+ if(p.soma)body+=detail('Soma das dezenas · distribuição',`<p>Soma do jogo: ${num(p.soma.atual)}. Faixas fixas para comparar com os resultados de ${p.tamanhoResultado} dezenas.</p>`+table(['Faixa','Ocorrências','Histórico','Último concurso'],p.soma.categorias.map(x=>[x.noPerfil?`<strong>${x.inicio}–${x.fim} · seu perfil</strong>`:`${x.inicio}–${x.fim}`,num(x.vezes),`${pct(x.percentual)}<div class="ll-bar"><i style="width:${x.percentual||0}%"></i></div>`,num(x.ultimo)])));
  const cycle=p.ciclos;
  if(cycle.disponivel){const a=cycle.atual;
   body+=detail('Ciclos de cobertura',`<p>${a.concursos?`${num(a.concursos)} concursos observados desde ${num(a.inicio)}.`:'Ciclo anterior concluído; aguardando o próximo resultado.'} ${a.inicioConhecido?'Início do ciclo conhecido.':'Trecho parcial: o início real do ciclo é desconhecido.'} ${a.atualizadoAteCorte?'':'Faltam resultados até o corte solicitado; este estado se refere apenas ao último registro.'}</p>`+
@@ -126,7 +127,7 @@ function patternView(p){
  body+=detail('Atrasos e ocorrências · todas as dezenas',table(['Dezena','No jogo','Ocorrências','% dos concursos','Atraso','Último concurso'],p.dezenas.map(d=>[
   String(d.dezena).padStart(2,'0'),d.noJogo?'Sim':'—',num(d.vezes),pct(d.percentual),num(d.atraso),num(d.ultimo)]))+
   '<p class="ll-sub">Atraso 0 significa que saiu no último registro; indisponível quando não é possível medir com segurança. Dezenas atrasadas não recebem chance adicional.</p>');
- return `<details class="ll-patterns"><summary>Padrões do jogo · visão conjunta</summary>${body}<p class="ll-sub">${esc(p.metodologia)}</p><p class="ll-sub">Uso no motor: soma, paridade, frequência, atraso e repetição já participam dos critérios existentes. Primos, Fibonacci, maior sequência e distribuição no volante também podem ser comparados na estratégia experimental “Padrões combinados”, no laboratório. Ciclos permanecem descritivos. Nenhum ganho preditivo é presumido.</p></details>`;
+ return `${op.embedded?'':'<details class="ll-patterns"><summary>Padrões do jogo · visão conjunta</summary>'}${body}<p class="ll-sub">${esc(p.metodologia)}</p><p class="ll-sub">Uso no motor: soma, paridade, frequência, atraso e repetição já participam dos critérios existentes. Primos, Fibonacci, maior sequência e distribuição no volante também podem ser comparados na estratégia experimental “Padrões combinados”, no laboratório. Ciclos permanecem descritivos. Nenhum ganho preditivo é presumido.</p>${op.embedded?'':'</details>'}`;
 }
 function recommendationPlanView(p){
  if(!p)return '';
@@ -146,6 +147,15 @@ function recommendationPlanView(p){
   p.avisos.map(x=>`<p class="ll-sub" role="status">${esc(x)}</p>`).join('')+
   `<p class="ll-sub">${esc(p.metodologia)}</p><p class="ll-sub">${esc(p.limites)}</p></details>`;
 }
+function mainParametersView(p,op={}){
+ if(!p)return '';
+ const strategy=op.estrategia||'Perfil estatístico integrado';
+ const joint=p.conjunta;
+ const reading=joint?.percentual!==null&&joint?.percentual!==undefined?`O conjunto de medidas (${joint.criterios}) apareceu simultaneamente em ${num(joint.vezes)} de ${num(joint.n)} concursos (${pct(joint.percentual)}).`:'Sem comparação conjunta disponível para este tamanho de jogo ou histórico.';
+ const group=p.modalidade==='lotofacil'?`<p>Distribuição deste jogo nas cinco linhas: <strong>${p.atual.linhas.join('–')}</strong>. ${p.atual.linhas.join('-')==='4-3-3-2-3'?'Corresponde ao padrão 4-3-3-2-3 nas linhas.':'O fechamento 4-3-3-2-3 possui seleção e orçamento próprios no laboratório.'} Um bilhete de 15 dezenas não equivale ao conjunto de 32 jogos.</p>`:'';
+ return `<section class="ll-main-parameters" aria-label="Parâmetros estatísticos da sugestão principal"><h3>Parâmetros estatísticos encontrados</h3><p><strong>Estratégia da sugestão: ${esc(strategy)}</strong></p>${op.motivo?`<p>${esc(op.motivo)}</p>`:''}<p>${esc(reading)} As porcentagens individuais não são multiplicadas: há dependência entre medidas. Essa frequência descreve o perfil, sem estimar chance de prêmio.</p>${group}${op.resumo||''}${patternView(p,{embedded:true,hideSummary:!!op.resumo})}</section>`;
+}
+
 function frequencyDiagnosisView(d){
  if(!d)return '';
  const pvalue=p=>p===null||p===undefined?'indisponível':p<.0001?'&lt;0,0001':num(p,4);
@@ -285,5 +295,5 @@ function openCommittee(m){
  const el=document.getElementById('ll-lab');
  if(el){el.tabIndex=-1;el.focus({preventScroll:true});el.scrollIntoView({block:'start',behavior:'instant'});}
 }
-root.LL18UI={patternView,observatoryView,portfolioDiagnosisView,provenanceView,diagnosticAlerts,recommendationPlanView,frequencyDiagnosisView,baseHealthView,evidenceView,modalidadeProfileView,automatic:(m,registros,estado,op,onProgress)=>compute('automatico',state(m),{registros,estado,op},onProgress),panel,mount,historyChanged,inspect,openRecommendation,openCommittee,recommend:(m,registros,op,onProgress)=>compute('recomendar',state(m),{registros,op},onProgress)};
+root.LL18UI={mainParametersView,patternView,observatoryView,portfolioDiagnosisView,provenanceView,diagnosticAlerts,recommendationPlanView,frequencyDiagnosisView,baseHealthView,evidenceView,modalidadeProfileView,automatic:(m,registros,estado,op,onProgress)=>compute('automatico',state(m),{registros,estado,op},onProgress),panel,mount,historyChanged,inspect,openRecommendation,openCommittee,recommend:(m,registros,op,onProgress)=>compute('recomendar',state(m),{registros,op},onProgress)};
 })(globalThis);

@@ -44,3 +44,15 @@ test('aba exclusiva da Lotofácil e worker retornam o conjunto',()=>{
  let response;const w={LL18:L,self:{postMessage:x=>response=x}};vm.createContext(w);vm.runInContext(readFileSync(new URL('../ui/lab-worker.js',import.meta.url),'utf8'),w);
  w.self.onmessage({data:{id:1,acao:'fechamento',modalidade:'lotofacil',registros:rows,op:{}}});assert.equal(response.resultado.jogos.length,32);
 });
+test('painel principal apresenta soma, estratégia e contagem conjunta sem multiplicar marginais',()=>{
+ const ctx={LL18:L,console};vm.createContext(ctx);vm.runInContext(readFileSync(new URL('../ui/lab-ui.js',import.meta.url),'utf8'),ctx);
+ const jogo={dezenas:[1,2,3,8,13,21]},records=[{concurso:1,dezenas:jogo.dezenas},{concurso:2,dezenas:[4,5,6,7,8,9]},{concurso:3,dezenas:jogo.dezenas}];
+ records.forEach(r=>r.modalidade='mega-sena');
+ const p=L.patternSummary('mega-sena',jogo,L.history('mega-sena',records,{antesDe:3}));
+ assert.equal(p.conjunta.vezes,1);assert.equal(p.conjunta.n,2);assert.equal(p.conjunta.percentual,50);
+ assert.equal(p.soma.categorias.reduce((s,x)=>s+x.vezes,0),2);assert.equal(p.soma.categorias.filter(x=>x.noPerfil).length,1);
+ const html=ctx.LL18UI.mainParametersView(p,{estrategia:'Consenso <teste>'});
+ assert.match(html,/Parâmetros estatísticos encontrados/);assert.match(html,/Consenso &lt;teste&gt;/);assert.match(html,/não são multiplicadas/);assert.match(html,/Soma das dezenas/);assert.match(html,/Ciclos de cobertura/);assert.match(html,/ll-bar/);
+ assert.doesNotMatch(html,/<summary>Padrões do jogo/);
+ const expanded=L.patternSummary('mega-sena',{dezenas:[1,2,3,4,8,13,21]},L.history('mega-sena',records));assert.equal(expanded.conjunta.percentual,null);assert.ok(expanded.soma.categorias.every(x=>!x.noPerfil));
+});

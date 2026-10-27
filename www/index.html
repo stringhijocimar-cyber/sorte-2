@@ -2989,6 +2989,7 @@ function intRenderRecomendacao(r){
     ${r.jogos.length<r.solicitados?`<p class="nota">Seu limite comporta ${r.jogos.length} dos ${r.solicitados} jogos solicitados. Total ajustado: ${brl(g.custo)}.</p>`:''}
     <div class="int-summary"><div><small>Custo estimado</small><b>${brl(g.custo)}</b></div><div><small>Concursos usados</small><b>${inf(g.base.n)}</b></div><div><small>Candidatas avaliadas</small><b>${inf(g.candidatos)}</b></div><div><small>Seleção</small><b>${historico?'Perfil integrado':'Aleatória'}</b></div></div>
     ${ticket(g.jogos[0],0)}
+    ${LL18UI.mainParametersView(a.padroes,{estrategia:historico?'Perfil estatístico integrado':'Aleatória',motivo:g.motivo})}
     ${LL18UI.baseHealthView(g.principal.analise.saudeBase,{historico:g.parametros.antesDe!==null})}
     ${LL18UI.evidenceView(g)}
     ${LL18UI.recommendationPlanView(g.plano)}
@@ -3274,6 +3275,13 @@ function tabelaSugestao(s){
   }).join("");
 
   const vezes = s.medianaDoAcaso > 0 ? s.menor / s.medianaDoAcaso : 0;
+  const resumoParametros = `<div class="rolagem" style="margin-top:10px"><table>
+    <thead><tr><th>medida</th><th style="text-align:right">no jogo</th>
+      <th>frequência no histórico</th><th style="text-align:right">%</th></tr></thead>
+    <tbody>${linhas}</tbody></table></div>`;
+  const m=s.modalidade||S.modalidade;
+  const padroes=LL18.patternSummary(m,{dezenas:s.dezenas},LL18.history(m,S.resultados));
+  const parametros=LL18UI.mainParametersView(padroes,{estrategia:'Perfil histórico equilibrado',motivo:'Escolha entre candidatas com medidas frequentes no histórico. Menor e maior dezena são apenas descritivas; ciclos não alteram a escolha.',resumo:resumoParametros})||resumoParametros;
 
   return `
   <div class="ficha" style="margin-top:12px">
@@ -3286,23 +3294,16 @@ function tabelaSugestao(s){
     <div class="contador"><span>a medida mais rara deste jogo</span>
       <b>${nf(s.menor*100,1)}%</b></div>
     <div class="nota" style="margin-top:6px">
-      Nenhuma das ${s.linhas.filter(l => !l.naoEscolhe).length} medidas que orientam a
-      escolha cai numa configuração incomum: a mais rara ainda apareceu em
-      <strong>${nf(s.menor*100,1)}%</strong> dos ${inf(s.n)} concursos.
-      Menor e maior dezena aparecem na tabela, mas não entram no critério — o
-      valor mais comum delas é o próprio extremo do volante, e usá-las para
-      escolher fixaria o 01 e o 60 em quase todo jogo.
-      Um jogo sorteado sem critério costuma ter a medida mais rara em
-      ${nf(s.medianaDoAcaso*100,1)}% — ${nf(vezes,1)}× menos.
-      Escolhido entre ${inf(s.candidatas)} candidatas sorteadas uniformemente.
+      Das ${s.linhas.filter(l => !l.naoEscolhe).length} medidas usadas na escolha,
+      a configuração menos frequente apareceu em <strong>${nf(s.menor*100,1)}%</strong>
+      dos ${inf(s.n)} concursos. Menor e maior dezena são apenas descritivas.
+      Na referência sem esse critério, a mediana da medida mais rara foi
+      ${nf(s.medianaDoAcaso*100,1)}%. A seleção foi feita entre ${inf(s.candidatas)}
+      candidatas uniformes. Essa comparação mede semelhança histórica, não chance de acerto.
     </div>
   </div>
 
-  <div class="rolagem" style="margin-top:10px"><table>
-    <thead><tr><th>medida</th><th style="text-align:right">no jogo</th>
-      <th>frequência no histórico</th><th style="text-align:right">%</th></tr></thead>
-    <tbody>${linhas}</tbody>
-  </table></div>
+  ${parametros}
 
   ${(() => {
     const a = aprendizadoNaSugestao(s.modalidade || S.modalidade);
