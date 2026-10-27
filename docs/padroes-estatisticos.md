@@ -42,4 +42,4 @@ A base usada termina no concurso 3074 da Mega-Sena e 3813 da Lotofácil. As imag
 
 Os testes cobrem contagens, massa probabilística, lacunas, conflitos, ciclos fechados/parciais, corte temporal, aposta ampliada, Mega da Virada, custo/reprodutibilidade, renderização e integração aos jogos salvos. O teste real de layout verifica o painel entregue pelo worker, abertura por toque e ausência de transbordamento no celular. `www/` acompanha os mesmos arquivos; o cache da aplicação foi incrementado.
 
-Esta alteração de código parte da 4.26.10. Ela não contém um novo APK nem declara uma nova release Android.
+Os recursos integram a versão 4.26.11, juntamente com a avaliação individual dos jogos salvos da 4.26.10. A publicação Android exige assinatura permanente e conferência das fontes efetivamente contidas nos APKs.
