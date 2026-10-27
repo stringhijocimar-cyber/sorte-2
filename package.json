@@ -28,7 +28,9 @@
     "test:layout": "node ferramentas/testar-layout.mjs",
     "test:observatorio": "node --test ferramentas/testar-observatorio.mjs",
     "test:decisao": "node --test ferramentas/testar-decisao-sugestao.mjs",
-    "test:jogos-salvos": "node --test ferramentas/testar-jogos-salvos.mjs"
+    "test:jogos-salvos": "node --test ferramentas/testar-jogos-salvos.mjs",
+    "test:padroes": "node --test ferramentas/testar-padroes.mjs",
+    "avaliar:padroes": "node ferramentas/avaliar-padroes.mjs"
   },
   "devDependencies": {
     "@capacitor/cli": "^6.1.2"

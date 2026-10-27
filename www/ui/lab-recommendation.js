@@ -273,6 +273,7 @@ function recommend(m,records,op={},progress=()=>{}){
  analysis.base=b.meta;
  analysis.saudeBase=L.historyHealth(b);
  analysis.diagnosticoFrequencia=L.frequencyDiagnosis(m,b);
+ analysis.padroes=L.patternSummary(m,first,b);
  const qualidade=evidenceQuality(b.meta,calibration,suspended?'recuo-prospectivo':enough?'perfil-historico':'amostra-insuficiente');
  return {versao:L.VERSION,motor:'integrado',plano,modalidade:m,semente:seed,calibracao:calibration,qualidadeEvidencia:qualidade,
    parametros:{acompanhamento:monitor?{comparacao:monitor.comparacao}:null,janela:op.janela??0,antesDe:op.antesDe??null,fixas:fixed,excluidas:excluded,formato:shape,trevosFixos:op.trevosFixos||null},

@@ -186,6 +186,103 @@ function frequencyDiagnosis(m,b){
  diagnosisCache.set(cacheKey,JSON.stringify(result));return result;
 }
 function frequency(m,t,b){const c=cfg(m);return tokens(m,t).map(d=>{const ids=[];b.masks.forEach((a,i)=>{if(a[d>>>5]&(1<<(d&31)))ids.push(i);});const v=intervals(ids,b),n=b.rows.length,nr=c.especial?0:Math.min(30,b.rows.filter(r=>r.bloco===b.rows.at(-1)?.bloco).length),p=c.colunas?.1:c.k/c.N;return {dezena:c.colunas?`${Math.floor(d/10)+1}:${d%10}`:d+c.base,...v,percentual:n?100*ids.length/n:null,frequenciaRecente:nr?ids.filter(i=>i>=n-nr).length/nr:null,frequenciaLonga:n?ids.length/n:null,janelaRecente:nr,atrasoMedio:v.intervaloMedio===null?null:v.intervaloMedio-1,maiorAtraso:v.maiorIntervalo===null?null:v.maiorIntervalo-1,esperado:p,desvio:n?ids.length/n-p:null,ic:wilson(ids.length,n)};});}
+// Indicadores do volante: descrição por modalidade, nunca chance do bilhete.
+const patternCache=new WeakMap();
+const patternNames={pares:'Pares',impares:'Ímpares',primos:'Primos',fibonacci:'Fibonacci',consecutivos:'Pares consecutivos',maiorSequencia:'Maior sequência',repetidas:'Repetidas do concurso anterior'};
+function patternProfile(m,t){
+ if(!['mega-sena','mega-da-virada','lotofacil'].includes(m))return null;
+ const ds=t.dezenas.slice().sort((a,b)=>a-b),width=m==='lotofacil'?5:10;
+ const linhas=Array(cfg(m).N/width).fill(0),colunas=Array(width).fill(0);
+ const fib=new Set([1,2,3,5,8,13,21,34,55]);
+ const prime=n=>n>=2&&!Array.from({length:Math.max(0,Math.floor(Math.sqrt(n))-1)},(_,i)=>i+2).some(d=>n%d===0);
+ let run=1,longest=1,pairs=0;
+ ds.forEach((d,i)=>{linhas[Math.floor((d-1)/width)]++;colunas[(d-1)%width]++;if(i){run=d===ds[i-1]+1?run+1:1;if(run>1)pairs++;longest=Math.max(longest,run);}});
+ const pares=ds.filter(d=>d%2===0).length;
+ return {pares,impares:ds.length-pares,primos:ds.filter(prime).length,fibonacci:ds.filter(d=>fib.has(d)).length,
+  consecutivos:pairs,maiorSequencia:longest>1?longest:0,linhas,colunas};
+}
+function coverageCycles(m,b){
+ const c=cfg(m);
+ if(c.especial)return {disponivel:false,motivo:'Ciclos de concursos consecutivos não se aplicam ao recorte anual.'};
+ if(!b.rows.length)return {disponivel:false,motivo:'Sem concursos válidos para acompanhar ciclos.'};
+ const complete=[],universe=Array.from({length:c.N},(_,i)=>i+c.base);
+ let seen=new Set(),start=null,known=false,count=0,discarded=0,previous=null;
+ for(const r of b.rows){
+  if(previous===null||r.concurso!==previous+1){
+   if(count)discarded++;
+   seen=new Set();start=r.concurso;count=0;known=r.concurso===1;
+  }
+  if(start===null)start=r.concurso;
+  count++;r.dezenas.forEach(d=>seen.add(d));
+  if(seen.size===c.N){
+   if(known)complete.push({inicio:start,fim:r.concurso,concursos:count});else discarded++;
+   seen=new Set();start=null;count=0;known=true;
+  }
+  previous=r.concurso;
+ }
+ const atCut=!b.meta.semRegistroAteCorte;
+ return {disponivel:true,completos:complete,media:complete.length?mean(complete.map(x=>x.concursos)):null,
+  trechosParciais:discarded,atual:{inicio:start,concursos:count,inicioConhecido:known,ate:previous,
+   atualizadoAteCorte:atCut,observadas:[...seen].sort((a,b)=>a-b),faltantes:universe.filter(d=>!seen.has(d))},
+  nota:'Ciclo: concursos necessários para observar todas as dezenas. Trechos iniciais incompletos e lacunas não entram na média. Faltantes não ficam mais prováveis.'};
+}
+function patternContext(m,b){
+ if(patternCache.has(b))return patternCache.get(b);
+ const c=cfg(m),hist=b.rows.map(r=>patternProfile(m,r));
+ if(!['mega-sena','mega-da-virada','lotofacil'].includes(m))return null;
+ const categoryCount={pares:Math.floor(c.N/2),impares:Math.ceil(c.N/2),
+  primos:m==='lotofacil'?9:17,fibonacci:m==='lotofacil'?7:9,repetidas:c.k};
+ const theoretical=(id,v)=>{
+  if(Object.hasOwn(categoryCount,id)){const K=categoryCount[id];return comb(K,v)*comb(c.N-K,c.k-v)/comb(c.N,c.k);}
+  if(id==='consecutivos'){const runs=c.k-v;return comb(c.k-1,runs-1)*comb(c.N-c.k+1,runs)/comb(c.N,c.k);}
+  return null;
+ };
+ const distributions=Object.entries(patternNames).map(([id,nome])=>{
+  const entries=[];
+  b.rows.forEach((r,i)=>{
+   if(id==='repetidas'){
+    if(!c.especial&&i&&r.concurso===b.rows[i-1].concurso+1)entries.push({valor:hits(m,r,b.rows[i-1]),concurso:r.concurso});
+   }else entries.push({valor:hist[i][id],concurso:r.concurso});
+  });
+  const categorias=Array.from({length:c.k+1},(_,valor)=>{
+   const found=entries.filter(x=>x.valor===valor);
+   return {valor,vezes:found.length,percentual:entries.length?100*found.length/entries.length:null,
+    ultimo:found.at(-1)?.concurso??null,esperado:theoretical(id,valor)};
+  }).filter(x=>id!=='maiorSequencia'||x.valor!==1);
+  return {id,nome,n:entries.length,media:entries.length?mean(entries.map(x=>x.valor)):null,categorias};
+ });
+ const grid={};
+ for(const axis of ['linhas','colunas']){
+  const size=axis==='linhas'?(m==='lotofacil'?5:6):(m==='lotofacil'?5:10),den=b.rows.length*c.k;
+  grid[axis]=Array.from({length:size},(_,i)=>{const vezes=sum(hist.map(p=>p[axis][i])),rows=b.rows.filter((r,j)=>hist[j][axis][i]>0);
+   return {posicao:i+1,vezes,percentual:den?100*vezes/den:null,esperado:1/size,concursos:rows.length,ultimo:rows.at(-1)?.concurso??null};});
+ }
+ const all={dezenas:Array.from({length:c.N},(_,i)=>i+c.base)};
+ const out={distributions,grid,ciclos:coverageCycles(m,b),dezenas:frequency(m,all,b).map(d=>({...d,atraso:c.especial?null:d.atraso}))};
+ patternCache.set(b,out);return out;
+}
+function patternSummary(m,t,b){
+ const atual=patternProfile(m,t);if(!atual)return null;
+ const ctx=patternContext(m,b),c=cfg(m),last=b.rows.at(-1),comparavel=t.dezenas.length===c.k;
+ atual.repetidas=last&&!c.especial&&!b.meta.semRegistroAteCorte?hits(m,t,last):null;
+ return {protocolo:'padroes-descritivos-1',modalidade:m,base:b.meta,atual,comparavel,tamanhoJogo:t.dezenas.length,tamanhoResultado:c.k,
+  distribuicoes:ctx.distributions.map(d=>({...d,atual:atual[d.id],percentualDoPerfil:comparavel&&atual[d.id]!==null?d.categorias.find(x=>x.valor===atual[d.id])?.percentual??null:null})),
+  grade:{...ctx.grid,denominador:b.rows.length*c.k},ciclos:ctx.ciclos,
+  dezenas:ctx.dezenas.map(d=>({dezena:d.dezena,vezes:d.vezes,percentual:d.percentual,ultimo:d.ultimo,atraso:d.atraso,noJogo:t.dezenas.includes(d.dezena)})),
+  nota:'Frequência do perfil descreve uma categoria com muitas combinações; não é a chance deste jogo. Pares e ímpares são complementares. Atraso e ciclo não preveem o próximo resultado.',
+  metodologia:'Maior sequência = tamanho do maior bloco de dezenas consecutivas (0 se não houver). Pares consecutivos = ligações adjacentes: 01–02–03 tem 2 pares e sequência 3. Linhas/colunas usam ocorrências de dezenas; repetição usa apenas transições sem lacunas. Fibonacci usa 1, 2, 3, 5, 8, 13, 21, 34, 55 dentro da modalidade.'};
+}
+// Grupos novos para pesquisa: sem duplicar a paridade, frequência ou atraso do vetor existente.
+function patternVector(m,t){const p=patternProfile(m,t);if(!p)return null;const n=t.dezenas.length;
+ return {primos:[p.primos/n],fibonacci:[p.fibonacci/n],sequencia:[p.maiorSequencia/n],grade:[...p.linhas.map(x=>x/n),...p.colunas.map(x=>x/n)]};}
+function patternModel(m,tickets){
+ const rows=tickets.map(t=>patternVector(m,t));if(!rows.length||!rows[0])return null;
+ return Object.fromEntries(Object.keys(rows[0]).map(k=>[k,center(rows.map(r=>r[k]))]));
+}
+function patternDistance(m,t,model,w={}){
+ if(!model)return 0;const v=patternVector(m,t);
+ return mean(Object.keys(model).map(k=>mean(v[k].map((x,j)=>Math.min(5,Math.abs(x-model[k].media[j])/model[k].dp[j])))*(w[k]??1)));
+}
 function analyze(m,input,records,op={}){
  const t=validateTicket(m,input),b=history(m,records,op),c=cfg(m),n=b.rows.length,{hs,dist}=counts(m,t,b),p=distribution(m,t),own=tokens(m,t);
  const faixas=dist.map((vezes,h)=>({acertos:h,percentual:n?100*vezes/n:null,ic:wilson(vezes,n),probabilidade:p[h],...intervals(hs.flatMap((v,i)=>v===h?[i]:[]),b)}));
@@ -197,7 +294,7 @@ function analyze(m,input,records,op={}){
  const complementos=c.extra?{campo:c.extra,completos:0,ausentes:0,conjuntas:[]}:null;
  if(complementos)for(let i=0;i<n;i++){const r=b.rows[i];if(t[c.extra]===undefined||r[c.extra]===undefined){complementos.ausentes++;continue;}const e=c.extra==='trevos'?t.trevos.filter(x=>r.trevos.includes(x)).length:Number(t[c.extra]===r[c.extra]);complementos.completos++;let f=complementos.conjuntas.find(x=>x.acertos===hs[i]&&x.extra===e);if(!f){f={acertos:hs[i],extra:e,vezes:0};complementos.conjuntas.push(f);}f.vezes++;}
  if(complementos)complementos.conjuntas.forEach(x=>x.percentual=100*x.vezes/complementos.completos);
- return {versao:VERSION,modalidade:m,jogo:t,base:b.meta,saudeBase:historyHealth(b),diagnosticoFrequencia:frequencyDiagnosis(m,b),faixas,minimos,predominantes:n?ranking.slice(0,2).map(f=>f.acertos):[],raras:faixas.filter(f=>f.vezes&&f.percentual<1).map(f=>f.acertos),naoObservadas:faixas.filter(f=>!f.vezes).map(f=>f.acertos),estrutura:structural(m,t),perfilModalidade:profileSummary(m,t,b),dezenas:frequency(m,t,b),coberturaMedia:n?sum(hs)/(n*c.k):null,coberturaMediaDezenas:n?sum(hs)/(n*own.length):null,repetidas,repeticaoCompleta:intervals(b.rows.flatMap((r,i)=>complete.has(r.concurso)?[i]:[]),b),detalhes,complementos,conclusao:n?`Maior concentração histórica nas faixas de ${ranking[0].acertos} e ${ranking[1].acertos} acertos.`:'Sem concursos válidos neste recorte.',aviso};
+ return {versao:VERSION,modalidade:m,jogo:t,base:b.meta,saudeBase:historyHealth(b),diagnosticoFrequencia:frequencyDiagnosis(m,b),faixas,minimos,predominantes:n?ranking.slice(0,2).map(f=>f.acertos):[],raras:faixas.filter(f=>f.vezes&&f.percentual<1).map(f=>f.acertos),naoObservadas:faixas.filter(f=>!f.vezes).map(f=>f.acertos),estrutura:structural(m,t),perfilModalidade:profileSummary(m,t,b),padroes:patternSummary(m,t,b),dezenas:frequency(m,t,b),coberturaMedia:n?sum(hs)/(n*c.k):null,coberturaMediaDezenas:n?sum(hs)/(n*own.length):null,repetidas,repeticaoCompleta:intervals(b.rows.flatMap((r,i)=>complete.has(r.concurso)?[i]:[]),b),detalhes,complementos,conclusao:n?`Maior concentração histórica nas faixas de ${ranking[0].acertos} e ${ranking[1].acertos} acertos.`:'Sem concursos válidos neste recorte.',aviso};
 }
 const criterionNames=['soma','paridade','amplitude','consecutivos','dispersao','concentracao','finais','frequencia','atraso','paresTrios','repeticao','perfil'];
 function vector(m,t,b,omit=-1){const c=cfg(m),s=structural(m,t),ts=tokens(m,t),n=ts.length,all=counts(m,t,b),hs=omit<0?all.hs:all.hs.filter((_,i)=>i!==omit),dist=all.dist.slice(),H=hs.length,p=distribution(m,t);if(omit>=0)dist[all.hs[omit]]--;
@@ -284,6 +381,6 @@ function financialMetrics(rows){const valid=rows.filter(x=>x.disponivel);if(vali
 function monteCarlo(m,t,op={}){t=validateTicket(m,t);const n=op.amostras??10000;if(!Number.isInteger(n)||n<1000||n>100000)throw Error('Use 1.000–100.000 simulações.');const seed=String(op.semente||'simulacao-418'),random=rng(seed),c=cfg(m),dist=Array(c.k+1).fill(0),target=tokens(m,t),gm=mask(target),groups=Array.from({length:Math.min(5,c.k,target.length)},(_,i)=>({tamanho:i+1,tokens:target.slice(0,i+1),vezes:0,atraso:0,maiorAusencia:0}));let last=-1,maxAbs=0,repeated=0;
  for(let i=0;i<n;i++){const d=c.colunas?{colunas:Array.from({length:7},()=>[Math.floor(random()*10)])}:{dezenas:sample(Array.from({length:c.N},(_,i)=>i+c.base),c.k,random)},dm=mask(tokens(m,d)),h=intersection(gm,dm);dist[h]++;if(h===c.k){repeated++;if(last>=0)maxAbs=Math.max(maxAbs,i-last-1);last=i;}for(const g of groups)if(intersection(mask(g.tokens),dm)===g.tamanho){g.vezes++;g.atraso=0;}else{g.atraso++;g.maiorAusencia=Math.max(g.maiorAusencia,g.atraso);}}
  return {versao:VERSION,modalidade:m,jogo:t,semente:seed,n,simulado:true,faixas:dist.map((vezes,h)=>({acertos:h,vezes,percentual:100*vezes/n,ic:wilson(vezes,n),probabilidade:distribution(m,t)[h]})),coberturaCompleta:{vezes:repeated,maiorIntervaloSemCobertura:repeated>1?maxAbs:null,ausenciaAtual:last>=0?n-last-1:null},grupos:groups.map(g=>({...g,grupo:g.tokens.map(d=>c.colunas?`${Math.floor(d/10)+1}:${d%10}`:d+c.base)})),nota:'Sorteios uniformes simulados, nunca gravados como resultados reais. Cada grupo listado é específico; não representa todos os grupos desse tamanho.'};}
-root.LL18={VERSION,aviso,rules,cfg,sum,mean,sd,comb,hash,rng,sample,nums,parseTicket,validateTicket,tokens,key,mask,intersection,hits,randomTicket,normalizeDraw,isoDate,history,historyHealth,binomialMass,fisherExact,frequencyDiagnosis,distribution,wilson,percentile,quantile,intervals,counts,structural,modalityProfile,profileSummary,frequency,analyze,criterionNames,vector,center,distance,reference,unrank,groupPage,portfolio,portfolioDiagnosis,resultSnapshot,historyRevision,historyProvenance,equivalents,currentCost,financial,financialMetrics,monteCarlo};
+root.LL18={VERSION,aviso,rules,cfg,sum,mean,sd,comb,hash,rng,sample,nums,parseTicket,validateTicket,tokens,key,mask,intersection,hits,randomTicket,normalizeDraw,isoDate,history,historyHealth,binomialMass,fisherExact,frequencyDiagnosis,distribution,wilson,percentile,quantile,intervals,counts,structural,modalityProfile,profileSummary,frequency,patternProfile,coverageCycles,patternSummary,patternVector,patternModel,patternDistance,analyze,criterionNames,vector,center,distance,reference,unrank,groupPage,portfolio,portfolioDiagnosis,resultSnapshot,historyRevision,historyProvenance,equivalents,currentCost,financial,financialMetrics,monteCarlo};
 if(typeof module!=='undefined'&&module.exports)module.exports=root.LL18;
 })(globalThis);

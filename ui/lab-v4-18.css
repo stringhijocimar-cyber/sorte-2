@@ -1,4 +1,10 @@
 /* Superfícies, cores e tipografia seguem o tema atual. */
+.ll-patterns{min-width:0;max-width:100%;overflow-wrap:anywhere}
+.ll-patterns summary{font-size:.9375rem;line-height:1.5;min-height:44px;cursor:pointer}
+.ll-patterns .ll-table{max-width:100%;overflow-x:auto}
+.ll-patterns .ll-table table{min-width:620px;table-layout:auto}
+.ll-patterns .ll-table th,.ll-patterns .ll-table td{padding:10px;white-space:nowrap}
+.ll-patterns .ll-table th{white-space:normal;min-width:110px}
 .ll-lab{--ll-acento:var(--ll-cor,var(--mod-acento));margin-bottom:22px;scroll-margin-top:100px}
 html[data-tema="claro"] .ll-lab{--ll-acento:color-mix(in srgb,var(--ll-cor) 48%,#102030)}
 .ll-lab *{box-sizing:border-box}
