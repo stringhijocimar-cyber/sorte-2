@@ -422,6 +422,7 @@ function autoRecommend(m,records,input={},op={},progress=()=>{}){
  analysis.base=base.meta;
  analysis.saudeBase=L.historyHealth(base);
  analysis.diagnosticoFrequencia=L.frequencyDiagnosis(m,base);
+ analysis.padroes=L.patternSummary(m,selected[0],base);
  const estadoValidacao=cycle.acompanhamento.n>=60?'prospectivo':cycle.inicial?.estado==='concluido'?'teste-separado':'insuficiente';
  const qualidadeEvidencia=L.evidenceQuality(base.meta,{estado:estadoValidacao},base.meta.n>=30?'perfil-historico':'amostra-insuficiente');
  return {versao:VERSION,motor:'automatico',plano,modalidade:m,semente:cycle.rodada.semente,

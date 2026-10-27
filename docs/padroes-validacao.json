@@ -1,0 +1,444 @@
+{
+  "protocolo": "padroes-protocolo-1",
+  "nota": "Retrospectivo; acertos de dezenas, não lucro nem probabilidade de prêmio. Não ativa o novo método na recomendação automática.",
+  "reports": [
+    {
+      "modalidade": "mega-sena",
+      "fonte": "dados/mega-sena.json",
+      "sha256": "7094f4ac788e2ce5d7680e829c431a0197bacc3c72b3680bb2169067365a2ad1",
+      "opcoes": {
+        "treino": 120,
+        "validacao": 60,
+        "teste": 60,
+        "quantidade": 1,
+        "referencias": 32,
+        "candidatos": 60,
+        "semente": "padroes-protocolo-1"
+      },
+      "particao": {
+        "desenvolvimento": [
+          2835,
+          2954
+        ],
+        "validacao": [
+          2955,
+          3014
+        ],
+        "teste": [
+          3015,
+          3074
+        ]
+      },
+      "selecaoAntesDoTeste": "uniforme",
+      "champion": "uniforme",
+      "validacao": [
+        {
+          "id": "padroes",
+          "n": 60,
+          "mediaAcertos": 0.38333333333333336,
+          "diferencaAoAcaso": -0.22395833333333334,
+          "ic95": [
+            -0.32346354166666663,
+            -0.11872395833333335
+          ],
+          "pAjustado": 0.2527472527472528,
+          "periodos": [
+            -0.278125,
+            -0.1203125,
+            -0.2734375
+          ]
+        },
+        {
+          "id": "uniforme",
+          "n": 60,
+          "mediaAcertos": 0.5666666666666667,
+          "diferencaAoAcaso": -0.040625,
+          "ic95": [
+            -0.23856770833333335,
+            0.16928385416666666
+          ],
+          "pAjustado": 1,
+          "periodos": [
+            0.121875,
+            -0.2203125,
+            -0.0234375
+          ]
+        },
+        {
+          "id": "semelhanca",
+          "n": 60,
+          "mediaAcertos": 0.5666666666666667,
+          "diferencaAoAcaso": -0.040625,
+          "ic95": [
+            -0.18860677083333333,
+            0.09117187499999997
+          ],
+          "pAjustado": 1,
+          "periodos": [
+            -0.078125,
+            -0.0203125,
+            -0.0234375
+          ]
+        }
+      ],
+      "teste": [
+        {
+          "id": "padroes",
+          "n": 60,
+          "mediaAcertos": 0.6166666666666667,
+          "diferencaAoAcaso": 0.052083333333333336,
+          "ic95": [
+            -0.0901171875,
+            0.20834635416666666
+          ],
+          "pAjustado": 1,
+          "periodos": [
+            -0.0921875,
+            0.2140625,
+            0.034375
+          ]
+        },
+        {
+          "id": "uniforme",
+          "n": 60,
+          "mediaAcertos": 0.5,
+          "diferencaAoAcaso": -0.06458333333333334,
+          "ic95": [
+            -0.25473958333333335,
+            0.13914062499999993
+          ],
+          "pAjustado": 1,
+          "periodos": [
+            -0.2421875,
+            -0.1359375,
+            0.184375
+          ]
+        },
+        {
+          "id": "semelhanca",
+          "n": 60,
+          "mediaAcertos": 0.6333333333333333,
+          "diferencaAoAcaso": 0.06875,
+          "ic95": [
+            -0.10209635416666667,
+            0.2421875
+          ],
+          "pAjustado": 1,
+          "periodos": [
+            -0.0421875,
+            0.0640625,
+            0.184375
+          ]
+        }
+      ],
+      "remocoes": [
+        {
+          "id": "sem-primos",
+          "n": 60,
+          "mediaAcertos": 0.5666666666666667,
+          "diferencaAoAcaso": 0.0020833333333333333,
+          "ic95": [
+            -0.15688802083333334,
+            0.14220052083333332
+          ],
+          "pAjustado": 1,
+          "periodos": [
+            -0.1421875,
+            0.1640625,
+            -0.015625
+          ]
+        },
+        {
+          "id": "sem-fibonacci",
+          "n": 60,
+          "mediaAcertos": 0.6333333333333333,
+          "diferencaAoAcaso": 0.06875,
+          "ic95": [
+            -0.1041796875,
+            0.2458854166666666
+          ],
+          "pAjustado": 1,
+          "periodos": [
+            -0.0421875,
+            0.2140625,
+            0.034375
+          ]
+        },
+        {
+          "id": "sem-sequencia",
+          "n": 60,
+          "mediaAcertos": 0.55,
+          "diferencaAoAcaso": -0.014583333333333334,
+          "ic95": [
+            -0.17661458333333335,
+            0.16617187499999997
+          ],
+          "pAjustado": 1,
+          "periodos": [
+            -0.2421875,
+            0.1640625,
+            0.034375
+          ]
+        },
+        {
+          "id": "sem-grade",
+          "n": 60,
+          "mediaAcertos": 0.5666666666666667,
+          "diferencaAoAcaso": 0.0020833333333333333,
+          "ic95": [
+            -0.121875,
+            0.1423046874999999
+          ],
+          "pAjustado": 1,
+          "periodos": [
+            -0.1421875,
+            0.2140625,
+            -0.065625
+          ]
+        }
+      ],
+      "comparacaoDiretaExploratoria": {
+        "n": 60,
+        "estado": "exploratório",
+        "media": -0.016666666666666666,
+        "ic": [
+          -0.2,
+          0.2
+        ],
+        "p": 1,
+        "efeito": -0.02050384309312703,
+        "periodos": [
+          -0.05,
+          0.15,
+          -0.15
+        ],
+        "semMelhor": -0.05084745762711865,
+        "semPior": 0.01694915254237288,
+        "replicas": 1000,
+        "bloco": 5,
+        "nota": "Padrões menos semelhança; análise adicional sem correção própria, não seleciona estratégia."
+      },
+      "mensagem": "Nenhuma estratégia demonstrou vantagem estatística confiável. Seleção por equilíbrio e diversificação.",
+      "limites": "Walk-forward expansivo; escolha antes do teste. Bootstrap e permutação em blocos de até 5 concursos, IC 95% individual e Holm para modelos, remoções, pesos e métricas financeiras disponíveis. Média de dezenas/colunas como métrica principal. Testes repetidos exigem confirmação independente. Finanças ausentes não são zero."
+    },
+    {
+      "modalidade": "lotofacil",
+      "fonte": "dados/lotofacil.json",
+      "sha256": "ba6fe399ce5ff5bb217ba0dfa1531f61f010b279b4f527cd532b32f9514c37b2",
+      "opcoes": {
+        "treino": 120,
+        "validacao": 60,
+        "teste": 60,
+        "quantidade": 1,
+        "referencias": 32,
+        "candidatos": 60,
+        "semente": "padroes-protocolo-1"
+      },
+      "particao": {
+        "desenvolvimento": [
+          3574,
+          3693
+        ],
+        "validacao": [
+          3694,
+          3753
+        ],
+        "teste": [
+          3754,
+          3813
+        ]
+      },
+      "selecaoAntesDoTeste": "uniforme",
+      "champion": "uniforme",
+      "validacao": [
+        {
+          "id": "padroes",
+          "n": 60,
+          "mediaAcertos": 8.85,
+          "diferencaAoAcaso": -0.1671875,
+          "ic95": [
+            -0.5323697916666668,
+            0.15483072916666654
+          ],
+          "pAjustado": 1,
+          "periodos": [
+            -0.49375,
+            0.1,
+            -0.1078125
+          ]
+        },
+        {
+          "id": "uniforme",
+          "n": 60,
+          "mediaAcertos": 9.033333333333333,
+          "diferencaAoAcaso": 0.016145833333333335,
+          "ic95": [
+            -0.2713671875,
+            0.3260416666666667
+          ],
+          "pAjustado": 1,
+          "periodos": [
+            0.25625,
+            -0.1,
+            -0.1078125
+          ]
+        },
+        {
+          "id": "semelhanca",
+          "n": 60,
+          "mediaAcertos": 8.783333333333333,
+          "diferencaAoAcaso": -0.23385416666666667,
+          "ic95": [
+            -0.5142057291666666,
+            0.06783854166666654
+          ],
+          "pAjustado": 1,
+          "periodos": [
+            -0.34375,
+            -0.05,
+            -0.3078125
+          ]
+        }
+      ],
+      "teste": [
+        {
+          "id": "padroes",
+          "n": 60,
+          "mediaAcertos": 9.016666666666667,
+          "diferencaAoAcaso": 0.016145833333333335,
+          "ic95": [
+            -0.20627604166666666,
+            0.2484375
+          ],
+          "pAjustado": 1,
+          "periodos": [
+            0.01875,
+            -0.0484375,
+            0.078125
+          ]
+        },
+        {
+          "id": "uniforme",
+          "n": 60,
+          "mediaAcertos": 8.9,
+          "diferencaAoAcaso": -0.10052083333333334,
+          "ic95": [
+            -0.38286458333333334,
+            0.17765624999999996
+          ],
+          "pAjustado": 1,
+          "periodos": [
+            -0.03125,
+            -0.0484375,
+            -0.221875
+          ]
+        },
+        {
+          "id": "semelhanca",
+          "n": 60,
+          "mediaAcertos": 8.966666666666667,
+          "diferencaAoAcaso": -0.033854166666666664,
+          "ic95": [
+            -0.27867187499999996,
+            0.22503906249999997
+          ],
+          "pAjustado": 1,
+          "periodos": [
+            -0.03125,
+            0.2515625,
+            -0.321875
+          ]
+        }
+      ],
+      "remocoes": [
+        {
+          "id": "sem-primos",
+          "n": 60,
+          "mediaAcertos": 8.983333333333333,
+          "diferencaAoAcaso": -0.0171875,
+          "ic95": [
+            -0.2662890625,
+            0.2546875
+          ],
+          "pAjustado": 1,
+          "periodos": [
+            0.16875,
+            -0.1484375,
+            -0.071875
+          ]
+        },
+        {
+          "id": "sem-fibonacci",
+          "n": 60,
+          "mediaAcertos": 9.033333333333333,
+          "diferencaAoAcaso": 0.0328125,
+          "ic95": [
+            -0.22657552083333332,
+            0.3130989583333333
+          ],
+          "pAjustado": 1,
+          "periodos": [
+            -0.03125,
+            0.1515625,
+            -0.021875
+          ]
+        },
+        {
+          "id": "sem-sequencia",
+          "n": 60,
+          "mediaAcertos": 8.85,
+          "diferencaAoAcaso": -0.15052083333333333,
+          "ic95": [
+            -0.3661979166666667,
+            0.06257812499999993
+          ],
+          "pAjustado": 1,
+          "periodos": [
+            -0.18125,
+            0.1015625,
+            -0.371875
+          ]
+        },
+        {
+          "id": "sem-grade",
+          "n": 60,
+          "mediaAcertos": 8.85,
+          "diferencaAoAcaso": -0.15052083333333333,
+          "ic95": [
+            -0.4203255208333333,
+            0.10682291666666661
+          ],
+          "pAjustado": 1,
+          "periodos": [
+            -0.23125,
+            -0.1984375,
+            -0.021875
+          ]
+        }
+      ],
+      "comparacaoDiretaExploratoria": {
+        "n": 60,
+        "estado": "exploratório",
+        "media": 0.05,
+        "ic": [
+          -0.21666666666666667,
+          0.26666666666666666
+        ],
+        "p": 0.8231768231768232,
+        "efeito": 0.039025295266335615,
+        "periodos": [
+          0.05,
+          -0.3,
+          0.4
+        ],
+        "semMelhor": 0,
+        "semPior": 0.1016949152542373,
+        "replicas": 1000,
+        "bloco": 5,
+        "nota": "Padrões menos semelhança; análise adicional sem correção própria, não seleciona estratégia."
+      },
+      "mensagem": "Nenhuma estratégia demonstrou vantagem estatística confiável. Seleção por equilíbrio e diversificação.",
+      "limites": "Walk-forward expansivo; escolha antes do teste. Bootstrap e permutação em blocos de até 5 concursos, IC 95% individual e Holm para modelos, remoções, pesos e métricas financeiras disponíveis. Média de dezenas/colunas como métrica principal. Testes repetidos exigem confirmação independente. Finanças ausentes não são zero."
+    }
+  ]
+}
