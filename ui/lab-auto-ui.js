@@ -192,6 +192,7 @@ function render(g,old=false,rec=()=>'',trevos=()=> ''){
   ${!g.base.n?'<p class="nota atencao">Sem histórico disponível. A sugestão usa apenas referências combinatórias; a comparação começará quando os resultados chegarem.</p>':''}
   <div class="auto-context"><span>${esc(L.cfg(g.modalidade).nome)} · ${round.concursoAlvo?'concurso '+num(round.concursoAlvo,0):'concurso a definir'}</span><span class="auto-state">${old?'Histórico alterado':round.concursoAlvo?'Aguardando resultado':'Prévia'}</span></div>
   ${ticket(g.jogos[0],0)}
+  ${root.LL18UI?.mainParametersView(g.principal.analise.padroes,{estrategia:name(round.metodo||'consenso'),motivo:g.motivo})||''}
   ${strategyView(a,old)}
   <div class="auto-lot-cost"><div><span>Seu lote · ${g.jogos.length} ${g.jogos.length===1?'jogo':'jogos'}</span><strong>${money(g.custo)}</strong></div><p>${money(g.unitario)} por jogo<br>Testes virtuais: R$ 0,00</p></div>
   ${g.jogos.length>1?`<details class="int-details"><summary>Jogos adicionais escolhidos (${g.jogos.length-1})</summary>${g.jogos.slice(1).map((t,i)=>ticket(t,i+1)).join('')}</details>`:''}
@@ -208,7 +209,7 @@ function render(g,old=false,rec=()=>'',trevos=()=> ''){
   ${root.LL18UI?.evidenceView(g)||''}
   ${root.LL18UI?.recommendationPlanView(g.plano)||''}
   ${root.LL18UI?.frequencyDiagnosisView(g.principal.analise.diagnosticoFrequencia)||''}
-  ${root.LL18UI?.patternView(g.principal.analise.padroes)||''}
+
   ${root.LL18UI?.modalidadeProfileView(g.principal.analise.perfilModalidade,{open:false})||''}
   ${historyReport(g)}
   <details class="auto-decision auto-goal"><summary>Acertos altos e critério de escolha</summary><span class="int-eyebrow">FOCO NO PRÊMIO MÁXIMO</span><h3>Acertos altos também decidem a escolha</h3><p class="int-help">A troca de estratégia exige melhora na média e em um índice que dá mais peso aos acertos próximos de ${k}. A diferença precisa aparecer em períodos distintos e superar o controle aleatório.</p>${goalMain&&goal.n?`<div class="auto-summary"><div><b>${goalMain.melhor}</b><small>melhor acerto de dezenas${L.cfg(g.modalidade).colunas?' / colunas':''}</small></div><div><b>${goalMain.proximos}</b><small>com ${k-1} ou ${k} acertos</small></div><div><b>${goalMain.maximos}</b><small>acertos completos${g.modalidade==='mais-milionaria'?' com trevos':''}</small></div></div><p class="int-help">${follow.n?'Sua principal registrada antes dos sorteios.':'Referência: consenso histórico no teste separado; não representa jogos feitos por você.'} ${goal.n} concursos avaliados${L.cfg(g.modalidade).dupla?' (primeiro sorteio)':''}${goalMain.completos<goal.n?`; ${goal.n-goalMain.completos} sem trevos para conferir o prêmio máximo`:''}. Esses números descrevem o que aconteceu.</p>`:'<p class="int-help">Os acertos altos aparecerão após a conferência. Um prêmio isolado não muda a estratégia.</p>'}</details>

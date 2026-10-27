@@ -1,7 +1,7 @@
 /* LotoLab 4.18: núcleo descritivo puro, compartilhado pelo worker e pelos testes. */
 (function(root){
 'use strict';
-const VERSION='4.26.11';
+const VERSION='4.26.12';
 const aviso='Este índice mede semelhança com o histórico. Não representa a probabilidade matemática de a combinação ser sorteada no próximo concurso.';
 const rules={
  'mega-sena':{nome:'Mega-Sena',N:60,k:6,min:6,max:20,base:1,preco:6,faixas:[6,5,4],slug:'megasena'},
@@ -258,14 +258,18 @@ function patternContext(m,b){
    return {posicao:i+1,vezes,percentual:den?100*vezes/den:null,esperado:1/size,concursos:rows.length,ultimo:rows.at(-1)?.concurso??null};});
  }
  const all={dezenas:Array.from({length:c.N},(_,i)=>i+c.base)};
- const out={distributions,grid,ciclos:coverageCycles(m,b),dezenas:frequency(m,all,b).map(d=>({...d,atraso:c.especial?null:d.atraso}))};
+ const edges=m==='lotofacil'?[120,135,150,165,180,195,210,225,240,255,271]:[21,53,85,117,149,181,213,245,277,309,346];
+ const somas=edges.slice(0,-1).map((inicio,i)=>{const fim=edges[i+1]-1,found=b.rows.filter(r=>sum(r.dezenas)>=inicio&&sum(r.dezenas)<=fim);return {inicio,fim,vezes:found.length,percentual:b.rows.length?100*found.length/b.rows.length:null,ultimo:found.at(-1)?.concurso??null};});
+ const out={somas,distributions,grid,ciclos:coverageCycles(m,b),dezenas:frequency(m,all,b).map(d=>({...d,atraso:c.especial?null:d.atraso}))};
  patternCache.set(b,out);return out;
 }
 function patternSummary(m,t,b){
  const atual=patternProfile(m,t);if(!atual)return null;
  const ctx=patternContext(m,b),c=cfg(m),last=b.rows.at(-1),comparavel=t.dezenas.length===c.k;
  atual.repetidas=last&&!c.especial&&!b.meta.semRegistroAteCorte?hits(m,t,last):null;
- return {protocolo:'padroes-descritivos-1',modalidade:m,base:b.meta,atual,comparavel,tamanhoJogo:t.dezenas.length,tamanhoResultado:c.k,
+ const soma=sum(t.dezenas),faixa=ctx.somas.find(x=>soma>=x.inicio&&soma<=x.fim);
+ const conjunta=faixa&&comparavel?b.rows.filter(r=>{const p=patternProfile(m,r),s=sum(r.dezenas);return s>=faixa.inicio&&s<=faixa.fim&&['pares','primos','fibonacci','consecutivos'].every(k=>p[k]===atual[k]);}).length:null;
+ return {soma:{atual:soma,comparavel,categorias:ctx.somas.map(x=>({...x,noPerfil:comparavel&&soma>=x.inicio&&soma<=x.fim}))},conjunta:{vezes:conjunta,n:b.rows.length,percentual:conjunta!==null&&b.rows.length?100*conjunta/b.rows.length:null,criterios:'mesma paridade, primos, Fibonacci, pares consecutivos e faixa de soma'},protocolo:'padroes-descritivos-1',modalidade:m,base:b.meta,atual,comparavel,tamanhoJogo:t.dezenas.length,tamanhoResultado:c.k,
   distribuicoes:ctx.distributions.map(d=>({...d,atual:atual[d.id],percentualDoPerfil:comparavel&&atual[d.id]!==null?d.categorias.find(x=>x.valor===atual[d.id])?.percentual??null:null})),
   grade:{...ctx.grid,denominador:b.rows.length*c.k},ciclos:ctx.ciclos,
   dezenas:ctx.dezenas.map(d=>({dezena:d.dezena,vezes:d.vezes,percentual:d.percentual,ultimo:d.ultimo,atraso:d.atraso,noJogo:t.dezenas.includes(d.dezena)})),

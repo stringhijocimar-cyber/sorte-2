@@ -17,6 +17,8 @@ self.onmessage=event=>{
     resultado=LL18.recommend(m,registros,{...op,acompanhamento},progress);break;
    }
    case 'analisar':resultado={analise:LL18.analyze(m,jogo,registros,op),aderencia:LL18.reference(m,jogo,registros,op)};break;
+   case 'fechamento':resultado=LL18.fechamento43323(m,registros,op);break;
+   case 'fechamento-teste':resultado=LL18.backtestFechamento43323(m,registros,op,progress);break;
    case 'grupos':resultado=LL18.groupPage(m,jogo,registros,op);break;
    case 'gerar':resultado=LL18.generate(m,registros,op);resultado.explicacoes.forEach((e,i)=>{e.aderencia=LL18.reference(m,e.jogo,registros,{...op,semente:op.semente+':referencia'});const a=LL18.analyze(m,e.jogo,registros,op);e.dezenas=a.dezenas;e.complementos=a.complementos;e.pares=LL18.groupPage(m,e.jogo,registros,{...op,tamanho:2,limite:10});e.trios=LL18.groupPage(m,e.jogo,registros,{...op,tamanho:3,limite:10});progress({feitos:i+1,total:resultado.gerados,etapa:'Explicando jogos'});});break;
    case 'diversificar':resultado=LL18.diversify(m,registros,jogos,op);break;

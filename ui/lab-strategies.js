@@ -56,5 +56,46 @@ function diagnose(s,p){if(p?.redundantes?.length||p?.sobreposicoes?.some(x=>x.di
 function monitor(m,records,book){const b=history(m,records),obs=[];for(const draw of b.rows){const ts=[...new Map(book.filter(g=>g.modalidade===m&&Number.isInteger(g.geradoAte)&&g.geradoAte<draw.concurso&&g.concursoAlvo===draw.concurso).flatMap(g=>g.jogos).map(t=>[key(m,t),t])).values()];if(!ts.length)continue;const value=mean(ts.map(t=>L.hits(m,t,draw))),refs=[];for(let j=0;j<32;j++){const r=rng('prospectivo:'+m+':'+draw.concurso+':'+j);refs.push(mean(ts.map(t=>L.hits(m,randomTicket(m,r,t),draw))));}obs.push({concurso:draw.concurso,data:draw.data,acertosMedios:value,referencia:mean(refs),delta:value-mean(refs),jogos:ts.length});}const stat=paired(obs.map(x=>x.delta),'monitor:'+m);stat.pAjustado=Math.min(1,stat.p*20);const batch=book.filter(x=>x.modalidade===m).at(-1),cart=batch?portfolio(m,batch.jogos):null;return {base:b.meta,observacoes:obs,comparacao:stat,carteira:cart,diagnostico:diagnose(stat,cart),nota:'Somente lotes registrados antes do alvo. Correções substituem observações. Ajuste conservador para 20 consultas planejadas; monitoramento contínuo é exploratório.'};}
 function drift(m,records,t,op={}){const {base,rows}=sampleRows(m,records,op);if(rows.length<210)return {estado:'amostra insuficiente',necessarios:210,disponiveis:rows.length};const data=rows.slice(-210),c=cfg(m),seed=String(op.semente||'mudanca-418'),vs=data.map((r,i)=>{const s=L.structural(m,r),ts=tokens(m,r),prev=i?L.hits(m,data[i-1],r):0;return [s.media/c.N,s.pares/c.k,s.consecutivos/c.k,s.concentracao,prev/c.k,comb(prev,2)/Math.max(1,comb(c.k,2)),comb(prev,3)/Math.max(1,comb(c.k,3)),t?L.hits(m,t,r)/c.k:0,...Array.from({length:c.colunas?70:c.N},(_,d)=>Number(ts.includes(d)))];}),random=rng(seed),short=vs.slice(180),comparisons=[];
  const stat=(a,b)=>mean(a[0].map((_,j)=>(mean(a.map(x=>x[j]))-mean(b.map(x=>x[j])))**2));for(const [name,a] of [['longo',vs.slice(0,120)],['médio',vs.slice(120,180)]]){const value=stat(a,short),pool=a.concat(short);let more=0;for(let i=0;i<499;i++){const v=pool.slice();for(let j=v.length-1;j>0;j--){const k=Math.floor(random()*(j+1));[v[j],v[k]]=[v[k],v[j]];}if(stat(v.slice(0,a.length),v.slice(a.length))>=value)more++;}comparisons.push({referencia:name,efeito:value,p:(more+1)/500});}const adj=holm(comparisons.map(x=>x.p));comparisons.forEach((x,i)=>x.pAjustado=adj[i]);return {estado:comparisons.every(x=>x.pAjustado<.05)?'sinal estatístico':comparisons.some(x=>x.pAjustado<.05)?'inconclusiva':'compatível com ruído',comparacoes:comparisons,semente:seed,base:base.meta,limites:'Janelas sem sobreposição de 120, 60 e 30 concursos; 499 permutações e Holm. Não indica mudança física ou previsibilidade do sorteio.'};}
-Object.assign(L,{models,generate,diversify,paired,holm,robust,backtest,diagnose,monitor,drift,sampleRows});if(typeof module!=='undefined'&&module.exports)module.exports=L;
+// Desdobramento 4-3-3-2-3: produto cartesiano de duas opções por grupo.
+// O padrão e as opções são definidos antes de observar o concurso avaliado.
+function fechamento43323(m,records,op={}){
+ if(m!=='lotofacil')throw Error('Fechamento 4-3-3-2-3 exclusivo da Lotofácil.');
+ const seed=String(op.semente||'fechamento-43323'),random=rng(seed),quantidades=[4,3,3,2,3];
+ const ordem=op.ordem||Array.from({length:25},(_,i)=>i+1);
+ if(!Array.isArray(ordem)||ordem.length!==25||new Set(ordem).size!==25||ordem.some(x=>!Number.isInteger(x)||x<1||x>25))throw Error('Informe as 25 dezenas, uma vez cada, na ordem dos cinco grupos.');
+ const unit=currentCost(m,{dezenas:Array.from({length:15},(_,i)=>i+1)}),custo=32*unit;
+ if(op.orcamento!==undefined&&(!Number.isFinite(op.orcamento)||op.orcamento+1e-9<custo))throw Error('O conjunto completo exige orçamento de '+custo.toFixed(2)+'. Nenhum jogo foi gerado.');
+ const grupos=quantidades.map((k,i)=>{
+  const dezenas=ordem.slice(i*5,i*5+5),primeira=sample(dezenas,k,random).sort((a,b)=>a-b);
+  // Segunda opção com a menor interseção possível dentro do grupo.
+  const fora=dezenas.filter(d=>!primeira.includes(d)),segunda=fora.concat(sample(primeira,Math.max(0,k-fora.length),random)).sort((a,b)=>a-b);
+  // k=2: há três dezenas fora da primeira opção, escolhemos somente duas.
+  const alternativa=fora.length>k?sample(fora,k,random).sort((a,b)=>a-b):segunda;
+  return {dezenas,quantidade:k,opcoes:[primeira,alternativa]};
+ });
+ const jogos=Array.from({length:32},(_,bits)=>({dezenas:grupos.flatMap((g,i)=>g.opcoes[(bits>>i)&1]).sort((a,b)=>a-b)}));
+ const base=history(m,records,{antesDe:op.antesDe??null});
+ const somas=Array.from({length:10},(_,i)=>({inicio:120+15*i,fim:i===9?270:134+15*i,vezes:0,ultimo:null}));
+ for(const row of base.rows){const s=sum(row.dezenas),faixa=somas.find(x=>s>=x.inicio&&s<=x.fim);if(faixa){faixa.vezes++;faixa.ultimo=row.concurso;}}
+ return {versao:L.VERSION,modalidade:m,modelo:'fechamento43323',semente:seed,base:base.meta,ordem:ordem.slice(),grupos,jogos,gerados:32,custo,precoUnitario:unit,somas:somas.map(x=>({...x,percentual:base.rows.length?100*x.vezes/base.rows.length:null})),diagnostico:L.patternSummary(m,jogos[0],base),perfis:jogos.map(jogo=>({soma:sum(jogo.dezenas),...L.patternProfile(m,jogo)})),limites:'São 32 jogos distintos de 15 dezenas. Os 15 pontos só estão cobertos se, em cada um dos cinco grupos, as dezenas sorteadas coincidirem exatamente com uma das duas opções. O padrão 4-3-3-2-3 sozinho não garante prêmio. Soma, Fibonacci e ciclos são descrições do histórico, sem previsão.'};
+}
+function backtestFechamento43323(m,records,op={},progress=()=>{}){
+ if(m!=='lotofacil')throw Error('Avaliação exclusiva da Lotofácil.');
+ const b=history(m,records,{antesDe:op.antesDe??null}),n=op.concursos??60;
+ if(!Number.isInteger(n)||n<1||n>120)throw Error('Avalie entre 1 e 120 concursos.');
+ if(b.rows.length<31)throw Error('Carregue pelo menos 31 concursos válidos para avaliar.');
+ const observacoes=[],start=Math.max(30,b.rows.length-n),shape={dezenas:Array.from({length:15},(_,i)=>i+1)};
+ for(let i=start;i<b.rows.length;i++){
+  const alvo=b.rows[i],semente=String(op.semente||'fechamento-43323')+':alvo:'+alvo.concurso;
+  const g=fechamento43323(m,b.rows.slice(0,i),{...op,semente});
+  const ref=uniformBatch(m,32,rng(semente+':uniforme'),shape);
+  const avaliar=ts=>{const hs=ts.map(t=>L.hits(m,t,alvo));return {melhor:Math.max(...hs),media:mean(hs),premiados:hs.filter(h=>h>=11).length};};
+  observacoes.push({concurso:alvo.concurso,treinoAte:b.rows[i-1].concurso,fechamento:avaliar(g.jogos),uniforme:avaliar(ref)});
+  progress({feitos:i-start+1,total:b.rows.length-start});
+ }
+ const resumir=k=>({melhorMedio:mean(observacoes.map(x=>x[k].melhor)),mediaAcertos:mean(observacoes.map(x=>x[k].media)),concursosCom11:observacoes.filter(x=>x[k].melhor>=11).length,premiados:sum(observacoes.map(x=>x[k].premiados))});
+ return {base:b.meta,concursos:observacoes.length,observacoes,fechamento:resumir('fechamento'),uniforme:resumir('uniforme'),jogosPorConcurso:32,custoAtualPorConcurso:32*currentCost(m,shape),nota:'Avaliação exploratória com 32 jogos por concurso em ambos os métodos. Cada lote é definido antes do resultado; usa apenas registros anteriores. A referência usa uma amostra aleatória reproduzível por concurso. Não demonstra vantagem futura. Custo calculado pela tarifa atual; prêmios e ROI não são estimados.'};
+}
+
+Object.assign(L,{fechamento43323,backtestFechamento43323,models,generate,diversify,paired,holm,robust,backtest,diagnose,monitor,drift,sampleRows});if(typeof module!=='undefined'&&module.exports)module.exports=L;
 })(globalThis);
