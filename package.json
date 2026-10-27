@@ -4,6 +4,7 @@
   "description": "Monta jogos das loterias brasileiras, guarda no aparelho e confere contra os concursos, mostrando o desempenho comparado ao acaso.",
   "private": true,
   "scripts": {
+    "test:fechamento": "node --test ferramentas/testar-fechamento.mjs",
     "start": "python3 servir.py",
     "sync:www": "node ferramentas/sincronizar-www.mjs sync",
     "check:distribution": "node ferramentas/sincronizar-www.mjs check",

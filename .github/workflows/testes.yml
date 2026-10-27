@@ -61,6 +61,7 @@ jobs:
           npm run test:observatorio
           npm run test:decisao
           npm run test:jogos-salvos
+          npm run test:fechamento
 
       - name: Testes do motor
         run: node ferramentas/testar-motor.mjs
