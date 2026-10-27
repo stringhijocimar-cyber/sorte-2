@@ -3281,7 +3281,7 @@ function tabelaSugestao(s){
     <tbody>${linhas}</tbody></table></div>`;
   const m=s.modalidade||S.modalidade;
   const padroes=LL18.patternSummary(m,{dezenas:s.dezenas},LL18.history(m,S.resultados));
-  const parametros=LL18UI.mainParametersView(padroes,{estrategia:'Perfil histórico equilibrado',motivo:'Escolha entre candidatas com medidas frequentes no histórico. Menor e maior dezena são apenas descritivas; ciclos não alteram a escolha.',resumo:resumoParametros})||resumoParametros;
+  const parametros=globalThis.LL18UI?.mainParametersView(padroes,{estrategia:'Perfil histórico equilibrado',motivo:'Escolha entre candidatas com medidas frequentes no histórico. Menor e maior dezena são apenas descritivas; ciclos não alteram a escolha.',resumo:resumoParametros})||resumoParametros;
 
   return `
   <div class="ficha" style="margin-top:12px">
@@ -3297,7 +3297,7 @@ function tabelaSugestao(s){
       Das ${s.linhas.filter(l => !l.naoEscolhe).length} medidas usadas na escolha,
       a configuração menos frequente apareceu em <strong>${nf(s.menor*100,1)}%</strong>
       dos ${inf(s.n)} concursos. Menor e maior dezena são apenas descritivas.
-      Na referência sem esse critério, a mediana da medida mais rara foi
+      Na referência sem critério, a mediana da medida mais rara foi
       ${nf(s.medianaDoAcaso*100,1)}%. A seleção foi feita entre ${inf(s.candidatas)}
       candidatas uniformes. Essa comparação mede semelhança histórica, não chance de acerto.
     </div>

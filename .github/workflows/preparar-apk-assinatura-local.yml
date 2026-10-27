@@ -1,4 +1,4 @@
-# Compila candidatos para assinatura fora do runner. Nunca publica estes APKs.
+# Compila candidatos da 4.26.12 para assinatura fora do runner. Nunca publica estes APKs.
 # A versão segue o arquivo VERSION da revisão compilada.
 # A chave permanente permanece no backup privado, fora do código e dos artefatos.
 name: Preparar APK para assinatura local
