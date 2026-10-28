@@ -1,0 +1,27 @@
+{
+  "version": "4.26.12",
+  "androidVersionCode": 49,
+  "sourceCommit": "b67a1d6015e41004ab274a3b50b9216edaf11006",
+  "buildRun": "https://github.com/stringhijocimar-cyber/sorte-2/actions/runs/40576373063",
+  "testsRun": "https://github.com/stringhijocimar-cyber/sorte-2/actions/runs/40576372143",
+  "signingCertificateSha256": "5520d62f56ce112f6d63d75259c7a1e2b8999731d1ac7473996a58f4f235225f",
+  "checks": {
+    "permanentCertificate": true,
+    "allWebAssetsMatchSource": true,
+    "nativeComponents": true
+  },
+  "files": [
+    {
+      "name": "LotoLab-4.26.12-transferencia.apk",
+      "bytes": 11297300,
+      "sha256": "724c8e88beebbc0074ff7e0d47e614cc9f51c24329bac7b67c54657f0f2d9a64",
+      "gitBlob": "acd2ef728a207e7af7175a58f28bf97998be5be3"
+    },
+    {
+      "name": "LotoLab-4.26.12.apk",
+      "bytes": 10339843,
+      "sha256": "bec0c4e914ad1f09ad9517ae131f4b33a4df957602d0cb271291889740efc794",
+      "gitBlob": "2bf299f99723925e85fe77a111d3d3256a9909b3"
+    }
+  ]
+}
