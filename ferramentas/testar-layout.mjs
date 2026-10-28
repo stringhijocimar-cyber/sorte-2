@@ -49,11 +49,11 @@ try{
  await cmd('Network.setBlockedURLs',{urls:['*githubusercontent.com*','*caixa.gov.br*']});
  await cmd('Emulation.setTouchEmulationEnabled',{enabled:true,maxTouchPoints:1});
  await recommend('mega-sena');
- check(await js(`const p=S.intLotes['mega-sena'].laboratorio.principal.analise.padroes;return p.modalidade==='mega-sena'&&p.dezenas.length===60&&document.querySelector('.ll-patterns').textContent.includes('Fibonacci')&&!document.querySelector('.ll-patterns').open`),'parâmetros integrados da principal chegam do worker e começam recolhidos');
- await tap('.ll-patterns>summary');
- check(await js(`return document.querySelector('.ll-patterns').open&&document.documentElement.scrollWidth<=visualViewport.width+1`),'painel de padrões abre sem transbordar a tela');
- await shot('11-padroes-mega-sena.png','.ll-patterns');
- await tap('.ll-patterns>summary');
+ check(await js(`const p=S.intLotes['mega-sena'].laboratorio.principal.analise.padroes;return p.modalidade==='mega-sena'&&p.dezenas.length===60&&document.querySelector('.ll-main-parameters').textContent.includes('Fibonacci')&&document.querySelector('.ll-main-parameters').textContent.includes('Estratégia da sugestão')`),'parâmetros integrados da principal chegam do worker e começam recolhidos');
+ await tap('.ll-main-parameters details>summary');
+ check(await js(`return document.querySelector('.ll-main-parameters details').open&&document.documentElement.scrollWidth<=visualViewport.width+1`),'painel de parâmetros abre sem transbordar a tela');
+ await shot('11-padroes-mega-sena.png','.ll-main-parameters');
+ await tap('.ll-main-parameters details>summary');
  check(await js(`const p=document.querySelector('.int-principal'),d=p.querySelector('.auto-main-decision'),s=p.querySelector('.auto-saved-sequence');return !!d.querySelector('svg')&&d.textContent.includes('Por quê:')&&s.dataset.savedSequence==='nova'&&p.nextElementSibling.classList.contains('auto-strategy-diagnosis')`),'decisão com ícone e motivo, registro e estratégias junto da principal');
  check(await js(`const a=S.intLotes['mega-sena'].laboratorio.automatico,text=document.querySelector('.auto-strategy-diagnosis').textContent,expected=a.acompanhamento.n?'Jogos registrados antes dos resultados.':a.inicial?.particao?'Teste histórico separado':'Aguardando histórico suficiente';return document.querySelectorAll('.auto-ranking').length===1&&document.querySelectorAll('[data-strategy-diagnosis]').length===11&&text.includes(expected)`),'comparativo único indica a origem efetiva dos resultados');
  check(await js(`const d=S.intLotes['mega-sena'].laboratorio.diagnostico;return d.faixas.escopos.length===3&&d.faixas.protocolo==='faixas-diagnostico-4268-1'&&document.querySelector('.ll-tier-diagnosis')&&document.querySelector('.ll-portfolio-diagnosis')&&document.querySelector('.ll-provenance')`),'worker real entrega faixas, redundância e proveniência');
@@ -82,7 +82,7 @@ try{
  await js(`const a=S.intLotes['mega-sena'].laboratorio.automatico,original=a.decisao;a.decisao={acao:'ALTERAR',metodo:'frequencia',motivo:'Revisão validada para a próxima rodada.'};document.querySelector('#int-lote').innerHTML=intRenderLote(S.intLotes['mega-sena']);a.decisao=original;`);
  check(await js(`const d=document.querySelector('.auto-main-decision');return d.dataset.decision==='trocar'&&d.textContent.includes('Trocar estratégia')&&d.textContent.includes('próxima rodada')`),'troca usa ícone próprio e explica o jogo congelado');
  await recommend('lotofacil');
- check(await js(`const p=S.intLotes['lotofacil'].laboratorio.principal.analise.padroes;return p.dezenas.length===25&&p.atual.linhas.length===5&&p.atual.colunas.length===5&&document.querySelector('.ll-patterns').textContent.includes('Lotofácil')`),'Lotofácil mantém universo e grade próprios no painel');
+ check(await js(`const p=S.intLotes['lotofacil'].laboratorio.principal.analise.padroes;return p.dezenas.length===25&&p.atual.linhas.length===5&&p.atual.colunas.length===5&&document.querySelector('.ll-main-parameters').textContent.includes('Lotofácil')`),'Lotofácil mantém universo e grade próprios no painel');
  await shot('03-lotofacil-escuro.png','.auto-results');
  await tap('.ll-tier-diagnosis>summary');await tap('.ll-tier-scope>summary');
  await tap('.ll-portfolio-diagnosis>summary');await tap('.ll-provenance>summary');
