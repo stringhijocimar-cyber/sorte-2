@@ -5,7 +5,7 @@
   "sourceBranch": "main",
   "visualLayer": "Sugestão e aprendizado automáticos",
   "android": {
-    "versionCode": 49,
+    "versionCode": 50,
     "versionName": "4.26.13"
   },
   "versionFiles": [
