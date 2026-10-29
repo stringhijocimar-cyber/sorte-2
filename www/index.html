@@ -960,12 +960,12 @@ td{padding:6px 7px;border-bottom:1px solid var(--trama)}
 <link rel="stylesheet" href="ui/experiencia-v4-14.css?v=4.22.1">
 <link rel="stylesheet" href="ui/modalidades-v4-15.css?v=4.22.1">
 <link rel="stylesheet" href="ui/recorrencia-v4-17.css?v=4.22.1">
-<link rel="stylesheet" href="ui/lab-v4-18.css?v=4.26.12">
+<link rel="stylesheet" href="ui/lab-v4-18.css?v=4.26.13">
 <link rel="stylesheet" href="ui/auto-v4-21.css?v=4.22.1">
-<link rel="stylesheet" href="ui/conferencia-v4-22.css?v=4.26.12">
+<link rel="stylesheet" href="ui/conferencia-v4-22.css?v=4.26.13">
 <link rel="stylesheet" href="ui/lotolab-ui-v4-23.css?v=4.23.0" data-lotolab-ui-refino="4.23.0">
-<link rel="stylesheet" href="ui/lotolab-ui-v4-24.css?v=4.26.12" data-lotolab-ui-experiencia="4.24.0">
-<link rel="stylesheet" href="ui/acompanhamento-v4-25.css?v=4.26.12">
+<link rel="stylesheet" href="ui/lotolab-ui-v4-24.css?v=4.26.13" data-lotolab-ui-experiencia="4.24.0">
+<link rel="stylesheet" href="ui/acompanhamento-v4-25.css?v=4.26.13">
 </head>
 <body>
 <header>
@@ -1044,16 +1044,16 @@ td{padding:6px 7px;border-bottom:1px solid var(--trama)}
   <div class="corpo"><div class="alca"></div><div id="corpo-avisos"></div></div>
 </div>
 
-<script src="ui/lab-core.js?v=4.26.12"></script>
-<script src="ui/lab-strategies.js?v=4.26.12"></script>
-<script src="ui/lab-recommendation.js?v=4.26.12"></script>
-<script src="ui/lab-auto.js?v=4.26.12"></script>
-<script src="ui/lab-ui.js?v=4.26.12"></script>
+<script src="ui/lab-core.js?v=4.26.13"></script>
+<script src="ui/lab-strategies.js?v=4.26.13"></script>
+<script src="ui/lab-recommendation.js?v=4.26.13"></script>
+<script src="ui/lab-auto.js?v=4.26.13"></script>
+<script src="ui/lab-ui.js?v=4.26.13"></script>
 <script src="ui/lab-check.js?v=4.25.0"></script>
-<script src="ui/lab-auto-ui.js?v=4.26.12"></script>
-<script src="ui/lab-saved-review.js?v=4.26.12"></script>
-<script src="ui/lab-storage.js?v=4.26.12"></script>
-<script src="ui/lab-backup.js?v=4.26.12"></script>
+<script src="ui/lab-auto-ui.js?v=4.26.13"></script>
+<script src="ui/lab-saved-review.js?v=4.26.13"></script>
+<script src="ui/lab-storage.js?v=4.26.13"></script>
+<script src="ui/lab-backup.js?v=4.26.13"></script>
 <script>
 "use strict";
 
@@ -3985,7 +3985,7 @@ T.inicio = () => {
   const avisos=S.avisos.filter(a=>!a.lido).length;
   const meus=S.jogos.filter(j=>j.modalidade===m).length,idade=idadeDoHistorico(m);
   return `<div class="foco-inicio ux-inicio" style="--foco-cor:${FOCO_CORES[m]}">
-    <div class="foco-boasvindas"><div><span class="foco-label">BEM-VINDO AO SEU LABORATÓRIO</span><${podeVoltar()?'h2':'h1'}>Seu jogo,<br>bem planejado.</${podeVoltar()?'h2':'h1'}></div><span class="foco-versao">4.26.12</span></div>
+    <div class="foco-boasvindas"><div><span class="foco-label">BEM-VINDO AO SEU LABORATÓRIO</span><${podeVoltar()?'h2':'h1'}>Seu jogo,<br>bem planejado.</${podeVoltar()?'h2':'h1'}></div><span class="foco-versao">4.26.13</span></div>
     <section class="foco-hero"><div class="foco-hero-topo"><span class="foco-label">UM PLANO PARA CADA CONCURSO</span><span class="foco-tag">${esc(c.nome)}</span></div>
       <div class="foco-objetivo"><div><h2>Crie seus jogos.<br>Veja os acertos.</h2><p>Defina seus critérios e seu limite. O LotoLab organiza e confere.</p></div><div class="foco-alvo" aria-label="Meta de ${c.k} dezenas"><strong>${c.k}</strong><span>${c.trevos?"+ 2 trevos":"dezenas"}</span></div></div>
       <button class="acao foco-primary" data-atalho="sugestoes">Criar sugestões <span aria-hidden="true">→</span></button>
@@ -6970,6 +6970,8 @@ const LL18_BRIDGE={
   changeMode:m=>{if(MODALIDADES[m])trocarModalidade(m);},
   openSuggestions:m=>{if(MODALIDADES[m]){trocarModalidade(m);irParaTela('sugestoes');}},
   openAnalysis:()=>irParaTela('estatisticas'),
+  showSavedGames:(m,texto)=>{S.avisoJogos={modalidade:m,texto};},
+  openGames:()=>irParaTela('jogos'),
   recommendationBatches:()=>S.jogos.filter(j=>['integrado','automatico'].includes(j.inteligencia?.motor)&&(j.concursoAlvo||j.inteligencia?.concursoOriginal)).map(j=>({modalidade:j.modalidade,concursoAlvo:j.concursoAlvo||j.inteligencia.concursoOriginal,geradoAte:j.inteligencia.geradoAte,jogos:[LL18.validateTicket(j.modalidade,j)]})),
   games:m=>S.jogos.filter(j=>j.modalidade===m).flatMap(j=>{try{return [LL18.validateTicket(m,j)];}catch(e){return [];}}),
   merge:novos=>{const n=guardarResultados(novos);aoMudarHistorico(n,'laboratório analítico');return n;},
