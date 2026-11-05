@@ -49,6 +49,7 @@ try{
  await until(()=>js(`return !!navigator.serviceWorker.controller`),'controle do service worker');
  assert.ok(await js(`return caches.match('./ui/lab-worker.js').then(Boolean)`),'worker foi pré-armazenado');
  assert.ok(await js(`return caches.match('./ui/lab-recommendation.js').then(Boolean)`),'motor integrado pré-armazenado');
+ assert.ok(await js(`return caches.match('./ui/lab-lotofacil.js').then(Boolean)`),'perfil conjunto pré-armazenado');
  assert.ok(await js(`return caches.match('./ui/lab-check.js').then(Boolean)`),'cartelas de conferência pré-armazenadas');
  console.log('cache pronto');
  // Também corta fontes externas: encerrar só o servidor não impede a busca
@@ -96,6 +97,15 @@ try{
  assert.ok(await js(`return document.querySelector('#ll-content').textContent.includes('Média histórica da linha')&&document.querySelector('#ll-content').textContent.includes('Média combinatória de referência')`));
  assert.ok(await js(`return document.querySelector('.ll-frequency-diagnosis')?.textContent.includes('IC 95% individual')`));
  console.log('ok — perfis Mega-Sena/Lotofácil e indicador da sugestão automática disponíveis offline');
+ await js(`irParaTela('sugestoes',{lateral:true});`);
+ await until(()=>js(`return !!S.intLotes.lotofacil?.laboratorio.automatico.rodada.perfilConjunto`),'sugestão com perfil conjunto',90000);
+ assert.ok(await js(`const t=document.querySelector('.ll-main-parameters').textContent;
+  return t.includes('119 concursos comparáveis')&&t.includes('ocorram no mesmo concurso')&&!document.querySelector('#int-salvar').disabled;`));
+ await js(`irParaTela('estatisticas',{lateral:true});document.querySelector('[data-ll-tab="estudo"]').click();
+  document.querySelector('[data-ll-action="estudo-carteiras"]').click();`);
+ await until(()=>js(`return !document.querySelector('[data-ll-action="cancelar"]')&&document.querySelector('#ll-content').textContent.includes('1.000.000 sorteios simulados')`),'simulação de carteiras offline',90000);
+ assert.ok(await js(`return document.querySelector('#ll-content').textContent.includes('Fechamento em 18 dezenas')`));
+ console.log('ok — sugestão principal aplica o perfil conjunto e o estudo de carteiras funciona offline');
  const first=rows.slice(0,2).sort((a,b)=>a.concurso-b.concurso);
  await js(`await Guardar.gravarAsync('resultados',${JSON.stringify(first)});await Guardar.gravarAsync('laboratorio418',{lotes:[{modalidade:'mega-sena',geradoAte:${first[0].concurso},concursoAlvo:${first[1].concurso},jogos:[{dezenas:[14,23,53,56,57,60]}]}],historicoExtra:[],tentativas:[],monitor:{},comites:{}});`);
  await cmd('Page.reload');await sleep(300);await ready();
@@ -113,5 +123,5 @@ try{
  assert.ok(await js(`LL18UI.openRecommendation('super-sete');const q=document.querySelector('#ll-quantidade');q.value='2';q.dispatchEvent(new Event('input'));const b=document.querySelector('#ll-orcamento');b.value='6';b.dispatchEvent(new Event('input'));const el=document.querySelector('#ll-plan-preview'),text=el.textContent.replace(/\\s+/g,' '),valid=text.includes('R$ 6,00')&&text.includes('2 / 2');b.value='1';b.dispatchEvent(new Event('input'));return valid&&el.textContent.includes('orçamento não cobre');`));
  console.log('ok — prévia especial atualiza campos e identifica orçamento insuficiente offline');
  completed=true;
- console.log('9 cenários de distribuição passaram');
+ console.log('10 cenários de distribuição passaram');
 }finally{ws.close();close();}

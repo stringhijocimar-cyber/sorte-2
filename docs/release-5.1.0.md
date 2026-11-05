@@ -1,0 +1,7 @@
+# LotoLab 5.1.0
+
+- Em **Sugestões → Lotofácil**, a seleção de 15 dezenas classifica os jogos válidos pela incidência conjunta do perfil no histórico completo disponível. O painel abaixo da sugestão mostra o percentual, o número de concursos comparáveis, a faixa de soma, paridade, Fibonacci, primos, repetição, consecutivos, maior sequência, moldura e concentração nas linhas e colunas. As características devem ocorrer no mesmo concurso.
+- A repetição compara cada resultado ao concurso imediatamente anterior. O primeiro concurso e as transições que cruzam lacunas ficam fora do denominador. Se a base for insuficiente, a tela mostra uma prévia sem habilitar o salvamento pelo perfil conjunto. A opção **Ciclo automático anterior** continua acessível na personalização.
+- Em **Análise → Estatísticas → Estudo Lotofácil**, avalie o perfil conjunto em 100, 500 ou 1.000 concursos. Cada alvo é avaliado com 20 jogos gerados a partir do histórico anterior e com 32 carteiras aleatórias do mesmo tamanho.
+- No mesmo painel, compare quatro carteiras de 20 jogos — aleatória, filtrada por soma e paridade, diversificada e fechamento parcial em 18 dezenas — nos mesmos 1.000.000 de sorteios uniformes simulados. A tabela informa acertos e sobreposição. Resultados simulados ficam separados do histórico real.
+- A frequência de um perfil é uma medida histórica. O teste de acertos permite comparar os métodos com o controle aleatório. O código Android é 54 e o identificador de pacote continua sendo `app.lotolab.jogos`.

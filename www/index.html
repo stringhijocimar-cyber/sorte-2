@@ -960,12 +960,12 @@ td{padding:6px 7px;border-bottom:1px solid var(--trama)}
 <link rel="stylesheet" href="ui/experiencia-v4-14.css?v=4.22.1">
 <link rel="stylesheet" href="ui/modalidades-v4-15.css?v=4.22.1">
 <link rel="stylesheet" href="ui/recorrencia-v4-17.css?v=4.22.1">
-<link rel="stylesheet" href="ui/lab-v4-18.css?v=5.0.0">
+<link rel="stylesheet" href="ui/lab-v4-18.css?v=5.1.0">
 <link rel="stylesheet" href="ui/auto-v4-21.css?v=4.22.1">
-<link rel="stylesheet" href="ui/conferencia-v4-22.css?v=5.0.0">
+<link rel="stylesheet" href="ui/conferencia-v4-22.css?v=5.1.0">
 <link rel="stylesheet" href="ui/lotolab-ui-v4-23.css?v=4.23.0" data-lotolab-ui-refino="4.23.0">
-<link rel="stylesheet" href="ui/lotolab-ui-v4-24.css?v=5.0.0" data-lotolab-ui-experiencia="4.24.0">
-<link rel="stylesheet" href="ui/acompanhamento-v4-25.css?v=5.0.0">
+<link rel="stylesheet" href="ui/lotolab-ui-v4-24.css?v=5.1.0" data-lotolab-ui-experiencia="4.24.0">
+<link rel="stylesheet" href="ui/acompanhamento-v4-25.css?v=5.1.0">
 </head>
 <body>
 <header>
@@ -1044,16 +1044,17 @@ td{padding:6px 7px;border-bottom:1px solid var(--trama)}
   <div class="corpo"><div class="alca"></div><div id="corpo-avisos"></div></div>
 </div>
 
-<script src="ui/lab-core.js?v=5.0.0"></script>
-<script src="ui/lab-strategies.js?v=5.0.0"></script>
-<script src="ui/lab-recommendation.js?v=5.0.0"></script>
-<script src="ui/lab-auto.js?v=5.0.0"></script>
-<script src="ui/lab-ui.js?v=5.0.0"></script>
+<script src="ui/lab-core.js?v=5.1.0"></script>
+<script src="ui/lab-strategies.js?v=5.1.0"></script>
+<script src="ui/lab-recommendation.js?v=5.1.0"></script>
+<script src="ui/lab-lotofacil.js?v=5.1.0"></script>
+<script src="ui/lab-auto.js?v=5.1.0"></script>
+<script src="ui/lab-ui.js?v=5.1.0"></script>
 <script src="ui/lab-check.js?v=4.25.0"></script>
-<script src="ui/lab-auto-ui.js?v=5.0.0"></script>
-<script src="ui/lab-saved-review.js?v=5.0.0"></script>
-<script src="ui/lab-storage.js?v=5.0.0"></script>
-<script src="ui/lab-backup.js?v=5.0.0"></script>
+<script src="ui/lab-auto-ui.js?v=5.1.0"></script>
+<script src="ui/lab-saved-review.js?v=5.1.0"></script>
+<script src="ui/lab-storage.js?v=5.1.0"></script>
+<script src="ui/lab-backup.js?v=5.1.0"></script>
 <script>
 "use strict";
 
@@ -2870,20 +2871,23 @@ let intTrabalho = 0, intPendente = null;
 
 function intConfig(m){
   return S.intConfig[m] || (S.intConfig[m]={tam:MODALIDADES[m].min,quantidade:1,concurso:"",
-    modo:"integrado",janela:0,fixas:"",excluidas:"",orcamento:"",semente:""});
+    modo:"integrado",perfilConjunto:true,janela:0,fixas:"",excluidas:"",orcamento:"",semente:""});
 }
 function intConfigDaTela(m){
   const o=intConfig(m);
   if(S.tela!=="sugestoes"||S.modalidade!==m||!$('#int-tam'))return o;
   for(const k of ["tam","quantidade","janela"])o[k]=Number($('#int-'+k).value);
   for(const k of ["fixas","excluidas","orcamento","semente","concurso"])o[k]=$('#int-'+k).value;
+  if($('#int-perfil-conjunto'))o.perfilConjunto=$('#int-perfil-conjunto').value==='conjunto';
   if($('#int-trevos'))o.trevos=$('#int-trevos').value;
   return o;
 }
 function intRecommendationOptions(m,o){
   const formato=LL18.randomTicket(m,LL18.rng("formato:"+m));formato.dezenas=universo(m).slice(0,o.tam);
   const trevos=MODALIDADES[m].trevos?lerTrevos(o.trevos):null;
-  return {formato,quantidade:o.quantidade,orcamento:o.orcamento,janela:o.janela,fixas:intDezenas(o.fixas,m),excluidas:intDezenas(o.excluidas,m),concursoAlvo:o.concurso===""?null:Number(o.concurso),...(trevos?.length?{trevosFixos:trevos}:{})};
+  const perfilConjunto=m==='lotofacil'&&o.tam===15&&o.perfilConjunto!==false;
+  return {formato,quantidade:o.quantidade,orcamento:o.orcamento,janela:perfilConjunto?0:o.janela,perfilConjunto,
+    fixas:intDezenas(o.fixas,m),excluidas:intDezenas(o.excluidas,m),concursoAlvo:o.concurso===""?null:Number(o.concurso),...(trevos?.length?{trevosFixos:trevos}:{})};
 }
 function intPlanPreview(m,o){
   try{return LL18UI.recommendationPlanView(LL18.recommendationPlan(m,intRecommendationOptions(m,o),'automatico'));}
@@ -2925,6 +2929,8 @@ T.sugestoes = () => {
         <select id="int-tam">${Array.from({length:c.max-c.min+1},(_,i)=>i+c.min).map(t=>`<option ${o.tam===t?"selected":""}>${t}</option>`).join("")}</select></label>
         <label class="campo" for="int-quantidade">Total de jogos<input id="int-quantidade" type="number" min="1" max="60" value="${o.quantidade}"></label>
         </div>
+      ${m==='lotofacil'?`<label class="campo" for="int-perfil-conjunto">Critério para jogos de 15 dezenas
+        <select id="int-perfil-conjunto"><option value="conjunto" ${o.perfilConjunto!==false?'selected':''}>Perfil conjunto do histórico</option><option value="ciclo" ${o.perfilConjunto!==false?'':'selected'}>Ciclo automático anterior</option></select></label>`:''}
       <label class="campo" for="int-orcamento">Quanto deseja gastar, no máximo? (R$)<input id="int-orcamento" type="number" inputmode="decimal" min="0" step="0.50" placeholder="Opcional · ajusta a quantidade de jogos" value="${esc(o.orcamento)}"></label>
       ${c.trevos?campoTrevos("int-trevos",o.trevos):""}
       <details class="int-details" id="int-avancado" ${o.avancado?'open':''}><summary>Ajustes avançados do lote</summary>
@@ -3064,10 +3070,8 @@ function intLigarAcoes(){
   document.querySelectorAll('[data-int-special]').forEach(b=>b.onclick=()=>LL18UI.openRecommendation(b.dataset.intSpecial));
   const m=S.modalidade,o=intConfig(m);
   const ler=()=>{
-    for(const k of ["tam","quantidade","janela"]) o[k]=Number($("#int-"+k).value);
-    if($("#int-trevos"))o.trevos=$("#int-trevos").value;
+    intConfigDaTela(m);
     o.modo="integrado";
-    for(const k of ["fixas","excluidas","orcamento","semente","concurso"]) o[k]=$("#int-"+k).value;
     intUpdatePlan(m,o);
   };
   document.querySelectorAll('.int-form input,.int-form select').forEach(el=>el.onchange=()=>{
@@ -3094,16 +3098,9 @@ function intLigarAcoes(){
     botao.disabled=true;botao.textContent="Atualizando sugestão…";
     mensagem.textContent="Comparando candidatas com o histórico disponível. Você pode navegar enquanto o cálculo termina.";
     try{
-      const alvo=parametros.concurso===""?null:Number(parametros.concurso);
+      const op=intRecommendationOptions(m,parametros);
       const ultimo=LL18.history(m,parametros.historico).meta.ultimo||0;
-      if(alvo!==null&&(!Number.isSafeInteger(alvo)||alvo<=ultimo))throw Error("Informe um concurso futuro, posterior ao último resultado conhecido.");
-      const seed=parametros.semente||String(Math.floor(Math.random()*4294967296));
-      const c=MODALIDADES[m],formato=LL18.randomTicket(m,LL18.rng(seed+':formato'));
-      formato.dezenas=universo(m).slice(0,parametros.tam);
-      const trevos=c.trevos?lerTrevos(parametros.trevos):null;
-      const op={formato,concursoAlvo:alvo,quantidade:parametros.quantidade,orcamento:parametros.orcamento,
-        fixas:intDezenas(parametros.fixas,m),excluidas:intDezenas(parametros.excluidas,m),
-        janela:parametros.janela,semente:seed,...(trevos?.length?{trevosFixos:trevos}:{})};
+      if(op.concursoAlvo!==null&&(!Number.isSafeInteger(op.concursoAlvo)||op.concursoAlvo<=ultimo))throw Error("Informe um concurso futuro, posterior ao último resultado conhecido.");
       const g=await LL18Auto.recommend(m,parametros.historico,op,p=>{
         if(atual())$('#int-mensagem').textContent=`${p.etapa}: ${p.feitos} de ${p.total}.`;
       });
@@ -3120,12 +3117,15 @@ function intLigarAcoes(){
   };
   const lote=S.intLotes[m];
   if(lote){
-    prepararAcompanhamento("int-salvar",lote.concursoAlvo||proximoConcursoSalvo());
+    const automatico=lote.laboratorio?.automatico;
+    const perfilPendente=automatico?.perfilSolicitado&&!automatico.rodada.perfilConjunto;
+    if(!perfilPendente)prepararAcompanhamento("int-salvar",lote.concursoAlvo||proximoConcursoSalvo());
     document.querySelectorAll('[data-int-analisar]').forEach(b=>b.onclick=()=>{
       const i=Number(b.dataset.intAnalisar),g=lote.laboratorio;
       LL18UI.inspect(m,g.jogos[i],i===0?{analise:g.principal.analise,aderencia:g.principal.aderencia}:null);
     });
     $("#int-salvar").onclick=()=>{
+      if(perfilPendente)return;
       if(lote.laboratorio&&intRecomendacaoDesatualizada(lote)){
         $("#int-mensagem").textContent="O histórico mudou. Gere uma nova recomendação antes de salvar.";return;
       }
@@ -4071,7 +4071,7 @@ T.inicio = () => {
   const avisos=S.avisos.filter(a=>!a.lido).length;
   const meus=S.jogos.filter(j=>j.modalidade===m).length,idade=idadeDoHistorico(m);
   return `<div class="foco-inicio ux-inicio" style="--foco-cor:${FOCO_CORES[m]}">
-    <div class="foco-boasvindas"><div><span class="foco-label">BEM-VINDO AO SEU LABORATÓRIO</span><${podeVoltar()?'h2':'h1'}>Seu jogo,<br>bem planejado.</${podeVoltar()?'h2':'h1'}></div><span class="foco-versao">5.0.0</span></div>
+    <div class="foco-boasvindas"><div><span class="foco-label">BEM-VINDO AO SEU LABORATÓRIO</span><${podeVoltar()?'h2':'h1'}>Seu jogo,<br>bem planejado.</${podeVoltar()?'h2':'h1'}></div><span class="foco-versao">5.1.0</span></div>
     <section class="foco-hero"><div class="foco-hero-topo"><span class="foco-label">UM PLANO PARA CADA CONCURSO</span><span class="foco-tag">${esc(c.nome)}</span></div>
       <div class="foco-objetivo"><div><h2>Crie seus jogos.<br>Veja os acertos.</h2><p>Defina seus critérios e seu limite. O LotoLab organiza e confere.</p></div><div class="foco-alvo" aria-label="Meta de ${c.k} dezenas"><strong>${c.k}</strong><span>${c.trevos?"+ 2 trevos":"dezenas"}</span></div></div>
       <button class="acao foco-primary" data-atalho="sugestoes">Criar sugestões <span aria-hidden="true">→</span></button>
