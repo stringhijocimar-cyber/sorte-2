@@ -36,6 +36,7 @@ function review(games,records){
   const hits=rows.map(r=>L.hits(j.modalidade,t,r));
   const distribution=L.distribution(j.modalidade,t);
   result.padroes=L.patternProfile(j.modalidade,t);
+  if(!L.cfg(j.modalidade).colunas&&Array.isArray(t.dezenas))result.faixaSoma=historicalSumRange(t,b.rows.map(x=>({...x,modalidade:j.modalidade})));
   Object.assign(result,{n:hits.length,media:hits.length?L.mean(hits):null,melhor:hits.length?Math.max(...hits):null,recente:hits.length?L.mean(hits.slice(-Math.min(10,hits.length))):null,esperado:distribution.reduce((s,p,i)=>s+p*i,0)});
   const end=j.acompanhamento==='fixo'?null:Number.isFinite(j.concursoAlvo)?j.concursoAlvo:j.deConcurso?Number(j.deConcurso)+Number(j.concursos||1)-1:null;
   const start=j.deConcurso?Number(j.deConcurso):j.concursoAlvo;
@@ -46,6 +47,14 @@ function review(games,records){
   result.motivo=start&&latest&&start>latest?`A participação começa no concurso ${start}. Aguarde os resultados antes de reavaliar.`:!hits.length?'Nenhum resultado válido posterior à data de cadastro dentro da participação do jogo. Aguarde a conferência.':hits.length<60?`${hits.length} concurso${hits.length===1?'':'s'} posterior${hits.length===1?'':'es'} ao cadastro. Amostra curta: mantenha em observação; um resultado isolado não justifica trocar a sequência.`:'O desempenho foi atualizado com os resultados posteriores ao cadastro. A média passada, acima ou abaixo do acaso, não demonstra vantagem para o próximo sorteio nem justifica excluir a sequência.';
  }
  return out;
+}
+function historicalSumRange(j,records){
+ const rows=L.history(j.modalidade,records).rows;
+ const totals=rows.map(r=>r.dezenas).filter(a=>Array.isArray(a)&&a.length===j.dezenas.length).map(a=>a.reduce((s,n)=>s+Number(n),0)).filter(Number.isFinite).sort((a,b)=>a-b);
+ if(totals.length<30)return null;
+ // Intervalo central empírico de 80%, não é previsão de sorteio.
+ const quantile=p=>{const i=(totals.length-1)*p,lo=Math.floor(i),hi=Math.ceil(i);return Math.round(totals[lo]+(totals[hi]-totals[lo])*(i-lo));};
+ return {min:quantile(.1),max:quantile(.9),n:totals.length};
 }
 function indicator(label,value,reference,good,detail=''){
  const state=good===null?'neutral':good?'good':'attention';
@@ -60,8 +69,9 @@ function card(j,r){
   const dezenas=Array.isArray(j.dezenas)?j.dezenas:[];
   const soma=dezenas.reduce((s,n)=>s+(Number.isFinite(Number(n))?Number(n):0),0);
   const hasSum=dezenas.length>0&&!L.cfg(j.modalidade).colunas;
-  const sumReference=hasSum?'Faixa histórica: não calculada':'Não se aplica a esta modalidade';
-  indicators+=indicator('Soma do jogo',hasSum?soma:'—',sumReference,null,'A faixa precisa ser calculada a partir de concursos válidos da mesma modalidade.');
+  const faixa=r.faixaSoma;
+  const sumReference=!hasSum?'Não se aplica':faixa?'Faixa histórica central (80%): '+faixa.min+' a '+faixa.max:'Faixa histórica: amostra insuficiente';
+  indicators+=indicator('Soma do jogo',hasSum?soma:'—',sumReference,hasSum&&faixa?soma>=faixa.min&&soma<=faixa.max:null,faixa?'Referência descritiva de '+faixa.n+' concursos; não prevê resultados.':'São necessários pelo menos 30 concursos válidos comparáveis.');
   indicators+=indicator('Pares e ímpares',p.pares+' pares / '+p.impares+' ímpares','Distribuição do jogo',null);
   indicators+=indicator('Números primos',p.primos,'Quantidade encontrada',null);
   indicators+=indicator('Fibonacci',p.fibonacci,'Quantidade encontrada',null);
