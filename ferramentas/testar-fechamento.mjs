@@ -34,6 +34,11 @@ test('corte exclui futuro e backtest compara 32 jogos antes de cada alvo',()=>{
  const a=L.backtestFechamento43323('lotofacil',rows,{antesDe:40,concursos:5,semente:'corte'});
  const b=L.backtestFechamento43323('lotofacil',rows.slice(0,39),{antesDe:40,concursos:5,semente:'corte'});
  assert.deepEqual(a,b);assert.equal(a.concursos,5);assert.equal(a.jogosPorConcurso,32);
+ assert.equal(a.observacoes.length,5);
+ assert.ok(a.observacoes.every(x=>Number.isInteger(x.referenciasCom11)&&x.referenciasCom11>=0&&x.referenciasCom11<=32));
+ assert.ok(a.observacoes.every(x=>Number.isFinite(x.uniforme.media)&&Number.isFinite(x.uniforme.melhor)));
+ assert.ok(a.uniforme.concursosCom11>=0&&a.uniforme.concursosCom11<=a.concursos);
+ assert.match(a.nota,/32 lotes aleatórios independentes/);
  assert.ok(a.observacoes.every(x=>x.treinoAte<x.concurso&&x.concurso<40));
  assert.throws(()=>L.backtestFechamento43323('lotofacil',rows.slice(0,30)),/31 concursos/);
 });
