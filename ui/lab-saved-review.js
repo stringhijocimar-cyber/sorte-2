@@ -47,11 +47,30 @@ function review(games,records){
  }
  return out;
 }
+function indicator(label,value,reference,good,detail=''){
+ const state=good===null?'neutral':good?'good':'attention';
+ const tag=good===null?'Sem referência':good?'Dentro da faixa':'Fora da faixa';
+ return `<div class="saved-review-indicator ${state}" style="padding:9px 0;border-bottom:1px solid var(--border-color,#5553)"><div style="display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap"><strong>${esc(label)}</strong><span style="border-radius:20px;padding:3px 9px;background:${good===null?'#64748b22':good?'#16834a22':'#c47c1b22'};color:${good===null?'inherit':good?'#21a366':'#d99b35'}">${tag}</span></div><div><b>${esc(value)}</b> — ${esc(reference)}</div>${detail?`<small>${esc(detail)}</small>`:''}</div>`;
+}
 function card(j,r){
  if(!r)return '';
- const p=r.padroes,perfil=p?`<p class="saved-patterns">Perfil do jogo: ${p.pares} pares / ${p.impares} ímpares · ${p.primos} primos · ${p.fibonacci} Fibonacci · maior sequência ${p.maiorSequencia}. Linhas: ${p.linhas.join(' / ')}; colunas: ${p.colunas.join(' / ')}. Descrição, sem chance adicional.</p>`:'';
+ const p=r.padroes;
+ let indicators='';
+ if(p){
+  const dezenas=Array.isArray(j.dezenas)?j.dezenas:[];
+  const soma=dezenas.reduce((s,n)=>s+(Number.isFinite(Number(n))?Number(n):0),0);
+  const hasSum=dezenas.length>0&&!L.cfg(j.modalidade).colunas;
+  const sumReference=hasSum?'Faixa histórica: não calculada':'Não se aplica a esta modalidade';
+  indicators+=indicator('Soma do jogo',hasSum?soma:'—',sumReference,null,'A faixa precisa ser calculada a partir de concursos válidos da mesma modalidade.');
+  indicators+=indicator('Pares e ímpares',p.pares+' pares / '+p.impares+' ímpares','Distribuição do jogo',null);
+  indicators+=indicator('Números primos',p.primos,'Quantidade encontrada',null);
+  indicators+=indicator('Fibonacci',p.fibonacci,'Quantidade encontrada',null);
+  indicators+=indicator('Maior sequência',p.maiorSequencia,'Números consecutivos',null);
+  if(Array.isArray(p.linhas)&&p.linhas.length)indicators+=indicator('Linhas',p.linhas.join(' / '),'Distribuição no volante',null);
+  if(Array.isArray(p.colunas)&&p.colunas.length)indicators+=indicator('Colunas',p.colunas.join(' / '),'Distribuição no volante',null);
+ }
  const symbol=r.acao==='retirar'?'↔':r.acao==='reavaliar'?'↻':'✓';
- return `<section class="saved-review ${r.acao}${r.ativo?'':' inactive'}" data-saved-review="${esc(j.id)}" aria-label="Avaliação da IA deste jogo"><div class="saved-review-heading"><span aria-hidden="true">${symbol}</span><strong>${esc(r.titulo)}</strong><small>${r.ativo?'Na análise':'Fora da análise'}</small></div><p><b>Por quê:</b> ${esc(r.motivo)}</p><details><summary>Ver dados da avaliação</summary><div class="saved-review-metrics"><span>Concursos após cadastro<b>${r.n}</b></span><span>Média de acertos<b>${num(r.media)}</b></span><span>Últimos até 10<b>${num(r.recente)}</b></span><span>Referência ao acaso<b>${num(r.esperado)}</b></span></div>${perfil}<p>Somente resultados válidos, posteriores ao dia de cadastro e dentro da participação declarada. Resultados do mesmo dia não entram nesta avaliação.${r.ultimo?` Base até o concurso ${r.ultimo}.`:''}${r.lacunas?' Há lacunas no histórico disponível.':''} Acertos das dezenas${j.modalidade==='dupla-sena'?' do primeiro sorteio':''}; complementos não entram na média. Nenhuma previsão de prêmio.</p></details><button class="acao secundaria mini" data-alternar-analise="${esc(j.id)}" aria-pressed="${r.ativo}">${r.ativo?'Retirar da análise':'Reincluir na análise'}</button><small class="saved-review-footnote">${r.ativo?'A decisão é sua.':'Este jogo não entra nos comparativos de jogos ativos.'} O jogo e as conferências permanecem salvos.</small><p class="saved-review-error" role="status"></p></section>`;
+ return `<section class="saved-review ${r.acao}${r.ativo?'':' inactive'}" data-saved-review="${esc(j.id)}" aria-label="Avaliação deste jogo"><details class="saved-review-details"><summary class="saved-review-heading"><span aria-hidden="true">${symbol}</span><strong>${esc(r.titulo)}</strong><small>${r.ativo?'Na análise':'Fora da análise'} · Abrir diagnóstico</small></summary><div class="saved-review-indicators">${indicators}</div><p><b>Motivo da recomendação:</b> ${esc(r.motivo)}</p><details><summary>Ver métricas históricas</summary><div class="saved-review-metrics"><span>Concursos após cadastro<b>${r.n}</b></span><span>Média de acertos<b>${num(r.media)}</b></span><span>Últimos até 10<b>${num(r.recente)}</b></span><span>Referência ao acaso<b>${num(r.esperado)}</b></span></div><p>Resultados posteriores ao cadastro e dentro da participação declarada. Estatísticas descritivas não aumentam a probabilidade de prêmio.${r.lacunas?' Há lacunas no histórico.':''}</p></details><button class="acao secundaria mini" data-alternar-analise="${esc(j.id)}" aria-pressed="${r.ativo}">${r.ativo?'Retirar da análise':'Reincluir na análise'}</button><small class="saved-review-footnote">O jogo e as conferências permanecem salvos.</small><p class="saved-review-error" role="status"></p></details></section>`;
 }
 root.LL18SavedReview={active,covers,review,card};
 if(typeof module!=='undefined'&&module.exports)module.exports=root.LL18SavedReview;
