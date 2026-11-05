@@ -50,3 +50,16 @@ test('resultados conflitantes não entram; motivos e IDs são escapados no HTML'
  const j=game({id:'<img src=x>'}),r=R.review([j],[draw(10),draw(10,{dezenas:[11,12,13,14,15,16]})]).get(j);
  assert.equal(r.n,0);assert.doesNotMatch(R.card(j,r),/<img/);
 });
+
+test('diagnóstico começa recolhido e indicadores funcionam para modalidades distintas',()=>{
+ for(const modalidade of ['mega-sena','lotofacil','quina']){
+  const dezenas=modalidade==='lotofacil'?Array.from({length:15},(_,i)=>i+1):modalidade==='quina'?[1,2,3,4,5]:[1,2,3,4,5,6];
+  const j={...game(),modalidade,dezenas},r=R.review([j],[]).get(j),html=R.card(j,r);
+  assert.match(html,/<details class="saved-review-details">/);
+  assert.match(html,/Soma do jogo/);
+  assert.match(html,/Faixa histórica: não calculada/);
+  assert.match(html,/Pares e ímpares/);
+  assert.match(html,/Motivo da recomendação/);
+  assert.match(html,/data-alternar-analise/);
+ }
+});
