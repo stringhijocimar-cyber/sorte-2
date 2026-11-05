@@ -63,3 +63,14 @@ test('diagnóstico começa recolhido e indicadores funcionam para modalidades di
   assert.match(html,/data-alternar-analise/);
  }
 });
+
+test('v5: faixa de soma usa histórico comparável e sinaliza posição do jogo',()=>{
+ const j={...game(),modalidade:'lotofacil',dezenas:Array.from({length:15},(_,i)=>i+1)};
+ const rows=Array.from({length:35},(_,i)=>({modalidade:'lotofacil',concurso:i+1,data:'2025-02-01',dezenas:Array.from({length:15},(_,n)=>n+1+(i%11))}));
+ const r=R.review([j],rows).get(j),html=R.card(j,r);
+ assert.equal(r.faixaSoma.n,35);
+ assert.ok(r.faixaSoma.min<=r.faixaSoma.max);
+ assert.match(html,/Faixa histórica central \(80%\)/);
+ assert.match(html,/Fora da faixa|Dentro da faixa/);
+ assert.match(html,/não prevê resultados/);
+});
