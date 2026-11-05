@@ -31,5 +31,5 @@ A versão Android usa a numeração 5.0.0. O APK da versão anterior 4.26.15 usa
 - [x] Consolidado financeiro de Últimas Conferências.
 - [x] Consolidado financeiro de Resultados.
 - [x] Validar modalidades e valores oficiais de premiação.
-- [ ] Executar testes automatizados e de interface.
-- [ ] Gerar APK de atualização instalável.
+- [x] Executar testes automatizados e de interface.
+- [x] Gerar APK com assinatura compatível para atualização.
