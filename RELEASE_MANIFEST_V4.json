@@ -1,12 +1,12 @@
 {
   "product": "LotoLab",
-  "version": "4.26.13",
-  "versionLabel": "V4.26.13",
+  "version": "5.0.0",
+  "versionLabel": "V5.0.0",
   "sourceBranch": "main",
-  "visualLayer": "Sugestão e aprendizado automáticos",
+  "visualLayer": "Diagnóstico por jogo e conferências por concurso",
   "android": {
-    "versionCode": 50,
-    "versionName": "4.26.13"
+    "versionCode": 53,
+    "versionName": "5.0.0"
   },
   "versionFiles": [
     "VERSION",
@@ -15,7 +15,7 @@
     "android/app/build.gradle"
   ],
   "releaseState": "ready",
-  "notes": "Fechamento Lotofácil 4-3-3-2-3 com 32 jogos, orçamento e avaliação histórica. Estratégia e distribuições integradas aos parâmetros da sugestão principal. Sem vantagem preditiva comprovada.",
+  "notes": "Diagnóstico abaixo da cartela, resumo de apostas em oito modalidades e fechamento da Lotofácil acessível em Sugestões.",
   "editions": [
     {
       "name": "LotoLab 4.3.0",

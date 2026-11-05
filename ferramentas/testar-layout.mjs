@@ -111,8 +111,12 @@ try{
  check(await js(`return S.intLotes['mega-sena'].laboratorio.diagnostico.faixas.escopos.every(s=>s.n===0&&s.linhas.every(x=>x.observado===null&&x.intervaloDiferenca===null))`),'base vazia mantém diagnósticos sem acertos ou incerteza inventados');
  check(await js(`return S.intLotes['mega-sena'].laboratorio.base.n===0&&document.querySelector('.auto-results').textContent.includes('Sem histórico disponível')`),'estado sem histórico permanece explícito e não inventa evidência');
  check(await js(`return document.querySelector('.auto-strategy-diagnosis').textContent.includes('ainda não há concursos elegíveis')&&document.querySelectorAll('[data-strategy-diagnosis]')[0].children[2].textContent==='—'`),'comparativo sem amostra exibe indisponível, sem média ou líder inventados');
- await js(`S.modalidade='mega-sena';S.resultados=${JSON.stringify(rows('mega-sena'))};const last=ultimoResultado(S.modalidade),base={modalidade:'mega-sena',data:'2020-01-01',acompanhamento:'fixo',deConcurso:1,dezenas:[1,2,3,4,5,6],conferencias:[{concurso:last.concurso,data:last.data,dezenas:last.dezenas,acertos:2}]};S.jogos=[{...base,id:'manual-review',lote:'manual-review',metodo:'manual'},{...base,id:'ai-ended',lote:'ai-ended',metodo:'automatico',acompanhamento:'unico',concursoAlvo:1}];S.teimosinhas=[{...base,id:'legacy-review',acompanhamento:undefined,deConcurso:last.concurso,concursos:3}];Guardar.gravar('jogos',S.jogos);Guardar.gravar('teimosinhas',S.teimosinhas);irParaTela('jogos',{lateral:true});`);
- check(await js(`return document.querySelectorAll('[data-saved-review]').length===3&&document.querySelector('[data-saved-review="ai-ended"]').textContent.includes('Retirar da análise')&&document.querySelector('[data-saved-review="legacy-review"]').textContent.includes('duplicata')`),'todos os jogos recebem revisão individual, incluindo legado, encerrado e duplicata');
+ await js(`S.modalidade='mega-sena';S.resultados=${JSON.stringify(rows('mega-sena'))};const last=ultimoResultado(S.modalidade),fora=Array.from({length:60},(_,i)=>i+1).filter(n=>!last.dezenas.includes(n)),base={modalidade:'mega-sena',data:'2020-01-01',acompanhamento:'fixo',deConcurso:1,dezenas:[...last.dezenas.slice(0,4),...fora.slice(0,2)],conferencias:[{concurso:last.concurso,data:last.data,dezenas:last.dezenas,acertos:4}]};last.origem='caixa';last.rateio=[{faixa:3,premio:20.5}];S.jogos=[{...base,id:'manual-review',lote:'manual-review',metodo:'manual'},{...base,id:'ai-ended',lote:'ai-ended',metodo:'automatico',acompanhamento:'unico',concursoAlvo:1}];S.teimosinhas=[{...base,id:'legacy-review',acompanhamento:undefined,deConcurso:last.concurso,concursos:3}];Guardar.gravar('jogos',S.jogos);Guardar.gravar('teimosinhas',S.teimosinhas);irParaTela('jogos',{lateral:true});`);
+ check(await js(`return !document.querySelector('[data-saved-review]')`),'diagnóstico oculto nas cartelas fechadas');
+ for(const [id,expected] of [['ai-ended','Retirar da análise'],['legacy-review','duplicata'],['manual-review','Soma do jogo']]){
+  await tap('[data-abrir-jogo="'+id+'"]');
+  check(await js(`const card=document.querySelector('[data-saved-review="${id}"]');return card.querySelector('details').open&&card.textContent.includes('${expected}')&&!!card.parentElement.querySelector('.cartela')`),'diagnóstico abaixo da cartela · '+id);
+ }
  await tap('[data-alternar-analise="manual-review"]');
  check(await js(`return S.jogos[0].analiseAtiva===false&&Guardar.ler('jogos',[])[0].analiseAtiva===false&&jogosContraConcurso(ultimoResultado('mega-sena')).total===2&&S.jogos[0].conferencias.length===1&&document.querySelector('[data-saved-review="manual-review"]').textContent.includes('Reincluir na análise')`),'retirada salva a escolha, exclui dos comparativos e preserva conferências');
  await js(`S.jogos=Guardar.ler('jogos',[]);pintar();`);
@@ -126,6 +130,15 @@ try{
   check(await js(`return document.documentElement.scrollWidth<=visualViewport.width+1`),'avaliação dos salvos sem overflow em 360px · '+tema);
   await shot('meus-jogos-avaliacao-'+tema+'.png','[data-saved-review="manual-review"]');
  }
+ await tap('.registro-aposta>summary');
+ await js(`const f=document.querySelector('[data-aposta-jogo="manual-review"]');f.elements.valor.value='6,50';f.requestSubmit();`);
+ check(await js(`const r=document.querySelector('.linha-conf .resumo-financeiro').textContent;return /20,50/.test(r)&&/6,50/.test(r)&&/14,00/.test(r)&&r.includes('Acompanhamento')&&Guardar.ler('jogos',[])[0].apostasPagas[ultimoResultado(S.modalidade).concurso]===650`),'Últimas conferências separa prêmio, custo, saldo e jogo virtual');
+ await js(`irParaTela('resultados',{lateral:true});`);
+ check(await js(`const r=document.querySelector('.concurso .resumo-financeiro').textContent;return /20,50/.test(r)&&/6,50/.test(r)&&/14,00/.test(r)&&r.includes('Acompanhamento')`),'Resultados exibe o mesmo consolidado do concurso');
+ await js(`S.modalidade='lotofacil';S.resultados=${JSON.stringify(rows('lotofacil').slice(-40))};irParaTela('sugestoes',{lateral:true});document.querySelector('#ll-fechamento-opcoes').open=true;document.querySelector('[data-ll-action="fechamento-gerar"]').click();`);
+ await until(()=>js(`return !!document.querySelector('[data-ll-action="fechamento-salvar"]')`),'fechamento em Sugestões');
+ await tap('[data-ll-action="fechamento-salvar"]');
+ check(await js(`const jogos=Guardar.ler('jogos',[]).filter(j=>j.modalidade==='lotofacil');return jogos.length===32&&new Set(jogos.map(j=>j.dezenas.join())).size===32&&jogos.every(j=>j.concursoAlvo===ultimoResultado('lotofacil').concurso+1)`),'fechamento de Sugestões salva os 32 jogos para conferência');
  const metrics={versao:await js(`return LL18.VERSION`),checks,capturas:9,fonte:'Resultados reais do acervo local, últimos 180 concursos. Não certifica última atualização oficial.'};
  writeFileSync(join(output,'validacao-layout.json'),JSON.stringify(metrics,null,2)+'\n');
  console.log(`${checks} verificações de layout passaram; 9 capturas reais.`);

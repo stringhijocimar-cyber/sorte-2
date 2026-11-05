@@ -960,12 +960,12 @@ td{padding:6px 7px;border-bottom:1px solid var(--trama)}
 <link rel="stylesheet" href="ui/experiencia-v4-14.css?v=4.22.1">
 <link rel="stylesheet" href="ui/modalidades-v4-15.css?v=4.22.1">
 <link rel="stylesheet" href="ui/recorrencia-v4-17.css?v=4.22.1">
-<link rel="stylesheet" href="ui/lab-v4-18.css?v=4.26.13">
+<link rel="stylesheet" href="ui/lab-v4-18.css?v=5.0.0">
 <link rel="stylesheet" href="ui/auto-v4-21.css?v=4.22.1">
-<link rel="stylesheet" href="ui/conferencia-v4-22.css?v=4.26.13">
+<link rel="stylesheet" href="ui/conferencia-v4-22.css?v=5.0.0">
 <link rel="stylesheet" href="ui/lotolab-ui-v4-23.css?v=4.23.0" data-lotolab-ui-refino="4.23.0">
-<link rel="stylesheet" href="ui/lotolab-ui-v4-24.css?v=4.26.13" data-lotolab-ui-experiencia="4.24.0">
-<link rel="stylesheet" href="ui/acompanhamento-v4-25.css?v=4.26.13">
+<link rel="stylesheet" href="ui/lotolab-ui-v4-24.css?v=5.0.0" data-lotolab-ui-experiencia="4.24.0">
+<link rel="stylesheet" href="ui/acompanhamento-v4-25.css?v=5.0.0">
 </head>
 <body>
 <header>
@@ -1044,16 +1044,16 @@ td{padding:6px 7px;border-bottom:1px solid var(--trama)}
   <div class="corpo"><div class="alca"></div><div id="corpo-avisos"></div></div>
 </div>
 
-<script src="ui/lab-core.js?v=4.26.13"></script>
-<script src="ui/lab-strategies.js?v=4.26.13"></script>
-<script src="ui/lab-recommendation.js?v=4.26.13"></script>
-<script src="ui/lab-auto.js?v=4.26.13"></script>
-<script src="ui/lab-ui.js?v=4.26.13"></script>
+<script src="ui/lab-core.js?v=5.0.0"></script>
+<script src="ui/lab-strategies.js?v=5.0.0"></script>
+<script src="ui/lab-recommendation.js?v=5.0.0"></script>
+<script src="ui/lab-auto.js?v=5.0.0"></script>
+<script src="ui/lab-ui.js?v=5.0.0"></script>
 <script src="ui/lab-check.js?v=4.25.0"></script>
-<script src="ui/lab-auto-ui.js?v=4.26.13"></script>
-<script src="ui/lab-saved-review.js?v=4.26.13"></script>
-<script src="ui/lab-storage.js?v=4.26.13"></script>
-<script src="ui/lab-backup.js?v=4.26.13"></script>
+<script src="ui/lab-auto-ui.js?v=5.0.0"></script>
+<script src="ui/lab-saved-review.js?v=5.0.0"></script>
+<script src="ui/lab-storage.js?v=5.0.0"></script>
+<script src="ui/lab-backup.js?v=5.0.0"></script>
 <script>
 "use strict";
 
@@ -2645,7 +2645,7 @@ function numerosComplementares(valor,min,max,limite){
   return ds.sort((a,b)=>a-b);
 }
 function complementosResultado(bruto,m){
-  const r={};
+  const r=LL18.complementosSorteio(m,bruto);
   if(m==='mais-milionaria'){
     const t=numerosComplementares(bruto.trevosSorteados??bruto.trevos,2,2,6);if(t)r.trevos=t;
   }
@@ -2655,7 +2655,8 @@ function complementosResultado(bruto,m){
   return r;
 }
 function faltamComplementos(r){
-  return (r.modalidade==='mais-milionaria'&&!r.trevos)||(r.modalidade==='dupla-sena'&&!r.dezenasSegundoSorteio);
+  return (r.modalidade==='mais-milionaria'&&!r.trevos)||(r.modalidade==='dupla-sena'&&!r.dezenasSegundoSorteio)||
+    (r.modalidade==='dia-de-sorte'&&!r.mes)||(r.modalidade==='timemania'&&!r.timeNome&&!r.time);
 }
 function lerTrevos(texto,obrigatorio=false){
   const t=String(texto??'').trim();
@@ -2686,6 +2687,8 @@ function metaComplementoHtml(cf){
   return '';
 }
 function resultadoExtrasHtml(r){
+  if(r.modalidade==='dia-de-sorte'&&r.mes)return `<p class="int-help">Mês da Sorte · ${esc(LL18.meses[r.mes-1])}</p>`;
+  if(r.modalidade==='timemania'&&r.timeNome)return `<p class="int-help">Time do Coração · ${esc(r.timeNome)}</p>`;
   if(r.modalidade==='mais-milionaria')return r.trevos?trevosHtml(r.trevos):'<p class="int-help">Trevos do resultado ainda não disponíveis.</p>';
   if(r.modalidade==='dupla-sena')return '<div class="extras-volante"><b>2º sorteio</b>'+(r.dezenasSegundoSorteio?'<div class="dezenas">'+r.dezenasSegundoSorteio.map(d=>'<span class="dz marcada">'+pad(d)+'</span>').join('')+'</div>':'<p class="int-help">Dados ainda não disponíveis.</p>')+'</div>';
   return '';
@@ -2913,6 +2916,7 @@ T.sugestoes = () => {
   const m=S.modalidade,c=MODALIDADES[m],o=intConfig(m),base=intHistorico(m,S.resultados,o.janela);
   const calculando=intPendente?.token===intTrabalho&&intPendente.modalidade===m;
   return `<p class="int-help">O sistema prepara a sugestão, testa estratégias e confere os resultados automaticamente.</p><div id="auto-status" class="auto-status" role="status" aria-live="polite"></div>
+    ${/*<aposta>*/""}${LL18UI.fechamentoSuggestions(m)}${/*</aposta>*/""}
     <div id="int-lote">${S.intLotes[m]?intRenderLote(S.intLotes[m]):""}</div>
     <details class="auto-settings" ${o.personalizacaoAberta??!S.intLotes[m]?'open':''}><summary>Personalizar formato e orçamento</summary>
     <section class="carta int-form ux-form"><div class="int-section-title"><h2>Configure seu jogo</h2><span>${esc(c.nome)}</span></div>
@@ -3364,44 +3368,111 @@ function resumoDeMeusJogos(meus){
     <button class="acao" id="j-conferir" style="margin-top:12px">Conferir os jogos agora</button>
     ${(S.avisoJogos && S.avisoJogos.modalidade === S.modalidade)
       ? `<div class="nota">${esc(S.avisoJogos.texto)}</div>` : ""}
-    <div class="nota">Compara cada jogo com o concurso que ele declara, ou com o
-    último resultado guardado. Mostra quantas dezenas coincidiram e quais — não
-    calcula prêmio nem faixa, porque quem confere bilhete é a Caixa.</div>
+    <div class="nota">Abra uma cartela para consultar o diagnóstico e o histórico do jogo.</div>
   </div>` + ultimasConferencias();
 }
 
-/* "Últimas conferências" do mockup: uma linha por concurso conferido, com
-   quantos jogos entraram e qual foi o melhor. Atravessa modalidades de
-   propósito — é o histórico do que o app fez, e o que ele fez na Quina ontem
-   não deixa de ter acontecido porque agora se está olhando a Lotofácil. */
-function ultimasConferencias(limite){
-  const porConcurso = new Map();
-  for(const j of S.jogos.concat(S.teimosinhas || [])){
-    for(const cf of (j.conferencias || [])){
-      const chave = `${j.modalidade}:${cf.concurso}`;
-      const atual = porConcurso.get(chave) ||
-        {modalidade:j.modalidade, concurso:cf.concurso, data:cf.data, jogos:0, melhor:0};
-      atual.jogos++;
-      if(cf.acertos > atual.melhor) atual.melhor = cf.acertos;
-      porConcurso.set(chave, atual);
+/* Um jogo conta uma vez por concurso. Os dois sorteios da Dupla Sena
+   compõem a mesma participação, inclusive quando ambos têm acertos. */
+function conferenciasAgrupadas(modalidade,concursos){
+  const grupos=new Map();
+  for(const j of S.jogos.concat(S.teimosinhas||[])){
+    if(!Object.hasOwn(MODALIDADES,j.modalidade)||(modalidade&&j.modalidade!==modalidade))continue;
+    for(const cf of resumoAcompanhamento(j).conf){
+      const concurso=Number(cf.concurso);
+      if(!Number.isSafeInteger(concurso)||concurso<1||(concursos&&!concursos.has(concurso)))continue;
+      const chave=j.modalidade+':'+concurso;
+      if(!grupos.has(chave))grupos.set(chave,{modalidade:j.modalidade,concurso,data:cf.data,jogos:new Map()});
+      const grupo=grupos.get(chave),id=j.id==null?j:String(j.id);
+      const anterior=grupo.jogos.get(id);
+      if(!anterior||Object.hasOwn(j.apostasPagas||{},concurso))grupo.jogos.set(id,{j,cf});
     }
   }
-  const linhas = [...porConcurso.values()]
-    .sort((a, b) => String(b.data || "").localeCompare(String(a.data || "")) ||
-                    b.concurso - a.concurso)
-    .slice(0, limite || 6);
-  if(!linhas.length) return "";
+  return grupos;
+}
+
+/*<aposta>*/
+function resumoFinanceiro(grupo,resultado){
+  if(!grupo)return '';
+  const registrar=()=>({jogos:0,premiados:0,pendentes:0,premio:0,premiosSemValor:0,custo:0,custosSemValor:0});
+  const reais=registrar(),acompanhados=registrar();
+  for(const {j,cf} of grupo.jogos.values()){
+    const paga=Object.hasOwn(j.apostasPagas||{},grupo.concurso);
+    const total=paga?reais:acompanhados;
+    const draw={...cf,...resultado,concurso:grupo.concurso,modalidade:grupo.modalidade};
+    const {premiado,premioCentavos}=LL18.savedAward(grupo.modalidade,j,draw);
+    total.jogos++;
+    if(premiado===true)total.premiados++;
+    if(premiado===null)total.pendentes++;
+    if(!paga)continue;
+    const custo=j.apostasPagas[grupo.concurso];
+    if(Number.isSafeInteger(custo)&&custo>0)total.custo+=custo;
+    else total.custosSemValor++;
+    if(premioCentavos===null)total.premiosSemValor++;
+    else total.premio+=premioCentavos;
+  }
+  const emFaixa=t=>inf(t.premiados)+' de '+inf(t.jogos)+(t.pendentes?' · '+inf(t.pendentes)+' pendente(s)':'');
+  const valor=(centavos,faltantes)=>!faltantes&&Number.isSafeInteger(centavos)?brl(centavos/100):'Indisponível';
+  return `<section class="resumo-financeiro" aria-label="Resumo das apostas">
+    ${reais.jogos?`<dl>
+      <div><dt>Apostas em faixa</dt><dd>${emFaixa(reais)}</dd></div>
+      <div><dt>Prêmio pelo rateio</dt><dd>${valor(reais.premio,reais.premiosSemValor)}</dd></div>
+      <div><dt>Total gasto</dt><dd>${valor(reais.custo,reais.custosSemValor)}</dd></div>
+      <div><dt>Saldo</dt><dd>${valor(reais.premio-reais.custo,reais.premiosSemValor+reais.custosSemValor)}</dd></div>
+    </dl>`:'<p>Sem apostas registradas neste concurso.</p>'}
+    ${acompanhados.jogos?`<p>Acompanhamento · ${emFaixa(acompanhados)} em faixa</p>`:''}
+  </section>`;
+}
+
+function centavosDeAposta(valor){
+  const texto=valor.trim();
+  if(!texto)return null;
+  const decimal=text=>/^\d+(?:[.,]\d{1,2})?$/.test(text);
+  const numero=decimal(texto)?texto.replace(',','.'):
+    /^\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?$/.test(texto)?texto.replace(/\./g,'').replace(',','.'):'';
+  const centavos=Math.round(Number(numero)*100);
+  if(!Number.isSafeInteger(centavos)||centavos<=0)throw Error('Informe um valor positivo em reais, com até duas casas decimais.');
+  return centavos;
+}
+
+function registroDeAposta(j,ultima){
+  const concurso=Number(ultima?.concurso||j.concursoAlvo||Math.max(proximoConcursoSalvo(),Number(j.deConcurso)||1));
+  const pago=j.apostasPagas?.[concurso],registrada=Object.hasOwn(j.apostasPagas||{},concurso);
+  return `<details class="registro-aposta">
+    <summary>${registrada?'Editar aposta registrada':'Registrar aposta paga'}</summary>
+    <form data-aposta-jogo="${esc(j.id)}">
+      <label class="campo">Concurso <input name="concurso" type="number" min="1" step="1" value="${concurso}" required></label>
+      <label class="campo">Valor pago neste concurso (R$)<input name="valor" inputmode="decimal" maxlength="22"
+        value="${pago==null?'':nf(pago/100,2)}" placeholder="Ex. 3,50"></label>
+      <p class="int-help">Informe o valor do bilhete para este concurso. Você também pode salvar o registro e informar o valor depois.</p>
+      <div class="botoes">
+        <button class="acao secundaria mini" type="submit">Salvar registro</button>
+        <button class="acao contorno mini" type="submit" name="remover" ${registrada?'':'hidden'}>Remover registro</button>
+      </div>
+      <p class="int-help" role="status"></p>
+    </form>
+  </details>`;
+}
+/*</aposta>*/
+
+function ultimasConferencias(limite){
+  const porConcurso=conferenciasAgrupadas();
+  const linhas=[...porConcurso.values()]
+    .sort((a,b)=>String(b.data||'').localeCompare(String(a.data||''))||b.concurso-a.concurso)
+    .slice(0,limite||6);
+  if(!linhas.length)return '';
   return `<section class="carta" style="margin-top:12px">
     <div class="panel-title"><h3>Últimas conferências</h3>
-      <span>${inf(porConcurso.size)} concurso${porConcurso.size>1?"s":""}</span></div>
-    <div class="conferencias">${linhas.map(l => `
+      <span>${inf(porConcurso.size)} concurso${porConcurso.size>1?'s':''}</span></div>
+    <div class="conferencias">${linhas.map(l=>`
       <div class="linha-conf">
-        <span class="quando">${esc(l.data || "—")}</span>
+        <span class="quando">${esc(l.data||'—')}</span>
         <span class="qual">${esc(MODALIDADES[l.modalidade].nome)}
-          <small>concurso ${esc(l.concurso)}</small></span>
-        <span class="quanto2">${inf(l.jogos)} jogo${l.jogos>1?"s":""}
-          <small>melhor: ${l.melhor}</small></span>
-      </div>`).join("")}</div>
+          <small>concurso ${l.concurso}</small></span>
+        <span class="quanto2">${inf(l.jogos.size)} jogo${l.jogos.size>1?'s':''}
+          <small>melhor: ${[...l.jogos.values()].reduce((m,{cf})=>Math.max(m,cf.acertos||0,cf.acertosSegundo||0),0)}</small></span>
+        ${/*<aposta>*/""}${resumoFinanceiro(l,resultadosDe(l.modalidade).find(r=>r.concurso===l.concurso))}${/*</aposta>*/""}
+      </div>`).join('')}</div>
   </section>`;
 }
 
@@ -3429,13 +3500,11 @@ T.jogos = () => {
       `<strong>${esc(MODALIDADES[k].nome)}</strong> (${n})`).join(", ")}.
     Troque no topo da tela para ver.</div>`;
 
-  if(!meus.length) return vazio() + rodape;
+  if(!meus.length) return vazio() + ultimasConferencias() + rodape;
 
   const porLote = {};
   meus.forEach(j => (porLote[j.lote] = porLote[j.lote] || []).push(j));
-  const avaliacoes=[...S.avaliacaoJogos.values()],ativos=meus.filter(LL18SavedReview.active).length;
-  const revisao=`<section class="carta saved-review-summary"><h2>Avaliação da IA · meus jogos</h2><p>${ativos} de ${meus.length} jogos na análise · ${avaliacoes.filter(r=>r.acao==='manter').length} para manter · ${avaliacoes.filter(r=>r.acao==='retirar').length} para retirar · ${avaliacoes.filter(r=>r.acao==='reavaliar').length} para revisar.</p><p class="int-help">Todos os seus jogos recebem uma avaliação, inclusive manuais, sugestões, fixos e teimosinhas. A decisão aparece em cada cartão e é atualizada com os resultados disponíveis. Retirar da análise exclui dos comparativos de jogos ativos; as conferências e os avisos continuam, e você pode reincluir depois.</p></section>`;
-  return revisao + resumoDeMeusJogos(meus) + Object.entries(porLote).reverse().map(([lote, jogos])=>{
+  return resumoDeMeusJogos(meus) + Object.entries(porLote).reverse().map(([lote, jogos])=>{
     const p = jogos[0];
     return `<h2 style="margin:14px 0 8px">${esc(MODALIDADES[p.modalidade].nome)} ·
       ${esc(p.data)} · ${esc(nomeDoMetodo(p.metodo))}</h2>
@@ -3517,11 +3586,26 @@ function lerAcompanhamento(botaoId){
 function proximoConcursoSalvo(){return (ultimoResultado(S.modalidade)?.concurso||0)+1;}
 
 
+function complementoDoJogo(j){
+  let campo;
+  if(j.modalidade==='dia-de-sorte'){
+    campo=`<label class="campo">Mês da Sorte<select name="complemento">
+      <option value="">Escolha o mês do bilhete</option>${LL18.meses.map((m,i)=>
+        `<option value="${i+1}" ${Number(j.mes)===i+1?'selected':''}>${m}</option>`).join('')}
+    </select></label>`;
+  }else if(j.modalidade==='timemania'){
+    campo=`<label class="campo">Time do Coração (nome/UF)<input name="complemento" maxlength="85"
+      placeholder="Ex. GRÊMIO/RS" value="${esc(j.timeNome||'')}"></label>`;
+  }else return '';
+  return `<form class="extras-volante" data-complemento-jogo="${esc(j.id)}">${campo}
+    <button class="acao secundaria mini" type="submit">Salvar complemento</button><p class="int-help" role="status"></p></form>`;
+}
+
 function ficha(j){
   const c = MODALIDADES[j.modalidade];
   const conferencias = resumoAcompanhamento(j).conf;
   const ultima = conferencias.find(cf=>cf.concurso===S.concursoDoJogo?.[j.id])||conferencias[conferencias.length-1];
-  const aberto = S.jogoAberto === j.id;
+  const aberto = S.jogoAberto != null && String(S.jogoAberto) === String(j.id);
   const resultado=ultima&&(S.resultados.find(r=>r.modalidade===j.modalidade&&r.concurso===ultima.concurso)||ultima);
   const cf=resultado?metaValidarConferencia(metaConferencia(j,resultado)):null;
   /* Clicar no jogo abre a cartela dele. A ficha compacta serve para varrer a
@@ -3540,7 +3624,6 @@ function ficha(j){
         : `<span class="selo seu">não conferido</span>`}
     </div>
     ${painelAcompanhamento(j)}
-    ${LL18SavedReview.card(j,S.avaliacaoJogos?.get(j))}
     <div class="dezenas">${j.dezenas.map(d=>{
       const acertou = ultima && ultima.dezenas.includes(d);
       return `<span class="dz ${acertou?"acertou":ultima?"errou":""}">${pad(d)}</span>`;
@@ -3557,12 +3640,15 @@ function ficha(j){
     ${!aberto ? "" : `<div style="margin-top:12px">
       ${recBotao(j.modalidade,j.dezenas)}
       ${c.trevos?campoTrevos('j-trevos-'+j.id,(j.trevos||[]).join(' '),true)+'<button class="acao secundaria mini" data-salvar-trevos="'+esc(j.id)+'">Salvar trevos deste jogo</button><p id="j-trevos-erro-'+esc(j.id)+'" role="status"></p>':''}
+      ${complementoDoJogo(j)}
       ${conferencias.length>1?`<label class="campo acomp-review">Rever concurso<select data-rever-jogo="${esc(j.id)}" aria-label="Concurso da cartela">${conferencias.slice().reverse().map(x=>`<option value="${x.concurso}" ${x.concurso===ultima.concurso?'selected':''}>${x.concurso} · ${x.acertos} acertos${x.data?' · '+esc(x.data):''}</option>`).join('')}</select></label>`:''}
       ${cartela(j.modalidade, j.dezenas, {
         sorteadas: ultima ? ultima.dezenas : null,
         selo: ultima ? `concurso ${ultima.concurso}` : "não conferido"})}
       ${j.modalidade==='dupla-sena'&&resultado?.dezenasSegundoSorteio?cartela(j.modalidade,j.dezenas,{sorteadas:resultado.dezenasSegundoSorteio,selo:`concurso ${ultima.concurso} · 2º sorteio`}):''}
       ${ultima ? legendaCartela : ""}
+      ${LL18SavedReview.card(j,S.avaliacaoJogos?.get(j),true)}
+      ${/*<aposta>*/""}${registroDeAposta(j,ultima)}${/*</aposta>*/""}
       ${analiseDoJogo(j)}
       ${conferencias.length > 1 ? `<div class="rolagem" style="margin-top:10px"><table>
         <tr><th>concurso</th><th>coincidências</th><th>sorteio</th></tr>
@@ -3985,7 +4071,7 @@ T.inicio = () => {
   const avisos=S.avisos.filter(a=>!a.lido).length;
   const meus=S.jogos.filter(j=>j.modalidade===m).length,idade=idadeDoHistorico(m);
   return `<div class="foco-inicio ux-inicio" style="--foco-cor:${FOCO_CORES[m]}">
-    <div class="foco-boasvindas"><div><span class="foco-label">BEM-VINDO AO SEU LABORATÓRIO</span><${podeVoltar()?'h2':'h1'}>Seu jogo,<br>bem planejado.</${podeVoltar()?'h2':'h1'}></div><span class="foco-versao">4.26.13</span></div>
+    <div class="foco-boasvindas"><div><span class="foco-label">BEM-VINDO AO SEU LABORATÓRIO</span><${podeVoltar()?'h2':'h1'}>Seu jogo,<br>bem planejado.</${podeVoltar()?'h2':'h1'}></div><span class="foco-versao">5.0.0</span></div>
     <section class="foco-hero"><div class="foco-hero-topo"><span class="foco-label">UM PLANO PARA CADA CONCURSO</span><span class="foco-tag">${esc(c.nome)}</span></div>
       <div class="foco-objetivo"><div><h2>Crie seus jogos.<br>Veja os acertos.</h2><p>Defina seus critérios e seu limite. O LotoLab organiza e confere.</p></div><div class="foco-alvo" aria-label="Meta de ${c.k} dezenas"><strong>${c.k}</strong><span>${c.trevos?"+ 2 trevos":"dezenas"}</span></div></div>
       <button class="acao foco-primary" data-atalho="sugestoes">Criar sugestões <span aria-hidden="true">→</span></button>
@@ -6570,7 +6656,7 @@ function normalizarCaixa(bruto, modalidade){
     ganhadores: parseInt(f.numeroDeGanhadores, 10) || 0,
     premio: Number(f.valorPremio) || 0
   })).filter(f => Number.isFinite(f.faixa));
-  if(rateio.length) r.rateio = rateio;
+  if(rateio.length) Object.assign(r,{rateio,origemRateio:'caixa'});
 
   /* Cidades dos ganhadores. Vem só para a faixa principal, e nem sempre vem. */
   const cidades = (bruto.listaMunicipioUFGanhadores || []).map(g => ({
@@ -6624,7 +6710,7 @@ function normalizarEspelho(bruto, modalidade){
     ganhadores: parseInt(f.ganhadores || f.vencedores, 10) || 0,
     premio: Number(f.valorPremio || f.premio) || 0
   }));
-  if(prem.length) r.rateio = prem;
+  if(prem.length) Object.assign(r,{rateio:prem,origemRateio:'espelho'});
   const locais = (bruto.localGanhadores || []).map(g => ({
     municipio: String(g.municipio || g.cidade || "").trim(),
     uf: String(g.uf || g.estado || "").trim(),
@@ -6687,7 +6773,12 @@ function normalizarRepositorio(bruto, modalidade, concurso){
   if(!achado) throw new Error(`concurso ${concurso} ainda não está no arquivo`);
   if(!Array.isArray(achado.dezenas) || achado.dezenas.length !== c.k)
     throw new Error(`o arquivo trouxe ${(achado.dezenas||[]).length} dezenas, esperava ${c.k}`);
-  return Object.assign({}, achado, complementosResultado(achado,modalidade), {modalidade, origem:"repositorio"});
+  return resultadoDoRepositorio(achado,modalidade);
+}
+
+function resultadoDoRepositorio(raw,modalidade){
+  const origemRateio=raw.origemRateio??raw.origem??'indisponivel';
+  return {...raw,...complementosResultado(raw,modalidade),modalidade,origem:'repositorio',origemRateio};
 }
 
 /* Baixa o histórico inteiro de uma vez. É o que torna desnecessário pedir
@@ -6705,7 +6796,7 @@ async function baixarHistoricoDoRepositorio(modalidade){
     Number.isFinite(x.concurso));
   if(!validos.length) throw new Error("nenhum concurso válido no arquivo");
   const proveniencia={fonte:'repositorio',urlFonte:`${REPO_DADOS}/${modalidade}.json`,consultadoEm:new Date().toISOString(),ultimoSolicitado:false,confirmacaoDireta:false};
-  return validos.map(x => Object.assign({}, x, {modalidade, origem:"repositorio",proveniencia}));
+  return validos.map(x=>({...resultadoDoRepositorio(x,modalidade),proveniencia}));
 }
 
 const FONTES = [
@@ -6924,7 +7015,15 @@ function guardarResultados(novos){
       const anterior=working[i];
       // Uma fonte sem campos adicionais não apaga detalhes já confirmados do mesmo sorteio.
       const mesmos=anterior.dezenas.slice().sort((a,b)=>a-b).join()===r.dezenas.slice().sort((a,b)=>a-b).join();
-      const candidate=mesmos?{...anterior,...r,data:r.data||anterior.data}:r;
+      const candidate=mesmos?{...anterior,...r,data:r.data||anterior.data}:{...r};
+      if(mesmos&&anterior.rateio?.length){
+        const origemAnterior=anterior.origemRateio??anterior.origem??'indisponivel';
+        const origemNova=r.origemRateio??r.origem;
+        if(!r.rateio?.length||(origemAnterior==='caixa'&&origemNova!=='caixa')){
+          candidate.rateio=anterior.rateio;
+          candidate.origemRateio=origemAnterior;
+        }
+      }
       const revision=typeof LL18!=='undefined'?LL18.historyRevision(r.modalidade,anterior,candidate,instant):null;
       const revisoes=[...(anterior.revisoes||[]),...(revision?[revision]:[])];
       const consultas=[...(anterior.consultasRecentes||[]),...(anterior.proveniencia?[anterior.proveniencia]:[]),...(r.proveniencia?[r.proveniencia]:[])];
@@ -6979,7 +7078,7 @@ const LL18_BRIDGE={
   saveGames:b=>{
     if(!MODALIDADES[b.modalidade]||b.jogos.some(t=>(t.trevos?.length||2)>2))return false;
     const id='L418'+Date.now().toString(36),criadoEm=new Date().toISOString(),novos=b.jogos.map((t,i)=>({...t,id:id+'-'+i,modalidade:b.modalidade,metodo:'int-lab418',data:hoje(),lote:id,conferencias:[],concursoAlvo:b.concursoAlvo,inteligencia:{versao:'4.18',semente:b.semente,modelo:b.modelo}})).map(j=>({...j,registroProspectivo:LL18.freezeSavedGame(b.modalidade,j,b.geradoAte,criadoEm)}));
-    const todos=S.jogos.concat(novos);if(!Guardar.gravar('jogos',todos))return false;S.jogos=todos;return true;
+    const todos=S.jogos.concat(novos);if(!Guardar.gravar('jogos',todos))return false;S.jogos=todos;espelharParaSegundoPlano();return true;
   }
 };
 
@@ -9097,10 +9196,14 @@ T.resultados = () => {
       nada, a fonte pode estar fora do ar — a conferência e a análise continuam
       valendo, mas sobre os concursos que já estão aqui.</div>`;
 
+  const exibidos=meus.slice(0,40);
+  /*<aposta>*/
+  const conferencias=conferenciasAgrupadas(S.modalidade,new Set(exibidos.map(r=>r.concurso)));
+  /*</aposta>*/
   const cartoes = !meus.length
     ? `<div class="vazio">Nenhum resultado desta modalidade ainda.<br>
         Sem histórico, a bancada e o placar não têm o que medir.</div>`
-    : `<div class="concursos">${meus.slice(0,40).map(r => `
+    : `<div class="concursos">${exibidos.map(r => `
         <article class="concurso ${ganhadoresDoConcurso(r).estado}${
             S.concursoAberto === r.concurso ? " aberto" : ""}"
           data-abrir-concurso="${esc(r.concurso)}"
@@ -9118,6 +9221,7 @@ T.resultados = () => {
           <div class="concurso-detalhe">${seloGanhadores(r, {cidades:false})}
             <span class="pilula ${r.origem==="caixa"?"oficial":"manual"}"
               >${esc(r.origem || "manual")}</span></div>
+          ${/*<aposta>*/""}${resumoFinanceiro(conferencias.get(r.modalidade+':'+r.concurso),r)}${/*</aposta>*/""}
           <span class="chevron" aria-hidden="true">
             <svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></span>
           ${S.concursoAberto === r.concurso
@@ -9684,11 +9788,59 @@ function acoesNovas(){
     S.concursoDoJogo=S.concursoDoJogo||{};S.concursoDoJogo[el.dataset.reverJogo]=Number(el.value);pintar();
   });
   document.querySelectorAll('[data-alternar-analise]').forEach(b=>b.onclick=()=>{
-    const id=b.dataset.alternarAnalise,chave=S.jogos.some(j=>j.id===id)?'jogos':'teimosinhas';
-    const jogo=(S[chave]||[]).find(j=>j.id===id);if(!jogo)return;
+    const id=b.dataset.alternarAnalise,chave=S.jogos.some(j=>String(j.id)===id)?'jogos':'teimosinhas';
+    const jogo=(S[chave]||[]).find(j=>String(j.id)===id);if(!jogo)return;
     const novos=S[chave].map(j=>j===jogo?{...j,analiseAtiva:!LL18SavedReview.active(j)}:j);
     if(!Guardar.gravar(chave,novos)){b.closest('.saved-review').querySelector('.saved-review-error').textContent='Não foi possível salvar a decisão. Tente novamente.';return;}
     S[chave]=novos;pintar();
+  });
+
+  /*<aposta>*/
+  document.querySelectorAll('[data-aposta-jogo]').forEach(form=>{
+    const id=form.dataset.apostaJogo,chave=S.jogos.some(j=>String(j.id)===id)?'jogos':'teimosinhas';
+    const jogo=(S[chave]||[]).find(j=>String(j.id)===id);
+    if(!jogo)return;
+    const fields=form.elements,status=form.querySelector('[role="status"]');
+    fields.concurso.onchange=()=>{
+      const n=Number(fields.concurso.value),pago=jogo.apostasPagas?.[n];
+      fields.valor.value=pago==null?'':nf(pago/100,2);
+      fields.remover.hidden=!Object.hasOwn(jogo.apostasPagas||{},n);
+    };
+    form.onsubmit=e=>{
+      e.preventDefault();
+      try{
+        const concurso=Number(fields.concurso.value),remover=e.submitter===fields.remover;
+        const resultado=resultadosDe(jogo.modalidade).find(r=>r.concurso===concurso);
+        const jaConferido=resumoAcompanhamento(jogo).conf.some(r=>Number(r.concurso)===concurso);
+        if(!Number.isSafeInteger(concurso)||concurso<1||
+          (!jaConferido&&!jogoCobreResultado(jogo,resultado||{modalidade:jogo.modalidade,concurso,data:hoje()})))
+          throw Error('Escolha um concurso coberto por este jogo.');
+        const apostasPagas={...jogo.apostasPagas};
+        if(remover)delete apostasPagas[concurso];
+        else apostasPagas[concurso]=centavosDeAposta(fields.valor.value);
+        const novos=S[chave].map(j=>j===jogo?{...j,apostasPagas}:j);
+        if(!Guardar.gravar(chave,novos))throw Error('Não foi possível salvar neste aparelho.');
+        S[chave]=novos;
+        pintar();
+      }catch(error){status.textContent=error.message;}
+    };
+  });
+  /*</aposta>*/
+
+  document.querySelectorAll('[data-complemento-jogo]').forEach(form=>form.onsubmit=e=>{
+    e.preventDefault();
+    const id=form.dataset.complementoJogo,chave=S.jogos.some(j=>String(j.id)===id)?'jogos':'teimosinhas';
+    const jogo=(S[chave]||[]).find(j=>String(j.id)===id),status=form.querySelector('[role="status"]');
+    if(!jogo)return;
+    const entrada=form.elements.complemento.value;
+    const complemento=jogo.modalidade==='dia-de-sorte'?
+      LL18.complementosSorteio(jogo.modalidade,{mes:entrada}).mes:LL18.nomeDoTime(entrada);
+    if(!complemento){status.textContent='Preencha o complemento como consta no bilhete.';return;}
+    const campo=jogo.modalidade==='dia-de-sorte'?'mes':'timeNome';
+    const novos=S[chave].map(j=>j===jogo?{...j,[campo]:complemento}:j);
+    if(!Guardar.gravar(chave,novos)){status.textContent='Não foi possível salvar neste aparelho.';return;}
+    S[chave]=novos;
+    pintar();
   });
 
   document.querySelectorAll('[data-excluir-jogo]').forEach(b=>b.onclick=()=>{

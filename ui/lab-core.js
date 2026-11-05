@@ -1,7 +1,7 @@
 /* LotoLab 4.18: núcleo descritivo puro, compartilhado pelo worker e pelos testes. */
 (function(root){
 'use strict';
-const VERSION='4.26.13';
+const VERSION='5.0.0';
 const aviso='Este índice mede semelhança com o histórico. Não representa a probabilidade matemática de a combinação ser sorteada no próximo concurso.';
 const rules={
  'mega-sena':{nome:'Mega-Sena',N:60,k:6,min:6,max:20,base:1,preco:6,faixas:[6,5,4],slug:'megasena'},
@@ -41,18 +41,47 @@ const intersection=(a,b)=>pop(a[0]&b[0])+pop(a[1]&b[1])+pop(a[2]&b[2])+pop(a[3]&
 const hits=(m,t,r)=>intersection(mask(tokens(m,t)),mask(tokens(m,r)));
 function randomTicket(m,r,shape){const c=cfg(m);let t=c.colunas?{colunas:Array.from({length:7},(_,i)=>sample(Array.from({length:10},(_,x)=>x),shape?.colunas?.[i]?.length||1,r))}:{dezenas:sample(Array.from({length:c.N},(_,i)=>i+c.base),shape?.dezenas?.length||c.min,r)};if(c.extra==='trevos')t.trevos=sample([1,2,3,4,5,6],shape?.trevos?.length||2,r);if(['mes','time'].includes(c.extra))t[c.extra]=1+Math.floor(r()*c.extraN);return t;}
 function isoDate(s){s=String(s??'');if(/^\d{2}\/\d{2}\/\d{4}$/.test(s))s=s.slice(6)+'-'+s.slice(3,5)+'-'+s.slice(0,2);if(!/^\d{4}-\d{2}-\d{2}$/.test(s)||!Number.isFinite(Date.parse(s))||new Date(s).toISOString().slice(0,10)!==s)throw Error('Data inválida.');return s;}
-function normalizeDraw(m,raw){const c=cfg(m),concurso=Number(raw.concurso??raw.numero);if(!Number.isSafeInteger(concurso)||concurso<1)throw Error('Número de concurso inválido.');const ex={trevos:raw.trevos??raw.trevosSorteados,mes:raw.mes,time:raw.time};if(m==='dia-de-sorte'&&ex.mes===undefined&&typeof raw.nomeTimeCoracaoMesSorte==='string'){const i=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'].indexOf(raw.nomeTimeCoracaoMesSorte.toLowerCase());if(i>=0)ex.mes=i+1;}
- const t=validateTicket(m,{dezenas:raw.dezenas??raw.listaDezenas,colunas:raw.colunas,...ex},{resultado:true}),date=raw.data??raw.dataApuracao;
- const r={...raw,...t,modalidade:m,concurso,data:date?isoDate(date):null,origem:String(raw.origem||'importado')};if(c.colunas)r.dezenas=t.colunas.map(a=>a[0]);const second=raw.dezenasSegundoSorteio??raw.listaDezenasSegundoSorteio;if(c.dupla&&second!==undefined)r.dezenasSegundoSorteio=validateTicket(m,{dezenas:second},{resultado:true}).dezenas;r.completo=(!c.extra||r[c.extra]!==undefined)&&(!c.dupla||!!r.dezenasSegundoSorteio);return r;
+const meses=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+function nomeDoTime(valor){
+ if(typeof valor!=='string')return '';
+ const nome=valor.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase()
+   .replace(/[^A-Z0-9/]+/g,' ').replace(/ *\/ */g,'/').trim();
+ return /^[A-Z0-9][A-Z0-9 ]{0,79}\/[A-Z]{2}$/.test(nome)?nome:'';
+}
+function complementosSorteio(m,raw){
+ if(m==='dia-de-sorte'){
+  const valor=Number(raw.mes),nome=String(raw.nomeTimeCoracaoMesSorte??'').trim().toLowerCase();
+  const mes=Number.isInteger(valor)&&valor>=1&&valor<=12?valor:meses.findIndex(x=>x.toLowerCase()===nome)+1;
+  if(mes)return {mes};
+ }
+ if(m==='timemania'){
+  const timeNome=nomeDoTime(raw.timeNome??raw.nomeTimeCoracaoMesSorte);
+  const time=Number(raw.time);
+  return {...(timeNome?{timeNome}:{}),...(Number.isInteger(time)&&time>=1&&time<=80?{time}:{})};
+ }
+ return {};
+}
+function normalizeDraw(m,raw){
+ const c=cfg(m),concurso=Number(raw.concurso??raw.numero);
+ if(!Number.isSafeInteger(concurso)||concurso<1)throw Error('Número de concurso inválido.');
+ const extras=complementosSorteio(m,raw);
+ const t=validateTicket(m,{dezenas:raw.dezenas??raw.listaDezenas,colunas:raw.colunas,trevos:raw.trevos??raw.trevosSorteados,...extras},{resultado:true});
+ const date=raw.data??raw.dataApuracao;
+ const r={...raw,...extras,...t,modalidade:m,concurso,data:date?isoDate(date):null,origem:String(raw.origem||'importado')};
+ if(c.colunas)r.dezenas=t.colunas.map(a=>a[0]);
+ const second=raw.dezenasSegundoSorteio??raw.listaDezenasSegundoSorteio;
+ if(c.dupla&&second!==undefined)r.dezenasSegundoSorteio=validateTicket(m,{dezenas:second},{resultado:true}).dezenas;
+ r.completo=(!c.extra||r[c.extra]!=null||(m==='timemania'&&!!extras.timeNome))&&(!c.dupla||!!r.dezenasSegundoSorteio);
+ return r;
 }
 function history(m,records,op={}){
  const c=cfg(m),antes=op.antesDe??null;if(antes!==null&&(!Number.isSafeInteger(antes)||antes<1))throw Error('Corte de concurso inválido.');if(op.sorteio!==undefined&&(![1,2].includes(op.sorteio)||(op.sorteio===2&&!c.dupla)))throw Error('Extração inválida.');
  const map=new Map(),conflicts=new Set();let invalidos=0,duplicatas=0;
  for(const raw of records){const own=raw.modalidade,especial=c.especial&&['mega-sena','megasena'].includes(own)&&raw.especial==='mega-da-virada';if(own!==m&&own!==c.slug&&!especial)continue;if(c.especial&&own!==m&&raw.especial!=='mega-da-virada')continue;if(antes!==null&&Number(raw.concurso??raw.numero)>=antes)continue;
-  try{let r=normalizeDraw(m,raw);if(op.sorteio===2){if(!r.dezenasSegundoSorteio)throw Error('Segundo sorteio ausente');r={...r,dezenas:r.dezenasSegundoSorteio};}const old=map.get(r.concurso);if(old){duplicatas++;if(JSON.stringify(tokens(m,old))!==JSON.stringify(tokens(m,r))||(old.data&&r.data&&old.data!==r.data)||[c.extra,'dezenasSegundoSorteio'].filter(Boolean).some(k=>old[k]!==undefined&&r[k]!==undefined&&JSON.stringify(old[k])!==JSON.stringify(r[k])))conflicts.add(r.concurso);else map.set(r.concurso,normalizeDraw(m,{...old,...r,data:r.data||old.data}));}else map.set(r.concurso,r);}catch(e){invalidos++;}}
+  try{let r=normalizeDraw(m,raw);if(op.sorteio===2){if(!r.dezenasSegundoSorteio)throw Error('Segundo sorteio ausente');r={...r,dezenas:r.dezenasSegundoSorteio};}const old=map.get(r.concurso);if(old){duplicatas++;if(JSON.stringify(tokens(m,old))!==JSON.stringify(tokens(m,r))||(old.data&&r.data&&old.data!==r.data)||[c.extra,'timeNome','dezenasSegundoSorteio'].filter(Boolean).some(k=>old[k]!==undefined&&r[k]!==undefined&&JSON.stringify(old[k])!==JSON.stringify(r[k])))conflicts.add(r.concurso);else map.set(r.concurso,normalizeDraw(m,{...old,...r,data:r.data||old.data}));}else map.set(r.concurso,r);}catch(e){invalidos++;}}
  const gaps=[];let bloco=0;const rows=[...map.values()].filter(r=>!conflicts.has(r.concurso)).sort((a,b)=>a.concurso-b.concurso).map((r,i,a)=>{if(i&&r.concurso!==a[i-1].concurso+1){bloco++;if(!c.especial)gaps.push([a[i-1].concurso+1,r.concurso-1]);}return {...r,bloco};});
  const meta={n:rows.length,primeiro:rows[0]?.concurso??null,ultimo:rows.at(-1)?.concurso??null,antesDe:antes,sorteio:op.sorteio||1,invalidos,duplicatas,conflitos:conflicts.size,lacunas:sum(gaps.map(([a,b])=>b-a+1)),intervalosAusentes:gaps,semComplemento:rows.filter(r=>!r.completo).length,semData:rows.filter(r=>!r.data).length,inicioAusente:rows.length&&!c.especial?rows[0].concurso-1:0,semRegistroAteCorte:antes!==null&&rows.length&&!c.especial?Math.max(0,antes-1-rows.at(-1).concurso):0,especial:!!c.especial};
- meta.assinatura=hash(JSON.stringify(rows.map(r=>[r.concurso,r.data,tokens(m,r),r[c.extra],r.dezenasSegundoSorteio,r.precoBase,r.faixasDetalhadas]))).toString(16);return {modalidade:m,rows,meta,masks:rows.map(r=>mask(tokens(m,r)))};
+ meta.assinatura=hash(JSON.stringify(rows.map(r=>[r.concurso,r.data,tokens(m,r),r[c.extra],r.timeNome,r.dezenasSegundoSorteio,r.precoBase,r.faixasDetalhadas]))).toString(16);return {modalidade:m,rows,meta,masks:rows.map(r=>mask(tokens(m,r)))};
 }
 function historyHealth(b){
  const {rows,meta}=b,origens=new Map();let anterior=null,datasForaDeOrdem=0,consecutivosFinais=rows.length?1:0;
@@ -352,13 +381,13 @@ function portfolioDiagnosis(m,tickets,op={}){
 }
 function resultSnapshot(m,raw){
  const r=normalizeDraw(m,raw),c=cfg(m),out={concurso:r.concurso,data:r.data,...validateTicket(m,r,{resultado:true})};
- for(const k of ['dezenasSegundoSorteio','precoBase','faixasDetalhadas','faixas','origem','fonte','proveniencia'])if(r[k]!==undefined)out[k]=r[k];
+ for(const k of ['timeNome','dezenasSegundoSorteio','precoBase','faixasDetalhadas','faixas','rateio','origem','fonte','proveniencia'])if(r[k]!==undefined)out[k]=r[k];
  return JSON.parse(JSON.stringify(out));
 }
 function historyRevision(m,previous,next,instant){
  const a=resultSnapshot(m,previous),b=resultSnapshot(m,next);
  // Fonte/consulta novas, sem mudança no resultado, não são uma correção.
- const content=x=>JSON.stringify([x.concurso,x.data,x.dezenas,x.colunas,x.trevos,x.mes,x.time,x.dezenasSegundoSorteio,x.precoBase,x.faixasDetalhadas,x.faixas]);
+ const content=x=>JSON.stringify([x.concurso,x.data,x.dezenas,x.colunas,x.trevos,x.mes,x.time,x.timeNome,x.dezenasSegundoSorteio,x.precoBase,x.faixasDetalhadas,x.faixas,x.rateio]);
  if(content(a)===content(b))return null;
  return {registradoEm:instant,anterior:a,novaIdentidade:hash(content(b)).toString(16),nota:'Alteração recebida; versão anterior preservada, sem autenticação automática.'};
 }
@@ -376,15 +405,92 @@ function historyProvenance(b){
 }
 function equivalents(m,t){const c=cfg(m);return c.colunas?t.colunas.reduce((v,a)=>v*a.length,1):comb(t.dezenas.length,c.min)*(c.extra==='trevos'?comb(t.trevos?.length||2,2):1);}
 const currentCost=(m,t)=>cfg(m).preco*equivalents(m,validateTicket(m,t));
-function financial(m,t,draw){const c=cfg(m),r=normalizeDraw(m,draw),h=hits(m,t,r),price=r.precoBase;if(!Number.isFinite(price)||price<=0)return {disponivel:false,motivo:'Preço histórico ausente.',acertos:h};if(c.extra&&(t[c.extra]===undefined||r[c.extra]===undefined)||c.dupla&&!r.dezenasSegundoSorteio)return {disponivel:false,motivo:'Complemento ou segundo sorteio ausente.',acertos:h};if(!Array.isArray(r.faixasDetalhadas)||!r.faixasDetalhadas.length)return {disponivel:false,motivo:'Rateio detalhado ausente.',acertos:h};let prize=0;
- const tiers=c.extra==='trevos'?[[6,[2]],[6,[0,1]],[5,[2]],[5,[0,1]],[4,[2]],[4,[0,1]],[3,[2]],[3,[1]],[2,[2]],[2,[1]]]:c.faixas.map(x=>[x,null]),draws=c.dupla?[r,{...r,dezenas:r.dezenasSegundoSorteio}]:[r];
- for(let di=0;di<draws.length;di++)for(const [tier,extra] of tiers){const hh=hits(m,t,draws[di]);let mult;if(c.colunas){let a=[1];for(let i=0;i<7;i++){const hit=t.colunas[i].includes(r.colunas[i][0])?1:0,next=Array(a.length+1).fill(0);a.forEach((v,j)=>{next[j]+=v*(t.colunas[i].length-hit);next[j+1]+=v*hit;});a=next;}mult=a[tier]||0;}else mult=c.min===c.k?comb(hh,tier)*comb(t.dezenas.length-hh,c.min-tier):Number(hh===tier);if(extra){const e=t.trevos.filter(x=>r.trevos.includes(x)).length;mult*=sum(extra.map(h=>comb(e,h)*comb(t.trevos.length-e,2-h)));}if(!mult)continue;const f=r.faixasDetalhadas.find(f=>f.acertos===tier&&(extra===null||JSON.stringify(f.extras??[f.extra])===JSON.stringify(extra))&&(f.sorteio??1)===di+1);if(!f||!Number.isFinite(f.premio)||f.premio<0)return {disponivel:false,motivo:'Faixa de prêmio ausente.',acertos:h};prize+=mult*f.premio;}
- if(['mes','time'].includes(c.extra)&&t[c.extra]===r[c.extra]){const f=r.faixasDetalhadas.find(f=>f.complemento===c.extra);if(!f||!Number.isFinite(f.premio)||f.premio<0)return {disponivel:false,motivo:'Prêmio complementar ausente.'};if(c.extra==='mes'&&t.dezenas.length>c.min&&!Number.isInteger(f.multiplicidade))return {disponivel:false,motivo:'Multiplicidade do mês não documentada.'};prize+=(f.multiplicidade??1)*f.premio;}
- const custo=price*equivalents(m,t);return {disponivel:true,acertos:h,custo,premio:prize,liquido:prize-custo};}
+function acertosPorCombinacao(m,t,r){
+ const c=cfg(m);
+ if(c.colunas){
+  return t.colunas.reduce((counts,col,i)=>{
+   const match=Number(col.includes(r.colunas[i][0])),next=Array(counts.length+1).fill(0);
+   counts.forEach((n,h)=>{next[h]+=n*(col.length-match);next[h+1]+=n*match;});
+   return next;
+  },[1]);
+ }
+ const hh=hits(m,t,r);
+ return Array.from({length:c.k+1},(_,h)=>c.min===c.k?
+   comb(hh,h)*comb(t.dezenas.length-hh,c.min-h):Number(hh===h));
+}
+const faixasMilionaria=[[6,[2]],[6,[0,1]],[5,[2]],[5,[0,1]],[4,[2]],[4,[0,1]],[3,[2]],[3,[1]],[2,[2]],[2,[1]]];
+function prizeBands(m,t,r){
+ const c=cfg(m),bands=[];
+ let complete=true;
+ const tiers=c.extra==='trevos'?faixasMilionaria:c.faixas.map(h=>[h,null]);
+ const draws=[r];
+ if(c.dupla){
+  if(r.dezenasSegundoSorteio)draws.push({...r,dezenas:r.dezenasSegundoSorteio});
+  else complete=false;
+ }
+ const trevos=t.trevos&&r.trevos?t.trevos.filter(x=>r.trevos.includes(x)).length:null;
+ draws.forEach((draw,i)=>{
+  const counts=acertosPorCombinacao(m,t,draw);
+  tiers.forEach(([acertos,extras],j)=>{
+   let quantidade=counts[acertos];
+   if(!quantidade)return;
+   if(extras){
+    if(trevos===null){complete=false;return;}
+    quantidade*=sum(extras.map(h=>comb(trevos,h)*comb(t.trevos.length-trevos,2-h)));
+   }
+   if(quantidade)bands.push({faixa:i*tiers.length+j+1,sorteio:i+1,acertos,extras,quantidade});
+  });
+ });
+ if(c.extra==='trevos'&&trevos===null)complete=false;
+ if(c.extra==='mes'||c.extra==='time'){
+  const tNome=nomeDoTime(t.timeNome),rNome=nomeDoTime(r.timeNome);
+  const porNome=c.extra==='time'&&tNome&&rNome;
+  const a=porNome?tNome:t[c.extra],b=porNome?rNome:r[c.extra];
+  if(a==null||b==null)complete=false;
+  else if(a===b)bands.push({faixa:tiers.length+1,complemento:c.extra,quantidade:c.extra==='mes'?equivalents(m,t):1});
+ }
+ return {bands,complete};
+}
+function savedAward(m,t,draw){
+ try{
+  t={...validateTicket(m,t),timeNome:t.timeNome};
+  const r=normalizeDraw(m,draw),{bands,complete}=prizeBands(m,t,r);
+  const premiado=bands.length?true:complete?false:null;
+  const rateioOficial=(r.origemRateio??r.origem)==='caixa'&&Array.isArray(r.rateio)&&r.rateio.length>0;
+  if(!rateioOficial||!complete)return {premiado,premioCentavos:null};
+  let total=0;
+  for(const band of bands){
+   const faixas=r.rateio.filter(f=>f.faixa===band.faixa);
+   const valor=faixas.length===1?faixas[0].premio:null;
+   // Rateio zero com faixa sem ganhadores não informa o valor deste jogo.
+   if(!Number.isFinite(valor)||valor<=0)return {premiado,premioCentavos:null};
+   total+=Math.round(valor*100)*band.quantidade;
+  }
+  return {premiado,premioCentavos:Number.isSafeInteger(total)?total:null};
+ }catch{
+  return {premiado:null,premioCentavos:null};
+ }
+}
+function financial(m,t,draw){
+ const r=normalizeDraw(m,draw),acertos=hits(m,t,r),price=r.precoBase;
+ if(!Number.isFinite(price)||price<=0)return {disponivel:false,motivo:'Preço histórico ausente.',acertos};
+ const {bands,complete}=prizeBands(m,t,r);
+ if(!complete)return {disponivel:false,motivo:'Complemento ou segundo sorteio ausente.',acertos};
+ if(!Array.isArray(r.faixasDetalhadas)||!r.faixasDetalhadas.length)return {disponivel:false,motivo:'Rateio detalhado ausente.',acertos};
+ let premio=0;
+ for(const b of bands){
+  const f=r.faixasDetalhadas.find(f=>b.complemento?f.complemento===b.complemento:
+    f.acertos===b.acertos&&(b.extras===null||JSON.stringify(f.extras??[f.extra])===JSON.stringify(b.extras))&&(f.sorteio??1)===b.sorteio);
+  if(!f||!Number.isFinite(f.premio)||f.premio<0)return {disponivel:false,motivo:'Faixa de prêmio ausente.',acertos};
+  premio+=(b.complemento?(f.multiplicidade??b.quantidade):b.quantidade)*f.premio;
+ }
+ const custo=price*equivalents(m,t);
+ return {disponivel:true,acertos,custo,premio,liquido:premio-custo};
+}
 function financialMetrics(rows){const valid=rows.filter(x=>x.disponivel);if(valid.length!==rows.length||!rows.length)return {disponivel:false,cobertura:rows.length?valid.length/rows.length:0,motivo:'ROI indisponível: preço, rateio e complementos completos são obrigatórios em todo o recorte.'};let acc=0,peak=0,dd=0,dry=0,maxDry=0;const curve=[];for(const r of rows){acc+=r.liquido;peak=Math.max(peak,acc);dd=Math.max(dd,peak-acc);dry=r.premio===0?dry+1:0;maxDry=Math.max(maxDry,dry);curve.push(acc);}const custo=sum(rows.map(r=>r.custo)),premio=sum(rows.map(r=>r.premio));return {disponivel:true,cobertura:1,custo,premio,liquido:premio-custo,roi:(premio-custo)/custo,drawdown:dd,sequenciaSemPremio:maxDry,curva:curve};}
 function monteCarlo(m,t,op={}){t=validateTicket(m,t);const n=op.amostras??10000;if(!Number.isInteger(n)||n<1000||n>100000)throw Error('Use 1.000–100.000 simulações.');const seed=String(op.semente||'simulacao-418'),random=rng(seed),c=cfg(m),dist=Array(c.k+1).fill(0),target=tokens(m,t),gm=mask(target),groups=Array.from({length:Math.min(5,c.k,target.length)},(_,i)=>({tamanho:i+1,tokens:target.slice(0,i+1),vezes:0,atraso:0,maiorAusencia:0}));let last=-1,maxAbs=0,repeated=0;
  for(let i=0;i<n;i++){const d=c.colunas?{colunas:Array.from({length:7},()=>[Math.floor(random()*10)])}:{dezenas:sample(Array.from({length:c.N},(_,i)=>i+c.base),c.k,random)},dm=mask(tokens(m,d)),h=intersection(gm,dm);dist[h]++;if(h===c.k){repeated++;if(last>=0)maxAbs=Math.max(maxAbs,i-last-1);last=i;}for(const g of groups)if(intersection(mask(g.tokens),dm)===g.tamanho){g.vezes++;g.atraso=0;}else{g.atraso++;g.maiorAusencia=Math.max(g.maiorAusencia,g.atraso);}}
  return {versao:VERSION,modalidade:m,jogo:t,semente:seed,n,simulado:true,faixas:dist.map((vezes,h)=>({acertos:h,vezes,percentual:100*vezes/n,ic:wilson(vezes,n),probabilidade:distribution(m,t)[h]})),coberturaCompleta:{vezes:repeated,maiorIntervaloSemCobertura:repeated>1?maxAbs:null,ausenciaAtual:last>=0?n-last-1:null},grupos:groups.map(g=>({...g,grupo:g.tokens.map(d=>c.colunas?`${Math.floor(d/10)+1}:${d%10}`:d+c.base)})),nota:'Sorteios uniformes simulados, nunca gravados como resultados reais. Cada grupo listado é específico; não representa todos os grupos desse tamanho.'};}
-root.LL18={VERSION,aviso,rules,cfg,sum,mean,sd,comb,hash,rng,sample,nums,parseTicket,validateTicket,tokens,key,mask,intersection,hits,randomTicket,normalizeDraw,isoDate,history,historyHealth,binomialMass,fisherExact,frequencyDiagnosis,distribution,wilson,percentile,quantile,intervals,counts,structural,modalityProfile,profileSummary,frequency,patternProfile,coverageCycles,patternSummary,patternVector,patternModel,patternDistance,analyze,criterionNames,vector,center,distance,reference,unrank,groupPage,portfolio,portfolioDiagnosis,resultSnapshot,historyRevision,historyProvenance,equivalents,currentCost,financial,financialMetrics,monteCarlo};
+root.LL18={VERSION,aviso,rules,cfg,sum,mean,sd,comb,hash,rng,sample,nums,parseTicket,validateTicket,tokens,key,mask,intersection,hits,randomTicket,meses,nomeDoTime,complementosSorteio,normalizeDraw,isoDate,history,historyHealth,binomialMass,fisherExact,frequencyDiagnosis,distribution,wilson,percentile,quantile,intervals,counts,structural,modalityProfile,profileSummary,frequency,patternProfile,coverageCycles,patternSummary,patternVector,patternModel,patternDistance,analyze,criterionNames,vector,center,distance,reference,unrank,groupPage,portfolio,portfolioDiagnosis,resultSnapshot,historyRevision,historyProvenance,equivalents,currentCost,savedAward,financial,financialMetrics,monteCarlo};
 if(typeof module!=='undefined'&&module.exports)module.exports=root.LL18;
 })(globalThis);

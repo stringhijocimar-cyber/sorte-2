@@ -44,6 +44,10 @@ html[data-tema="claro"] .ll-lab{--ll-acento:color-mix(in srgb,var(--ll-cor) 48%,
 .ll-bar{height:4px;min-width:45px;background:var(--linha);border-radius:3px;margin-top:6px}.ll-bar i{display:block;height:100%;border-radius:3px;background:var(--ll-acento)}
 .ll-lab details{border:1px solid var(--linha);border-radius:14px;padding:12px;margin:12px 0}
 .ll-lab summary{cursor:pointer;min-height:32px;font-size:.84rem;line-height:1.5}
+.ll-fechamento-sugestoes>details{border:0;padding:0;margin:0}
+.ll-fechamento-sugestoes>details>summary{min-height:52px;font-size:1rem;color:var(--tinta)}
+.ll-fechamento-sugestoes>details>summary span{display:block;margin-top:5px;color:var(--secundaria);font-size:.875rem}
+.ll-fechamento-sugestoes .ll-grid{grid-template-columns:1fr}
 .ll-actions{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0}.ll-actions button{padding:9px 13px;border:1px solid var(--linha);border-radius:12px;background:transparent;color:var(--ll-acento)}
 .ll-game{border-top:1px solid var(--linha);padding:18px 0 8px}.ll-game-title{display:flex;justify-content:space-between;gap:8px;color:var(--ll-acento);font-size:.82rem}
 .ll-lab code{overflow-wrap:anywhere;font-size:.76rem}.ll-report{border-top:1px solid var(--linha);margin-top:24px;padding-top:8px}

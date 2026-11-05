@@ -81,5 +81,5 @@ test('painel explica denominadores e jogo salvo recebe perfil sem alterar decis√
  const R=require('../ui/lab-saved-review.js'),j={id:1,modalidade:'mega-sena',...ticket,data:'2025-01-01',acompanhamento:'fixo',deConcurso:1};
  const review=R.review([j],[draw(1)]).get(j);
  assert.deepEqual(review.padroes,L.patternProfile('mega-sena',ticket));assert.equal(review.acao,'manter');
- assert.match(R.card(j,review),/Perfil do jogo/);
+ assert.match(R.card(j,review),/Soma do jogo.*Fibonacci/);
 });

@@ -20,16 +20,16 @@
 
 ## Situação
 
-A versão 5.0 é um **nome de desenvolvimento**. A versão Android e o APK somente receberão esse número após testes de regressão, sincronização web/Android e verificação da assinatura de atualização. Não alterar prematuramente `VERSION`, manifestos ou `versionCode`.
+A versão Android usa a numeração 5.0.0. O APK da versão anterior 4.26.15 usa o código Android 52 e o certificado permanente fixado no projeto. A 5.0.0 usa o código Android 53 e a mesma identidade de pacote.
 
 ## Entregas incrementais
 
 - [x] Diagnóstico recolhido em Meus Jogos.
 - [x] Indicadores descritivos para modalidades com dezenas.
 - [x] Faixa central de soma por histórico comparável (mínimo 30 concursos).
-- [ ] Posicionar diagnóstico diretamente abaixo da cartela expandida.
-- [ ] Consolidado financeiro de Últimas Conferências.
-- [ ] Consolidado financeiro de Resultados.
-- [ ] Validar modalidades e valores oficiais de premiação.
+- [x] Posicionar diagnóstico diretamente abaixo da cartela expandida.
+- [x] Consolidado financeiro de Últimas Conferências.
+- [x] Consolidado financeiro de Resultados.
+- [x] Validar modalidades e valores oficiais de premiação.
 - [ ] Executar testes automatizados e de interface.
 - [ ] Gerar APK de atualização instalável.

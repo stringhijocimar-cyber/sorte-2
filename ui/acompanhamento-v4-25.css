@@ -58,3 +58,23 @@
 .saved-review.retirar{border-left-color:var(--acumulou-tinta)}.saved-review.reavaliar{border-left-color:var(--secundaria)}
 .saved-review-heading{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.saved-review-heading>span{font-size:1.3rem;line-height:1}.saved-review-heading strong{font-size:.9rem}.saved-review-heading small{margin-left:auto;color:var(--secundaria);font-size:.7rem}
 .saved-review p,.saved-review details{font-size:.78rem;line-height:1.55;margin:8px 0}.saved-review summary{cursor:pointer}.saved-review-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:12px 0}.saved-review-metrics span{font-size:.71rem;color:var(--secundaria)}.saved-review-metrics b{display:block;color:var(--tinta);font-size:1rem}.saved-review button{min-height:44px;margin:8px 0}.saved-review-footnote{display:block;font-size:.7rem;line-height:1.5;color:var(--secundaria)}.saved-review-error:empty{display:none}.saved-review.inactive{border-left-style:dashed}.saved-review-summary p{line-height:1.55}
+
+.saved-review-indicator{padding:8px 0;border-bottom:1px solid var(--linha)}
+.saved-review-indicator>div{display:flex;align-items:baseline;gap:4px 10px;flex-wrap:wrap}
+.saved-review-indicator>div:first-child{justify-content:space-between}
+.saved-review-indicator small,.saved-review-indicator>div+div span{color:var(--secundaria)}
+.saved-review-status{border-radius:16px;padding:2px 8px;background:var(--linha);font-weight:700}
+.saved-review-indicator.good .saved-review-status{color:var(--ganhou-tinta)}
+.saved-review-indicator.attention .saved-review-status{color:var(--acumulou-tinta)}
+
+.resumo-financeiro{min-width:0;color:var(--tinta);font-size:.82rem;margin:8px 0 2px}
+.linha-conf>.resumo-financeiro{grid-column:1/-1;margin:0}
+.resumo-financeiro dl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin:0}
+.resumo-financeiro dl>div{min-width:0;padding:6px 8px;border:1px solid var(--linha);border-radius:8px;overflow-wrap:anywhere}
+.resumo-financeiro dt,.resumo-financeiro p{color:var(--secundaria);font-size:.75rem}
+.resumo-financeiro dd{margin:3px 0 0;font-weight:700}
+.resumo-financeiro p{margin:5px 0 0}
+.registro-aposta{padding:10px 0;margin:8px 0;border-block:1px solid var(--linha)}
+.registro-aposta summary{cursor:pointer;font-weight:650}
+.registro-aposta form{margin-top:10px}
+.registro-aposta [role=status]:empty,.extras-volante [role=status]:empty{display:none}
