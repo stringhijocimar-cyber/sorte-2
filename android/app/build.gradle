@@ -8,8 +8,8 @@ android {
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         // versionCode sobe a cada versão Android publicada.
-        versionCode 50
-        versionName "4.26.13"
+        versionCode 53
+        versionName "5.0.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         resourceConfigurations += ['pt-rBR', 'en']
         aaptOptions {

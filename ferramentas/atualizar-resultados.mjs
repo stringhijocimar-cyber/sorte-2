@@ -20,6 +20,7 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import L from "../ui/lab-core.js";
 
 const RAIZ = join(dirname(fileURLToPath(import.meta.url)), "..");
 const PASTA = join(RAIZ, "dados");
@@ -73,7 +74,7 @@ function numerosComplementares(valor,min,max,limite){
   return ds.sort((a,b)=>a-b);
 }
 function complementosResultado(bruto,m){
-  const r={};
+  const r=L.complementosSorteio(m,bruto);
   if(m==='mais-milionaria'){
     const t=numerosComplementares(bruto.trevosSorteados??bruto.trevos,2,2,6);if(t)r.trevos=t;
   }
@@ -83,10 +84,11 @@ function complementosResultado(bruto,m){
   return r;
 }
 function faltamComplementos(r){
-  return (r.modalidade==='mais-milionaria'&&!r.trevos)||(r.modalidade==='dupla-sena'&&!r.dezenasSegundoSorteio);
+  return (r.modalidade==='mais-milionaria'&&!r.trevos)||(r.modalidade==='dupla-sena'&&!r.dezenasSegundoSorteio)||
+    (r.modalidade==='dia-de-sorte'&&!r.mes)||(r.modalidade==='timemania'&&!r.timeNome&&!r.time);
 }
 
-function converter(bruto, modalidade) {
+function converter(bruto, modalidade, origem = "caixa") {
   const cfg = MODALIDADES[modalidade];
   const dezenas = (bruto.listaDezenas || [])
     .map((x) => parseInt(String(x), 10))
@@ -101,7 +103,7 @@ function converter(bruto, modalidade) {
     data: dataBr(bruto.dataApuracao),
     dezenas: dezenas.sort((a, b) => a - b),
     modalidade,
-    origem: "caixa",
+    origem,
   };
   Object.assign(r,complementosResultado(bruto,modalidade));
   const rateio = (bruto.listaRateioPremio || []).map((f) => ({
@@ -110,7 +112,7 @@ function converter(bruto, modalidade) {
     ganhadores: parseInt(f.numeroDeGanhadores, 10) || 0,
     premio: Number(f.valorPremio) || 0,
   })).filter((f) => Number.isFinite(f.faixa));
-  if (rateio.length) r.rateio = rateio;
+  if (rateio.length) Object.assign(r,{rateio,origemRateio:origem});
 
   const cidades = (bruto.listaMunicipioUFGanhadores || []).map((g) => ({
     municipio: String(g.municipio || "").trim(),
@@ -171,6 +173,8 @@ function daFormaDoEspelho(j) {
     dataApuracao: j.data || j.dataApuracao,
     listaDezenas: dezenas,
     trevosSorteados:j.trevosSorteados??j.trevos,
+    nomeTimeCoracaoMesSorte:j.nomeTimeCoracaoMesSorte??j.timeCoracao??j.mesSorte,
+    mes:j.mes,time:j.time,timeNome:j.timeNome,
     listaDezenasSegundoSorteio:j.listaDezenasSegundoSorteio??j.dezenasSegundoSorteio,
     listaRateioPremio: (j.premiacoes || []).map((p) => ({
       faixa: p.faixa,
@@ -208,7 +212,7 @@ async function buscarUltimoDeTodas(slug, modalidade) {
   const respostas = [];
   for (const f of FONTES_ULTIMO) {
     try {
-      const r = converter(await f.buscar(slug), modalidade);
+      const r = converter(await f.buscar(slug), modalidade, f.nome);
       respostas.push({ fonte: f.nome, r });
     } catch (e) {
       console.error(`  ${modalidade}/${f.nome}: ${e.message}`);
@@ -339,7 +343,7 @@ for (const [modalidade, cfg] of Object.entries(MODALIDADES)) {
   else {
     const alvo=dados.concursos.find(c=>c.concurso===ultimo.concurso);
     if(alvo.dezenas.slice().sort().join()===ultimo.dezenas.slice().sort().join()){
-      for(const campo of ['trevos','dezenasSegundoSorteio'])if(ultimo[campo]&&JSON.stringify(alvo[campo])!==JSON.stringify(ultimo[campo])){alvo[campo]=ultimo[campo];completados++;}
+      for(const campo of ['trevos','dezenasSegundoSorteio','mes','time','timeNome'])if(ultimo[campo]&&JSON.stringify(alvo[campo])!==JSON.stringify(ultimo[campo])){alvo[campo]=ultimo[campo];completados++;}
     }
   }
 
@@ -414,11 +418,11 @@ for (const [modalidade, cfg] of Object.entries(MODALIDADES)) {
         const r = converter(await buscar(cfg.slug, alvo.concurso), modalidade);
         if(r.concurso!==alvo.concurso||r.dezenas.slice().sort().join()!==alvo.dezenas.slice().sort().join())continue;
         const antes=JSON.stringify(alvo);
-        if(r.trevos)alvo.trevos=r.trevos;
-        if(r.dezenasSegundoSorteio)alvo.dezenasSegundoSorteio=r.dezenasSegundoSorteio;
+        for(const campo of ['trevos','dezenasSegundoSorteio','mes','time','timeNome'])
+          if(r[campo]!=null)alvo[campo]=r[campo];
         /* Mescla: o que já existia manda, o rateio e as cidades entram. Trocar
            o objeto inteiro apagaria campos que só o registro antigo tem. */
-        if (r.rateio) alvo.rateio = r.rateio;
+        if (r.rateio) Object.assign(alvo,{rateio:r.rateio,origemRateio:r.origemRateio});
         if (r.cidades && r.cidades.length) alvo.cidades = r.cidades;
         if(JSON.stringify(alvo)!==antes)completados++;
       } catch (e) {

@@ -50,3 +50,27 @@ test('resultados conflitantes não entram; motivos e IDs são escapados no HTML'
  const j=game({id:'<img src=x>'}),r=R.review([j],[draw(10),draw(10,{dezenas:[11,12,13,14,15,16]})]).get(j);
  assert.equal(r.n,0);assert.doesNotMatch(R.card(j,r),/<img/);
 });
+
+test('diagnóstico começa recolhido e indicadores funcionam para modalidades distintas',()=>{
+ for(const modalidade of ['mega-sena','lotofacil','quina','lotomania','dupla-sena','dia-de-sorte','timemania','mais-milionaria']){
+  const c=L.cfg(modalidade),dezenas=Array.from({length:c.min},(_,i)=>i+c.base);
+  const j={...game(),modalidade,dezenas},r=R.review([j],[]).get(j),html=R.card(j,r);
+  assert.match(html,/<details class="saved-review-details">/);
+  assert.match(html,/Soma do jogo/);
+  assert.match(html,c.k===c.min?/Faixa histórica indisponível/:/Resultados de tamanho diferente/);
+  assert.match(html,/Pares e ímpares/);
+  assert.match(html,/Motivo da recomendação/);
+  assert.match(html,/data-alternar-analise/);
+ }
+});
+
+test('v5: faixa de soma usa histórico comparável e sinaliza posição do jogo',()=>{
+ const j={...game(),modalidade:'lotofacil',dezenas:Array.from({length:15},(_,i)=>i+1)};
+ const rows=Array.from({length:35},(_,i)=>({modalidade:'lotofacil',concurso:i+1,data:'2025-02-01',dezenas:Array.from({length:15},(_,n)=>n+1+(i%11))}));
+ const r=R.review([j],rows).get(j),html=R.card(j,r);
+ assert.equal(r.faixaSoma.n,35);
+ assert.ok(r.faixaSoma.min<=r.faixaSoma.max);
+ assert.match(html,/Faixa histórica central \(80%\)/);
+ assert.match(html,/Fora da faixa|Dentro da faixa/);
+ assert.match(html,/não prevê resultados/);
+});

@@ -25,7 +25,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const RAIZ = join(dirname(fileURLToPath(import.meta.url)), "..");
-const CAPTURAS = join(RAIZ, "capturas");
+const CAPTURAS = process.env.LOTOLAB_INTERFACE_OUTPUT || join(RAIZ, "capturas");
 const ENDERECO = process.env.LOTOLAB_URL || "http://127.0.0.1:8123/index.html";
 const LARGURA = 412, ALTURA = 915; // proporção de celular comum
 
@@ -2023,7 +2023,7 @@ checar('laboratório integrado preserva recorrência e oferece dez modalidades',
 await input418('#ll-texto','14 23 53 56 57 60');await input418('#ll-semente','revisao418');await tocar('[data-ll-action="analisar"]');await wait418();
 checar('worker analisa todo o acervo real e 2.000 referências',await js(`const t=document.querySelector('#ll-content').textContent;return t.includes(${JSON.stringify(history418.length.toLocaleString('pt-BR')+' concursos disponíveis')})&&t.includes('2.000 jogos aleatórios')&&t.includes('Distribuição completa')`));
 checar('exatos, acumulados e aviso obrigatório permanecem distintos',await js(`const t=document.querySelector('#ll-content').textContent;return t.includes('Exatamente')&&t.includes('Pelo menos')&&t.includes(LL18.aviso)`));
-await frame418('#ll-lab','LotoLab-4.18-Laboratorio');await frame418('#ll-content .ll-metrics','LotoLab-4.18-Perfil-historico');await frame418('#ll-content h3:nth-of-type(2)','LotoLab-4.18-Distribuicao');
+await frame418('#ll-lab','LotoLab-4.18-Laboratorio');await frame418('#ll-content .ll-metrics','LotoLab-4.18-Perfil-historico');await frame418('#ll-content .ll-analysis-summary','LotoLab-4.18-Distribuicao');
 await js(`document.querySelector('#ll-historico').open=true;return true;`);await input418('#ll-faixa','3');
 checar('histórico por faixa permite consultar coincidências e intervalos',await js(`const t=document.querySelector('#ll-concursos').textContent;return t.includes(${JSON.stringify(exatosTres418+' concursos')})&&t.includes('Coincidentes')&&t.includes('Não coincidentes')&&t.includes('Intervalo desde')`));
 await tab418('grupos');await input418('#ll-tamanho','4');await tocar('[data-ll-action="grupos"]');await wait418();

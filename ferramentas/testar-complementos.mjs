@@ -7,6 +7,7 @@ const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
 function contexto(){
   const memoria=new Map();
   const ctx=vm.createContext({console,setTimeout:()=>0,localStorage:{getItem:k=>memoria.get(k)??null,setItem:(k,v)=>memoria.set(k,v)},document:{querySelector:()=>null,querySelectorAll:()=>[]}});
+  vm.runInContext(readFileSync(new URL('../ui/lab-core.js',import.meta.url),'utf8'),ctx);
   vm.runInContext(html.slice(html.indexOf('<script>')+8,html.indexOf('(function iniciar(){')),ctx);
   return {ctx,a:vm.runInContext('({S,normalizarCaixa,normalizarEspelho,intGerarLote,intCsv,metaConferencia,metaValidarConferencia,focoConcurso,metaAvisoHtml,metaAvisoDados,guardarResultados,conferenciaAutomatica,lerTrevos,trevosDoLote,chaveDoJogo,premioDoAcerto})',ctx)};
 }

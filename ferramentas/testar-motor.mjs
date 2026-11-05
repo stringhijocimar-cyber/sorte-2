@@ -3285,8 +3285,8 @@ secao("27. Concurso-alvo e conferência sob demanda");
     /id="j-conferir"/.test(tela) && /jogos salvos/.test(tela));
   checar("o resumo mostra o último concurso e as coincidências",
     /último concurso/.test(tela) && /coincidências/.test(tela));
-  checar("e avisa que não calcula prêmio nem faixa",
-    /não\s+calcula prêmio nem faixa/.test(tela.replace(/\s+/g, " ")));
+  checar("distingue jogos acompanhados de apostas registradas",
+    /Sem apostas registradas neste concurso/.test(tela) && /Acompanhamento/.test(tela));
   checar("a ficha do jogo fala em coincidências",
     /coincidência/.test(tela));
   checar("e não carimba prêmio no jogo",

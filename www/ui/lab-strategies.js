@@ -88,13 +88,15 @@ function backtestFechamento43323(m,records,op={},progress=()=>{}){
  for(let i=start;i<b.rows.length;i++){
   const alvo=b.rows[i],semente=String(op.semente||'fechamento-43323')+':alvo:'+alvo.concurso;
   const g=fechamento43323(m,b.rows.slice(0,i),{...op,semente});
-  const ref=uniformBatch(m,32,rng(semente+':uniforme'),shape);
   const avaliar=ts=>{const hs=ts.map(t=>L.hits(m,t,alvo));return {melhor:Math.max(...hs),media:mean(hs),premiados:hs.filter(h=>h>=11).length};};
-  observacoes.push({concurso:alvo.concurso,treinoAte:b.rows[i-1].concurso,fechamento:avaliar(g.jogos),uniforme:avaliar(ref)});
+  // Réplicas independentes com exatamente 32 jogos por lote, mesmo custo e alvo.
+  const referencias=Array.from({length:32},(_,replica)=>avaliar(uniformBatch(m,32,rng(semente+':uniforme:'+replica),shape)));
+  const uniforme={melhor:mean(referencias.map(x=>x.melhor)),media:mean(referencias.map(x=>x.media)),premiados:mean(referencias.map(x=>x.premiados))};
+  observacoes.push({concurso:alvo.concurso,treinoAte:b.rows[i-1].concurso,fechamento:avaliar(g.jogos),uniforme,referenciasCom11:referencias.filter(x=>x.melhor>=11).length});
   progress({feitos:i-start+1,total:b.rows.length-start});
  }
- const resumir=k=>({melhorMedio:mean(observacoes.map(x=>x[k].melhor)),mediaAcertos:mean(observacoes.map(x=>x[k].media)),concursosCom11:observacoes.filter(x=>x[k].melhor>=11).length,premiados:sum(observacoes.map(x=>x[k].premiados))});
- return {base:b.meta,concursos:observacoes.length,observacoes,fechamento:resumir('fechamento'),uniforme:resumir('uniforme'),jogosPorConcurso:32,custoAtualPorConcurso:32*currentCost(m,shape),nota:'Avaliação exploratória com 32 jogos por concurso em ambos os métodos. Cada lote é definido antes do resultado; usa apenas registros anteriores. A referência usa uma amostra aleatória reproduzível por concurso. Não demonstra vantagem futura. Custo calculado pela tarifa atual; prêmios e ROI não são estimados.'};
+ const resumir=k=>({melhorMedio:mean(observacoes.map(x=>x[k].melhor)),mediaAcertos:mean(observacoes.map(x=>x[k].media)),concursosCom11:k==='uniforme'?sum(observacoes.map(x=>x.referenciasCom11))/32:observacoes.filter(x=>x[k].melhor>=11).length,premiados:sum(observacoes.map(x=>x[k].premiados))});
+ return {base:b.meta,concursos:observacoes.length,observacoes,fechamento:resumir('fechamento'),uniforme:resumir('uniforme'),jogosPorConcurso:32,custoAtualPorConcurso:32*currentCost(m,shape),nota:'Avaliação exploratória com 32 jogos por concurso em ambos os métodos. Cada lote é definido antes do resultado; usa apenas registros anteriores. A referência é a média de 32 lotes aleatórios independentes e reproduzíveis por concurso (cada lote tem 32 jogos). Não demonstra vantagem futura. Custo calculado pela tarifa atual; prêmios e ROI não são estimados.'};
 }
 
 Object.assign(L,{fechamento43323,backtestFechamento43323,models,generate,diversify,paired,holm,robust,backtest,diagnose,monitor,drift,sampleRows});if(typeof module!=='undefined'&&module.exports)module.exports=L;
