@@ -1,5 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import vm from 'node:vm';
 import L from '../ui/lab-core.js';
 import {converter} from './atualizar-resultados.mjs';
 
@@ -53,4 +55,62 @@ test('atualizador conserva mês, time e procedência da tabela',()=>{
  const r=converter({...raw,nomeTimeCoracaoMesSorte:' AMERICA       /RN'},'timemania','espelho');
  assert.equal(r.timeNome,'AMERICA/RN');
  assert.equal(r.origemRateio,'espelho');
+});
+
+const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
+function appDeTeste(plugin={}){
+ const contexto=vm.createContext({LL18:L,Capacitor:{isNativePlatform:()=>true,
+  isPluginAvailable:n=>n==='LotoLabNotificacoes',Plugins:{LotoLabNotificacoes:plugin}},
+  document:{getElementById:()=>null}});
+ vm.runInContext(html.slice(html.indexOf('<script>')+8,html.indexOf('(function iniciar(){')),contexto);
+ return vm.runInContext(`
+   S.autoAnalise=false;
+   Guardar.gravar=()=>true;
+   irParaTela=tela=>{S.tela=tela;};
+   ({S,ganhosAcumulados,ganhoDoJogoNoConcurso,painelGanhos,importarResultadosDoAndroid,metaAbrirDestino})
+ `,contexto);
+}
+
+test('Resultados soma ganhos por jogo sem duplicar apostas ou incluir acompanhamentos',()=>{
+ const app=appDeTeste(),m='mega-sena';
+ const a={id:'a',modalidade:m,dezenas:dezenas(6),acompanhamento:'fixo',deConcurso:10,
+  apostasPagas:{10:600,11:600,12:600,99:600}};
+ const b={id:'b',modalidade:m,dezenas:dezenas(6),acompanhamento:'fixo',deConcurso:10};
+ app.S.jogos=[a,b];app.S.teimosinhas=[{...a}];
+ const historico=[resultado(6,[100],{modalidade:m}),resultado(6,[20],{modalidade:m,concurso:11}),
+  resultado(6,[],{modalidade:m,concurso:12}),...Array.from({length:43},(_,i)=>resultado(6,[50],{modalidade:m,concurso:13+i}))];
+ const ganhos=app.ganhosAcumulados(m,historico);
+ assert.equal(ganhos.jogos.size,1);
+ assert.equal(ganhos.geral.centavos,12000);
+ assert.equal(ganhos.geral.apurados,2);
+ assert.equal(ganhos.geral.pendentes,1);
+ assert.match(app.painelGanhos(ganhos),/R\$\s*120,00.*1 pendente/);
+ const primeiro=app.ganhoDoJogoNoConcurso(a,historico[0],ganhos);
+ assert.match(primeiro,/Prêmio neste concurso/);
+ assert.equal(primeiro.match(/R\$\s*100,00/g)?.length,2);
+ assert.match(app.ganhoDoJogoNoConcurso(b,historico[0],ganhos),/Valor em acompanhamento/);
+});
+
+test('resultado recebido com o app fechado abre offline, recebe rateio e mantém uma entrada por concurso',async()=>{
+ const m='mega-sena',concurso=3051,consultadoEm=Date.parse('2026-11-05T00:15:00Z');
+ const base={numero:concurso,dataApuracao:'04/11/2026',listaDezenas:['01','02','03','04','05','06']};
+ let entradas=[{modalidade:m,consultadoEm,resultado:base},
+  {modalidade:m,consultadoEm,resultado:{...base,numero:3052,listaDezenas:['01','01','03','04','05','06']}}];
+ const app=appDeTeste({resultados:async()=>({concursos:entradas}),destino:async()=>({modalidade:m,concurso})});
+ app.S.jogos=[{id:'nativo',modalidade:m,dezenas:dezenas(6),concursoAlvo:concurso,apostasPagas:{[concurso]:600}}];
+ await app.metaAbrirDestino();
+ assert.equal(app.S.tela,'resultados');
+ assert.equal(app.S.concursoAberto,concurso);
+ assert.equal(app.S.resultados.length,1);
+ assert.equal(app.S.jogos[0].conferencias[0].acertos,6);
+ assert.equal(app.ganhosAcumulados(m,app.S.resultados).geral.pendentes,1);
+ entradas=[{modalidade:m,consultadoEm:consultadoEm+900000,resultado:{...base,
+  listaRateioPremio:[{faixa:1,numeroDeGanhadores:1,valorPremio:100}]}}];
+ assert.equal((await app.importarResultadosDoAndroid()).alterados,1);
+ assert.equal((await app.importarResultadosDoAndroid()).alterados,0);
+ assert.equal(app.S.resultados.length,1);
+ assert.equal(app.ganhosAcumulados(m,app.S.resultados).geral.centavos,10000);
+ entradas=[{modalidade:m,consultadoEm,resultado:{...base,listaRateioPremio:[{faixa:1,valorPremio:50}]}}];
+ assert.equal((await app.importarResultadosDoAndroid()).alterados,0);
+ assert.equal(app.ganhosAcumulados(m,app.S.resultados).geral.centavos,10000);
 });

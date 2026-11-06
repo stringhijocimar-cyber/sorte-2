@@ -19,14 +19,22 @@ import java.util.concurrent.TimeUnit;
 public class LotoLabNotificacoesPlugin extends Plugin {
     private static final String TRABALHO="lotolab_conferencia_colorida_v410";
     private String modalidade="",jogo="";
+    private int concurso;
     private void receber(Intent i){if(i!=null&&i.hasExtra("lotolab_modalidade")){
         modalidade=i.getStringExtra("lotolab_modalidade");jogo=i.getStringExtra("lotolab_jogo");
-        i.removeExtra("lotolab_modalidade");i.removeExtra("lotolab_jogo");
+        concurso=i.getIntExtra("lotolab_concurso",0);
+        i.removeExtra("lotolab_modalidade");i.removeExtra("lotolab_jogo");i.removeExtra("lotolab_concurso");
     }}
     @Override public void load(){receber(getActivity().getIntent());}
     @Override protected void handleOnNewIntent(Intent i){super.handleOnNewIntent(i);receber(i);notifyListeners("abrirJogo",new JSObject());}
     @PluginMethod public void destino(PluginCall call){
-        JSObject r=new JSObject();r.put("modalidade",modalidade);r.put("jogo",jogo);modalidade="";jogo="";call.resolve(r);
+        JSObject r=new JSObject();r.put("modalidade",modalidade);r.put("jogo",jogo);r.put("concurso",concurso);
+        modalidade="";jogo="";concurso=0;call.resolve(r);
+    }
+    @PluginMethod public void resultados(PluginCall call){
+        JSObject r=new JSObject();
+        r.put("concursos",ResultadosEmSegundoPlano.listar(getContext()));
+        call.resolve(r);
     }
     @PluginMethod public void mostrar(PluginCall call){
         JSObject cf=call.getObject("conferencia");
@@ -41,7 +49,7 @@ public class LotoLabNotificacoesPlugin extends Plugin {
             call.reject("Não foi possível guardar o estado");return;
         }
         WorkManager manager=WorkManager.getInstance(getContext());
-        if(!estado.optBoolean("ligado",false)||estado.optJSONArray("jogos")==null||estado.optJSONArray("jogos").length()==0){
+        if(!estado.optBoolean("ligado",false)||estado.optJSONObject("modalidades")==null||estado.optJSONObject("modalidades").length()==0){
             manager.cancelUniqueWork(TRABALHO);manager.cancelUniqueWork(TRABALHO+"_agora");call.resolve();return;
         }
         Constraints constraints=new Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build();

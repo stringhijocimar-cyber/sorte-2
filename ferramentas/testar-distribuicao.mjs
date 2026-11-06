@@ -106,6 +106,33 @@ try{
  await until(()=>js(`return !document.querySelector('[data-ll-action="cancelar"]')&&document.querySelector('#ll-content').textContent.includes('1.000.000 sorteios simulados')`),'simulação de carteiras offline',90000);
  assert.ok(await js(`return document.querySelector('#ll-content').textContent.includes('Fechamento em 18 dezenas')`));
  console.log('ok — sugestão principal aplica o perfil conjunto e o estudo de carteiras funciona offline');
+ const premios=await js(`
+  const original=globalThis.Capacitor,jogos=S.jogos;
+  const modalidade='lotofacil',dezenas=Array.from({length:15},(_,i)=>i+1);
+  const concursos=[3820,3821].map((numero,i)=>({modalidade,consultadoEm:Date.parse('2026-11-05T00:20:00Z')+i,
+   resultado:{numero,dataApuracao:'04/11/2026',listaDezenas:dezenas,
+    listaRateioPremio:[{faixa:1,numeroDeGanhadores:1,valorPremio:i?70:30}]}}));
+  S.jogos=[{id:'pago',modalidade,dezenas,acompanhamento:'fixo',deConcurso:3820,apostasPagas:{3820:350,3821:350}}];
+  globalThis.Capacitor={isNativePlatform:()=>true,isPluginAvailable:n=>n==='LotoLabNotificacoes',
+   Plugins:{LotoLabNotificacoes:{resultados:async()=>({concursos}),destino:async()=>({modalidade,concurso:3821}),sincronizar:async()=>{}}}};
+  try{
+   await metaAbrirDestino();
+   const card=document.querySelector('[data-abrir-concurso="3821"]');
+   return {tela:S.tela,concurso:S.concursoAberto,
+    premio:card?.querySelector('.ganho-no-concurso')?.textContent,
+    total:document.querySelector('#r-ganhos summary')?.textContent,
+    cabe:document.documentElement.scrollWidth<=visualViewport.width+1};
+  }finally{
+   globalThis.Capacitor=original;_metaPlugin=null;S.jogos=jogos;
+   Guardar.gravar('jogos',jogos);
+  }
+ `);
+ assert.equal(premios.tela,'resultados');
+ assert.equal(premios.concurso,3821);
+ assert.match(premios.premio,/Prêmio neste concurso\s*R\$\s*70,00[\s\S]*Ganhos registrados até aqui\s*R\$\s*100,00/);
+ assert.match(premios.total,/R\$\s*100,00/);
+ assert.ok(premios.cabe,'ganhos cabem na tela móvel');
+ console.log('ok — toque no aviso abre o resultado offline e distingue prêmio e acumulado');
  const first=rows.slice(0,2).sort((a,b)=>a.concurso-b.concurso);
  await js(`await Guardar.gravarAsync('resultados',${JSON.stringify(first)});await Guardar.gravarAsync('laboratorio418',{lotes:[{modalidade:'mega-sena',geradoAte:${first[0].concurso},concursoAlvo:${first[1].concurso},jogos:[{dezenas:[14,23,53,56,57,60]}]}],historicoExtra:[],tentativas:[],monitor:{},comites:{}});`);
  await cmd('Page.reload');await sleep(300);await ready();
@@ -123,5 +150,5 @@ try{
  assert.ok(await js(`LL18UI.openRecommendation('super-sete');const q=document.querySelector('#ll-quantidade');q.value='2';q.dispatchEvent(new Event('input'));const b=document.querySelector('#ll-orcamento');b.value='6';b.dispatchEvent(new Event('input'));const el=document.querySelector('#ll-plan-preview'),text=el.textContent.replace(/\\s+/g,' '),valid=text.includes('R$ 6,00')&&text.includes('2 / 2');b.value='1';b.dispatchEvent(new Event('input'));return valid&&el.textContent.includes('orçamento não cobre');`));
  console.log('ok — prévia especial atualiza campos e identifica orçamento insuficiente offline');
  completed=true;
- console.log('10 cenários de distribuição passaram');
+ console.log('11 cenários de distribuição passaram');
 }finally{ws.close();close();}

@@ -2756,7 +2756,21 @@ function metaPlugin(){
 }
 async function metaAbrirDestino(){
   const p=metaPlugin();if(!p)return;
-  try{const r=await p.destino();if(!MODALIDADES[r.modalidade])return;S.modalidade=r.modalidade;S.jogoAberto=r.jogo||null;irParaTela('jogos');}catch(e){}
+  try{
+    const r=await p.destino();
+    if(!Object.hasOwn(MODALIDADES,r.modalidade))return;
+    const concurso=Number(r.concurso);
+    if(Number.isSafeInteger(concurso)&&concurso>0){
+      await importarResultadosDoAndroid().catch(()=>{});
+      S.modalidade=r.modalidade;S.concursoAberto=concurso;irParaTela('resultados');
+      if(!resultadosDe(r.modalidade).some(x=>Number(x.concurso)===concurso)){
+        const resultado=await buscarNaCaixa(r.modalidade,concurso,{priorizarCaixa:true});
+        incorporarResultadosAutomaticos([resultado],"notificação",false);
+      }
+      return;
+    }
+    S.modalidade=r.modalidade;S.jogoAberto=r.jogo||null;irParaTela('jogos');
+  }catch(e){}
 }
 let _metaOuvindo=false;
 async function metaLigarNativo(){
@@ -2769,6 +2783,7 @@ async function metaLigarNativo(){
       _metaOuvindo=true;
     }
   }catch(e){ /* O sino interno continua disponível se o evento nativo falhar. */ }
+  void cancelarLembretesDeSorteio().catch(()=>{});
   await metaAbrirDestino();
   try{await espelharParaSegundoPlano();}catch(e){}
   return true;
@@ -3422,6 +3437,62 @@ function resumoFinanceiro(grupo,resultado){
     </dl>`:'<p>Sem apostas registradas neste concurso.</p>'}
     ${acompanhados.jogos?`<p>Acompanhamento · ${emFaixa(acompanhados)} em faixa</p>`:''}
   </section>`;
+}
+
+function somarPremios(valores){
+  let centavos=0,apurados=0,pendentes=0;
+  for(const valor of valores){
+    if(valor===null)pendentes++;
+    else{centavos+=valor;apurados++;}
+  }
+  return {centavos,apurados,pendentes};
+}
+
+function ganhosAcumulados(modalidade,resultados){
+  const porConcurso=new Map(resultados.map(r=>[Number(r.concurso),r]));
+  const ultimo=resultados.reduce((max,r)=>Math.max(max,Number(r.concurso)||0),0);
+  const jogos=new Map();
+  for(const j of S.jogos.concat(S.teimosinhas||[])){
+    if(j.modalidade!==modalidade)continue;
+    const id=j.id==null?j:String(j.id);
+    for(const numero of Object.keys(j.apostasPagas||{})){
+      const concurso=Number(numero),r=porConcurso.get(concurso);
+      if(!Number.isSafeInteger(concurso)||concurso<1||concurso>ultimo||r&&!jogoCobreResultado(j,r))continue;
+      if(!jogos.has(id))jogos.set(id,{jogo:j,premios:new Map()});
+      const {premios}=jogos.get(id);
+      const valor=r?LL18.savedAward(modalidade,j,r).premioCentavos:null;
+      if(!premios.has(concurso)||premios.get(concurso)===null)premios.set(concurso,valor);
+    }
+  }
+  return {jogos,geral:somarPremios([...jogos.values()].flatMap(x=>[...x.premios.values()]))};
+}
+
+function valorDosGanhos(total){
+  if(!total.apurados)return total.pendentes?'Aguardando apuração':'Sem apostas registradas';
+  if(!Number.isSafeInteger(total.centavos))return 'Indisponível';
+  return brl(total.centavos/100)+(total.pendentes?' · '+inf(total.pendentes)+' pendente(s)':'');
+}
+
+function painelGanhos(ganhos){
+  return `<details class="carta ganhos-acumulados" id="r-ganhos" ${S.ganhosAbertos?'open':''}>
+    <summary><strong>Ganhos acumulados</strong><span>${valorDosGanhos(ganhos.geral)}</span></summary>
+    <p>Prêmios pelo rateio oficial, somados por jogo nas apostas marcadas como pagas.</p>
+    ${ganhos.jogos.size?`<ul>${[...ganhos.jogos.values()].map(({jogo,premios})=>`<li>
+      <span>Jogo #${esc(jogo.id??'—')}<small>${jogo.dezenas.map(pad).join(' · ')}</small></span>
+      <strong>${valorDosGanhos(somarPremios(premios.values()))}</strong></li>`).join('')}</ul>`:
+      '<p>Em Meus Jogos, abra a cartela e use <b>Registrar aposta paga</b> para incluir o concurso no acumulado.</p>'}
+  </details>`;
+}
+
+function ganhoDoJogoNoConcurso(j,r,ganhos){
+  const id=j.id==null?j:String(j.id),premios=ganhos?.jogos.get(id)?.premios;
+  const paga=premios?.has(Number(r.concurso));
+  const atual=paga?premios.get(Number(r.concurso)):LL18.savedAward(r.modalidade,j,r).premioCentavos;
+  const anteriores=premios?[...premios].filter(([n])=>n<=r.concurso).map(([,valor])=>valor):[];
+  return `<dl class="ganho-no-concurso">
+    <div><dt>${paga?'Prêmio neste concurso':'Valor em acompanhamento'}</dt><dd>${atual===null?'Aguardando apuração':brl(atual/100)}</dd></div>
+    <div><dt>Ganhos registrados até aqui</dt><dd>${valorDosGanhos(somarPremios(anteriores))}</dd></div>
+  </dl>`;
 }
 
 function centavosDeAposta(valor){
@@ -4998,20 +5069,15 @@ function diasAte(iso){
   return Math.round((alvo - hoje2) / 86400000);
 }
 
-/* Busca diária: roda na abertura, uma vez por modalidade que já tem histórico.
-   Só o último concurso — quem quer o histórico inteiro pede explicitamente. */
-/* A partir de que hora o resultado do dia já pode existir. O sorteio é às 20h
-   de Brasília e a Caixa publica minutos depois; 21h dá folga sem empurrar a
-   procura para o dia seguinte. */
-const HORA_DE_PUBLICACAO = 21;
-
-/* Data local, e não toISOString(): às 21h de Brasília já é o dia seguinte em
-   UTC, e o app perguntaria pelo sorteio de amanhã justamente na hora em que o
-   de hoje acabou de sair. */
-function dataLocalIso(d){
-  const p = n => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+// Horário de Brasília, inclusive em aparelhos configurados em outro fuso.
+const relogioDoSorteio=new Intl.DateTimeFormat('en-CA',{
+  timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',hourCycle:'h23'
+});
+function horarioBrasilia(agora){
+  const partes=Object.fromEntries(relogioDoSorteio.formatToParts(new Date(agora)).map(p=>[p.type,p.value]));
+  return {data:partes.year+'-'+partes.month+'-'+partes.day,hora:Number(partes.hour)};
 }
+function horaDoSorteio(data){return diaDaSemanaIso(data)===0?11:21;}
 
 /* Mesmo critério de dia da semana que diasDeSorteio() usa, para os dois
    falarem da mesma coisa: o dia do calendário, sem fuso no meio. */
@@ -5027,12 +5093,13 @@ function somarDias(iso, n){
    como saber se está faltando alguma coisa — e sem saber disso, só resta
    perguntar de tempos em tempos e torcer. */
 function ultimoSorteioEsperado(modalidade, agora){
-  const dias = diasDeSorteio(modalidade);
-  if(!dias.size) return null;
-  const d = new Date(agora);
-  let cursor = dataLocalIso(d);
-  /* Antes da hora de publicação, o sorteio de hoje ainda não conta. */
-  if(d.getHours() < HORA_DE_PUBLICACAO) cursor = somarDias(cursor, -1);
+  const {data,hora}=horarioBrasilia(agora);
+  let cursor=hora<horaDoSorteio(data)?somarDias(data,-1):data;
+  const ultimo=ultimoResultado(modalidade),proximo=ultimo?.dataProximo;
+  if(/^\d{4}-\d{2}-\d{2}$/.test(String(proximo||''))&&proximo>String(ultimo.data||''))
+    return proximo<=cursor?proximo:ultimo.data;
+  const dias=diasDeSorteio(modalidade);
+  if(!dias.size)return null;
   for(let i = 0; i < 14; i++){
     if(dias.has(diaDaSemanaIso(cursor))) return cursor;
     cursor = somarDias(cursor, -1);
@@ -5069,42 +5136,46 @@ async function executarBuscaDiaria(){
      Com o calendário na mão dá para separar os dois casos: quando não há nada
      esperando, doze horas; quando há sorteio publicado que o aparelho não tem,
      cinco minutos; modalidade aberta e jogos salvos também usam esse intervalo. */
+  const acompanhadas=new Set(S.jogos.concat(S.teimosinhas||[]).map(j=>j.modalidade));
   const alvos = Object.keys(MODALIDADES).filter(k => {
-    if(!SLUG_CAIXA[k] || (!historicoDe(k).length&&!S.jogos.some(j=>j.modalidade===k))) return false;
+    if(!SLUG_CAIXA[k] || (k!==S.modalidade&&!historicoDe(k).length&&!acompanhadas.has(k))) return false;
     const desde = agora - (marcas[k] || 0);
-    return desde > (sorteioPendente(k, agora)||k===S.modalidade||S.jogos.some(j=>j.modalidade===k)
+    return desde >= (sorteioPendente(k, agora)||k===S.modalidade||acompanhadas.has(k)
       ? INTERVALO_BUSCA_PENDENTE : INTERVALO_BUSCA);
   });
   if(!alvos.length) return {tentadas:0, novos:0};
 
-  let novos = 0, falhas = 0;
+  let novos = 0, alterados = 0, falhas = 0;
   const fila=alvos.slice().sort((a,b)=>Number(b===S.modalidade)-Number(a===S.modalidade));
   const consumir=async()=>{while(fila.length){
     const k=fila.shift();
     try{
-      const r = await buscarNaCaixa(k, null);
-      /* Guardar só o último perde sorteio: quem passa três dias sem abrir o
-         app tinha o mais recente gravado e os do meio simplesmente sumiam.
-         Desce do mais novo até emendar com o que já está no aparelho. */
       const hist = historicoDe(k);
       const jaTem = hist.length ? Number(hist[hist.length - 1].concurso) : 0;
-      const lote = [r];
-      for(let n = Number(r.concurso) - 1; n > jaTem; n--){
-        if(lote.length >= MAXIMO_A_EMENDAR) break;
-        try{ lote.push(await buscarNaCaixa(k, n)); }
+      const minimo=jaTem+(sorteioPendente(k,agora)?1:0);
+      const r=await buscarNaCaixa(k,null,{priorizarCaixa:true,minimo});
+      const aplicar=lote=>{
+        const mudanca=incorporarResultadosAutomaticos(lote,"busca automática");
+        novos+=mudanca.novos;alterados+=mudanca.alterados;
+      };
+      aplicar([r]);
+      // Preenche lacunas recentes depois de mostrar o concurso mais novo.
+      const lote=[],conhecidos=new Set(hist.map(x=>Number(x.concurso)));
+      const fim=Number(r.concurso);
+      const inicio=Math.max(Number(hist[0]?.concurso)||1,fim-MAXIMO_A_EMENDAR+1);
+      for(let n=fim-1;fim>=jaTem&&n>=inicio;n--){
+        if(conhecidos.has(n))continue;
+        try{ lote.push(await buscarNaCaixa(k,n)); }
         catch(e){ break; }
       }
-      lote.sort((a, b) => Number(a.concurso) - Number(b.concurso));
-      const inseridos=guardarResultados(lote);novos+=inseridos;
-      // Confere e avisa assim que esta modalidade chega, sem esperar as demais.
-      aoMudarHistorico(inseridos,"busca diária");
+      aplicar(lote);
       marcas[k] = agora;
     }catch(e){ falhas++;marcas[k]=agora; }
   }};
   await Promise.all(Array.from({length:Math.min(3,fila.length)},consumir));
   S.ultimaBusca = marcas;
   Guardar.gravar("ultimaBusca", marcas);
-  return {tentadas:alvos.length, novos, falhas};
+  return {tentadas:alvos.length, novos, alterados, falhas};
 }
 
 /* ==================== calibração de popularidade ====================
@@ -5825,7 +5896,7 @@ const Avisos = {
   },
 
   /* Agenda para uma data futura. É o que faz o aviso chegar com o app fechado. */
-  async agendar(quando, titulo, texto, chave){
+  async agendar(quando, titulo, texto, chave, extra){
     const p = this.plugin();
     if(!p) return false;
     if(!(quando instanceof Date) || !Number.isFinite(quando.getTime())) return false;
@@ -5838,17 +5909,8 @@ const Avisos = {
            mudam nada — enquanto SCHEDULE_EXACT_ALARM é permissão restrita e
            pediria uma justificativa que este app não tem. */
         schedule: {at: quando, allowWhileIdle: true},
-        smallIcon: "ic_stat_icone"
+        smallIcon: "ic_stat_icone",extra
       }]});
-      return true;
-    }catch(e){ return false; }
-  },
-
-  async cancelar(chaves){
-    const p = this.plugin();
-    if(!p || !chaves.length) return false;
-    try{
-      await p.cancel({notifications: chaves.map(c => ({id: this.id(c)}))});
       return true;
     }catch(e){ return false; }
   },
@@ -5886,7 +5948,12 @@ function ligarToqueNaNotificacao(){
       /* Só navega para tela que existe. Um destino gravado por uma versão
          antiga do app não pode deixar a tela em branco depois de atualizar. */
       const existe = SECOES.some(s => s.telas.some(t => t.id === alvo));
-      if(existe) irParaTela(alvo);
+      if(existe){
+        const m=ev.notification.extra.modalidade;
+        if(Object.hasOwn(MODALIDADES,m))S.modalidade=m;
+        irParaTela(alvo);
+        if(alvo==='resultados')void atualizarResultadosAutomaticamente();
+      }
     });
     return true;
   }catch(e){ return false; }
@@ -5896,25 +5963,11 @@ async function pedirPermissaoDeAviso(){
   return await Avisos.permissao();
 }
 
-/* ---- lembrete do próximo sorteio ----
-
-   O caso que motivou tudo: o celular precisa avisar que saiu concurso novo
-   mesmo com o app fechado. Sem servidor, o jeito honesto é o alarme do próprio
-   aparelho — o app já sabe a data do próximo sorteio de cada modalidade,
-   porque a Caixa a publica junto com o resultado.
-
-   Uma hora depois do sorteio, e não na hora: o resultado da Caixa demora a
-   sair, e avisar às 20h para a pessoa abrir e não achar nada é pior que não
-   avisar. */
-const HORA_DO_SORTEIO = 20;        /* 20h, horário de Brasília */
-const ATRASO_DO_AVISO = 90;        /* minutos depois do sorteio */
-
+// O lembrete de calendário é usado só quando o módulo Android não está disponível.
 function momentoDoAviso(dataISO){
-  if(!/^\d{4}-\d{2}-\d{2}$/.test(String(dataISO || ""))) return null;
-  const [a, m, d] = dataISO.split("-").map(Number);
-  const quando = new Date(a, m - 1, d, HORA_DO_SORTEIO, 0, 0, 0);
-  quando.setMinutes(quando.getMinutes() + ATRASO_DO_AVISO);
-  return quando;
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(String(dataISO||'')))return null;
+  const quando=new Date(dataISO+'T'+String(horaDoSorteio(dataISO)).padStart(2,'0')+':30:00-03:00');
+  return Number.isFinite(quando.getTime())?quando:null;
 }
 
 /* Reagenda os lembretes das modalidades que a pessoa acompanha. Chamado depois
@@ -6053,24 +6106,28 @@ function diasDeSorteio(modalidade){
   return set.size ? set : new Set();
 }
 
+async function cancelarLembretesDeSorteio(){
+  const p=Avisos.plugin();
+  if(!p)return;
+  const pendentes=await Avisos.pendentes();
+  const legados=pendentes.filter(n=>n.extra?.origem==='lembreteSorteio'||String(n.body||'').startsWith('O sorteio já saiu. Abra para conferir'));
+  if(legados.length)await p.cancel({notifications:legados.map(({id})=>({id}))});
+}
 async function reagendarLembretes(){
   if(S.avisarSorteio === false) return {agendados:0, motivo:"desligado"};
+  if(metaPlugin())return {agendados:0,motivo:"aguarda resultado"};
   if(!Avisos.plugin()) return {agendados:0, motivo:"sem plugin nativo"};
 
-  const modalidades = [...new Set(S.jogos.map(j => j.modalidade))];
+  const modalidades = [...new Set(S.jogos.concat(S.teimosinhas||[]).map(j => j.modalidade))];
   let agendados = 0;
   for(const mod of modalidades){
-    const quantos = S.jogos.filter(j => j.modalidade === mod).length;
-    /* Uma FILA de alarmes, e não um só. Este era o defeito: com um alarme por
-       vez, ele tocava e o aparelho ficava mudo até alguém abrir o app — que é
-       exatamente a queixa de "só recebo aviso quando abro". */
-    for(const alvo of proximasDatasDeSorteio(mod, LEMBRETES_A_FRENTE)){
-      const quando = momentoDoAviso(alvo.data);
-      if(!quando) continue;
-      const ok = await Avisos.agendar(quando,
-        `${MODALIDADES[mod].nome} — concurso ${alvo.numero}`,
-        `O sorteio já saiu. Abra para conferir ${quantos === 1 ? "seu jogo" : `seus ${quantos} jogos`}.`,
-        `sorteio:${mod}:${alvo.numero}`);
+    for(const alvo of proximasDatasDeSorteio(mod,LEMBRETES_A_FRENTE)){
+      const quando=momentoDoAviso(alvo.data);
+      if(!quando)continue;
+      const ok=await Avisos.agendar(quando,
+        MODALIDADES[mod].nome+' · concurso previsto '+alvo.numero,
+        'Abra Resultados para consultar a publicação da CAIXA.',
+        'sorteio:'+mod+':'+alvo.numero,{tela:'resultados',modalidade:mod,origem:'lembreteSorteio'});
       if(ok) agendados++;
     }
   }
@@ -6187,10 +6244,10 @@ function conferenciaAutomatica(){
 
 /* Chamado sempre que o histórico muda: confere, avisa quantos concursos
    entraram, e só então notifica o sistema. */
-function aoMudarHistorico(quantosConcursos, origem){
+function aoMudarHistorico(quantosConcursos, origem, notificar=S.avisarSorteio!==false){
   const r = conferenciaAutomatica();
   const colorido=metaPlugin();
-  if(colorido)for(const cf of Object.values(r.resumos||{}))
+  if(notificar&&colorido)for(const cf of Object.values(r.resumos||{}))
     notificarSistema(MODALIDADES[cf.modalidade].nome+": "+metaTituloAcertos(cf),"Concurso "+cf.concurso,null,"jogos",cf);
   if(quantosConcursos > 0){
     const titulo = `${quantosConcursos} concurso${quantosConcursos===1?"":"s"} novo${quantosConcursos===1?"":"s"}`;
@@ -6198,8 +6255,9 @@ function aoMudarHistorico(quantosConcursos, origem){
       ? `${r.novas} conferência${r.novas===1?"":"s"} feita${r.novas===1?"":"s"} automaticamente`
         /*<aposta>*/+ (r.premios ? `, ${r.premios} em faixa de prêmio.` : ", nenhuma em faixa de prêmio.")/*</aposta>*/
       : "Nenhum jogo salvo cobria esses concursos.";
-    if(avisar("historico", titulo, `${texto} Origem: ${origem}.`,
-              `hist:${origem}:${S.resultados.length}:${Date.now()}`))
+    const novoAviso=avisar("historico", titulo, `${texto} Origem: ${origem}.`,
+              `hist:${origem}:${S.resultados.length}:${Date.now()}`);
+    if(novoAviso&&notificar)
       notificarSistema(titulo, texto, null, "resultados");
   }
   /* O aviso do prêmio vem depois e separado do aviso de concurso novo, e diz
@@ -6216,7 +6274,7 @@ function aoMudarHistorico(quantosConcursos, origem){
      concursos publicados. Anunciar prêmio a partir disso afirma o que não foi
      medido, e o texto antigo já se contradizia pedindo para conferir no
      volante antes de comemorar. */
-  if(r.premios&&!colorido){
+  if(notificar&&r.premios&&!colorido){
     const detalhe = r.melhor
       ? `${metaTituloAcertos(r.melhor)} na ${MODALIDADES[r.melhor.modalidade].nome}, concurso ${r.melhor.concurso}.`
       : "Abra o LotoLab para ver qual jogo e qual concurso.";
@@ -6600,8 +6658,9 @@ function espelharParaSegundoPlano(){
     if(!colorido&&(!runner||typeof runner.dispatchEvent!=="function"))return false;
 
     const modalidades = {};
+    const ativas=new Set([S.modalidade,...S.jogos.concat(S.teimosinhas||[]).map(j=>j.modalidade)]);
     for(const [chave, c] of Object.entries(MODALIDADES)){
-      if(!SLUG_CAIXA[chave]) continue;
+      if(!SLUG_CAIXA[chave]||!ativas.has(chave))continue;
       modalidades[chave] = {slug: SLUG_CAIXA[chave], nome: c.nome, faixas: c.faixas};
     }
     /* Só o necessário para contar acerto. Mandar a conferência inteira de cada
@@ -6619,7 +6678,7 @@ function espelharParaSegundoPlano(){
     const conhecidos={},completos={};
     for(const r of S.resultados)conhecidos[r.modalidade]=Math.max(conhecidos[r.modalidade]||0,Number(r.concurso)||0);
     for(const r of S.resultados)if(!faltamComplementos(r))completos[r.modalidade]=Math.max(completos[r.modalidade]||0,Number(r.concurso)||0);
-    const estado={ligado:S.buscaAutomatica!==false,modalidades,jogos,conhecidos,completos};
+    const estado={ligado:S.buscaAutomatica!==false,avisar:S.avisarSorteio!==false,modalidades,jogos,conhecidos,completos};
     const legado=ligado=>runner?.dispatchEvent({label:ETIQUETA_SEGUNDO_PLANO,event:"guardarEstado",
       details:{estado:JSON.stringify({...estado,ligado})}}).catch(()=>{});
     if(colorido)colorido.sincronizar({estado}).then(()=>legado(false)).catch(()=>legado(estado.ligado));
@@ -6641,8 +6700,10 @@ function normalizarCaixa(bruto, modalidade){
     .map(x => parseInt(String(x), 10)).filter(x => Number.isFinite(x));
   if(dezenas.length !== c.k)
     throw new Error(`o serviço devolveu ${dezenas.length} dezenas, esperava ${c.k}`);
+  if(new Set(dezenas).size!==c.k||dezenas.some(n=>n<c.base||n>=c.base+c.N))
+    throw new Error("o serviço devolveu dezenas inválidas para esta modalidade");
   const concurso = parseInt(bruto.numero ?? bruto.concurso, 10);
-  if(!Number.isFinite(concurso)) throw new Error("o serviço não informou o número do concurso");
+  if(!Number.isSafeInteger(concurso)||concurso<1)throw new Error("o serviço não informou o número do concurso");
   const r = {concurso, data:dataBrParaIso(bruto.dataApuracao || bruto.data),
              dezenas:dezenas.sort((a,b)=>a-b), modalidade, origem:"caixa"};
   Object.assign(r,complementosResultado(bruto,modalidade));
@@ -6930,24 +6991,29 @@ function ordemDeFontes(concurso){
   return [...preferida, repositorio].filter(Boolean);
 }
 
-async function buscarNaCaixa(modalidade, concurso){
+async function buscarNaCaixa(modalidade, concurso, op={}){
   const slug = SLUG_CAIXA[modalidade];
   if(!slug) throw new Error("modalidade sem serviço público conhecido");
 
-  const ordem = ordemDeFontes(concurso);
+  const fontes = ordemDeFontes(concurso);
+  const ordem=op.priorizarCaixa?[...fontes.filter(f=>f.id==='caixa'),...fontes.filter(f=>f.id!=='caixa')]:fontes;
   let parcial=null;
   const falhas = [];
   for(const fonte of ordem){
     try{
+      const consultadoEm=new Date().toISOString();
       const resp = await buscarComLimite(
         fonte.url(slug, concurso, modalidade), TEMPO_LIMITE_FONTE);
       if(!resp.ok) throw new Error(`respondeu ${resp.status}`);
       const r = fonte.converter(await resp.json(), modalidade, concurso);
       r.fonte = fonte.id;
-      r.proveniencia={fonte:fonte.id,urlFonte:fonte.url(slug,concurso,modalidade),consultadoEm:new Date().toISOString(),ultimoSolicitado:!concurso,confirmacaoDireta:fonte.id==='caixa'};
+      r.proveniencia={fonte:fonte.id,urlFonte:fonte.url(slug,concurso,modalidade),consultadoEm,ultimoSolicitado:!concurso,confirmacaoDireta:fonte.id==='caixa'};
       if(concurso&&r.concurso!==Number(concurso))throw new Error('A fonte respondeu outro concurso.');
       if(parcial&&r.concurso<parcial.concurso)continue;
-      if(faltamComplementos(r)){if(!parcial||r.concurso>=parcial.concurso)parcial=r;continue;}
+      if(r.concurso<(op.minimo||0)||faltamComplementos(r)){
+        if(!parcial||r.concurso>parcial.concurso||r.concurso===parcial.concurso&&faltamComplementos(parcial)&&!faltamComplementos(r))parcial=r;
+        continue;
+      }
       FONTE_PREFERIDA = fonte.id;
       return r;
     }catch(e){
@@ -7042,6 +7108,65 @@ function guardarResultados(novos){
   return inseridos;
 }
 
+function resultadoTrouxeDados(anterior,r){
+  if(!anterior)return true;
+  const direto=anterior.proveniencia?.confirmacaoDireta===true;
+  const novoDireto=r.proveniencia?.confirmacaoDireta===true;
+  if(direto&&novoDireto&&
+      Date.parse(anterior.proveniencia.consultadoEm)>Date.parse(r.proveniencia.consultadoEm))return false;
+  if(direto&&!novoDireto&&anterior.dezenas.join()!==r.dezenas.join())return false;
+  if(!direto&&novoDireto)return true;
+  if(r.rateio?.length&&r.origemRateio==='caixa'&&(anterior.origemRateio??anterior.origem)!=='caixa')return true;
+  const campos=['dezenas','data','trevos','dezenasSegundoSorteio','mes','time','timeNome',
+    'rateio','cidades','estimativaProximo','dataProximo','concursoProximo','acumulou'];
+  const rateioOficial=(anterior.origemRateio??anterior.origem)==='caixa'&&anterior.rateio?.length;
+  return campos.some(campo=>r[campo]!=null&&
+    (campo!=='rateio'||!rateioOficial||(r.origemRateio??r.origem)==='caixa')&&
+    JSON.stringify(anterior[campo])!==JSON.stringify(r[campo]));
+}
+
+function incorporarResultadosAutomaticos(lote,origem,notificar){
+  if(!lote.length)return {novos:0,alterados:0};
+  const anteriores=new Map(S.resultados.map(r=>[r.modalidade+':'+r.concurso,r]));
+  const atualizacoes=lote.filter(r=>resultadoTrouxeDados(anteriores.get(r.modalidade+':'+r.concurso),r));
+  if(!atualizacoes.length)return {novos:0,alterados:0};
+  const novos=guardarResultados(atualizacoes);
+  aoMudarHistorico(novos,origem,notificar);
+  if(typeof document!=='undefined'&&document.getElementById('tela')&&
+      ['inicio','resultados','conferir','jogos'].includes(S.tela)&&atualizacoes.some(r=>r.modalidade===S.modalidade))pintar();
+  return {novos,alterados:atualizacoes.length-novos};
+}
+
+let importacaoAndroid=null;
+function importarResultadosDoAndroid(){
+  const p=metaPlugin();
+  if(typeof p?.resultados!=='function')return Promise.resolve({novos:0,alterados:0});
+  if(!importacaoAndroid)importacaoAndroid=(async()=>{
+    const {concursos}=await p.resultados();
+    const lote=[];
+    for(const entrada of Array.isArray(concursos)?concursos:[]){
+      const m=entrada?.modalidade;
+      if(!Object.hasOwn(SLUG_CAIXA,m)||!Number.isSafeInteger(entrada.consultadoEm)||entrada.consultadoEm<=0)continue;
+      try{
+        const r=normalizarCaixa(entrada.resultado,m);
+        LL18.normalizeDraw(m,r);
+        r.proveniencia={fonte:'caixa',confirmacaoDireta:true,ultimoSolicitado:true,
+          consultadoEm:new Date(entrada.consultadoEm).toISOString()};
+        lote.push(r);
+      }catch(e){
+        // Um registro inválido não bloqueia os demais.
+      }
+    }
+    return incorporarResultadosAutomaticos(lote,"consulta no Android",false);
+  })().finally(()=>{importacaoAndroid=null;});
+  return importacaoAndroid;
+}
+
+async function atualizarResultadosAutomaticamente(){
+  if(S.buscaAutomatica===false)return;
+  await importarResultadosDoAndroid().catch(()=>{});
+  return buscaDiaria().catch(()=>{});
+}
 
 /* Integração preserva os jogos e as telas existentes. */
 const LL18_BRIDGE={
@@ -9199,6 +9324,7 @@ T.resultados = () => {
   const exibidos=meus.slice(0,40);
   /*<aposta>*/
   const conferencias=conferenciasAgrupadas(S.modalidade,new Set(exibidos.map(r=>r.concurso)));
+  const ganhos=ganhosAcumulados(S.modalidade,meus);
   /*</aposta>*/
   const cartoes = !meus.length
     ? `<div class="vazio">Nenhum resultado desta modalidade ainda.<br>
@@ -9225,14 +9351,15 @@ T.resultados = () => {
           <span class="chevron" aria-hidden="true">
             <svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></span>
           ${S.concursoAberto === r.concurso
-            ? `<div class="concurso-jogos">${recBotao(S.modalidade,r.dezenas,Number(r.concurso))}${S.modalidade==='dupla-sena'&&r.dezenasSegundoSorteio?recBotao(S.modalidade,r.dezenasSegundoSorteio,Number(r.concurso),2):''}${meusJogosNoConcurso(r)}</div>` : ""}
+            ? `<div class="concurso-jogos">${recBotao(S.modalidade,r.dezenas,Number(r.concurso))}${S.modalidade==='dupla-sena'&&r.dezenasSegundoSorteio?recBotao(S.modalidade,r.dezenasSegundoSorteio,Number(r.concurso),2):''}${meusJogosNoConcurso(r /*<aposta>*/,ganhos/*</aposta>*/)}</div>` : ""}
         </article>`).join("")}</div>
       ${meus.length > 40 ? `<div class="pe">mostrando os 40 mais recentes</div>` : ""}`;
 
   /* O botão "atualizar" saiu daqui: virou o ícone de recarregar no cabeçalho da
      tela, como no mockup. O id continua "r-caixa", então o tratador não mudou
      de lugar nem de nome. */
-  return chips + `<div class="ux-resultado-acoes"><span>${inf(meus.length)} concursos na base</span><div><button class="acao secundaria" data-ux-atualizar ${temServico?'':'disabled'}>Atualizar</button><button class="acao secundaria" data-ux-historico>Importar histórico</button></div></div>` + alerta + `<div id="r-saida" role="status" aria-live="polite"></div>` + cartoes + `
+  return chips + `<div class="ux-resultado-acoes"><span>${inf(meus.length)} concursos na base</span><div><button class="acao secundaria" data-ux-atualizar ${temServico?'':'disabled'}>Atualizar</button><button class="acao secundaria" data-ux-historico>Importar histórico</button></div></div>` + alerta + `<div id="r-saida" role="status" aria-live="polite"></div>` +
+    /*<aposta>*/(meus.length?painelGanhos(ganhos):'') +/*</aposta>*/ cartoes + `
   <details class="ajustes" id="r-ajustes" ${S.ajustesAbertos ? "open" : ""}>
     <summary>Trazer resultados e ajustes</summary>
     <div class="carta">
@@ -9261,8 +9388,8 @@ T.resultados = () => {
         style="width:20px;height:20px;flex:none;accent-color:var(--acaso)">
       <span style="flex:1;font-size:.86rem"><b>Buscar o último concurso sozinho</b>
         <span style="display:block;font-size:.76rem;color:var(--secundaria)">
-          Uma vez a cada 12 horas, ao abrir o app, só nas modalidades que você já
-          acompanha. Falha em silêncio quando não há sinal.</span></span>
+          A cada 5 minutos nas modalidades que você acompanha enquanto o app está aberto.
+          No Android, a consulta em segundo plano é programada a cada 15 minutos.</span></span>
     </label>
     <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;
       border:1px solid var(--linha);border-radius:12px;margin-bottom:10px;cursor:pointer">
@@ -9270,10 +9397,8 @@ T.resultados = () => {
         style="width:20px;height:20px;flex:none;accent-color:var(--acaso)">
       <span style="flex:1;font-size:.86rem"><b>Avisar no celular quando sair sorteio</b>
         <span style="display:block;font-size:.76rem;color:var(--secundaria)">
-          Um alarme do próprio aparelho, marcado para 90 minutos depois de cada
-          sorteio das loterias em que você tem jogo — toca com o app fechado.
-          Quando o resultado entra, o app confere os seus jogos e avisa o que
-          encontrou, com o número de dezenas que coincidiram.</span></span>
+          Com a busca automática ligada, o aviso é enviado após salvar o resultado consultado.
+          Toque para abrir o concurso em Resultados.</span></span>
     ${/* A frase anterior prometia dizer o valor do prêmio. Nunca foi verdade: o
           aviso sempre trouxe a contagem de dezenas. Descrição que promete mais
           do que o recurso entrega é a forma mais barata de perder a confiança.
@@ -9544,11 +9669,15 @@ function acoesNovas(){
      histórico parecer removida do app. */
   const ajustes = $("#r-ajustes");
   if(ajustes) ajustes.ontoggle = () => { S.ajustesAbertos = ajustes.open; };
+  const ganhos = $("#r-ganhos");
+  if(ganhos) ganhos.ontoggle = () => { S.ganhosAbertos = ganhos.open; };
 
   const rauto = $("#r-auto");
   if(rauto) rauto.onchange = e => {
     S.buscaAutomatica = e.target.checked;
     Guardar.gravar("buscaAutomatica", S.buscaAutomatica);
+    espelharParaSegundoPlano();
+    if(S.buscaAutomatica)void atualizarResultadosAutomaticamente();
   };
 
   const ravisar = $("#r-avisar");
@@ -9569,8 +9698,11 @@ function acoesNovas(){
     }
     if(via === "navegador"){
       estadoAvisos.innerHTML = `<div class="nota">Fora do app instalado, o aviso
-        só aparece com esta aba aberta. <strong>No APK</strong> o alarme é do
-        próprio Android e toca com o app fechado.</div>`;
+        aparece com esta aba aberta. No Android, o app consulta em segundo plano.</div>`;
+      return;
+    }
+    if(metaPlugin()){
+      estadoAvisos.innerHTML='<div class="nota">O Android avisa quando o resultado estiver disponível para abrir no app.</div>';
       return;
     }
     const pend = await Avisos.pendentes();
@@ -9586,6 +9718,7 @@ function acoesNovas(){
   if(ravisar) ravisar.onchange = async e => {
     S.avisarSorteio = e.target.checked;
     Guardar.gravar("avisarSorteio", S.avisarSorteio);
+    espelharParaSegundoPlano();
     if(S.avisarSorteio){
       const p = await pedirPermissaoDeAviso();
       if(p !== "granted"){
@@ -9596,15 +9729,7 @@ function acoesNovas(){
       }
       await reagendarLembretes();
     } else {
-      /* Desligar cancela o que já estava marcado. Deixar alarmes para trás
-         faria o app avisar depois de a pessoa ter pedido para parar. */
-      const mods = [...new Set(S.jogos.map(j => j.modalidade))];
-      const chaves = [];
-      mods.forEach(m => {
-        const u = ultimoResultado(m);
-        if(u) chaves.push(`sorteio:${m}:${u.concursoProximo || (Number(u.concurso)+1)}`);
-      });
-      await Avisos.cancelar(chaves);
+      await cancelarLembretesDeSorteio();
     }
     contarLembretes();
   };
@@ -10408,7 +10533,7 @@ function trocarModalidade(mod){
    O cartão de resultado já tinha data-abrir-concurso e um chevron — parecia
    clicável e não fazia nada, porque nunca houve tratador. Faltava a resposta
    mais óbvia de todas: "e os meus jogos, como foram nesse sorteio?" */
-function meusJogosNoConcurso(r){
+function meusJogosNoConcurso(r /*<aposta>*/,ganhos/*</aposta>*/){
   const cmp = jogosContraConcurso(r);
   if(!cmp.conferidos.length && !cmp.fora.length)
     return `<div class="nota">Nenhum jogo salvo de
@@ -10436,6 +10561,7 @@ function meusJogosNoConcurso(r){
             >${x.acertos} coincidência${x.acertos===1?"":"s"}</span></div>
         <div class="dezenas">${x.jogo.dezenas.map(d =>
           `<span class="dz ${r.dezenas.includes(d) ? "acertou" : "errou"}">${pad(d)}</span>`).join("")}</div>${metaComplementoHtml(x.conferencia)}
+        ${/*<aposta>*/""}${ganhoDoJogoNoConcurso(x.jogo,r,ganhos)}${/*</aposta>*/""}
       </div>`).join("")}`;
 }
 
@@ -10697,7 +10823,7 @@ function ligarControlesCabecalho(){
   /* Busca diária em segundo plano. Não bloqueia a abertura e não avisa quando
      falha: sem sinal é o caso comum, e um aviso a cada abertura offline
      treinaria a pessoa a ignorar o sino. */
-  buscaDiaria().then(r => { if(r.novos) pintar(); }).catch(()=>{});
+  void atualizarResultadosAutomaticamente();
 
   /* E de novo toda vez que o app volta ao primeiro plano. Rodar só na abertura
      significa que quem deixa o app aberto durante a noite não recebe o sorteio
@@ -10710,11 +10836,11 @@ function ligarControlesCabecalho(){
     if(document.visibilityState !== "visible") return;
     metaAbrirDestino();
     espelharParaSegundoPlano();
-    buscaDiaria().then(r => { if(r.novos) pintar(); }).catch(()=>{});
+    void atualizarResultadosAutomaticamente();
   });
-
+  window.addEventListener('online',atualizarResultadosAutomaticamente);
   setInterval(()=>{
-    if(document.visibilityState==="visible")buscaDiaria().then(r=>{if(r.novos)pintar();}).catch(()=>{});
+    if(document.visibilityState==="visible")void atualizarResultadosAutomaticamente();
   },60000);
 
   carregarCalibracao().then(()=>{ if(CALIBRACAO && S.tela==="gerar") pintar(); });
