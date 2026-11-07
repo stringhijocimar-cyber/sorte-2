@@ -7,3 +7,5 @@
 - A frequência de um perfil é uma medida histórica. O teste de acertos permite comparar os métodos com o controle aleatório. O código Android é 54 e o identificador de pacote continua sendo `app.lotolab.jogos`.
 - Em **Resultados**, abra o concurso para ver o valor de cada jogo e seus ganhos até aquele concurso. O painel **Ganhos acumulados** soma as apostas marcadas como pagas, separando os valores que ainda aguardam apuração dos valores já conhecidos. Jogos em acompanhamento aparecem identificados.
 - A busca automática consulta as modalidades acompanhadas a cada cinco minutos com o app aberto. O Android agenda a consulta em segundo plano a cada 15 minutos, sujeito à conexão e ao agendamento do aparelho. A consulta guarda o concurso antes do aviso, e tocar na notificação abre o resultado correspondente.
+
+O APK final usa o mesmo certificado permanente da versão 5.0.0 e pode ser instalado por cima dela.

@@ -14,8 +14,8 @@
     "package-lock.json",
     "android/app/build.gradle"
   ],
-  "releaseState": "candidate",
-  "notes": "Perfil conjunto da Lotofácil, avaliação histórica de até 1.000 concursos e comparação de carteiras em 1.000.000 de sorteios simulados.",
+  "releaseState": "ready",
+  "notes": "Perfil conjunto da Lotofácil, estudo de carteiras, ganhos acumulados por jogo e atualização de resultados antes dos avisos.",
   "editions": [
     {
       "name": "LotoLab 4.3.0",
