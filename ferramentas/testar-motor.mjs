@@ -203,7 +203,7 @@ const EXPOSTOS = [
   "buscarHistorico", "completarAPonta", "MAXIMO_A_EMENDAR",
   "buscaDiaria", "sorteioPendente", "ultimoSorteioEsperado",
   "espelharParaSegundoPlano", "ETIQUETA_SEGUNDO_PLANO", "faixaAtingida", "SLUG_CAIXA",
-  "INTERVALO_BUSCA", "INTERVALO_BUSCA_PENDENTE", "HORA_DE_PUBLICACAO",
+  "INTERVALO_BUSCA", "INTERVALO_BUSCA_PENDENTE", "horarioBrasilia",
 ];
 const epilogo = `\n;globalThis.__motor = {${EXPOSTOS.map((n) => `${n}: typeof ${n} !== "undefined" ? ${n} : undefined`).join(", ")}};\n`;
 vm.runInContext(fonte + epilogo, contexto, { filename: "index.html:script" });
@@ -2503,11 +2503,11 @@ secao("24. Avisos no celular");
 
   /* --- o horário do lembrete --- */
   const q = contexto.momentoDoAviso("2026-08-12");
-  checar("o lembrete cai no dia do sorteio", q.getFullYear() === 2026 &&
-    q.getMonth() === 7 && q.getDate() === 12, q.toString().slice(0, 21));
-  checar("e 90 minutos DEPOIS do sorteio, não na hora",
-    q.getHours() === 21 && q.getMinutes() === 30,
-    `${q.getHours()}h${String(q.getMinutes()).padStart(2,"0")}`);
+  checar("o lembrete de dia útil usa 21h30 em Brasília",
+    q.getTime()===Date.parse("2026-08-12T21:30:00-03:00"),q.toISOString());
+  const domingo=contexto.momentoDoAviso("2026-08-23");
+  checar("o lembrete de domingo usa 11h30 em Brasília",
+    domingo.getTime()===Date.parse("2026-08-23T11:30:00-03:00"),domingo.toISOString());
   checar("data inválida não vira alarme", contexto.momentoDoAviso("12/08/2026") === null);
   checar("data vazia também não", contexto.momentoDoAviso("") === null);
   checar("nem undefined", contexto.momentoDoAviso(undefined) === null);
@@ -2571,13 +2571,10 @@ secao("24. Avisos no celular");
   S.jogos = []; S.resultados = [];
   const tela = contexto.T.resultados();
   checar("a tela oferece o aviso no celular", /Avisar no celular quando sair sorteio/.test(tela));
-  checar("e explica que toca com o app fechado", /com o app fechado/.test(tela));
-  /* Este teste cobrava que a tela prometesse dizer "de quanto" foi. A promessa
-     era falsa: o aviso sempre trouxe a contagem de dezenas, nunca um valor —
-     e o teste estava fixando a mentira no lugar de pegá-la. Agora cobra o
-     contrário, nos dois sentidos. */
-  checar("e descreve o aviso pelo que ele entrega: dezenas coincidentes",
-    /dezenas que coincidiram/.test(tela));
+  checar("a tela explica a consulta em segundo plano a cada 15 minutos",
+    /consulta em segundo plano é programada a cada 15 minutos/.test(tela));
+  checar("e vincula o aviso ao concurso já salvo em Resultados",
+    /após salvar o resultado consultado/.test(tela)&&/abrir o concurso em Resultados/.test(tela));
   checar("e não promete informar valor de prêmio",
     !/de quanto/.test(tela));
   checar("a tela não promete aviso que o app não sabe entregar",
@@ -4608,19 +4605,19 @@ secao("43. Atualizar sozinho todos os sorteios novos");
 
   /* Domingo 2026-08-23, com histórico terminando na quinta 2026-08-20. */
   S.resultados = montarHistorico("2026-08-20", 3047);
-  const dom19h = new Date(2026, 7, 23, 19, 0, 0).getTime();
-  const dom21h = new Date(2026, 7, 23, 21, 30, 0).getTime();
+  const antesDomingo = Date.parse("2026-08-23T10:50:00-03:00");
+  const depoisDomingo = Date.parse("2026-08-23T11:20:00-03:00");
 
-  checar("às 19h o sorteio de hoje ainda não é esperado",
-    contexto.ultimoSorteioEsperado("mega-sena", dom19h) !== "2026-08-23",
-    String(contexto.ultimoSorteioEsperado("mega-sena", dom19h)));
-  checar("às 21h30 ele passa a ser esperado",
-    contexto.ultimoSorteioEsperado("mega-sena", dom21h) === "2026-08-23",
-    String(contexto.ultimoSorteioEsperado("mega-sena", dom21h)));
+  checar("domingo antes das 11h o concurso do dia ainda não é esperado",
+    contexto.ultimoSorteioEsperado("mega-sena", antesDomingo) !== "2026-08-23",
+    String(contexto.ultimoSorteioEsperado("mega-sena", antesDomingo)));
+  checar("domingo após as 11h o concurso do dia é esperado",
+    contexto.ultimoSorteioEsperado("mega-sena", depoisDomingo) === "2026-08-23",
+    String(contexto.ultimoSorteioEsperado("mega-sena", depoisDomingo)));
   checar("e com o histórico parado na quinta, o domingo fica pendente",
-    contexto.sorteioPendente("mega-sena", dom21h) === true);
-  checar("às 19h nada está pendente — não havia sorteio ainda",
-    contexto.sorteioPendente("mega-sena", dom19h) === false);
+    contexto.sorteioPendente("mega-sena", depoisDomingo) === true);
+  checar("domingo antes das 11h o concurso do dia ainda não está pendente",
+    contexto.sorteioPendente("mega-sena", antesDomingo) === false);
 
   /* O sábado não pode ser esperado: não há sorteio nesse dia. */
   const sab = new Date(2026, 7, 22, 22, 0, 0).getTime();
@@ -4654,7 +4651,7 @@ secao("43. Atualizar sozinho todos os sorteios novos");
 
     /* Alguém abre o app às 19h: nada pendente, mas o carimbo é gravado. */
     S.resultados = montarHistorico("2026-08-20", 3047);
-    S.ultimaBusca = {"mega-sena": dom19h};
+    S.ultimaBusca = {"mega-sena": antesDomingo};
     S.buscaAutomatica = true;
     contexto.fetch = responder(3048);
 

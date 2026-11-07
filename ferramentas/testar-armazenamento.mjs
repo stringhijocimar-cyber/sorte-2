@@ -101,7 +101,8 @@ try{
 
  await js(`S.modalidade='lotofacil';irParaTela('sugestoes',{lateral:true});`);
  await until(()=>js(`return !!S.intLotes?.lotofacil?.laboratorio?.automatico.persistido&&!document.querySelector('#int-gerar')?.disabled`),'sugestão com histórico completo',180000);
- const round=await js(`return S.intLotes.lotofacil.laboratorio.automatico.rodada`);
+ const {round,perfil}=await js(`const a=S.intLotes.lotofacil.laboratorio.automatico;return {round:a.rodada,perfil:a.estado.perfil};`);
+ assert.equal(round.metodo,'perfil-conjunto');
  assert.equal(await js(`return document.querySelector('.auto-results [role=alert]')?.textContent||''`),'');
  await js(`document.querySelector('#int-salvar').click();`);
  assert.equal(await js(`return S.tela`),'jogos');
@@ -131,7 +132,8 @@ try{
  await cmd('Page.reload');await ready();
  assert.equal(await js(`return Guardar.ler('resultados',[]).length`),count);
  assert.equal(await js(`return JSON.stringify(S.jogos)`),games);
- const reopened=await js(`return Guardar.ler('automatico421:'+LL18.autoOptions('lotofacil').profile,{}).rodadas`);
+ const reopened=await js(`return Guardar.ler(${JSON.stringify('automatico421:'+perfil)},{}).rodadas`);
+ assert.ok(Array.isArray(reopened),'rodadas do perfil exibido foram gravadas');
  assert.ok(reopened.some(r=>JSON.stringify(r)===JSON.stringify(round)));
  console.log('ok — reabertura conserva histórico, jogos e pacote original');
 

@@ -1,4 +1,4 @@
-if(typeof LL18==='undefined')importScripts('lab-core.js','lab-strategies.js','lab-recommendation.js','lab-auto.js');
+if(typeof LL18==='undefined')importScripts('lab-core.js','lab-strategies.js','lab-recommendation.js','lab-lotofacil.js','lab-auto.js');
 self.onmessage=event=>{
  const {id,acao,modalidade:m,jogo,registros=[],op={},estado={},jogos=[],jogosSalvos=[],livro=[]}=event.data;
  const progress=p=>self.postMessage({id,progresso:p});
@@ -24,6 +24,8 @@ self.onmessage=event=>{
    case 'diversificar':resultado=LL18.diversify(m,registros,jogos,op);break;
    case 'comite':resultado=LL18.backtest(m,registros,op,progress);break;
    case 'simular':resultado=LL18.monteCarlo(m,jogo,op);break;
+   case 'estudo-carteiras':resultado=LL18.simularCarteirasLotofacil(op,progress);break;
+   case 'estudo-historico':resultado=LL18.avaliarPerfilConjuntoLotofacil(registros,op,progress);break;
    case 'mudanca':resultado=LL18.drift(m,registros,jogo,op);break;
    case 'acompanhar':resultado=LL18.monitor(m,registros,livro);break;
    default:throw Error('Análise desconhecida.');

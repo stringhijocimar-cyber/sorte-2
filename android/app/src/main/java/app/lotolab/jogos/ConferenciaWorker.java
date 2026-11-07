@@ -23,6 +23,7 @@ public class ConferenciaWorker extends Worker {
     private JSONObject buscar(String slug) throws Exception {
         if(!slug.matches("megasena|lotofacil|quina|lotomania|duplasena|diadesorte|timemania|maismilionaria"))throw new IllegalArgumentException();
         HttpURLConnection conn=(HttpURLConnection)new URL("https://servicebus2.caixa.gov.br/portaldeloterias/api/"+slug).openConnection();
+        conn.setUseCaches(false);
         conn.setConnectTimeout(12000);conn.setReadTimeout(12000);conn.setRequestProperty("Accept","application/json");
         try {
             if(conn.getResponseCode()!=200)throw new IllegalStateException("Resultado indisponível");
@@ -46,21 +47,26 @@ public class ConferenciaWorker extends Worker {
             if(!estado.optBoolean("ligado",false))return Result.success();
             JSONObject mods=estado.optJSONObject("modalidades"),conhecidos=estado.optJSONObject("conhecidos"),completos=estado.optJSONObject("completos");
             JSONArray jogos=estado.optJSONArray("jogos");
-            if(mods==null||jogos==null||jogos.length()==0)return Result.success();
+            if(mods==null||jogos==null)return Result.success();
             Iterator<String> it=mods.keys();
             while(it.hasNext()&&!isStopped()){
                 String m=it.next();JSONObject mod=mods.optJSONObject(m);
                 if(mod==null||NotificacaoColorida.regra(m)==null)continue;
                 boolean tem=false;for(int i=0;i<jogos.length();i++)if(m.equals(jogos.getJSONObject(i).optString("modalidade"))){tem=true;break;}
-                if(!tem)continue;
                 try {
+                    long consulta=System.currentTimeMillis();
                     JSONObject r=buscar(mod.getString("slug"));int n=r.getInt("numero");
                     int visto=prefs.getInt("visto:"+m,0),conhecido=conhecidos==null?0:conhecidos.optInt(m,0);
-                    boolean especial="mais-milionaria".equals(m)||"dupla-sena".equals(m);
-                    if(n<Math.max(visto,conhecido)||(!especial&&n<=Math.max(visto,conhecido))||(n==visto&&prefs.getBoolean("completo:"+m,false))||(completos!=null&&n<=completos.optInt(m,0)))continue;
+                    if(n<1||n<conhecido)continue;
                     String data=iso(r.getString("dataApuracao"));JSONArray dezenas=r.getJSONArray("listaDezenas");
                     int[] sorteio=NotificacaoColorida.numeros(dezenas),regra=NotificacaoColorida.regra(m);
                     if(!ConferenciaRegras.validos(sorteio,regra[2],regra[2],regra[0],regra[1]))continue;
+                    // O aviso aponta para um concurso já disponível para a WebView.
+                    if(!ResultadosEmSegundoPlano.guardar(getApplicationContext(),m,r,consulta)){falhou=true;continue;}
+                    boolean especial="mais-milionaria".equals(m)||"dupla-sena".equals(m);
+                    if(!tem||!estado.optBoolean("avisar",true)||n<Math.max(visto,conhecido)||
+                        (!especial&&n<=Math.max(visto,conhecido))||(n==visto&&prefs.getBoolean("completo:"+m,false))||
+                        (completos!=null&&n<=completos.optInt(m,0)))continue;
                     JSONObject melhor=null;int maior=Integer.MIN_VALUE;
                     for(int i=0;i<jogos.length();i++){
                         JSONObject j=jogos.getJSONObject(i);if(!m.equals(j.optString("modalidade")))continue;
@@ -78,6 +84,8 @@ public class ConferenciaWorker extends Worker {
                     }
                     // Um resumo por modalidade e concurso, inclusive quando não houve faixa de prêmio.
                     if(melhor!=null&&!NotificacaoColorida.mostrar(getApplicationContext(),melhor,mod.optString("nome",m),false))continue;
+                    if(melhor==null&&n>Math.max(visto,conhecido)&&
+                        !NotificacaoColorida.mostrarResultado(getApplicationContext(),m,n,mod.optString("nome",m)))continue;
                     boolean completo=!especial||("mais-milionaria".equals(m)?ConferenciaRegras.validos(NotificacaoColorida.numeros(r.optJSONArray("trevosSorteados")),2,2,1,6):ConferenciaRegras.validos(NotificacaoColorida.numeros(r.optJSONArray("listaDezenasSegundoSorteio")),6,6,1,50));
                     prefs.edit().putInt("visto:"+m,n).putBoolean("completo:"+m,completo).apply();
                 }catch(Exception e){falhou=true;}

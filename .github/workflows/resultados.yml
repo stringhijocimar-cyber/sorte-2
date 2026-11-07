@@ -12,7 +12,11 @@ name: Atualizar resultados
 
 on:
   schedule:
-    # Depois dos sorteios noturnos e dos domingos; inclui tentativas de reserva.
+    # Primeira consulta às 21h32 nos dias úteis e às 11h32 no domingo (Brasília).
+    # O horário do GitHub está em UTC; a meia-noite UTC corresponde à noite anterior.
+    - cron: "32 0 * * 2-6"
+    - cron: "32 14 * * 0"
+    # Tentativas de reserva e atualização do histórico.
     - cron: "17 1,4,12 * * *"
     - cron: "17 15 * * 0"
   workflow_dispatch:

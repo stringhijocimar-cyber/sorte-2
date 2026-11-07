@@ -83,3 +83,66 @@ test('painel explica denominadores e jogo salvo recebe perfil sem alterar decis�
  assert.deepEqual(review.padroes,L.patternProfile('mega-sena',ticket));assert.equal(review.acao,'manter');
  assert.match(R.card(j,review),/Soma do jogo.*Fibonacci/);
 });
+
+const lotofacil='lotofacil';
+function historicoLotofacil(n){
+ const random=L.rng('validacao-perfil-conjunto');
+ return Array.from({length:n},(_,i)=>draw(i+1,L.randomTicket(lotofacil,random).dezenas,lotofacil));
+}
+
+test('perfil conjunto conta a interseção real, exclui lacunas e entra na sugestão principal',()=>{
+ const rows=historicoLotofacil(45).filter(r=>r.concurso!==10);
+ const op={perfilConjunto:true,fixas:[1],excluidas:[2],quantidade:3,orcamento:7};
+ const r=L.autoRecommend(lotofacil,rows,{},op),round=r.automatico.rodada,j=round.perfilConjunto;
+ assert.equal(round.metodo,'perfil-conjunto');
+ assert.equal(r.jogos.length,2);
+ assert.equal(j.comparaveis,43-1);
+ assert.equal(j.referencia,45);
+ assert.ok(r.jogos.every(t=>t.dezenas.includes(1)&&!t.dezenas.includes(2)));
+ const dentro=(n,[a,b])=>n>=a&&n<=b;
+ const contagem=rows.slice(1).filter((atual,i)=>{
+  const anterior=rows[i];
+  if(atual.concurso!==anterior.concurso+1)return false;
+  const p=L.patternProfile(lotofacil,atual),moldura=atual.dezenas.filter(d=>d<=5||d>=21||d%5===0||d%5===1).length;
+  return p.pares===j.pares&&p.primos===j.primos&&p.fibonacci===j.fibonacci&&
+   dentro(L.sum(atual.dezenas),j.faixaSoma)&&dentro(L.hits(lotofacil,atual,anterior),j.faixaRepeticao)&&
+   dentro(p.consecutivos,j.faixaConsecutivos)&&dentro(p.maiorSequencia,j.faixaSequencia)&&dentro(moldura,j.faixaMoldura)&&
+   (Math.max(...p.linhas,...p.colunas)===5)===j.grupoCheio;
+ }).length;
+ assert.ok(contagem>0);
+ assert.equal(j.vezes,contagem);
+ assert.equal(j.percentual,100*contagem/42);
+ assert.ok(r.explicacoes.every(e=>e.perfilConjunto.vezes<=j.vezes));
+ assert.deepEqual(L.autoRecommend(lotofacil,rows,r.automatico.estado,{...op,quantidade:1}).jogos[0],r.jogos[0]);
+ assert.notEqual(L.autoOptions(lotofacil,op).profile,L.autoOptions(lotofacil,{...op,perfilConjunto:false}).profile);
+ const preview=L.autoCycle(lotofacil,rows.slice(-20),{},op);
+ assert.equal(preview.rodada.perfilConjunto,undefined);
+ assert.equal(preview.estado.rodadas.length,0);
+});
+
+test('estudo histórico preserva os bilhetes quando o último resultado testado é alterado',()=>{
+ const rows=historicoLotofacil(140),op={concursos:100,semente:'teste-causal'};
+ const a=L.avaliarPerfilConjuntoLotofacil(rows,op);
+ const b=L.avaliarPerfilConjuntoLotofacil([...rows.slice(0,-1),draw(140,rows[0].dezenas,lotofacil)],op);
+ assert.equal(a.n,100);
+ assert.equal(a.inicio,41);
+ assert.equal(a.fim,140);
+ assert.equal(a.referencias,32);
+ assert.deepEqual(a.observacoes,b.observacoes);
+ assert.ok(a.observacoes.every(o=>o.treinoAte===o.concurso-1&&o.jogos.length===20));
+ assert.throws(()=>L.avaliarPerfilConjuntoLotofacil(rows.filter(r=>r.concurso!==110),op),/consecutivos/);
+});
+
+test('simulação compara carteiras distintas nos mesmos sorteios sem mudar custo',()=>{
+ const op={amostras:1000,semente:'teste-monte-carlo'};
+ const a=L.simularCarteirasLotofacil(op);
+ assert.deepEqual(a,L.simularCarteirasLotofacil(op));
+ assert.equal(a.n,1000);
+ assert.equal(a.carteiras.length,4);
+ assert.equal(a.custo,20*L.cfg(lotofacil).preco);
+ for(const c of a.carteiras){
+  assert.equal(new Set(c.jogos.map(t=>L.key(lotofacil,t))).size,20);
+  assert.ok(c.faixas.every((f,i)=>!i||f.vezes<=c.faixas[i-1].vezes));
+  if(c.id==='fechamento18')assert.ok(c.jogos.every(t=>t.dezenas.every(d=>a.baseFechamento.includes(d))));
+ }
+});

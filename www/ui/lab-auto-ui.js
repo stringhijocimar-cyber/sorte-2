@@ -6,7 +6,7 @@ let bridge=null, scheduled=false;
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const num=(v,d=2)=>v==null||!Number.isFinite(v)?'—':v.toLocaleString('pt-BR',{maximumFractionDigits:d});
 const money=v=>v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
-const name=id=>id==='consenso'?'Consenso das estratégias':L.autoExperts[id]||id;
+const name=id=>id==='perfil-conjunto'?'Perfil conjunto':id==='consenso'?'Consenso das estratégias':L.autoExperts[id]||id;
 const key=p=>'automatico421:'+p;
 // Apenas o concurso selecionado é desenhado; os demais pacotes permanecem na memória.
 const reports=new Map(),historyChoices=new Map();
@@ -184,20 +184,26 @@ function strategyView(a,old=false){
 }
 function render(g,old=false,rec=()=>'',trevos=()=> ''){
  const a=g.automatico,follow=a.acompanhamento,round=a.rodada;
+ const perfilPendente=a.perfilSolicitado&&!round.perfilConjunto;
  const goal=a.objetivo,goalMain=goal?.linhas.find(x=>x.id==='principal'),k=L.cfg(g.modalidade).k;
- const ticket=(t,i)=>`<article class="int-ticket ${i===0?'int-principal':''}"><div class="int-section-title"><h3>${i===0?'Sua sugestão principal':'Jogo adicional '+i}</h3><span>${i===0?'CONCURSO '+(round.concursoAlvo||'A DEFINIR'):'OPCIONAL'}</span></div>${balls(g.modalidade,t)}${t.trevos?trevos(t.trevos):''}${i===0?decisionView(a,old)+savedSequenceView(g.modalidade,t,round.concursoAlvo):''}${rec(t)}${i===0?`<details class="auto-reason"><summary>Como esta sugestão foi escolhida</summary><p class="int-help">${esc(g.motivo)}</p></details>`:''}<button class="acao secundaria" data-int-analisar="${i}">Ver estatísticas deste jogo</button></article>`;
+ const ticket=(t,i)=>{
+  const perfil=g.explicacoes?.[i]?.perfilConjunto;
+  return `<article class="int-ticket ${i===0?'int-principal':''}"><div class="int-section-title"><h3>${i===0?(perfilPendente?'Prévia da sugestão':'Sua sugestão principal'):'Jogo adicional '+i}</h3><span>${i===0?'CONCURSO '+(round.concursoAlvo||'A DEFINIR'):'OPCIONAL'}</span></div>${balls(g.modalidade,t)}${t.trevos?trevos(t.trevos):''}${i===0&&!perfilPendente?`${a.perfilSolicitado?'':decisionView(a,old)}${savedSequenceView(g.modalidade,t,round.concursoAlvo)}`:''}${perfilPendente?'':rec(t)}${i===0?`<details class="auto-reason"><summary>Como esta sugestão foi escolhida</summary><p class="int-help">${esc(g.motivo)}</p></details>`:perfil?`<p class="int-help">Incidência conjunta: ${num(perfil.percentual,3)}% · ${num(perfil.vezes,0)} de ${num(perfil.comparaveis,0)} concursos.</p>`:''}<button class="acao secundaria" data-int-analisar="${i}">Ver estatísticas deste jogo</button></article>`;
+ };
  return `<section class="int-results auto-results" data-auto-modalidade="${esc(g.modalidade)}" aria-label="Sugestão automática"><div class="int-section-title"><h2>Seu lote está pronto</h2><span>${esc(L.VERSION)}</span></div>
   ${old?'<p class="nota atencao">O histórico mudou. A atualização automática está preparando o próximo concurso.</p>':''}
   ${!a.persistido?'<p class="nota atencao" role="alert">Não foi possível registrar o pacote de análise. Os jogos já salvos foram preservados. Toque em Atualizar sugestão para tentar novamente ou salve uma cópia em Meus jogos → Backup.</p>':''}
   ${!g.base.n?'<p class="nota atencao">Sem histórico disponível. A sugestão usa apenas referências combinatórias; a comparação começará quando os resultados chegarem.</p>':''}
   <div class="auto-context"><span>${esc(L.cfg(g.modalidade).nome)} · ${round.concursoAlvo?'concurso '+num(round.concursoAlvo,0):'concurso a definir'}</span><span class="auto-state">${old?'Histórico alterado':round.concursoAlvo?'Aguardando resultado':'Prévia'}</span></div>
+  ${perfilPendente?`<p class="nota atencao">${esc(g.motivo)}</p>`:''}
   ${ticket(g.jogos[0],0)}
-  ${root.LL18UI?.mainParametersView(g.principal.analise.padroes,{estrategia:name(round.metodo||'consenso'),motivo:g.motivo})||''}
+  ${!perfilPendente?root.LL18UI?.mainParametersView(g.principal.analise.padroes,{estrategia:name(round.metodo||'consenso'),motivo:g.motivo,
+   perfilConjunto:round.perfilConjunto,baseOriginal:round.base!==g.base.assinatura})||'':''}
   ${strategyView(a,old)}
   <div class="auto-lot-cost"><div><span>Seu lote · ${g.jogos.length} ${g.jogos.length===1?'jogo':'jogos'}</span><strong>${money(g.custo)}</strong></div><p>${money(g.unitario)} por jogo<br>Testes virtuais: R$ 0,00</p></div>
   ${g.jogos.length>1?`<details class="int-details"><summary>Jogos adicionais escolhidos (${g.jogos.length-1})</summary>${g.jogos.slice(1).map((t,i)=>ticket(t,i+1)).join('')}</details>`:''}
   ${g.jogos.length<g.solicitados?`<p class="nota">O orçamento comporta ${g.jogos.length} dos ${g.solicitados} jogos solicitados.</p>`:''}
-  <div class="int-grid int-actions" aria-label="Ações do lote"><button class="acao" id="int-salvar" ${old?'disabled':''}>Salvar ${g.jogos.length===1?'sugestão':'lote'} · ${money(g.custo)}</button><button class="acao secundaria" id="int-exportar">Exportar CSV</button></div><p class="int-help">Salvar no app não compra apostas. O pacote virtual permanece separado dos seus jogos e do seu orçamento.</p>
+  <div class="int-grid int-actions" aria-label="Ações do lote"><button class="acao" id="int-salvar" ${old||perfilPendente?'disabled':''}>Salvar ${g.jogos.length===1?'sugestão':'lote'} · ${money(g.custo)}</button><button class="acao secundaria" id="int-exportar" ${perfilPendente?'disabled':''}>Exportar CSV</button></div><p class="int-help">Salvar no app não compra apostas. O pacote virtual permanece separado dos seus jogos e do seu orçamento.</p>
   <section class="auto-overview" aria-label="Resumo da análise"><h3>O que a análise mostra</h3><p class="int-help">${follow.n?`Acompanhamento prospectivo: ${num(follow.n,0)} concursos elegíveis.`:a.inicial?.particao?'Teste histórico separado. O acompanhamento futuro ainda não começou.':'Descrição do histórico disponível. Ainda sem validação suficiente.'}</p>
   <div class="auto-summary"><div><b>${num(g.base.n,0)}</b><small>concursos na base</small></div><div><b>${num(follow.n,0)}</b><small>conferidos neste perfil</small></div><div><b>${a.pacoteVirtual.length}</b><small>jogos virtuais</small></div></div>
   <p class="auto-limitation">Histórico descreve; não prevê. Estes indicadores não são chance de prêmio.</p></section>

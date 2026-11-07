@@ -2,6 +2,7 @@
 (function(root){
 'use strict';
 const L=root.LL18||(typeof require==='function'?require('./lab-recommendation.js'):null);
+if(!L.perfilConjuntoLotofacil&&typeof require==='function')require('./lab-lotofacil.js');
 // O protocolo dos bilhetes permanece igual: rodadas antigas continuam congeladas.
 const PROTOCOL='auto-421-1', EVALUATION='objetivo-426-3', VERSION=L.VERSION, POOL=96, REFERENCES=32;
 const experts={
@@ -26,8 +27,10 @@ function options(m,op={}){
  if(!c.colunas&&(fixed.length>shape.dezenas.length||c.N-excluded.length<shape.dezenas.length))throw Error('As restrições não permitem completar o jogo.');
  if(op.trevosFixos)shape.trevos=L.validateTicket(m,{...shape,trevos:op.trevosFixos},{completo:true}).trevos;
  const sizes=c.colunas?shape.colunas.map(a=>a.length):[shape.dezenas.length,shape.trevos?.length||0];
- const profile=JSON.stringify([PROTOCOL,m,sizes,fixed,excluded,op.trevosFixos||null,janela,op.antesDe??null]);
- return {shape,fixed,excluded,janela,profile,trevosFixos:op.trevosFixos||null};
+ const perfilConjunto=m==='lotofacil'&&sizes[0]===15&&op.perfilConjunto===true;
+ const profile=JSON.stringify([PROTOCOL,m,sizes,fixed,excluded,op.trevosFixos||null,janela,op.antesDe??null,
+  ...(perfilConjunto?['perfil-conjunto-1']:[])]);
+ return {shape,fixed,excluded,janela,profile,trevosFixos:op.trevosFixos||null,...(perfilConjunto?{perfilConjunto}:{})};
 }
 function randomTicket(m,random,o){
  const c=L.cfg(m),t=L.randomTicket(m,random,o.shape);
@@ -289,20 +292,31 @@ function autoCycle(m,records,input={},op={},progress=()=>{}){
  const latest=rows.at(-1)?.concurso||0,requested=op.concursoAlvo??null;
  if(requested!==null&&(!Number.isSafeInteger(requested)||requested<=latest))throw Error('Escolha um concurso futuro.');
  const target=requested||(c.especial?null:latest?latest+1:null);
- let round=state.rodadas.find(r=>r.concursoAlvo===target),p;
+ let round=state.rodadas.find(r=>r.concursoAlvo===target),p,conjunto;
+ const escolherConjunto=semente=>L.perfilConjuntoLotofacil(base,{semente,quantidade:op.quantidade??1,fixas:o.fixed,excluidas:o.excluded});
  if(!round){
   progress({etapa:'Montando sugestão e pacote virtual',feitos:0,total:1});
   p=proposal(model(m,rows),o,target||1);
-  const method=state.metodo||'consenso',principal=method==='consenso'?p.consensus:p.tests.find(x=>x.id===method)?.jogo||p.consensus;
+  if(o.perfilConjunto){
+   progress({etapa:'Classificando jogos pelo perfil conjunto',feitos:0,total:1});
+   conjunto=escolherConjunto(p.seed);
+  }
+  const method=conjunto?'perfil-conjunto':state.metodo||'consenso';
+  const principal=conjunto?.jogos[0]||p.tests.find(x=>x.id===method)?.jogo||p.consensus;
   round={protocolo:PROTOCOL,concursoAlvo:target,geradoAte:latest,criadoEm:now,semente:p.seed,base:base.meta.assinatura,
-   metodo:method,principal,consenso:p.consensus,testes:p.tests,candidatos:p.candidatos};
-  if(target)state.rodadas.push(round);
+   metodo:method,principal,consenso:p.consensus,testes:p.tests,candidatos:conjunto?.candidatas??p.candidatos,
+   ...(conjunto?{perfilConjunto:conjunto.perfis[0]}:{})};
+  // Uma prévia com base curta pode ser refeita quando o histórico chegar.
+  if(target&&(!o.perfilConjunto||conjunto))state.rodadas.push(round);
+ }else if(round.perfilConjunto&&op.quantidade>1){
+  conjunto=escolherConjunto(round.semente);
  }
  state.ultimaBase={ultimo:latest,assinatura:base.meta.assinatura,avaliacao:evaluation.meta.assinatura,n:base.meta.n};
  const decision=state.decisoes.at(-1)||{acao:'MANTER',metodo:state.metodo||'consenso',motivo:state.inicial?.motivo||'Aguardando resultados válidos para iniciar o acompanhamento.'};
  return {versao:VERSION,protocolo:PROTOCOL,modalidade:m,estado:state,base:base.meta,rodada:round,acompanhamento:follow,
   inicial:state.inicial||null,decisao:decision,objetivo:goalReport(m,count?follow.observacoes:state.inicial?.observacoes?.slice(state.inicial.nSelecao)||[]),proximaRevisao:Math.max(60,30*(Math.floor(count/30)+1)),
   pacoteVirtual:round.testes.map(x=>({...x,nome:experts[x.id]})),custoVirtual:0,pool:p?.pool||null,
+  ...(o.perfilConjunto?{perfilSolicitado:true,lotePerfilConjunto:conjunto||null}:{}),
   limite:'Os testes virtuais não são apostas. Acertos históricos e convergência não representam probabilidade futura. Comparação principal: dezenas/colunas; complementos e retorno financeiro são informados separadamente.'};
 }
 // Protocolo exclusivo do painel, sem participação em pesos/decisões/sementes.
@@ -405,33 +419,44 @@ function observatory(m,records,state,op={},saved=[],tickets=[]){
 }
 function autoRecommend(m,records,input={},op={},progress=()=>{}){
  const plano=L.assertRecommendationPlan(L.recommendationPlan(m,op,'automatico'));
- const cycle=autoCycle(m,records,input,op,progress),o=options(m,op),base=L.recommendationBase(m,records,op),q=op.quantidade??1;
- if(!Number.isInteger(q)||q<1||q>60)throw Error('Escolha de 1 a 60 jogos.');
- const unit=L.currentCost(m,o.shape),budget=op.orcamento==null||op.orcamento===''?q*unit:Number(op.orcamento);
- if(!Number.isFinite(budget)||budget<unit)throw Error('O orçamento não cobre um jogo.');
- const size=Math.min(q,Math.floor((budget+1e-8)/unit)),pool=cycle.pool||(size>1?proposal(model(m,base.rows),o,cycle.rodada.concursoAlvo||1).pool:[]);
+ const {efetivos:size,unitario:unit,solicitados:q}=plano;
+ const cycle=autoCycle(m,records,input,{...op,quantidade:size},progress),o=options(m,op),base=L.recommendationBase(m,records,op);
+ const conjunto=cycle.rodada.perfilConjunto;
+ const classificados=cycle.lotePerfilConjunto;
+ const pool=conjunto?[]:cycle.pool||(size>1?proposal(model(m,base.rows),o,cycle.rodada.concursoAlvo||1).pool:[]);
  const selected=[cycle.rodada.principal],seen=new Set(selected.map(t=>L.key(m,t)));
+ if(conjunto&&size>1){
+  selected.push(...(classificados?.jogos||[]).filter(jogo=>!seen.has(L.key(m,jogo))).slice(0,size-1));
+  if(selected.length<size)throw Error('Carregue o histórico para completar o lote com o perfil conjunto.');
+ }
  while(selected.length<size){
   const next=pool.filter(x=>!seen.has(L.key(m,x.jogo))).map(x=>({...x,value:x.score-L.mean(selected.map(t=>L.hits(m,t,x.jogo)/L.tokens(m,t).length))})).sort((a,b)=>b.value-a.value)[0];
   if(!next)throw Error('O espaço matemático comporta o lote, mas a amostragem não encontrou candidatas diferentes suficientes. Reduza a quantidade ou revise as restrições. Nenhum jogo foi alterado.');selected.push(next.jogo);seen.add(L.key(m,next.jogo));
  }
  progress({etapa:'Explicando a decisão automática',feitos:1,total:1});
  const analysis=L.analyze(m,selected[0],base.rows),adherence=L.reference(m,selected[0],base.rows,{amostras:1000,semente:cycle.rodada.semente+':explicacao'});
- const explanations=selected.map(jogo=>({jogo,distancia:null,criterios:[]}));
- const {pool:unused,...publicCycle}=cycle;
+ const porJogo=new Map(classificados?.jogos.map((jogo,i)=>[L.key(m,jogo),classificados.perfis[i]]));
+ const explanations=selected.map((jogo,i)=>{
+  const perfilConjunto=i===0?conjunto:porJogo.get(L.key(m,jogo));
+  return {jogo,distancia:null,criterios:[],...(perfilConjunto?{perfilConjunto}:{})};
+ });
+ const {pool:unused,lotePerfilConjunto:unusedJoint,...publicCycle}=cycle;
  analysis.base=base.meta;
  analysis.saudeBase=L.historyHealth(base);
  analysis.diagnosticoFrequencia=L.frequencyDiagnosis(m,base);
  analysis.padroes=L.patternSummary(m,selected[0],base);
- const estadoValidacao=cycle.acompanhamento.n>=60?'prospectivo':cycle.inicial?.estado==='concluido'?'teste-separado':'insuficiente';
+ const estadoValidacao=cycle.acompanhamento.n>=60?'prospectivo':!o.perfilConjunto&&cycle.inicial?.estado==='concluido'?'teste-separado':'insuficiente';
  const qualidadeEvidencia=L.evidenceQuality(base.meta,{estado:estadoValidacao},base.meta.n>=30?'perfil-historico':'amostra-insuficiente');
  return {versao:VERSION,motor:'automatico',plano,modalidade:m,semente:cycle.rodada.semente,
-  parametros:{janela:o.janela,antesDe:op.antesDe??null,formato:o.shape,fixas:o.fixed,excluidas:o.excluded,trevosFixos:o.trevosFixos},
+  parametros:{janela:o.janela,antesDe:op.antesDe??null,formato:o.shape,fixas:o.fixed,excluidas:o.excluded,trevosFixos:o.trevosFixos,
+   ...(o.perfilConjunto?{perfilConjunto:true}:{})},
   base:base.meta,totalDisponivel:base.totalDisponivel,jogos:selected,explicacoes:explanations,
   principal:{...explanations[0],analise:analysis,aderencia:adherence},diversidade:L.portfolio(m,selected),
   custo:selected.length*unit,unitario:unit,solicitados:q,candidatos:cycle.rodada.candidatos,estado:base.meta.n>=30?'perfil-historico':'amostra-insuficiente',
   calibracao:{estado:estadoValidacao,perfil:cycle.rodada.metodo,pesos:{},motivo:cycle.decisao.motivo,particao:cycle.inicial?.particao},qualidadeEvidencia,
-  motivo:cycle.rodada.metodo==='consenso'?'Combinação com maior concordância entre as dez estratégias do pacote virtual.':'Estratégia selecionada automaticamente: '+experts[cycle.rodada.metodo]+'.',
+  motivo:conjunto?'Seleção pelo maior número de concursos em que os critérios do perfil ocorreram juntos, entre jogos válidos para esta configuração.':
+   o.perfilConjunto?'Perfil conjunto indisponível. São necessárias ao menos 30 transições comparáveis e um resultado de referência. Esta é uma prévia do ciclo automático.':
+   cycle.rodada.metodo==='consenso'?'Combinação com maior concordância entre as dez estratégias do pacote virtual.':'Estratégia selecionada automaticamente: '+experts[cycle.rodada.metodo]+'.',
   evidencia:'Seleção e comparação automáticas; vantagem futura não demonstrada.',automatico:publicCycle,aviso:L.aviso};
 }
 Object.assign(L,{autoProtocol:PROTOCOL,autoEvaluation:EVALUATION,autoObjective:objective,autoExperts:experts,autoOptions:options,autoCycle,autoRecommend,autoProspective:prospective,autoAnytime:anytime,autoEligible:eligible,tierProtocol:TIER_PROTOCOL,walletProtocol:WALLET_PROTOCOL,freezeSavedGame,hitTiers,prospectiveTiers,observatory});

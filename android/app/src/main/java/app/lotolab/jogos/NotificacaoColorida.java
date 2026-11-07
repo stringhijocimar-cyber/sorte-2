@@ -110,26 +110,45 @@ final class NotificacaoColorida {
         }
         return bitmap;
     }
-    static synchronized boolean mostrar(Context c, JSONObject cf, String nome, boolean demonstracao) {
-        if(!valida(cf))return false;
+    private static NotificationManagerCompat gerenciador(Context c) {
         NotificationManagerCompat manager=NotificationManagerCompat.from(c);
-        if(!manager.areNotificationsEnabled())return false;
+        if(!manager.areNotificationsEnabled())return null;
         NotificationManager nativeManager=(NotificationManager)c.getSystemService(Context.NOTIFICATION_SERVICE);
         if(Build.VERSION.SDK_INT>=26){
             NotificationChannel canal=new NotificationChannel(CANAL,"Conferência com dezenas",NotificationManager.IMPORTANCE_DEFAULT);
             canal.setDescription("Acertos e dezenas não sorteadas nos jogos acompanhados");nativeManager.createNotificationChannel(canal);
-            if(nativeManager.getNotificationChannel(CANAL).getImportance()==NotificationManager.IMPORTANCE_NONE)return false;
+            if(nativeManager.getNotificationChannel(CANAL).getImportance()==NotificationManager.IMPORTANCE_NONE)return null;
         }
+        return manager;
+    }
+    private static PendingIntent destino(Context c, int id, String modalidade, int concurso, String jogo) {
+        Intent intent=new Intent(c,MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP|Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        intent.putExtra("lotolab_modalidade",modalidade).putExtra("lotolab_concurso",concurso).putExtra("lotolab_jogo",jogo);
+        return PendingIntent.getActivity(c,id,intent,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
+    }
+    static synchronized boolean mostrarResultado(Context c, String modalidade, int concurso, String nome) {
+        if(preferencias(c).getInt("enviado:"+modalidade,0)>=concurso)return true;
+        NotificationManagerCompat manager=gerenciador(c);
+        if(manager==null)return false;
+        int id=((modalidade+":"+concurso).hashCode()&0x3fffffff)+10000;
+        NotificationCompat.Builder b=new NotificationCompat.Builder(c,CANAL)
+            .setSmallIcon(R.drawable.ic_stat_icone).setContentTitle(nome+" · resultado disponível")
+            .setContentText("Concurso "+concurso).setAutoCancel(true).setOnlyAlertOnce(true)
+            .setContentIntent(destino(c,id,modalidade,concurso,""));
+        try {manager.notify(id,b.build());return true;}
+        catch(SecurityException e){return false;}
+    }
+    static synchronized boolean mostrar(Context c, JSONObject cf, String nome, boolean demonstracao) {
+        if(!valida(cf))return false;
+        NotificationManagerCompat manager=gerenciador(c);
+        if(manager==null)return false;
         String modalidade=cf.optString("modalidade"), chave=modalidade+":"+cf.optInt("concurso");
         SharedPreferences prefs=preferencias(c);
         String assinatura=cf.optString("jogo")+":"+cf.optJSONArray("dezenas")+":"+cf.optJSONArray("sorteadas")+":"+cf.optJSONArray("trevos")+":"+cf.optJSONArray("trevosSorteados")+":"+cf.optJSONArray("sorteadasSegundo");
         int enviado=prefs.getInt("enviado:"+modalidade,0);
         if(!demonstracao&&(enviado>cf.optInt("concurso")||(enviado==cf.optInt("concurso")&&assinatura.equals(prefs.getString("assinatura:"+modalidade,"")))))return true;
-        int[] jogo=numeros(cf.optJSONArray("dezenas")),sorteio=numeros(cf.optJSONArray("sorteadas"));
-        int acertos=ConferenciaRegras.acertos(jogo,sorteio), id=(chave.hashCode()&0x3fffffff)+10000;
-        Intent intent=new Intent(c,MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP|Intent.FLAG_ACTIVITY_SINGLE_TOP);
-        intent.putExtra("lotolab_modalidade",modalidade);intent.putExtra("lotolab_jogo",cf.optString("jogo"));
-        PendingIntent abrir=PendingIntent.getActivity(c,id,intent,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
+        int id=(chave.hashCode()&0x3fffffff)+10000;
+        PendingIntent abrir=destino(c,id,modalidade,demonstracao?0:cf.optInt("concurso"),cf.optString("jogo"));
         String titulo=(demonstracao?"Demonstração · ":"")+nome+": "+resumo(cf);
         String texto="Concurso "+cf.optInt("concurso")+" · comparando dezenas; confira o bilhete oficial.";
         // Texto acessível repete os números, pois a imagem sozinha não é lida por todos os serviços.
@@ -146,7 +165,7 @@ final class NotificacaoColorida {
             .setSmallIcon(R.drawable.ic_stat_icone).setContentTitle(titulo).setContentText(texto)
             .setColor(Color.rgb(130,80,223)).setStyle(estilo).setAutoCancel(true)
             .setContentIntent(abrir).setOnlyAlertOnce(true).setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
-            .addAction(0,"Ver jogo",abrir);
+            .addAction(0,"Ver resultado",abrir);
         try {manager.notify(id,b.build());}
         catch(SecurityException e){return false;}
         if(!demonstracao)prefs.edit().putInt("enviado:"+modalidade,cf.optInt("concurso")).putString("assinatura:"+modalidade,assinatura).apply();
