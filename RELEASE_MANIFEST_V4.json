@@ -1,12 +1,12 @@
 {
   "product": "LotoLab",
-  "version": "5.1.0",
-  "versionLabel": "V5.1.0",
+  "version": "5.1.1",
+  "versionLabel": "V5.1.1",
   "sourceBranch": "main",
   "visualLayer": "Diagnóstico por jogo e conferências por concurso",
   "android": {
-    "versionCode": 54,
-    "versionName": "5.1.0"
+    "versionCode": 55,
+    "versionName": "5.1.1"
   },
   "versionFiles": [
     "VERSION",
@@ -14,8 +14,8 @@
     "package-lock.json",
     "android/app/build.gradle"
   ],
-  "releaseState": "ready",
-  "notes": "Perfil conjunto da Lotofácil, estudo de carteiras, ganhos acumulados por jogo e atualização de resultados antes dos avisos.",
+  "releaseState": "candidate",
+  "notes": "Consulta do concurso esperado pelo número e novas tentativas de atualização após os sorteios.",
   "editions": [
     {
       "name": "LotoLab 4.3.0",

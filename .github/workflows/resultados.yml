@@ -12,10 +12,10 @@ name: Atualizar resultados
 
 on:
   schedule:
-    # Primeira consulta às 21h32 nos dias úteis e às 11h32 no domingo (Brasília).
-    # O horário do GitHub está em UTC; a meia-noite UTC corresponde à noite anterior.
-    - cron: "32 0 * * 2-6"
-    - cron: "32 14 * * 0"
+    # Consultas às 21h10, 21h25 e 21h45 nos dias úteis e às 11h10,
+    # 11h25 e 11h45 no domingo, no horário de Brasília.
+    - cron: "10,25,45 0 * * 2-6"
+    - cron: "10,25,45 14 * * 0"
     # Tentativas de reserva e atualização do histórico.
     - cron: "17 1,4,12 * * *"
     - cron: "17 15 * * 0"
@@ -60,7 +60,7 @@ jobs:
         run: |
           args=""
           [ "${{ inputs.tudo }}" = "true" ] && args="$args --tudo"
-          if [ "${{ github.event_name }}" = "schedule" ]; then
+          if [ "${{ github.event_name }}" = "schedule" ] && [[ "${{ github.event.schedule }}" == "17 "* ]]; then
             args="$args --completar --completar-teto=20"
           elif [ "${{ inputs.completar }}" = "true" ]; then
             args="$args --completar --completar-teto=${{ inputs.completar_teto }}"
@@ -69,6 +69,7 @@ jobs:
           node ferramentas/atualizar-resultados.mjs $args
 
       - name: Repor concursos ausentes do histórico
+        if: github.event_name == 'workflow_dispatch' || startsWith(github.event.schedule, '17 ')
         run: node ferramentas/completar-lacunas.mjs --limite=40
 
       - name: Conferir pacotes e registrar o próximo concurso

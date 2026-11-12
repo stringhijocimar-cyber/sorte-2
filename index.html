@@ -960,12 +960,12 @@ td{padding:6px 7px;border-bottom:1px solid var(--trama)}
 <link rel="stylesheet" href="ui/experiencia-v4-14.css?v=4.22.1">
 <link rel="stylesheet" href="ui/modalidades-v4-15.css?v=4.22.1">
 <link rel="stylesheet" href="ui/recorrencia-v4-17.css?v=4.22.1">
-<link rel="stylesheet" href="ui/lab-v4-18.css?v=5.1.0">
+<link rel="stylesheet" href="ui/lab-v4-18.css?v=5.1.1">
 <link rel="stylesheet" href="ui/auto-v4-21.css?v=4.22.1">
-<link rel="stylesheet" href="ui/conferencia-v4-22.css?v=5.1.0">
+<link rel="stylesheet" href="ui/conferencia-v4-22.css?v=5.1.1">
 <link rel="stylesheet" href="ui/lotolab-ui-v4-23.css?v=4.23.0" data-lotolab-ui-refino="4.23.0">
-<link rel="stylesheet" href="ui/lotolab-ui-v4-24.css?v=5.1.0" data-lotolab-ui-experiencia="4.24.0">
-<link rel="stylesheet" href="ui/acompanhamento-v4-25.css?v=5.1.0">
+<link rel="stylesheet" href="ui/lotolab-ui-v4-24.css?v=5.1.1" data-lotolab-ui-experiencia="4.24.0">
+<link rel="stylesheet" href="ui/acompanhamento-v4-25.css?v=5.1.1">
 </head>
 <body>
 <header>
@@ -1044,17 +1044,17 @@ td{padding:6px 7px;border-bottom:1px solid var(--trama)}
   <div class="corpo"><div class="alca"></div><div id="corpo-avisos"></div></div>
 </div>
 
-<script src="ui/lab-core.js?v=5.1.0"></script>
-<script src="ui/lab-strategies.js?v=5.1.0"></script>
-<script src="ui/lab-recommendation.js?v=5.1.0"></script>
-<script src="ui/lab-lotofacil.js?v=5.1.0"></script>
-<script src="ui/lab-auto.js?v=5.1.0"></script>
-<script src="ui/lab-ui.js?v=5.1.0"></script>
+<script src="ui/lab-core.js?v=5.1.1"></script>
+<script src="ui/lab-strategies.js?v=5.1.1"></script>
+<script src="ui/lab-recommendation.js?v=5.1.1"></script>
+<script src="ui/lab-lotofacil.js?v=5.1.1"></script>
+<script src="ui/lab-auto.js?v=5.1.1"></script>
+<script src="ui/lab-ui.js?v=5.1.1"></script>
 <script src="ui/lab-check.js?v=4.25.0"></script>
-<script src="ui/lab-auto-ui.js?v=5.1.0"></script>
-<script src="ui/lab-saved-review.js?v=5.1.0"></script>
-<script src="ui/lab-storage.js?v=5.1.0"></script>
-<script src="ui/lab-backup.js?v=5.1.0"></script>
+<script src="ui/lab-auto-ui.js?v=5.1.1"></script>
+<script src="ui/lab-saved-review.js?v=5.1.1"></script>
+<script src="ui/lab-storage.js?v=5.1.1"></script>
+<script src="ui/lab-backup.js?v=5.1.1"></script>
 <script>
 "use strict";
 
@@ -4142,7 +4142,7 @@ T.inicio = () => {
   const avisos=S.avisos.filter(a=>!a.lido).length;
   const meus=S.jogos.filter(j=>j.modalidade===m).length,idade=idadeDoHistorico(m);
   return `<div class="foco-inicio ux-inicio" style="--foco-cor:${FOCO_CORES[m]}">
-    <div class="foco-boasvindas"><div><span class="foco-label">BEM-VINDO AO SEU LABORATÓRIO</span><${podeVoltar()?'h2':'h1'}>Seu jogo,<br>bem planejado.</${podeVoltar()?'h2':'h1'}></div><span class="foco-versao">5.1.0</span></div>
+    <div class="foco-boasvindas"><div><span class="foco-label">BEM-VINDO AO SEU LABORATÓRIO</span><${podeVoltar()?'h2':'h1'}>Seu jogo,<br>bem planejado.</${podeVoltar()?'h2':'h1'}></div><span class="foco-versao">5.1.1</span></div>
     <section class="foco-hero"><div class="foco-hero-topo"><span class="foco-label">UM PLANO PARA CADA CONCURSO</span><span class="foco-tag">${esc(c.nome)}</span></div>
       <div class="foco-objetivo"><div><h2>Crie seus jogos.<br>Veja os acertos.</h2><p>Defina seus critérios e seu limite. O LotoLab organiza e confere.</p></div><div class="foco-alvo" aria-label="Meta de ${c.k} dezenas"><strong>${c.k}</strong><span>${c.trevos?"+ 2 trevos":"dezenas"}</span></div></div>
       <button class="acao foco-primary" data-atalho="sugestoes">Criar sugestões <span aria-hidden="true">→</span></button>
@@ -5152,8 +5152,7 @@ async function executarBuscaDiaria(){
     try{
       const hist = historicoDe(k);
       const jaTem = hist.length ? Number(hist[hist.length - 1].concurso) : 0;
-      const minimo=jaTem+(sorteioPendente(k,agora)?1:0);
-      const r=await buscarNaCaixa(k,null,{priorizarCaixa:true,minimo});
+      const r=await buscarResultadoRecente(k,agora);
       const aplicar=lote=>{
         const mudanca=incorporarResultadosAutomaticos(lote,"busca automática");
         novos+=mudanca.novos;alterados+=mudanca.alterados;
@@ -6996,19 +6995,25 @@ async function buscarNaCaixa(modalidade, concurso, op={}){
   if(!slug) throw new Error("modalidade sem serviço público conhecido");
 
   const fontes = ordemDeFontes(concurso);
-  const ordem=op.priorizarCaixa?[...fontes.filter(f=>f.id==='caixa'),...fontes.filter(f=>f.id!=='caixa')]:fontes;
+  const caixa=fontes.find(f=>f.id==='caixa');
+  const ordem=op.priorizarCaixa&&caixa?[caixa,...fontes.filter(f=>f!==caixa)]:fontes;
+  const tentativas=ordem.map(fonte=>({fonte,pedido:concurso}));
+  // O endpoint oficial de último concurso pode atrasar em relação ao endpoint por número.
+  if(!concurso&&op.concursoEsperado&&caixa){
+    tentativas.splice(ordem.indexOf(caixa)+1,0,{fonte:caixa,pedido:op.concursoEsperado});
+  }
   let parcial=null;
   const falhas = [];
-  for(const fonte of ordem){
+  for(const {fonte,pedido} of tentativas){
     try{
       const consultadoEm=new Date().toISOString();
-      const resp = await buscarComLimite(
-        fonte.url(slug, concurso, modalidade), TEMPO_LIMITE_FONTE);
+      const url=fonte.url(slug,pedido,modalidade);
+      const resp=await buscarComLimite(url,TEMPO_LIMITE_FONTE);
       if(!resp.ok) throw new Error(`respondeu ${resp.status}`);
-      const r = fonte.converter(await resp.json(), modalidade, concurso);
+      const r = fonte.converter(await resp.json(), modalidade, pedido);
       r.fonte = fonte.id;
-      r.proveniencia={fonte:fonte.id,urlFonte:fonte.url(slug,concurso,modalidade),consultadoEm,ultimoSolicitado:!concurso,confirmacaoDireta:fonte.id==='caixa'};
-      if(concurso&&r.concurso!==Number(concurso))throw new Error('A fonte respondeu outro concurso.');
+      r.proveniencia={fonte:fonte.id,urlFonte:url,consultadoEm,ultimoSolicitado:!concurso,confirmacaoDireta:fonte.id==='caixa'};
+      if(pedido&&r.concurso!==Number(pedido))throw new Error('A fonte respondeu outro concurso.');
       if(parcial&&r.concurso<parcial.concurso)continue;
       if(r.concurso<(op.minimo||0)||faltamComplementos(r)){
         if(!parcial||r.concurso>parcial.concurso||r.concurso===parcial.concurso&&faltamComplementos(parcial)&&!faltamComplementos(r))parcial=r;
@@ -7031,6 +7036,13 @@ async function buscarNaCaixa(modalidade, concurso, op={}){
   const err = new Error(falhas.join(" · "));
   err.todasFalharam = true;
   throw err;
+}
+
+function buscarResultadoRecente(modalidade,agora=Date.now()){
+  const ultimo=ultimoResultado(modalidade);
+  const conhecido=Number(ultimo?.concurso)||0;
+  const concursoEsperado=sorteioPendente(modalidade,agora)?conhecido+1:null;
+  return buscarNaCaixa(modalidade,null,{priorizarCaixa:true,minimo:concursoEsperado||conhecido,concursoEsperado});
 }
 
 /* Colagem: aceita JSON (array de objetos) ou linhas soltas
@@ -9783,32 +9795,37 @@ function acoesNovas(){
   const atualizar = $("#c-atualizar");
   if(atualizar) atualizar.onclick = async () => {
     const aviso = $("#c-atualizando");
-    const antes = ultimoResultado(S.modalidade);
+    const modalidade=S.modalidade;
+    const antes=ultimoResultado(modalidade);
+    const pendente=sorteioPendente(modalidade,Date.now());
     atualizar.disabled = true;
     aviso.innerHTML = `<div class="nota"><span class="girando"></span>procurando o
       concurso mais recente…</div>`;
     try{
-      const r = await buscarNaCaixa(S.modalidade, null);
+      const r=await buscarResultadoRecente(modalidade);
       const inseridos = guardarResultados([r]);
       /* Mesmo sem concurso novo, a conferência roda: o resultado pode ter
          chegado antes sem rateio, ou um jogo salvo depois pode nunca ter sido
          confrontado com ele. */
       const conf = aoMudarHistorico(inseridos, "busca do último concurso");
       if(inseridos){
-        S.avisoConferir = {modalidade:S.modalidade, tipo:"ok", texto:
+        S.avisoConferir = {modalidade, tipo:"ok", texto:
           `Concurso ${r.concurso} é novo por aqui. ` +
           (conf.novas ? `${conf.novas} conferência${conf.novas===1?"":"s"} feita${conf.novas===1?"":"s"}.`
                       : "Nenhum jogo salvo cobria ele.")};
       } else if(conf.novas){
-        S.avisoConferir = {modalidade:S.modalidade, tipo:"ok", texto:
+        S.avisoConferir = {modalidade, tipo:"ok", texto:
           `O concurso ${r.concurso} já era conhecido, e ${conf.novas} conferência${conf.novas===1?"":"s"} nova${conf.novas===1?"":"s"} saiu daí.`};
+      } else if(pendente&&r.concurso<=antes?.concurso){
+        S.avisoConferir={modalidade,tipo:"atencao",texto:
+          `A busca ainda não encontrou o novo concurso. Último disponível: ${r.concurso}.`};
       } else {
-        S.avisoConferir = {modalidade:S.modalidade, tipo:"ok", texto: antes && antes.concurso === r.concurso
+        S.avisoConferir = {modalidade, tipo:"ok", texto: antes && antes.concurso === r.concurso
           ? `Já estava atualizado: ${r.concurso} continua sendo o último.`
           : `Nada novo veio da busca.`};
       }
     }catch(e){
-      S.avisoConferir = {modalidade:S.modalidade, tipo:"atencao", texto:
+      S.avisoConferir = {modalidade, tipo:"atencao", texto:
         `Nenhuma fonte respondeu (${e.message}). Dá para digitar o resultado à mão abaixo.`};
     }
     pintar();

@@ -13,16 +13,18 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.Locale;
+import java.util.TimeZone;
 
 /** Busca apenas resultados públicos, sem enviar jogos ou dados do usuário. */
 public class ConferenciaWorker extends Worker {
     public ConferenciaWorker(@NonNull Context c,@NonNull WorkerParameters p){super(c,p);}
-    private JSONObject buscar(String slug) throws Exception {
+    private JSONObject buscar(String slug, int concurso) throws Exception {
         if(!slug.matches("megasena|lotofacil|quina|lotomania|duplasena|diadesorte|timemania|maismilionaria"))throw new IllegalArgumentException();
-        HttpURLConnection conn=(HttpURLConnection)new URL("https://servicebus2.caixa.gov.br/portaldeloterias/api/"+slug).openConnection();
+        HttpURLConnection conn=(HttpURLConnection)new URL("https://servicebus2.caixa.gov.br/portaldeloterias/api/"+slug+(concurso>0?"/"+concurso:"")).openConnection();
         conn.setUseCaches(false);
         conn.setConnectTimeout(12000);conn.setReadTimeout(12000);conn.setRequestProperty("Accept","application/json");
         try {
@@ -38,6 +40,28 @@ public class ConferenciaWorker extends Worker {
         SimpleDateFormat entrada=new SimpleDateFormat("dd/MM/yyyy",Locale.ROOT);entrada.setLenient(false);
         if(!s.matches("\\d{2}/\\d{2}/\\d{4}"))throw new IllegalArgumentException("Data inválida");
         Date d=entrada.parse(s);return new SimpleDateFormat("yyyy-MM-dd",Locale.ROOT).format(d);
+    }
+    private JSONObject buscarRecente(String slug, long consulta) throws Exception {
+        JSONObject ultimo=buscar(slug,0);
+        String dataProxima=ultimo.optString("dataProximoConcurso");
+        if(!dataProxima.matches("[0-9]{2}/[0-9]{2}/[0-9]{4}"))return ultimo;
+
+        TimeZone brasilia=TimeZone.getTimeZone("America/Sao_Paulo");
+        Calendar relogio=Calendar.getInstance(brasilia);
+        relogio.setTimeInMillis(consulta);
+        SimpleDateFormat formato=new SimpleDateFormat("yyyy-MM-dd",Locale.ROOT);
+        formato.setTimeZone(brasilia);
+        int ordem=iso(dataProxima).compareTo(formato.format(relogio.getTime()));
+        int hora=relogio.get(Calendar.DAY_OF_WEEK)==Calendar.SUNDAY?11:21;
+        if(ordem>0||(ordem==0&&relogio.get(Calendar.HOUR_OF_DAY)<hora))return ultimo;
+
+        int esperado=ultimo.optInt("numeroConcursoProximo",ultimo.getInt("numero")+1);
+        if(esperado<=ultimo.getInt("numero"))return ultimo;
+        try {
+            JSONObject candidato=buscar(slug,esperado);
+            if(candidato.getInt("numero")==esperado)return candidato;
+        }catch(Exception e){ /* Mantém o último concurso disponível enquanto o novo não responde. */ }
+        return ultimo;
     }
     @NonNull @Override public Result doWork(){
         SharedPreferences prefs=NotificacaoColorida.preferencias(getApplicationContext());
@@ -55,7 +79,7 @@ public class ConferenciaWorker extends Worker {
                 boolean tem=false;for(int i=0;i<jogos.length();i++)if(m.equals(jogos.getJSONObject(i).optString("modalidade"))){tem=true;break;}
                 try {
                     long consulta=System.currentTimeMillis();
-                    JSONObject r=buscar(mod.getString("slug"));int n=r.getInt("numero");
+                    JSONObject r=buscarRecente(mod.getString("slug"),consulta);int n=r.getInt("numero");
                     int visto=prefs.getInt("visto:"+m,0),conhecido=conhecidos==null?0:conhecidos.optInt(m,0);
                     if(n<1||n<conhecido)continue;
                     String data=iso(r.getString("dataApuracao"));JSONArray dezenas=r.getJSONArray("listaDezenas");

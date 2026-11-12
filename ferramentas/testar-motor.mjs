@@ -4669,6 +4669,25 @@ secao("43. Atualizar sozinho todos os sorteios novos");
       Number(x.concurso) === n);
   }
 
+  await (async () => {
+    S.resultados = montarHistorico("2026-08-20", 3047);
+    S.ultimaBusca = {};
+    const consultas = [];
+    contexto.fetch = (url) => {
+      const u = String(url);
+      if(!u.includes("servicebus2")) return Promise.reject(new Error("fora do ar"));
+      consultas.push(u);
+      const novo = u.endsWith("/3048");
+      return Promise.resolve({ok:true, json:async()=>({
+        numero:novo?3048:3047, dataApuracao:novo?"23/08/2026":"20/08/2026",
+        listaDezenas:["01","02","03","04","05","06"], listaRateioPremio:[],
+      })});
+    };
+    await contexto.buscaDiaria();
+    checar("consulta pelo número encontra concurso que a Caixa ainda omite no endpoint de último",
+      historicoTem(3048)&&consultas.some(u=>u.endsWith("/3048")), consultas.join(" · "));
+  })();
+
   /* ---- sorteios perdidos: três dias sem abrir o app ---- */
   await (async () => {
     S.resultados = montarHistorico("2026-08-20", 3047);
